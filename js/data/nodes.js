@@ -125,9 +125,9 @@
       id: 'LAR-C', name: '저고도 탐지레이더 (중부축)',
       category: 'sensor', service: 'af', echelon: 'tactical',
       coord: [38.15, 127.31], coordNote: '철원권 도시 수준 개념좌표',
-      role: '전방 저고도 침투 항적 탐지 전용 레이더.',
+      role: '전방(철원권) 저고도 침투 항적 탐지 전용 레이더. 전방축선 담당, 수도권 종심은 미담당.',
       detects: ['uav_small', 'ac_low', 'heli', 'cruise'],
-      coverage: ['central', 'seoul'],
+      coverage: ['central'],
       detectProb: { paramRef: 'SEN-LAR-PD-01' }
     },
     {
@@ -152,8 +152,8 @@
       id: 'E737', name: 'E-737 항공통제기 (피스아이)',
       category: 'sensor', service: 'af', echelon: 'operational',
       coord: [37.20, 127.90], coordNote: '중부 내륙 상공 개념 궤도점 (도시 수준)',
-      role: '공중조기경보통제기. 광역 하향탐지, Link-16으로 MCRC·KAOC에 항적 전파.',
-      detects: ['fighter', 'ac_low', 'cruise', 'heli', 'uav_small'],
+      role: '공중조기경보통제기. 광역 하향탐지, Link-16으로 MCRC·KAOC에 항적 전파. 2m급 소형 무인기는 저RCS·지상클러터로 탐지 제한(SEN-E737-PD-01).',
+      detects: ['fighter', 'ac_low', 'cruise', 'heli'],
       coverage: ['west', 'central', 'east', 'seoul'],
       detectProb: { paramRef: 'SEN-E737-PD-01' }
     },

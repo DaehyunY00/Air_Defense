@@ -47,6 +47,8 @@
       KJ.panels.renderScenario(state);
     } else if (state.tab === 'analysis') {
       KJ.panels.renderAnalysis(state, analysis);
+    } else if (state.tab === 'des') {
+      KJ.desPanel.render(state);
     } else if (state.tab === 'data') {
       KJ.panels.renderData();
     }
@@ -76,6 +78,17 @@
         var card = e.target.closest('.scenario-card');
         if (card) setState({ sc: card.dataset.sc });
       });
+
+    // DES 패널: seed/dur 입력 → 상태 반영, 실행 버튼
+    document.getElementById('des-seed').addEventListener('change', function (e) {
+      setState({ seed: Math.max(0, Math.floor(parseFloat(e.target.value) || 0)) });
+    });
+    document.getElementById('des-dur').addEventListener('change', function (e) {
+      setState({ dur: Math.min(7200, Math.max(60, Math.floor(parseFloat(e.target.value) || 1800))) });
+    });
+    document.getElementById('des-run').addEventListener('click', function () {
+      KJ.desPanel.run(state);
+    });
     KJ.router.onChange(function () {
       state = KJ.router.parse();
       render();

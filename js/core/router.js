@@ -11,8 +11,8 @@
   'use strict';
   window.KJ = window.KJ || {};
 
-  var DEFAULTS = { tab: 'map', sc: 'sc1', mode: 'asis', t: 0, open: '', x: 1 };
-  var VALID_TABS = ['map', 'scenario', 'analysis', 'data'];
+  var DEFAULTS = { tab: 'map', sc: 'sc1', mode: 'asis', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
+  var VALID_TABS = ['map', 'scenario', 'analysis', 'des', 'data'];
 
   KJ.router = {
     /** 현재 해시를 상태 객체로 파싱 (유효성 검증 포함) */
@@ -27,7 +27,7 @@
         var k = decodeURIComponent(pair.slice(0, idx));
         var v = decodeURIComponent(pair.slice(idx + 1));
         if (!(k in DEFAULTS)) return;
-        if (k === 't' || k === 'x') {
+        if (k === 't' || k === 'x' || k === 'seed' || k === 'dur') {
           var num = parseFloat(v);
           if (!isNaN(num) && num >= 0) state[k] = num;
         } else {
@@ -38,6 +38,8 @@
       if (state.mode !== 'asis' && state.mode !== 'tobe') state.mode = DEFAULTS.mode;
       if (!KJ.SCENARIOS.some(function (s) { return s.id === state.sc; })) state.sc = DEFAULTS.sc;
       state.x = Math.min(3, Math.max(0.5, state.x));
+      state.seed = Math.max(0, Math.floor(state.seed)) >>> 0 || DEFAULTS.seed;
+      state.dur = Math.min(7200, Math.max(60, Math.floor(state.dur)));
       return state;
     },
 

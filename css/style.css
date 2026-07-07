@@ -181,6 +181,29 @@ tr.row-warn td { background: rgba(240, 160, 32, .07); }
 .chk-detail { color: var(--muted); font-size: 11px; margin-top: 2px; }
 li.chk-fail { background: #43140f; }
 
+/* ── DES 패널 ── */
+.des-controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+.des-controls label { font-size: 12px; color: var(--muted); }
+.des-controls input {
+  background: var(--panel); color: var(--text); border: 1px solid var(--border);
+  padding: 5px 8px; border-radius: 6px; width: 110px; margin-left: 4px;
+}
+.run-btn {
+  background: var(--accent); color: #fff; border: none; padding: 8px 18px;
+  border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700;
+}
+.run-btn:hover { background: #3a7bc8; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.stat-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+.stat-card.stat-crit { background: #3a1310; border-color: #6b2018; }
+.stat-val { font-size: 20px; font-weight: 700; color: #cfe0f2; }
+.stat-card.stat-crit .stat-val { color: #ff9a8d; }
+.stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.cmp-good { color: #7dd982; font-weight: 700; }
+.cmp-bad { color: #ff9a8d; font-weight: 700; }
+.leak-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.leak-chip { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 3px 10px; font-size: 11px; }
+
 /* ── 지도 범례 ── */
 .map-legend {
   position: absolute; bottom: 20px; left: 12px; z-index: 1000;

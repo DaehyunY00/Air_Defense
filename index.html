@@ -38,7 +38,8 @@
   <nav class="tabs">
     <button class="tab-btn" data-tab="map">🗺️ 상황도</button>
     <button class="tab-btn" data-tab="scenario">🎯 시나리오</button>
-    <button class="tab-btn" data-tab="analysis">📊 병목 분석</button>
+    <button class="tab-btn" data-tab="analysis">📊 병목 분석 (해석)</button>
+    <button class="tab-btn" data-tab="des">⚙️ DES 시뮬레이션</button>
     <button class="tab-btn" data-tab="data">📚 근거자료·제약검증</button>
   </nav>
 
@@ -106,6 +107,51 @@
       </div>
     </section>
 
+    <!-- ── DES 시뮬레이션 탭 ── -->
+    <section class="tab-panel" id="panel-des">
+      <div class="card">
+        <h2>⚙️ 이산사건 시뮬레이션 (DES) — 단일 복제</h2>
+        <p>개별 위협 객체를 생성해 9단계 C2 파이프라인(탐지→추적생성→식별→위협평가→WTA→결심→교전협조→교전명령→BDA→재교전)에
+           흘려보내고, 각 노드를 M/M/c/K 대기행렬로 처리한 관측 통계입니다. 상단 컨트롤바의 시나리오·모드·강도가 그대로 적용됩니다.
+           병목은 이 실행 결과에서 도출되며, seed·강도·시나리오·모드에 따라 달라집니다.</p>
+        <div id="des-context" class="analysis-context"></div>
+        <div class="des-controls">
+          <label>난수 seed <input type="number" id="des-seed" min="0" step="1" value="12345"></label>
+          <label>시뮬레이션 시간(초) <input type="number" id="des-dur" min="60" max="7200" step="60" value="1800"></label>
+          <button id="des-run" class="run-btn">▶ 시뮬레이션 실행</button>
+          <span id="des-meta" class="note"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>결과 요약</h2>
+        <div id="des-summary" class="stat-grid"></div>
+      </div>
+
+      <div class="card">
+        <h2>As-Is ↔ To-Be 비교 (동일 seed)</h2>
+        <div id="des-compare"></div>
+      </div>
+
+      <div class="card">
+        <h2>🔎 도출된 병목 (관측 통계 기반)</h2>
+        <div id="des-bottlenecks"></div>
+        <h3 style="margin-top:12px">누수 사유 분해</h3>
+        <div id="des-leak" class="leak-row"></div>
+      </div>
+
+      <div class="card">
+        <h2>노드 관측 통계 (ρ 내림차순)</h2>
+        <table>
+          <thead>
+            <tr><th>노드</th><th>구분</th><th>도착</th><th>완료</th><th>드롭</th>
+                <th>관측 이용률 ρ</th><th>평균대기 Wq</th><th>최대 재고</th><th>판정</th></tr>
+          </thead>
+          <tbody id="des-node-body"></tbody>
+        </table>
+      </div>
+    </section>
+
     <!-- ── 근거자료 탭 ── -->
     <section class="tab-panel" id="panel-data">
       <div class="card">
@@ -131,9 +177,13 @@
   <script src="js/data/scenarios.js"></script>
   <script src="js/core/router.js"></script>
   <script src="js/core/constraints.js"></script>
+  <script src="js/core/rng.js"></script>
+  <script src="js/core/heap.js"></script>
   <script src="js/analysis/bottleneck.js"></script>
+  <script src="js/engine/sim-engine.js"></script>
   <script src="js/ui/map-view.js"></script>
   <script src="js/ui/panels.js"></script>
+  <script src="js/ui/des-panel.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

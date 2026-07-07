@@ -115,25 +115,28 @@ tests/
 - [x] **Phase 1 — 스캐폴딩**: 다중 파일 구조, Leaflet 지도, 탭·딥링크, 데이터 모델, 시나리오 기반 병목 도출 프레임워크(정상상태 M/M/c 근사), 제약 어서션
 - [x] **Phase 2 — DES 엔진**: 이벤트 큐(이진 min-heap), 시뮬레이션 클록, 위협/노드 FSM, 9단계 C2 파이프라인, M/M/c/K 대기열, seeded RNG(Mulberry32)+분포 샘플러, DES 실행 UI·As-Is↔To-Be 비교, 재현성·극한값 회귀 테스트
 - [x] **Phase 3 — Monte Carlo**: Welford 스트리밍 평균/분산, 95% CI 수렴판정, 다중복제 신뢰구간, As-Is↔To-Be 통계적 유의성(CI 비중첩), 파라미터 ±20% 민감도 스윕(토네이도), 분포 샘플러 이론값 수렴 테스트
-- [x] **Phase 4 — 시각화 고도화** (현재): DES trace 모드(위협별 9단계 타임스탬프·노드별 재고 시계열), 위협궤적 애니메이션(requestAnimationFrame, 60fps), 대기열·노드 실시간 막대/링, Gantt 타임라인, Sankey형 흐름도(funnel), 축선별 중복교전 히트맵(As-Is↔To-Be), 딥링크 재생시각 동기화
-- [ ] **Phase 5 — 통합검증·문서화**: V&V, 회귀 스위트
+- [x] **Phase 4 — 시각화 고도화**: DES trace 모드(위협별 9단계 타임스탬프·노드별 재고 시계열), 위협궤적 애니메이션(requestAnimationFrame, 60fps), 대기열·노드 실시간 막대/링, Gantt 타임라인, Sankey형 흐름도(funnel), 축선별 중복교전 히트맵(As-Is↔To-Be), 딥링크 재생시각 동기화
+- [x] **Phase 5 — 통합검증·문서화** (완료): 통합 회귀 스위트(`tests/run-all.js`, 115 어서션 + 구문검증), 제약 어서션 헤드리스화(Rec.5 a~e, 데이터+행위 이중검증), **임계 전환점 분석**(Rec.6 — ρ≥0.9 돌파 구간의 As-Is↔To-Be 개선폭 정량화, `js/analysis/transition.js` + MC 탭 카드), Phase 4 적대적 코드리뷰·수정 6건, V&V 보고서(`docs/vv-report.md` — 9단계↔F2T2EA/OODA/TEWA 매핑표·극한값·민감도·2022.12.26 face validity·한계)
 
 ## 검증
 
 ```bash
-# JS 구문 검증 (Phase 종료 게이트)
-for f in $(find js -name '*.js'); do node --check "$f"; done
+# 전체 회귀 스위트 — 단일 진입점 (구문검증 + 5개 스위트 115 어서션, CI 게이트)
+node tests/run-all.js
 
-# 헤드리스 회귀 테스트 (저장소 루트에서)
-node tests/engine.test.js   # DES: 재현성·극한값·시나리오 병목·제약·보존·trace모드 (seed 0 포함)
-node tests/mc.test.js       # MC: Welford 정확성·샘플러 이론값 수렴·CI 축소·유의성·민감도·성능
-node tests/overlap.test.js  # 중복교전 히트맵: 순수성·강도 스케일링·JAMDC2 융합허브 효과
+# 개별 실행
+node tests/engine.test.js      # DES: 재현성·극한값·시나리오 병목·보존·trace모드
+node tests/mc.test.js          # MC: Welford·샘플러 이론값 수렴·CI 축소·유의성·민감도
+node tests/overlap.test.js     # 중복교전 히트맵: 순수성·스케일링·JAMDC2 융합허브
+node tests/transition.test.js  # 임계 전환점: Rec.6 — ρ≥0.9 구간 개선폭
+node tests/constraints.test.js # 제약 어서션: Rec.5 a~e (데이터+행위 이중검증)
 ```
 
-세 테스트는 `window.KJ` 네임스페이스를 Node에서 로드해 실행합니다. 브라우저에서는
+테스트는 `window.KJ` 네임스페이스를 Node에서 로드해 실행합니다. 브라우저에서는
 **[DES 시뮬레이션] 탭**(단일 복제 관측통계·As-Is↔To-Be 비교), **[Monte Carlo] 탭**
-(수렴판정·신뢰구간·통계적 유의성·민감도 토네이도), **[재생·시각화] 탭**(궤적 애니메이션·
-실시간 대기열·Gantt·흐름도·히트맵)에서 대화형으로 확인합니다.
+(수렴판정·신뢰구간·통계적 유의성·민감도 토네이도·**임계 전환점**), **[재생·시각화] 탭**
+(궤적 애니메이션·실시간 대기열·Gantt·흐름도·히트맵)에서 대화형으로 확인합니다.
+V&V 종합(매핑표·검증 이력·타당성·한계)은 **`docs/vv-report.md`** 참조.
 
 ### 통계 방법론 (Phase 3)
 

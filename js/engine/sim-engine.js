@@ -122,9 +122,17 @@
     this._seriesCount++;
   };
 
-  /** 위협 trace에 단계 이벤트 기록 (trace 대상이 아니면 무연산) */
+  /**
+   * 위협 trace에 단계 이벤트 기록 (trace 대상이 아니면 무연산).
+   * trace가 이미 종결(exitT 설정 = 격추/누수 확정)된 뒤의 기록은 차단한다 —
+   * 공역이탈한 위협의 잔여 서버 완료 콜백이 exitT 이후 단계를 추가해
+   * Gantt 구간 합이 100%를 초과하던 결함의 근본 수정 (Phase 5 리뷰 발견).
+   * 격추 마크는 exitT 설정 직전에 호출되므로 정상 기록된다.
+   */
   Simulation.prototype._mark = function (threat, name, t) {
-    if (threat._trace) threat._trace.stages.push({ name: name, t: t });
+    if (threat._trace && threat._trace.exitT === null) {
+      threat._trace.stages.push({ name: name, t: t });
+    }
   };
 
   // ── 스케줄러 ──

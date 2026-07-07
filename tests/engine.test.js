@@ -92,6 +92,22 @@ assert(tr.threatTraces.every(function (tt) {
   for (var i = 1; i < tt.stages.length; i++) if (tt.stages[i].t < tt.stages[i - 1].t) return false;
   return true;
 }), '각 trace의 단계 타임스탬프가 비감소(시간순)');
+// Phase 5 리뷰 발견 1 회귀: trace 종결(exitT) 이후 단계가 기록되지 않아야 함
+// (누수한 위협의 잔여 서버 완료 콜백이 exitT 이후 _mark를 추가해 Gantt 구간 합이
+//  100%를 초과하던 결함 — 포화 조건에서 재현되었음)
+(function () {
+  var violations = 0, checked = 0;
+  [0, 21, 42].forEach(function (sd) {
+    var r = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 3, seed: sd, endTimeSec: 1800, trace: true, traceCap: 300 });
+    r.threatTraces.forEach(function (tt) {
+      if (tt.exitT === null) return;
+      checked++;
+      tt.stages.forEach(function (s) { if (s.t > tt.exitT + 1e-9) violations++; });
+    });
+  });
+  assert(checked > 100 && violations === 0,
+    '종결된 trace(' + checked + '건)에 exitT 이후 단계 없음 — Gantt 구간 합 ≤100% 보장 (위반 ' + violations + ')');
+})();
 assert(tr.threatTraces.filter(function (tt) { return tt.outcome !== null; }).length > 0,
   '일부 위협은 종결(killed/leaked) outcome 기록');
 assert(Object.keys(tr.nodeSeries).length > 0, 'nodeSeries가 노드별로 기록됨');

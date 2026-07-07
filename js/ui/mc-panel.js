@@ -9,7 +9,10 @@
   'use strict';
   window.KJ = window.KJ || {};
 
-  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
   function el(id) { return document.getElementById(id); }
   function pct(x) { return (x * 100).toFixed(1) + '%'; }
   function pp(x) { return (x * 100).toFixed(2) + '%p'; }
@@ -23,9 +26,11 @@
   };
 
   var last = null;
+  var lastState = null; // 임계 전환점 버튼(패널 내 자체 바인딩)이 클릭 시점 상태를 참조
 
   KJ.mcPanel = {
     render: function (state) {
+      lastState = state;
       el('mc-seed').value = state.seed;
       el('mc-dur').value = state.dur;
       el('mc-context').textContent =
@@ -140,4 +145,103 @@
   };
 
   function now() { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); }
+
+  // ── 임계 전환점 (Phase 5, 계획서 Recommendations 6) ──────────────────────────
+  // 강도 스윕에서 As-Is/To-Be 누수율 곡선과 ρ>0.9 임계 돌파점을 SVG 라인차트로 제시.
+  // 계산은 analysis/transition.js (결정론적 — 동일 시나리오·seed → 동일 곡선).
+
+  function runTransition() {
+    if (!lastState) return;
+    var btn = el('mc-transition-run');
+    btn.disabled = true; btn.textContent = '⏳ 스윕 실행 중 (11점 × 2모드 × 20복제)...';
+    var state = lastState;
+    setTimeout(function () {
+      var t0 = now();
+      var r = KJ.analyzeTransition(KJ.scenarioById(state.sc), {
+        reps: 20, seed: state.seed, endTimeSec: Math.min(state.dur, 1800)
+      });
+      renderTransition(r, state, now() - t0);
+      btn.disabled = false; btn.textContent = '▶ 임계 전환점 스윕 실행';
+    }, 30);
+  }
+
+  function renderTransition(r, state, elapsedMs) {
+    var W = 760, H = 300, PAD = { l: 52, r: 16, t: 14, b: 34 };
+    var xs = r.points.map(function (p) { return p.x; });
+    var xMin = xs[0], xMax = xs[xs.length - 1];
+    var yMax = Math.min(1, Math.max.apply(null, r.points.map(function (p) {
+      return Math.max(p.asis.leakRate, p.tobe.leakRate);
+    })) * 1.15);
+    function px(x) { return PAD.l + (x - xMin) / (xMax - xMin) * (W - PAD.l - PAD.r); }
+    function py(y) { return H - PAD.b - (y / yMax) * (H - PAD.t - PAD.b); }
+    function poly(key) {
+      return r.points.map(function (p) {
+        return px(p.x).toFixed(1) + ',' + py(p[key].leakRate).toFixed(1);
+      }).join(' ');
+    }
+
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;max-width:' + W + 'px">';
+    // 격자·축 라벨
+    for (var g = 0; g <= 4; g++) {
+      var yv = yMax * g / 4;
+      svg += '<line x1="' + PAD.l + '" y1="' + py(yv) + '" x2="' + (W - PAD.r) + '" y2="' + py(yv) +
+        '" stroke="#2e3947" stroke-width="1"/>' +
+        '<text x="' + (PAD.l - 6) + '" y="' + (py(yv) + 3) + '" font-size="10" fill="#8a97a8" text-anchor="end">' +
+        (yv * 100).toFixed(0) + '%</text>';
+    }
+    r.points.forEach(function (p) {
+      svg += '<text x="' + px(p.x) + '" y="' + (H - PAD.b + 14) + '" font-size="10" fill="#8a97a8" text-anchor="middle">' +
+        p.x.toFixed(2).replace(/\.?0+$/, '') + '×</text>';
+    });
+    // 임계 돌파 수직선 + 임계 이후 음영
+    if (r.rho09CrossX !== null) {
+      svg += '<rect x="' + px(r.rho09CrossX) + '" y="' + PAD.t + '" width="' +
+        (W - PAD.r - px(r.rho09CrossX)) + '" height="' + (H - PAD.t - PAD.b) +
+        '" fill="#ff2d1a" opacity="0.06"/>' +
+        '<line x1="' + px(r.rho09CrossX) + '" y1="' + PAD.t + '" x2="' + px(r.rho09CrossX) +
+        '" y2="' + (H - PAD.b) + '" stroke="#ff2d1a" stroke-width="1.5" stroke-dasharray="5 4"/>' +
+        '<text x="' + (px(r.rho09CrossX) + 5) + '" y="' + (PAD.t + 12) +
+        '" font-size="10" fill="#ff8d80">ρ≥0.9 임계 돌파 (×' + r.rho09CrossX + ')</text>';
+    }
+    // 곡선 + 점
+    svg += '<polyline points="' + poly('asis') + '" fill="none" stroke="#e05545" stroke-width="2.5"/>';
+    svg += '<polyline points="' + poly('tobe') + '" fill="none" stroke="#3d8b40" stroke-width="2.5"/>';
+    r.points.forEach(function (p) {
+      svg += '<circle cx="' + px(p.x) + '" cy="' + py(p.asis.leakRate) + '" r="3.5" fill="#e05545">' +
+        '<title>As-Is ×' + p.x + ': 누수율 ' + pct(p.asis.leakRate) + ' (±' + pp(p.asis.leakCI) +
+        '), C2 최대 ρ=' + p.asis.maxC2Rho.toFixed(2) + '</title></circle>' +
+        '<circle cx="' + px(p.x) + '" cy="' + py(p.tobe.leakRate) + '" r="3.5" fill="#3d8b40">' +
+        '<title>To-Be ×' + p.x + ': 누수율 ' + pct(p.tobe.leakRate) + ' (±' + pp(p.tobe.leakCI) + ')</title></circle>';
+    });
+    // 최대 격차 마커
+    if (r.maxGapX !== null) {
+      var mp = r.points.find(function (p) { return p.x === r.maxGapX; });
+      svg += '<line x1="' + px(r.maxGapX) + '" y1="' + py(mp.asis.leakRate) + '" x2="' + px(r.maxGapX) +
+        '" y2="' + py(mp.tobe.leakRate) + '" stroke="#f0a020" stroke-width="2"/>' +
+        '<text x="' + (px(r.maxGapX) + 6) + '" y="' + ((py(mp.asis.leakRate) + py(mp.tobe.leakRate)) / 2 + 3) +
+        '" font-size="10" fill="#ffcf70">최대 격차 ' + pp(r.maxGap) + '</text>';
+    }
+    svg += '</svg>';
+
+    el('mc-transition').innerHTML =
+      '<div class="tl-legend" style="margin:6px 0">' +
+      '<span><span class="sw" style="background:#e05545"></span>As-Is 누수율</span>' +
+      '<span><span class="sw" style="background:#3d8b40"></span>To-Be 누수율</span>' +
+      '<span>가로축: 위협 강도 배수 · 점 툴팁: 95% CI·C2 최대 ρ</span></div>' + svg;
+
+    el('mc-transition-note').textContent =
+      esc(KJ.scenarioById(state.sc).name) + ' 기준 — ' +
+      (r.rho09CrossX !== null
+        ? 'As-Is C2 최대 이용률이 강도 ×' + r.rho09CrossX + '에서 임계(ρ=0.9)를 돌파. ' +
+          '임계 이전 평균 개선폭 ' + pp(r.preGapMean) + ' → 임계 이후 ' + pp(r.postGapMean) +
+          '로 확대(최대 ' + pp(r.maxGap) + ' @ ×' + r.maxGapX + '). ' +
+          '포화 구간에서 통합 C2(Track Fusion·자동 WTA·데이터링크)의 가치가 비선형적으로 커진다는 것이 핵심 논증.'
+        : '전 스윕 구간에서 As-Is C2 최대 ρ<0.9 — 이 시나리오는 처리용량 임계에 도달하지 않음(전환점은 시나리오의 함수).') +
+      ' [' + r.reps + '복제/점 · ' + (elapsedMs / 1000).toFixed(1) + 's · seed=' + r.seed + ' 결정론적]';
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var btn = el('mc-transition-run');
+    if (btn) btn.addEventListener('click', runTransition);
+  });
 })();

@@ -72,17 +72,24 @@
   var els = null;          // DOM 엘리먼트 캐시 (실행 1회당 재생성)
   var pb = { playing: false, t: 0, speed: 1, lastTs: null, raf: null, dragging: false, selected: null, urlSyncAt: 0 };
   var currentState = null;
+  // 사용자가 입력을 만진 뒤에는 re-render가 값을 되돌리지 않음 (리뷰 발견 4 수정)
+  var inputTouched = { seed: false, dur: false };
+
+  function contextLabel(cfg) {
+    return KJ.scenarioById(cfg.sc).name + ' · ' +
+      (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be K-JAMDS') +
+      ' · 강도 ×' + Number(cfg.x).toFixed(1);
+  }
 
   KJ.playbackPanel = {
     render: function (state) {
       currentState = state;
-      el('pb-seed').value = state.seed;
-      el('pb-dur').value = Math.min(state.dur, 900);
-      el('pb-context').textContent =
-        KJ.scenarioById(state.sc).name + ' · ' +
-        (state.mode === 'asis' ? 'As-Is 분절형' : 'To-Be K-JAMDS') +
-        ' · 강도 ×' + Number(state.x).toFixed(1);
+      if (!inputTouched.seed) el('pb-seed').value = state.seed;
+      if (!inputTouched.dur) el('pb-dur').value = Math.min(state.dur, 900);
+      // 실행 데이터가 있으면 그 실행 시점 설정을 표시 — 이후 컨트롤 변경으로
+      // 라벨만 바뀌어 재생 데이터와 어긋나던 문제 수정 (리뷰 발견 3)
       if (data) {
+        el('pb-context').textContent = contextLabel(data.runCfg) + ' (실행 기준)';
         // 딥링크 t= 복원 (데이터가 이미 있으면 해당 시각으로 이동, 정지 상태로 1프레임 렌더)
         if (state.t && state.t !== pb.t && !pb.playing) {
           pb.t = Math.min(state.t, data.dur);
@@ -90,6 +97,7 @@
           syncTransportUI();
         }
       } else {
+        el('pb-context').textContent = contextLabel(state);
         renderEmpty();
       }
     },
@@ -106,6 +114,8 @@
           seed: seed, endTimeSec: reqDur, trace: true, traceCap: 300
         });
         data = buildData(result, state, reqDur);
+        data.runCfg = { sc: state.sc, mode: state.mode, x: state.x, seed: seed, dur: reqDur };
+        el('pb-context').textContent = contextLabel(data.runCfg) + ' (실행 기준)';
         buildStaticMap(state.mode);
         buildGanttRows();
         renderFunnel();
@@ -152,7 +162,10 @@
   };
 
   function el(id) { return document.getElementById(id); }
-  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;'); // 속성값 삽입 대비 인용부호 포함 (리뷰 발견 5)
+  }
 
   function renderEmpty() {
     el('pb-queues').innerHTML = '<div class="bn-none">먼저 "정밀 재생 실행"을 눌러 재생 데이터를 생성하세요.</div>';
@@ -202,8 +215,9 @@
     var gThreats = ns('g'); gThreats.setAttribute('id', 'pb-threats-g');
     svg.appendChild(gHeat); svg.appendChild(gLinks); svg.appendChild(gNodes); svg.appendChild(gThreats);
 
-    // 배경 축선 히트 원 (현재 모드 기준, 시나리오·강도에서 도출)
-    var heat = KJ.computeOverlapHeat(KJ.scenarioById(currentState.sc), mode, currentState.x);
+    // 배경 축선 히트 원 (실행 시점 설정 기준 — 이후 컨트롤 변경과 무관하게 재생 데이터와 정합)
+    var cfg = data.runCfg;
+    var heat = KJ.computeOverlapHeat(KJ.scenarioById(cfg.sc), mode, cfg.x);
     els = { threatEls: {}, nodeEls: {}, heatEls: {} };
     heat.axes.forEach(function (a) {
       var ax = KJ.AXES[a.axis];
@@ -311,6 +325,11 @@
 
     // 노드 라이브 링(재고/용량 비율) + 대기열 막대
     var queueHtml = [];
+    // 시계열 절삭 경고 표출 (리뷰 발견 2: 절삭 시 이후 시각의 재고가 stale — 숨기지 않음)
+    if (data.nodeSeriesTruncated) {
+      queueHtml.push('<div class="bn-item bn-sev2" style="grid-column:1/-1">⚠️ 노드 시계열 표본 상한 도달 — ' +
+        '절삭 이후 시각의 재고 표시가 실제보다 오래된 값일 수 있습니다.</div>');
+    }
     Object.keys(data.nodeMeta).forEach(function (id) {
       var meta = data.nodeMeta[id];
       var n = countAt(data.nodeSeries[id], t);
@@ -332,10 +351,6 @@
       );
     });
     el('pb-queues').innerHTML = queueHtml.join('');
-
-    // 재생 커서(간트) 위치
-    var cursor = el('pb-gantt-cursor');
-    if (cursor && data.dur > 0) cursor.style.left = (t / data.dur * 100).toFixed(2) + '%';
 
     updateTimeLabel();
   }
@@ -388,15 +403,19 @@
     }).slice(0, 60);
 
     var rows = list.map(function (th) {
-      var total = (th.exitT != null ? th.exitT : th.spawnT + th.dwellSec) - th.spawnT;
+      var endT = th.exitT != null ? th.exitT : th.spawnT + th.dwellSec;
+      var total = endT - th.spawnT;
       var segs = [];
       for (var i = 1; i < th.stages.length; i++) {
         var prev = th.stages[i - 1], curr = th.stages[i];
         var cat = categoryOf(curr.name);
-        var w = total > 0 ? (curr.t - prev.t) / total * 100 : 0;
+        // 방어적 클램프: 단계 시각을 [spawnT, endT]로 제한 (엔진의 exitT 이후 _mark 차단과 이중 안전장치)
+        var t1 = Math.min(Math.max(prev.t, th.spawnT), endT);
+        var t2 = Math.min(Math.max(curr.t, th.spawnT), endT);
+        var w = total > 0 ? Math.max(0, t2 - t1) / total * 100 : 0;
         segs.push('<div class="pb-seg" style="width:' + w.toFixed(2) + '%;background:' +
           (CAT_COLOR[cat] || '#555') + '" title="' + esc(CAT_LABEL[cat] || curr.name) + ' ' +
-          (curr.t - prev.t).toFixed(1) + 's"></div>');
+          (t2 - t1).toFixed(1) + 's"></div>');
       }
       var badge = th.outcome === 'killed' ? '<span class="badge badge-ok">격추</span>' :
         (th.outcome && th.outcome.indexOf('leaked') === 0 ? '<span class="badge badge-bad">누수</span>' :
@@ -407,8 +426,8 @@
         '<div class="pb-gantt-total">' + total.toFixed(0) + 's</div></div>';
     }).join('');
 
-    el('pb-gantt').innerHTML =
-      '<div class="pb-gantt-wrap"><div id="pb-gantt-cursor" class="pb-gantt-cursor"></div>' + rows + '</div>';
+    // 참고: 전역 재생 커서는 각 행이 자기 지속시간으로 정규화되어 있어 의미가 없으므로 제거 (리뷰 발견 6)
+    el('pb-gantt').innerHTML = '<div class="pb-gantt-wrap">' + rows + '</div>';
     el('pb-gantt').querySelectorAll('.pb-gantt-row').forEach(function (row) {
       row.addEventListener('click', function () {
         pb.selected = row.dataset.tid;
@@ -470,9 +489,10 @@
 
   // ── 히트맵 (As-Is ↔ To-Be 비교, 축선별) ──
   function renderHeatmap() {
-    var scenario = KJ.scenarioById(currentState.sc);
-    var a = KJ.computeOverlapHeat(scenario, 'asis', currentState.x);
-    var b = KJ.computeOverlapHeat(scenario, 'tobe', currentState.x);
+    var cfg = data.runCfg; // 실행 시점 설정 기준 (리뷰 발견 3)
+    var scenario = KJ.scenarioById(cfg.sc);
+    var a = KJ.computeOverlapHeat(scenario, 'asis', cfg.x);
+    var b = KJ.computeOverlapHeat(scenario, 'tobe', cfg.x);
     var rows = a.axes.map(function (axA, i) {
       var axB = b.axes[i];
       var maxRaw = Math.max(axA.raw, axB.raw, 0.001);
@@ -488,6 +508,13 @@
       '<span class="sw" style="background:#3d8b40"></span>To-Be (막대: 상대 중복교전 위험도)</div>' + rows;
     el('pb-heatmap-note').textContent =
       '중복교전 위험도 = 동일 위협클래스를 교전 가능한 서로 다른 통제계통이 협조지연 내에 ' +
-      '제때 협조할 수 없는 조합 수 × 시나리오 부하(λ). 지도 위 빨간 원(현재 모드)도 동일 값을 표시.';
+      '제때 협조할 수 없는 조합 수 × 시나리오 부하(λ). 지도 위 빨간 원(실행 시점 모드)도 동일 값을 표시.';
   }
+
+  // 사용자 입력 추적: 만진 뒤에는 re-render가 seed/dur 값을 덮어쓰지 않음 (리뷰 발견 4)
+  document.addEventListener('DOMContentLoaded', function () {
+    var seedEl = el('pb-seed'), durEl = el('pb-dur');
+    if (seedEl) seedEl.addEventListener('input', function () { inputTouched.seed = true; });
+    if (durEl) durEl.addEventListener('input', function () { inputTouched.dur = true; });
+  });
 })();

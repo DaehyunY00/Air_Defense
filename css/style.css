@@ -252,10 +252,6 @@ li.chk-fail { background: #43140f; }
 .pb-gantt-bar { flex: 1; display: flex; height: 14px; background: #0d1117; border-radius: 3px; overflow: hidden; }
 .pb-seg { height: 100%; }
 .pb-gantt-total { width: 60px; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
-.pb-gantt-cursor {
-  position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; opacity: 0.6;
-  left: 0; pointer-events: none; z-index: 5;
-}
 
 .pb-heat-legend { display: flex; gap: 12px; font-size: 11px; color: var(--muted); margin-bottom: 8px; }
 .pb-heat-legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 3px; vertical-align: -1px; }

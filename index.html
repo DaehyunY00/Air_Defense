@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>K-JAMDS C2 병목 분석 시뮬레이터 (Phase 1-4)</title>
+  <title>K-JAMDS C2 병목 분석 시뮬레이터 (Phase 1-5)</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="css/style.css">
@@ -17,7 +17,7 @@
 
   <header>
     <h1>K-JAMDS C2 프로세스 병목 분석 시뮬레이터
-      <small>한국형 합동방공체계 As-Is(분절형) ↔ To-Be(통합형) 비교 · Phase 1-4: 스캐폴딩·DES·Monte Carlo·재생시각화</small>
+      <small>한국형 합동방공체계 As-Is(분절형) ↔ To-Be(통합형) 비교 · Phase 1-5: 스캐폴딩·DES·Monte Carlo·재생시각화·V&V</small>
     </h1>
     <span id="header-bn-count" class="bn-count">—</span>
   </header>
@@ -194,6 +194,19 @@
         <div id="mc-tornado" class="tornado"></div>
         <div class="note" id="mc-tornado-note"></div>
       </div>
+
+      <div class="card">
+        <h2>🚨 임계 전환점 — As-Is→To-Be 효과 정량화 (투자정당화 핵심)</h2>
+        <p>위협 강도를 0.5×~3.0× 스윕하며 각 점에서 As-Is/To-Be를 다중복제 실행합니다.
+           As-Is C2 최대 이용률 ρ가 임계(0.9)를 넘는 구간에서 두 체계의 누수율 격차가 어떻게
+           벌어지는지가 K-JAMDS 투자정당화의 정책적 핵심입니다(계획서 Recommendations 6).</p>
+        <div class="des-controls">
+          <button id="mc-transition-run" class="run-btn">▶ 임계 전환점 스윕 실행</button>
+          <span class="note">현재 시나리오 기준, 11점 × 2모드 × 20복제</span>
+        </div>
+        <div id="mc-transition"></div>
+        <div class="note" id="mc-transition-note"></div>
+      </div>
     </section>
 
     <!-- ── 재생·시각화 탭 ── -->
@@ -294,6 +307,7 @@
   <script src="js/analysis/bottleneck.js"></script>
   <script src="js/engine/sim-engine.js"></script>
   <script src="js/analysis/mc-runner.js"></script>
+  <script src="js/analysis/transition.js"></script>
   <script src="js/analysis/overlap-heatmap.js"></script>
   <script src="js/ui/geo.js"></script>
   <script src="js/ui/map-view.js"></script>

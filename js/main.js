@@ -8,6 +8,7 @@
 
   var state = null;
   var analysisCache = null;
+  var prevTab = null;
 
   function analyze() {
     analysisCache = KJ.analyzeScenario(KJ.scenarioById(state.sc), state.mode, state.x);
@@ -21,6 +22,12 @@
   }
 
   function render() {
+    // 재생 탭 이탈 시 rAF 루프 정지 (누수 방지)
+    if (prevTab === 'playback' && state.tab !== 'playback' && KJ.playbackPanel) {
+      KJ.playbackPanel.onLeave();
+    }
+    prevTab = state.tab;
+
     // 탭 전환
     document.querySelectorAll('.tab-btn').forEach(function (b) {
       b.classList.toggle('active', b.dataset.tab === state.tab);
@@ -51,6 +58,8 @@
       KJ.desPanel.render(state);
     } else if (state.tab === 'mc') {
       KJ.mcPanel.render(state);
+    } else if (state.tab === 'playback') {
+      KJ.playbackPanel.render(state);
     } else if (state.tab === 'data') {
       KJ.panels.renderData();
     }
@@ -93,6 +102,25 @@
     });
     document.getElementById('mc-run').addEventListener('click', function () {
       KJ.mcPanel.run(state);
+    });
+
+    // 재생·시각화 패널: 실행/재생/속도/스크러버
+    document.getElementById('pb-run').addEventListener('click', function () {
+      KJ.playbackPanel.run(state);
+    });
+    document.getElementById('pb-play').addEventListener('click', function () {
+      KJ.playbackPanel.togglePlay();
+    });
+    document.getElementById('pb-speed').addEventListener('change', function (e) {
+      KJ.playbackPanel.setSpeed(e.target.value);
+    });
+    var scrub = document.getElementById('pb-scrub');
+    scrub.addEventListener('pointerdown', function () { KJ.playbackPanel.dragStart(); });
+    scrub.addEventListener('pointerup', function () { KJ.playbackPanel.dragEnd(); });
+    scrub.addEventListener('input', function (e) { KJ.playbackPanel.scrub(e.target.value); });
+    scrub.addEventListener('change', function (e) { KJ.playbackPanel.dragEnd(); KJ.playbackPanel.scrub(e.target.value); });
+    document.getElementById('pb-gantt-filter').addEventListener('change', function (e) {
+      KJ.playbackPanel.setGanttFilter(e.target.value);
     });
     KJ.router.onChange(function () {
       state = KJ.router.parse();

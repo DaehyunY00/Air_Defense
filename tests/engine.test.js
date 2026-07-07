@@ -73,5 +73,42 @@ assert(sc2.nodes.filter(function (n) { return n.id.indexOf('SHORAD') === 0 && n.
   assert(r.global.spawned - r.global.killed - r.global.leaked >= 0, 'run' + i + ': 생성 ≥ 격추+누수 (보존)');
 });
 
+console.log('# 흐름 카운터 (Sankey/funnel용, trace 무관 항상 제공)');
+var flowRun = run('sc3', 'asis', 1.5, 21);
+assert(flowRun.flow.spawned >= flowRun.flow.detected, 'flow: 생성 ≥ 탐지');
+assert(flowRun.flow.detected >= flowRun.flow.reachedC2, 'flow: 탐지 ≥ C2도달');
+assert(flowRun.flow.reachedC2 >= flowRun.flow.everEngaged, 'flow: C2도달 ≥ 교전개시(단발집계)');
+assert(flowRun.flow.everEngaged >= flowRun.flow.killed, 'flow: 교전개시 ≥ 격추');
+assert(!flowRun.threatTraces && !flowRun.nodeSeries, 'trace 미지정 시 threatTraces/nodeSeries 미포함(오버헤드 없음)');
+
+console.log('# Phase 4 trace 모드');
+var tr = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1.5, seed: 21, endTimeSec: 1800, trace: true, traceCap: 300 });
+assert(JSON.stringify(tr.global) === JSON.stringify(flowRun.global), 'trace:true 이어도 통계 결과는 trace:false와 완전 동일(부수효과 없음)');
+assert(Array.isArray(tr.threatTraces) && tr.threatTraces.length > 0, 'threatTraces 기록됨 (' + tr.threatTraces.length + '건)');
+assert(tr.threatTraces.length <= 300, 'threatTraces가 traceCap(300) 이내로 절삭');
+assert(tr.threatTraces.every(function (tt) { return tt.stages.length >= 2 && tt.stages[0].name === '생성'; }),
+  '각 trace는 "생성" 단계로 시작하고 최소 2단계 이상 기록');
+assert(tr.threatTraces.every(function (tt) {
+  for (var i = 1; i < tt.stages.length; i++) if (tt.stages[i].t < tt.stages[i - 1].t) return false;
+  return true;
+}), '각 trace의 단계 타임스탬프가 비감소(시간순)');
+assert(tr.threatTraces.filter(function (tt) { return tt.outcome !== null; }).length > 0,
+  '일부 위협은 종결(killed/leaked) outcome 기록');
+assert(Object.keys(tr.nodeSeries).length > 0, 'nodeSeries가 노드별로 기록됨');
+Object.keys(tr.nodeSeries).forEach(function (id) {
+  var series = tr.nodeSeries[id];
+  for (var i = 1; i < series.length; i++) {
+    if (series[i].t < series[i - 1].t) { assert(false, 'nodeSeries[' + id + '] 시간 역행'); return; }
+  }
+  assert(series.every(function (s) { return s.n >= 0; }), 'nodeSeries[' + id + '] 재고 음수 없음');
+});
+// trace 재현성: 동일 seed → 동일 trace (threatTraces/nodeSeries 포함 완전 동일)
+var tr2 = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1.5, seed: 21, endTimeSec: 1800, trace: true, traceCap: 300 });
+assert(JSON.stringify(tr) === JSON.stringify(tr2), 'trace 포함 결과도 동일 seed → 완전 동일 (재현성)');
+// traceCap 절삭 동작: 상한을 낮게 주면 truncated 플래그가 서고, 배열은 상한을 넘지 않음
+var trCap = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 2, seed: 21, endTimeSec: 1800, trace: true, traceCap: 5 });
+assert(trCap.threatTraces.length <= 5, 'traceCap=5: threatTraces ≤ 5건');
+assert(trCap.traceTruncated === true, 'traceCap 초과 시 traceTruncated=true (절삭을 숨기지 않음)');
+
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

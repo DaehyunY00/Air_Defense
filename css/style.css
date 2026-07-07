@@ -219,6 +219,54 @@ li.chk-fail { background: #43140f; }
 .tor-base { position: absolute; top: -2px; height: 22px; width: 2px; background: #cfd8e3; z-index: 2; }
 .tor-swing { font-variant-numeric: tabular-nums; color: #cfe0f2; }
 
+/* ── 재생·시각화 패널 (Phase 4) ── */
+.pb-map-wrap { width: 100%; background: #0b0e12; border-radius: 8px; overflow: hidden; }
+#pb-svg { width: 100%; height: 460px; display: block; }
+.pb-transport { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.pb-transport select {
+  background: var(--panel); color: var(--text); border: 1px solid var(--border);
+  padding: 6px 8px; border-radius: 6px;
+}
+#pb-scrub { flex: 1; accent-color: var(--accent); }
+.pb-time { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted); min-width: 100px; text-align: right; }
+
+.pb-queue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.pb-qcard { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+.pb-qname { font-size: 11px; color: var(--muted); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.pb-funnel-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; font-size: 12px; }
+.pb-funnel-label { width: 90px; flex-shrink: 0; color: var(--muted); }
+.pb-funnel-track { position: relative; flex: 1; height: 18px; background: #0d1117; border-radius: 4px; }
+.pb-funnel-bar { height: 100%; background: linear-gradient(90deg, #2e6fd8, #3d8b40); border-radius: 4px; }
+.pb-funnel-track span { position: absolute; right: 8px; top: 0; line-height: 18px; font-size: 10px; color: #fff; }
+.pb-loss { color: #ff9a8d; font-size: 11px; width: 50px; text-align: right; }
+
+.pb-gantt-wrap { position: relative; }
+.pb-gantt-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 5px; font-size: 11px;
+  padding: 3px 4px; border-radius: 4px; cursor: pointer;
+}
+.pb-gantt-row:hover { background: var(--panel-2); }
+.pb-gantt-row.selected { background: #1c3a52; outline: 1px solid var(--accent); }
+.pb-gantt-label { width: 220px; flex-shrink: 0; }
+.pb-gantt-bar { flex: 1; display: flex; height: 14px; background: #0d1117; border-radius: 3px; overflow: hidden; }
+.pb-seg { height: 100%; }
+.pb-gantt-total { width: 60px; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.pb-gantt-cursor {
+  position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; opacity: 0.6;
+  left: 0; pointer-events: none; z-index: 5;
+}
+
+.pb-heat-legend { display: flex; gap: 12px; font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+.pb-heat-legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 3px; vertical-align: -1px; }
+.pb-heat-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; }
+.pb-heat-label { width: 140px; flex-shrink: 0; }
+.pb-heat-bars { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.pb-heat-bar { height: 8px; border-radius: 3px; }
+.pb-heat-bar.asis { background: #e05545; }
+.pb-heat-bar.tobe { background: #3d8b40; }
+.pb-heat-vals { width: 90px; text-align: right; font-variant-numeric: tabular-nums; font-size: 11px; color: var(--muted); }
+
 /* ── 지도 범례 ── */
 .map-legend {
   position: absolute; bottom: 20px; left: 12px; z-index: 1000;

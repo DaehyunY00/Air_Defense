@@ -113,14 +113,8 @@
     var levelById = {};
     if (analysis) analysis.nodes.forEach(function (r) { levelById[r.id] = r; });
 
-    var BOUNDS = { latMin: 36.3, latMax: 38.5, lonMin: 125.3, lonMax: 130.0 };
     var W = 1000, H = 640;
-    function px(coord) {
-      return [
-        (coord[1] - BOUNDS.lonMin) / (BOUNDS.lonMax - BOUNDS.lonMin) * W,
-        (BOUNDS.latMax - coord[0]) / (BOUNDS.latMax - BOUNDS.latMin) * H
-      ];
-    }
+    function px(coord) { return KJ.geo.project(coord, W, H); }
     var COLOR = { af: '#2e6fd8', army: '#3d8b40', navy: '#00838f', joint: '#7b1fa2' };
     var LINK_COLOR = { datalink: '#2e6fd8', link16: '#2e6fd8', voice: '#d32f2f', broadcast: '#ef6c00' };
     var LINK_DASH = { datalink: '', link16: '6 4', voice: '2 6', broadcast: '1 5' };

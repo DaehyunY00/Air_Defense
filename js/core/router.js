@@ -1,18 +1,19 @@
 /**
- * K-JAMDS 시뮬레이터 — 딥링크 라우터 (Phase 1)
+ * K-JAMDS 시뮬레이터 — 딥링크 라우터 (Phase 1, Phase 4에서 t= 실제 활용)
  *
- * URL 해시 스킴: #tab=<탭ID>&sc=<시나리오ID>&mode=<asis|tobe>&t=<시뮬레이션시각(초)>&open=<노드ID>
- *   - t    : Phase 2 DES 도입 시 사용될 시뮬레이션 시각 (Phase 1에서는 보존만)
+ * URL 해시 스킴: #tab=<탭ID>&sc=<시나리오ID>&mode=<asis|tobe>&t=<재생시각(초)>&open=<노드ID>&x=<강도>&seed=&dur=
+ *   - t    : [playback 탭] 재생 스크러버 시각(초). 다른 탭에서는 보존만 됨
  *   - open : 지도에서 팝업을 열 노드 ID
- *   - x    : 위협 강도 배수 (스킴 확장: intensity)
- * 예: #tab=analysis&sc=sc3&mode=asis&x=1.5&open=MCRC
+ *   - x    : 위협 강도 배수
+ *   - seed/dur : DES·MC 탭 재현용 시드·시뮬레이션 시간
+ * 예: #tab=playback&sc=sc3&mode=asis&x=1.5&t=240
  */
 (function () {
   'use strict';
   window.KJ = window.KJ || {};
 
   var DEFAULTS = { tab: 'map', sc: 'sc1', mode: 'asis', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
-  var VALID_TABS = ['map', 'scenario', 'analysis', 'des', 'mc', 'data'];
+  var VALID_TABS = ['map', 'scenario', 'analysis', 'des', 'mc', 'playback', 'data'];
 
   KJ.router = {
     /** 현재 해시를 상태 객체로 파싱 (유효성 검증 포함) */
@@ -38,7 +39,8 @@
       if (state.mode !== 'asis' && state.mode !== 'tobe') state.mode = DEFAULTS.mode;
       if (!KJ.SCENARIOS.some(function (s) { return s.id === state.sc; })) state.sc = DEFAULTS.sc;
       state.x = Math.min(3, Math.max(0.5, state.x));
-      state.seed = Math.max(0, Math.floor(state.seed)) >>> 0 || DEFAULTS.seed;
+      // seed 0은 유효한 값이므로 보존한다 (과거 `>>> 0 || DEFAULTS.seed`는 0을 12345로 붕괴시켰음).
+      state.seed = Math.max(0, Math.floor(state.seed)) >>> 0;
       state.dur = Math.min(7200, Math.max(60, Math.floor(state.dur)));
       return state;
     },

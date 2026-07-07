@@ -68,10 +68,23 @@
     this.linkStat = {};   // "from>to" -> {count, delaySec, type, kind}
     this.global = {
       spawned: 0, detected: 0, engaged: 0, killed: 0, leaked: 0,
+      reachedC2: 0, everEngaged: 0,
       leakReasons: {}, timeToKill: []
     };
     this.eventCount = 0;
     this.log = [];        // 표본 이벤트 로그(앞부분만 보존)
+
+    // ── Phase 4 재생용 trace (옵트인, 기본 false — 기존 동작·통계에 영향 없음) ──
+    // 항적별 9단계 타임스탬프(Gantt)와 노드별 재고 시계열(대기열 애니메이션)을 기록한다.
+    this.trace = !!cfg.trace;
+    this.traceCap = cfg.traceCap || 300;       // 추적할 위협 수 상한(메모리 보호)
+    this.nodeSeriesCap = cfg.nodeSeriesCap || 20000; // 전 노드 합산 샘플 수 상한
+    this.threatTraces = [];
+    this.nodeSeries = {};
+    this._seriesCount = 0;
+    this.traceTruncated = false;
+    this.nodeSeriesTruncated = false;
+
     this._initNodes();
   }
 
@@ -96,7 +109,22 @@
         arrivals: 0, completions: 0, drops: 0,
         waitAccum: 0, waitCount: 0, maxInSystem: 0
       };
+      if (self.trace) self.nodeSeries[n.id] = [];
     });
+  };
+
+  /** 노드 재고(재계 중+대기) 시계열 샘플 기록 (trace 모드 전용, 상한 초과 시 절삭·플래그) */
+  Simulation.prototype._sample = function (nsId, t) {
+    if (!this.trace) return;
+    if (this._seriesCount >= this.nodeSeriesCap) { this.nodeSeriesTruncated = true; return; }
+    var ns = this.nodeState[nsId];
+    this.nodeSeries[nsId].push({ t: t, n: ns.busy + ns.queue.length });
+    this._seriesCount++;
+  };
+
+  /** 위협 trace에 단계 이벤트 기록 (trace 대상이 아니면 무연산) */
+  Simulation.prototype._mark = function (threat, name, t) {
+    if (threat._trace) threat._trace.stages.push({ name: name, t: t });
   };
 
   // ── 스케줄러 ──
@@ -148,6 +176,7 @@
       if (!job.threat.leakReason) job.threat.leakReason = 'overflow:' + nsId;
     }
     ns.maxInSystem = Math.max(ns.maxInSystem, ns.busy + ns.queue.length);
+    this._sample(nsId, t);
   };
 
   Simulation.prototype._startService = function (ns, t, job, onDone) {
@@ -170,6 +199,7 @@
       this._startService(ns, t, nx.job, nx.onDone);
       break;
     }
+    this._sample(d.nsId, t);
     if (d.onDone) d.onDone(t, d.job);
   };
 
@@ -195,6 +225,7 @@
     if (this.rng.raw() < p) {
       threat.detected = true;
       this.global.detected++;
+      this._mark(threat, '탐지', t);
       this._onDetected(threat, t);
     } else {
       // 항적 소실 → 재획득 시도 (공역 이탈 전까지 반복, EXIT가 상한)
@@ -222,7 +253,10 @@
   Simulation.prototype._onC2Arrive = function (t, d) {
     var self = this, threat = d.threat;
     if (!threat.alive || threat.pipelineDead) return;
+    this._mark(threat, 'C2도착:' + d.c2, t);
     this._nodeArrive(d.c2, t, { threat: threat }, function (tt2, job) {
+      if (!job.threat._countedC2) { job.threat._countedC2 = true; self.global.reachedC2++; }
+      self._mark(job.threat, 'C2처리완료:' + d.c2, tt2);
       self._afterC2(tt2, job.threat, d.c2);
     });
   };
@@ -235,6 +269,7 @@
       var comm = this._link(c2Id, 'JAMDC2', 'report') || this._link(c2Id, 'JAMDC2', null);
       var delay = comm ? comm.delaySec : 0;
       if (comm) this._recordLink(c2Id, 'JAMDC2', comm, 'report');
+      this._mark(threat, '융합경유', t);
       this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'FUSION_ARRIVE', { threat: threat });
       return;
     }
@@ -245,6 +280,8 @@
     var self = this, threat = d.threat;
     if (!threat.alive || threat.pipelineDead) return;
     this._nodeArrive('JAMDC2', t, { threat: threat }, function (tt2, job) {
+      if (!job.threat._countedC2) { job.threat._countedC2 = true; self.global.reachedC2++; }
+      self._mark(job.threat, '융합처리완료', tt2);
       // To-Be는 사전승인 자동교전(approval=null)이 대부분 → 결심 홉 없이 바로 교전
       self._decision(job.threat, tt2, 'JAMDC2');
     });
@@ -265,6 +302,7 @@
       delay += l.comm[self.mode].delaySec;
       self._recordLink(l.from, l.to, l.comm[self.mode], 'coord');
     });
+    this._mark(threat, '협조개시:' + controlC2 + '→' + approvalId, t);
     this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'APPROVE_ARRIVE', { threat: threat, appr: approvalId });
   };
 
@@ -272,6 +310,7 @@
     var self = this, threat = d.threat;
     if (!threat.alive || threat.pipelineDead) return;
     this._nodeArrive(d.appr, t, { threat: threat }, function (tt2, job) {
+      self._mark(job.threat, '승인완료:' + d.appr, tt2);
       self._doEngage(job.threat, tt2);
     });
   };
@@ -297,6 +336,8 @@
     var delay = comm ? comm.delaySec : 0;
     if (comm) this._recordLink(controlC2, shooter.id, comm, 'command');
     this.global.engaged++;
+    if (!threat._countedEngaged) { threat._countedEngaged = true; this.global.everEngaged++; }
+    this._mark(threat, '교전명령#' + (threat.tries + 1) + ':' + shooter.id, t);
     this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: threat, shooter: shooter.id });
   };
 
@@ -318,10 +359,14 @@
       threat.alive = false; threat.killed = true;
       this.global.killed++;
       this.global.timeToKill.push(t - threat.spawnT);
+      this._mark(threat, '격추성공#' + threat.tries, t);
+      if (threat._trace) { threat._trace.exitT = t; threat._trace.outcome = 'killed'; }
     } else if (threat.tries < MAX_ENGAGE_TRIES && t < threat.spawnT + threat.dwellSec) {
+      this._mark(threat, '교전실패#' + threat.tries, t);
       this._doEngage(threat, t);          // 재교전
     } else if (!threat.leakReason) {
       threat.leakReason = 'missed';       // 요격 실패(기회 소진)
+      this._mark(threat, '교전실패#' + threat.tries + '(기회소진)', t);
     }
   };
 
@@ -344,8 +389,20 @@
     var threat = {
       id: entry.type + '#' + this.threatSeq, type: entry.type, axis: entry.axis,
       spawnT: t, dwellSec: tt.dwellSec, alive: true, killed: false,
-      detected: false, pipelineDead: false, tries: 0, leakReason: null
+      detected: false, pipelineDead: false, tries: 0, leakReason: null,
+      _trace: null, _countedC2: false, _countedEngaged: false
     };
+    if (this.trace) {
+      if (this.threatTraces.length < this.traceCap) {
+        threat._trace = {
+          id: threat.id, type: threat.type, axis: threat.axis,
+          spawnT: t, exitT: null, outcome: null, stages: [{ name: '생성', t: t }]
+        };
+        this.threatTraces.push(threat._trace);
+      } else {
+        this.traceTruncated = true;
+      }
+    }
     this.schedule(t + threat.dwellSec, PRI.EXIT, 'EXIT', { threat: threat });
     this._beginDetect(threat, t);
     // 다음 도착 (포아송: 지수 도착간격)
@@ -363,6 +420,11 @@
     this.global.leaked++;
     var reason = threat.leakReason || (threat.detected ? 'timeout' : 'not_detected');
     this.global.leakReasons[reason] = (this.global.leakReasons[reason] || 0) + 1;
+    if (threat._trace) {
+      threat._trace.exitT = t;
+      threat._trace.outcome = 'leaked:' + reason;
+      threat._trace.stages.push({ name: '누수:' + reason, t: t });
+    }
   };
 
   // ── 실행 ──
@@ -421,7 +483,7 @@
       }
       return {
         id: id, name: ns.node.name, category: ns.node.category,
-        c: ns.c, meanSec: ns.mean,
+        c: ns.c, K: ns.K, meanSec: ns.mean,
         arrivals: ns.arrivals, completions: ns.completions, drops: ns.drops,
         rho: rho, Lq: Lq, Wq: Wq, maxInSystem: ns.maxInSystem, level: level
       };
@@ -475,7 +537,7 @@
     var ttk = this.global.timeToKill;
     var meanTTK = ttk.length ? ttk.reduce(function (s, x) { return s + x; }, 0) / ttk.length : 0;
 
-    return {
+    var result = {
       config: {
         scenario: this.scenario.id, mode: this.mode,
         intensity: this.intensity, seed: this.seed, endTimeSec: this.endTime
@@ -485,13 +547,28 @@
       global: {
         spawned: this.global.spawned, detected: this.global.detected,
         engaged: this.global.engaged, killed: this.global.killed, leaked: this.global.leaked,
+        reachedC2: this.global.reachedC2, everEngaged: this.global.everEngaged,
         leakReasons: this.global.leakReasons,
         killRate: this.global.spawned ? this.global.killed / this.global.spawned : 0,
         leakRate: this.global.spawned ? this.global.leaked / this.global.spawned : 0,
         meanTimeToKillSec: meanTTK
       },
+      // 단계별 흐름 카운트 (Sankey/funnel용) — trace 없이도 항상 제공(집계 카운터라 저비용)
+      flow: {
+        spawned: this.global.spawned, detected: this.global.detected,
+        reachedC2: this.global.reachedC2, everEngaged: this.global.everEngaged,
+        killed: this.global.killed, leaked: this.global.leaked,
+        leakReasons: this.global.leakReasons
+      },
       logSample: this.log.slice(0, 40)
     };
+    if (this.trace) {
+      result.threatTraces = this.threatTraces;
+      result.nodeSeries = this.nodeSeries;
+      result.traceTruncated = this.traceTruncated;
+      result.nodeSeriesTruncated = this.nodeSeriesTruncated;
+    }
+    return result;
   };
 
   /** srcId → targetId coord 링크 최단경로(BFS, 방향성 존중). 도달 불가면 null */

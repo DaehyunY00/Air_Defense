@@ -82,7 +82,8 @@
 
     scenario.mix.forEach(function (entry) {
       var threat = KJ.threatType(entry.type);
-      var lam = entry.ratePerMin * intensity;
+      // burst 항목은 equivRatePerMin 개념값으로 정상상태 근사 (KJ.entryRate)
+      var lam = KJ.entryRate(entry) * intensity;
       var dup = dupFactor(threat, mode);
 
       // 1) 탐지 — 축선·위협클래스에 맞는 센서 선별

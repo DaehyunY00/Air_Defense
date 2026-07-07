@@ -1,7 +1,7 @@
 /**
  * K-JAMDS 시뮬레이터 — 공용 위경도→SVG 좌표 투영 (Phase 4)
  * 등장방형(equirectangular) 근사 투영. Leaflet 부재 시 SVG 개념도(map-view.js)와
- * 재생·시각화 탭(playback-panel.js)이 동일 투영을 공유해 두 뷰의 좌표가 일치하게 한다.
+ * 폐쇄망 대체 SVG 개념도가 이 투영을 사용한다 (Leaflet 부재 시 graceful degradation).
  */
 (function () {
   'use strict';

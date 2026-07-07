@@ -22,28 +22,6 @@
   var KIND_ICON = { node: '⬛', link: '🔗', gap: '⚠️' };
 
   KJ.panels = {
-    /** 시나리오 탭: 시나리오 카드 + 위협 구성 */
-    renderScenario: function (state) {
-      var html = KJ.SCENARIOS.map(function (sc) {
-        var active = sc.id === state.sc;
-        var rows = sc.mix.map(function (m) {
-          var t = KJ.threatType(m.type);
-          return '<tr><td>' + esc(t.name) + '</td><td>' + esc(m.axis) +
-            '</td><td>' + m.ratePerMin.toFixed(2) + '</td></tr>';
-        }).join('');
-        return '<div class="card scenario-card' + (active ? ' active' : '') +
-          '" data-sc="' + sc.id + '">' +
-          '<h3>' + esc(sc.name) + '</h3>' +
-          '<p>' + esc(sc.description) + '</p>' +
-          '<table class="mini"><thead><tr><th>위협</th><th>축선</th><th>λ (건/분)</th></tr></thead>' +
-          '<tbody>' + rows + '</tbody></table>' +
-          '<div class="basis">근거: ' + esc(sc.basis) + '</div>' +
-          (active ? '<div class="active-tag">선택됨</div>' : '') +
-          '</div>';
-      }).join('');
-      el('scenario-cards').innerHTML = html;
-    },
-
     /** 병목 분석 탭: 분석 결과 전체 렌더 */
     renderAnalysis: function (state, analysis) {
       var sc = KJ.scenarioById(state.sc);
@@ -118,6 +96,7 @@
       el('analysis-note').textContent =
         '※ Phase 1 정상상태 M/M/c(Erlang-C) 해석적 근사입니다. 타임라인은 대기시간을 제외한 ' +
         '경로 고정지연 합이며, Phase 2(DES)·Phase 3(Monte Carlo)에서 확률분포 기반으로 정밀화됩니다.';
+      if (KJ.tableSort) KJ.tableSort.attachAll(el('panel-analysis')); // 숫자열 헤더 우측정렬 동기화
     },
 
     /** 근거자료 탭: 제약 어서션 + 파라미터 문서 링크 */
@@ -134,13 +113,18 @@
         if (n.queue && n.queue.paramRef) refs.push(n.queue.paramRef);
         if (n.detectProb && n.detectProb.paramRef) refs.push(n.detectProb.paramRef);
         if (n.engage && n.engage.pk && n.engage.pk.paramRef) refs.push(n.engage.pk.paramRef);
+        if (n.rangeRef) refs.push(n.rangeRef);
         (n.constraintRefs || []).forEach(function (r) { refs.push(r); });
+        var km = n.category === 'sensor' ? n.rangeKm
+          : (n.engage ? n.engage.rangeKm : null);
         return '<tr><td>' + esc(n.id) + '</td><td>' + esc(n.name) + '</td>' +
           '<td>' + n.category + '</td>' +
           '<td>' + (n.modes ? n.modes.join(',') : 'asis, tobe') + '</td>' +
+          '<td class="num">' + (km ? '≈' + km + 'km' : '—') + '</td>' +
           '<td class="refs">' + refs.map(esc).join('<br>') + '</td></tr>';
       }).join('');
       el('inventory-body').innerHTML = nodeRows;
+      if (KJ.tableSort) KJ.tableSort.attachAll(el('panel-data'));
     }
   };
 })();

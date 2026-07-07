@@ -1,6 +1,9 @@
 /**
- * K-JAMDS 시뮬레이터 — 부트스트랩·상태 관리 (Phase 1)
- * 상태 단일원천: 딥링크 해시(#tab=&sc=&mode=&t=&open=&x=) ↔ UI 동기화.
+ * K-JAMDS 시뮬레이터 — 부트스트랩·상태 관리
+ * 상태 단일원천: 딥링크 해시(#tab=&sc=&mode=&x=&seed=&dur=) ↔ UI 동기화.
+ *
+ * 탭 구조(개편): [시뮬레이션(지도·실행·결과창)] [병목 분석(해석)] [Monte Carlo] [근거자료].
+ * 체계 모드는 단일 토글 스위치(off=As-Is 분절형, on=To-Be 통합형)로 단순화.
  */
 (function () {
   'use strict';
@@ -22,9 +25,9 @@
   }
 
   function render() {
-    // 재생 탭 이탈 시 rAF 루프 정지 (누수 방지)
-    if (prevTab === 'playback' && state.tab !== 'playback' && KJ.playbackPanel) {
-      KJ.playbackPanel.onLeave();
+    // 시뮬레이션 탭 이탈 시 애니메이션 루프 정지 (rAF 누수 방지)
+    if (prevTab === 'sim' && state.tab !== 'sim' && KJ.simView) {
+      KJ.simView.onLeave();
     }
     prevTab = state.tab;
 
@@ -38,33 +41,27 @@
 
     // 공통 컨트롤 동기화
     document.getElementById('scenario-select').value = state.sc;
-    document.querySelectorAll('.mode-btn').forEach(function (b) {
-      b.classList.toggle('active', b.dataset.mode === state.mode);
-    });
+    var sw = document.getElementById('mode-switch');
+    sw.checked = state.mode === 'tobe';
+    document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
     var slider = document.getElementById('intensity-slider');
     slider.value = state.x;
     document.getElementById('intensity-value').textContent = '×' + Number(state.x).toFixed(1);
 
     var analysis = analyze();
 
-    if (state.tab === 'map') {
+    if (state.tab === 'sim') {
       KJ.mapView.invalidateSize();
-      KJ.mapView.render(state, analysis);
-    } else if (state.tab === 'scenario') {
-      KJ.panels.renderScenario(state);
+      KJ.simView.render(state, analysis);
     } else if (state.tab === 'analysis') {
       KJ.panels.renderAnalysis(state, analysis);
-    } else if (state.tab === 'des') {
-      KJ.desPanel.render(state);
     } else if (state.tab === 'mc') {
       KJ.mcPanel.render(state);
-    } else if (state.tab === 'playback') {
-      KJ.playbackPanel.render(state);
     } else if (state.tab === 'data') {
       KJ.panels.renderData();
     }
 
-    // 헤더 요약 (전 탭 공통): 도출된 병목 개수
+    // 헤더 요약 (전 탭 공통): 도출된 병목 개수 (정상상태 해석 기준)
     var n = analysis.bottlenecks.length;
     var summary = document.getElementById('header-bn-count');
     summary.textContent = n > 0 ? '도출된 병목 ' + n + '건' : '병목 없음';
@@ -75,8 +72,9 @@
     document.querySelectorAll('.tab-btn').forEach(function (b) {
       b.addEventListener('click', function () { setState({ tab: b.dataset.tab, open: '' }); });
     });
-    document.querySelectorAll('.mode-btn').forEach(function (b) {
-      b.addEventListener('click', function () { setState({ mode: b.dataset.mode }); });
+    // 체계 모드: 단일 토글 스위치 (off=As-Is, on=To-Be)
+    document.getElementById('mode-switch').addEventListener('change', function (e) {
+      setState({ mode: e.target.checked ? 'tobe' : 'asis' });
     });
     document.getElementById('scenario-select').addEventListener('change', function (e) {
       setState({ sc: e.target.value });
@@ -84,44 +82,43 @@
     document.getElementById('intensity-slider').addEventListener('input', function (e) {
       setState({ x: parseFloat(e.target.value) });
     });
-    document.getElementById('scenario-cards') &&
-      document.getElementById('scenario-cards').addEventListener('click', function (e) {
-        var card = e.target.closest('.scenario-card');
-        if (card) setState({ sc: card.dataset.sc });
-      });
 
-    // DES 패널: seed/dur 입력 → 상태 반영, 실행 버튼
-    document.getElementById('des-seed').addEventListener('change', function (e) {
+    // 시뮬레이션 패널: seed/dur → 상태 반영, 실행·결과·속도·링 토글
+    document.getElementById('sim-seed').addEventListener('change', function (e) {
       setState({ seed: Math.max(0, Math.floor(parseFloat(e.target.value) || 0)) });
     });
-    document.getElementById('des-dur').addEventListener('change', function (e) {
+    document.getElementById('sim-dur').addEventListener('change', function (e) {
       setState({ dur: Math.min(7200, Math.max(60, Math.floor(parseFloat(e.target.value) || 1800))) });
     });
-    document.getElementById('des-run').addEventListener('click', function () {
-      KJ.desPanel.run(state);
+    document.getElementById('sim-run').addEventListener('click', function () {
+      KJ.simView.start(state);
     });
+    document.getElementById('sim-play').addEventListener('click', function () {
+      KJ.simView.togglePlay();
+    });
+    document.getElementById('sim-results').addEventListener('click', function () {
+      KJ.simView.showResults();
+    });
+    document.getElementById('sim-speed').addEventListener('change', function (e) {
+      KJ.simView.setSpeed(e.target.value);
+    });
+    document.getElementById('toggle-rings').addEventListener('change', function (e) {
+      KJ.simView.toggleRings(e.target.checked);
+    });
+
+    // 결과 모달 닫기 (배경 클릭 포함)
+    document.getElementById('modal-close').addEventListener('click', function () {
+      KJ.simView.hideResults();
+    });
+    document.getElementById('result-modal').addEventListener('click', function (e) {
+      if (e.target === e.currentTarget) KJ.simView.hideResults();
+    });
+
+    // Monte Carlo 패널 (임계 전환점 버튼은 mc-panel.js가 자체 바인딩)
     document.getElementById('mc-run').addEventListener('click', function () {
       KJ.mcPanel.run(state);
     });
 
-    // 재생·시각화 패널: 실행/재생/속도/스크러버
-    document.getElementById('pb-run').addEventListener('click', function () {
-      KJ.playbackPanel.run(state);
-    });
-    document.getElementById('pb-play').addEventListener('click', function () {
-      KJ.playbackPanel.togglePlay();
-    });
-    document.getElementById('pb-speed').addEventListener('change', function (e) {
-      KJ.playbackPanel.setSpeed(e.target.value);
-    });
-    var scrub = document.getElementById('pb-scrub');
-    scrub.addEventListener('pointerdown', function () { KJ.playbackPanel.dragStart(); });
-    scrub.addEventListener('pointerup', function () { KJ.playbackPanel.dragEnd(); });
-    scrub.addEventListener('input', function (e) { KJ.playbackPanel.scrub(e.target.value); });
-    scrub.addEventListener('change', function (e) { KJ.playbackPanel.dragEnd(); KJ.playbackPanel.scrub(e.target.value); });
-    document.getElementById('pb-gantt-filter').addEventListener('change', function (e) {
-      KJ.playbackPanel.setGanttFilter(e.target.value);
-    });
     KJ.router.onChange(function () {
       state = KJ.router.parse();
       render();
@@ -131,7 +128,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     state = KJ.router.parse();
 
-    // 시나리오 셀렉트 옵션 채우기
+    // 시나리오 셀렉트 옵션 채우기 (KJADS 3대 문제 상황)
     var sel = document.getElementById('scenario-select');
     sel.innerHTML = KJ.SCENARIOS.map(function (s) {
       return '<option value="' + s.id + '">' + s.name + '</option>';

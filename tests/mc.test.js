@@ -96,10 +96,12 @@ assert(intensityRow.high > intensityRow.low, '위협 강도↑ → 누수율↑ 
 var serviceRow = sw.rows.find(function (r) { return r.factor === 'service'; });
 assert(serviceRow.high > serviceRow.low, '처리시간↑ → 누수율↑ (단조 정합)');
 // 포화(SC3)에서 탐지확률은 병목이 아니므로 영향 미미 — 그 자체가 유의미한 인사이트.
-// 탐지가 제약인 SC1(무인기, detectFactor 0.4, 비포화)에서만 탐지↑→누수↓ 단조성 검증.
-var swDetect = KJ.sensitivitySweep({ scenario: KJ.scenarioById('sc1'), mode: 'asis', intensity: 1, seed: 7, endTimeSec: 1800 }, { reps: 60, deltaPct: 0.2 });
-var detectRow = swDetect.rows.find(function (r) { return r.factor === 'detect'; });
-assert(detectRow.high < detectRow.low, 'SC1(탐지제약): 탐지확률↑ → 누수율↓ (단조 정합)');
+// SC2(무인기 동시 남파)의 결정적 제약은 요격확률이다: uav 체공 900s ≫ 스캔 10s라 탐지는
+// 사실상 확실하고(배수는 탐지 '시점'만 이동), 2022.12.26 실패의 본질인 저요격확률
+// (pk 삼각 0.1/0.3/0.5)이 누수를 지배한다 — pk↑→누수↓ 단조성으로 검증.
+var swU = KJ.sensitivitySweep({ scenario: KJ.scenarioById('sc2'), mode: 'asis', intensity: 1, seed: 7, endTimeSec: 1800 }, { reps: 60, deltaPct: 0.2 });
+var pkRow = swU.rows.find(function (r) { return r.factor === 'pk'; });
+assert(pkRow.high < pkRow.low, 'SC2(무인기): 요격확률↑ → 누수율↓ (단조 정합 — 격추실패가 지배 제약)');
 var swS3Detect = sw.rows.find(function (r) { return r.factor === 'detect'; });
 assert(swS3Detect.swing < serviceRow.swing, 'SC3(포화): 탐지확률 영향 < 처리시간 영향 (병목은 처리용량)');
 

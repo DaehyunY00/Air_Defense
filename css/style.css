@@ -53,12 +53,22 @@ header h1 small { color: var(--muted); font-weight: 400; font-size: 11px; displa
   background: var(--panel); color: var(--text); border: 1px solid var(--border);
   padding: 5px 8px; border-radius: 6px; max-width: 340px;
 }
-.mode-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-.mode-btn {
-  background: var(--panel); color: var(--muted); border: none;
-  padding: 6px 12px; cursor: pointer; font-size: 12px;
+/* 체계 모드 단일 토글 스위치 (off=As-Is 분절형, on=To-Be 통합형) */
+.mode-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.mode-switch input { display: none; }
+.mode-switch .ms-side { font-size: 12px; color: var(--muted); transition: color .15s; }
+.mode-switch:not(.tobe) .ms-asis { color: var(--text); font-weight: 700; }
+.mode-switch.tobe .ms-tobe { color: #7dd982; font-weight: 700; }
+.ms-track {
+  position: relative; width: 42px; height: 20px; border-radius: 10px;
+  background: var(--panel); border: 1px solid var(--border); transition: background .15s;
 }
-.mode-btn.active { background: var(--accent); color: #fff; font-weight: 700; }
+.mode-switch.tobe .ms-track { background: #1d4022; border-color: #2f6b36; }
+.ms-knob {
+  position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); transition: left .15s, background .15s;
+}
+.mode-switch.tobe .ms-knob { left: 24px; background: #3d8b40; }
 #intensity-slider { width: 140px; accent-color: var(--accent); }
 #intensity-value { font-weight: 700; min-width: 36px; display: inline-block; }
 
@@ -73,8 +83,139 @@ nav.tabs { display: flex; gap: 2px; background: var(--panel); padding: 0 16px; b
 main { flex: 1; position: relative; overflow: hidden; }
 .tab-panel { display: none; height: 100%; overflow-y: auto; padding: 16px; }
 .tab-panel.active { display: block; }
-#panel-map { padding: 0; }
+#panel-sim { padding: 0; position: relative; }
 #map { height: 100%; background: #0b0e12; }
+
+/* ── 시뮬레이션 HUD (지도 오버레이) ── */
+.sim-hud {
+  position: absolute; top: 12px; right: 12px; z-index: 1000; width: 320px;
+  background: rgba(16, 20, 26, .94); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px; font-size: 12px;
+}
+.sim-blurb { margin-bottom: 8px; line-height: 1.5; }
+.sim-blurb .sim-desc { color: var(--muted); font-size: 11px; margin-top: 4px; max-height: 84px; overflow-y: auto; }
+.sim-problem {
+  font-size: 10px; background: #4a3200; color: #ffd27d;
+  padding: 1px 7px; border-radius: 9px; margin-left: 4px; vertical-align: 1px;
+}
+.sim-hud-controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.sim-hud-controls label { color: var(--muted); font-size: 11px; }
+.sim-hud-controls input, .sim-hud-controls select {
+  background: var(--panel); color: var(--text); border: 1px solid var(--border);
+  padding: 4px 6px; border-radius: 5px; width: 76px; margin-left: 3px; font-size: 11px;
+}
+.sim-hud-controls select { width: 62px; }
+.sim-hud-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+.sim-hud-actions .run-btn { flex: 1; padding: 7px 8px; font-size: 12px; }
+.run-btn.ghost { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); }
+.run-btn.ghost:hover { background: #2a3440; }
+.run-btn:disabled { opacity: .45; cursor: not-allowed; }
+.sim-progress { height: 6px; background: #0d1117; border-radius: 3px; overflow: hidden; }
+#sim-progress-bar { height: 100%; width: 0; background: linear-gradient(90deg, #2e6fd8, #3d8b40); transition: width .1s linear; }
+.sim-clock-row { display: flex; justify-content: space-between; margin-top: 5px; }
+#sim-clock { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 11px; }
+.sim-status { color: #aecbeb; font-size: 11px; text-align: right; max-width: 200px; }
+.lg-ring { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: -2px; }
+.lg-ring.sensor { border: 1px dashed #2e6fd8; }
+.lg-ring.shooter { border: 1px solid #3d8b40; }
+
+/* ── 위협 항적 로그 (지도 좌상단) ── */
+.threat-log {
+  position: absolute; top: 12px; left: 56px; z-index: 1000; width: 320px;
+  background: rgba(16, 20, 26, .94); border: 1px solid var(--border);
+  border-radius: 10px; font-size: 11px; max-height: 52vh;
+  display: flex; flex-direction: column;
+}
+.threat-log.hidden { display: none; }
+.tlog-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; border-bottom: 1px solid var(--border);
+  color: #aecbeb; font-weight: 700; flex-shrink: 0;
+}
+.tlog-head button {
+  background: none; border: none; color: var(--muted); cursor: pointer; font-size: 12px;
+}
+.tlog-body { overflow-y: auto; padding: 4px 6px; }
+.tlog-row { border-bottom: 1px solid #222b38; }
+.tlog-row:last-child { border-bottom: none; }
+.tlog-hdr {
+  display: flex; align-items: center; gap: 6px; padding: 4px 4px;
+  cursor: pointer; border-radius: 4px;
+}
+.tlog-hdr:hover { background: var(--panel-2); }
+.tlog-row.open .tlog-hdr { background: #1c3a52; }
+.tlog-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; border: 1px solid #0006; }
+.tlog-name { flex-shrink: 0; min-width: 96px; color: var(--text); }
+.tlog-name i { color: var(--muted); font-style: normal; font-size: 10px; }
+.tlog-stage {
+  flex: 1; color: #ffd27d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tlog-badge { flex-shrink: 0; }
+.tlog-stages { list-style: none; margin: 2px 0 6px 18px; padding: 0; }
+.tlog-stages li { padding: 1px 0; font-variant-numeric: tabular-nums; }
+li.tlog-done { color: var(--muted); }
+li.tlog-current { color: #ffd27d; font-weight: 700; }
+li.tlog-future { color: #4a5666; }
+
+/* ── As-Is ↔ To-Be 좌·우 직관 비교 블록 ── */
+.vs-block { margin: 4px 0 8px; }
+.vs-headrow, .vs-row {
+  display: grid; grid-template-columns: 60px 1fr 150px 1fr 60px;
+  align-items: center; gap: 8px;
+}
+.vs-headrow { margin-bottom: 8px; font-size: 12px; font-weight: 700; }
+.vs-side.asis { grid-column: 1 / 3; text-align: left; color: #ff9a8d; }
+.vs-side-mid { grid-column: 3; text-align: center; color: var(--muted); font-weight: 400; }
+.vs-side.tobe { grid-column: 4 / 6; text-align: right; color: #7dd982; }
+.vs-row { margin-bottom: 10px; }
+.vs-val { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; }
+.vs-val.asis { text-align: right; color: #ff9a8d; }
+.vs-val.tobe { text-align: left; color: #7dd982; }
+.vs-track { height: 14px; background: #0d1117; border-radius: 4px; overflow: hidden; display: flex; }
+.vs-track.l { justify-content: flex-end; }
+.vs-fill { height: 100%; border-radius: 4px; }
+.vs-fill.asis { background: linear-gradient(90deg, #7a2018, #e05545); }
+.vs-fill.tobe { background: linear-gradient(90deg, #3d8b40, #1d5a22); }
+.vs-mid { text-align: center; }
+.vs-metric { font-size: 12px; color: var(--text); }
+.vs-delta { font-size: 11px; font-weight: 700; margin-top: 2px; }
+.vs-delta.vs-good { color: #7dd982; }
+.vs-delta.vs-bad { color: #ff9a8d; }
+.vs-delta.vs-flat { color: var(--muted); }
+
+/* ── 표 열 정렬 ── */
+th.num { text-align: right; }
+th.th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
+th.th-sort:hover { color: var(--text); }
+th.th-sort::after { content: ' ↕'; opacity: .35; font-size: 9px; }
+th.th-sort.sorted-asc::after { content: ' ▲'; opacity: 1; color: var(--accent); }
+th.th-sort.sorted-desc::after { content: ' ▼'; opacity: 1; color: var(--accent); }
+
+/* ── 결과 모달 ── */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 2000; background: rgba(5, 8, 12, .72);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.modal-backdrop.hidden { display: none; }
+.modal {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  width: min(880px, 96vw); max-height: 88vh; display: flex; flex-direction: column;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, .55);
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+}
+.modal-head h2 { font-size: 15px; color: #aecbeb; }
+.modal-head button {
+  background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer;
+  padding: 4px 8px; border-radius: 6px;
+}
+.modal-head button:hover { background: var(--panel-2); color: var(--text); }
+.modal-body { padding: 14px 18px; overflow-y: auto; }
+.modal-body h3 { font-size: 13px; color: #aecbeb; margin: 16px 0 8px; }
+.modal-body h3:first-of-type { margin-top: 8px; }
+.modal-bn { list-style: none; }
 
 /* ── 지도 노드 아이콘 ── */
 .node-icon { background: none; border: none; }

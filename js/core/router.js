@@ -12,8 +12,10 @@
   'use strict';
   window.KJ = window.KJ || {};
 
-  var DEFAULTS = { tab: 'map', sc: 'sc1', mode: 'asis', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
-  var VALID_TABS = ['map', 'scenario', 'analysis', 'des', 'mc', 'playback', 'data'];
+  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
+  var VALID_TABS = ['sim', 'analysis', 'mc', 'data'];
+  // 구 딥링크 호환: 지도/시나리오/DES/재생 탭은 통합 [시뮬레이션] 탭으로 흡수
+  var LEGACY_TAB = { map: 'sim', scenario: 'sim', des: 'sim', playback: 'sim' };
 
   KJ.router = {
     /** 현재 해시를 상태 객체로 파싱 (유효성 검증 포함) */
@@ -35,6 +37,7 @@
           state[k] = v;
         }
       });
+      if (LEGACY_TAB[state.tab]) state.tab = LEGACY_TAB[state.tab];
       if (VALID_TABS.indexOf(state.tab) === -1) state.tab = DEFAULTS.tab;
       if (state.mode !== 'asis' && state.mode !== 'tobe') state.mode = DEFAULTS.mode;
       if (!KJ.SCENARIOS.some(function (s) { return s.id === state.sc; })) state.sc = DEFAULTS.sc;

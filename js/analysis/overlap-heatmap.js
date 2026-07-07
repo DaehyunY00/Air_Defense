@@ -86,7 +86,7 @@
           }
         }
         if (riskPairs > 0) {
-          var weight = entry.ratePerMin * intensity;
+          var weight = KJ.entryRate(entry) * intensity; // burst 항목은 등가 λ 개념값
           raw += weight * riskPairs;
           details.push({
             type: entry.type, typeName: tt.name,

@@ -40,7 +40,7 @@
     // ─── 센서 → C2 항적보고 (육군 계열: ADC2A/KVMF, 음성) ───
     { from: 'LLR-1C', to: 'AOC-1C', kind: 'report', comm: { asis: KVMF, tobe: DL_FAST } },
     { from: 'LLR-CD', to: 'JAOC-CD', kind: 'report', comm: { asis: KVMF, tobe: DL_FAST } },
-    { from: 'JASP-W', to: 'AOC-1C', kind: 'report', comm: { asis: VOICE, tobe: KVMF } },
+    { from: 'ADC2A-W', to: 'AOC-1C', kind: 'report', comm: { asis: VOICE, tobe: KVMF } },
 
     // ─── C2 ↔ C2 협조 (As-Is 병목의 핵심: 육↔공 음성 협조) ───
     { from: 'AOC-1C', to: 'MCRC', kind: 'coord', comm: { asis: VOICE, tobe: DL_FAST },

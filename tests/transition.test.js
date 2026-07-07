@@ -42,9 +42,9 @@ var rhoMono = r.points.every(function (p, i) {
 });
 assert(rhoMono, 'As-Is C2 최대 ρ 강도에 대해 약단조 증가');
 
-console.log('# 대조군: 저강도 기준선(SC5)은 임계 미돌파');
-var r5 = KJ.analyzeTransition(KJ.scenarioById('sc5'), { reps: 20, seed: 12345 });
-assert(r5.rho09CrossX === null, 'SC5: 전 스윕 구간에서 ρ<0.9 (전환점은 시나리오의 함수, 고정 아님)');
+console.log('# 대조군: 저부하 시나리오(SC1 경계 침투)는 임계 미돌파');
+var r5 = KJ.analyzeTransition(KJ.scenarioById('sc1'), { reps: 20, seed: 12345 });
+assert(r5.rho09CrossX === null, 'SC1: 전 스윕 구간에서 ρ<0.9 (전환점은 시나리오의 함수, 고정 아님)');
 
 console.log('# 성능');
 var t0 = Date.now();

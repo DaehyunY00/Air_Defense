@@ -95,13 +95,14 @@
 
     // ══════════════════════ 센서 (관제부대 포함) ══════════════════════
     {
-      id: 'JASP-W', name: '합동대공감시소 (서부축)',
-      category: 'sensor', service: 'joint', echelon: 'tactical',
+      id: 'ADC2A-W', name: 'ADC2A 대공감시 (방공지휘통제경보체계, 서부축)',
+      category: 'sensor', service: 'army', echelon: 'tactical',
       coord: [37.76, 126.78], coordNote: '파주권 도시 수준 개념좌표',
-      role: '육안·광학 관측 기반 대공감시. 저고도 침투 항적 음성보고.',
+      role: '육군 방공지휘통제경보체계(ADC2A) 예하 대공감시. 육안·광학 관측 기반 저고도 침투 항적 보고 — As-Is에서 음성보고 의존.',
       detects: ['uav_small', 'ac_low', 'heli', 'cruise'],
       coverage: ['west', 'seoul'],
-      detectProb: { paramRef: 'SEN-JASP-PD-01' }
+      detectProb: { paramRef: 'SEN-JASP-PD-01' },
+      rangeKm: 15, rangeNote: '육안·광학 관측 가시범위 개념값', rangeRef: 'CVG-ADC2A-W-RNG-01',
     },
     {
       id: 'ACR-E', name: '방공관제레이더 (동부축)',
@@ -110,7 +111,8 @@
       role: '중·고고도 광역 방공관제레이더. MCRC에 항적 자동 전송.',
       detects: ['fighter', 'ac_low', 'cruise', 'heli'],
       coverage: ['east', 'central'],
-      detectProb: { paramRef: 'SEN-ACR-PD-01' }
+      detectProb: { paramRef: 'SEN-ACR-PD-01' },
+      rangeKm: 250, rangeNote: '장거리 방공관제레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-ACR-E-RNG-01',
     },
     {
       id: 'ACR-W', name: '방공관제레이더 (서부축)',
@@ -119,7 +121,8 @@
       role: '중·고고도 광역 방공관제레이더. MCRC에 항적 자동 전송.',
       detects: ['fighter', 'ac_low', 'cruise', 'heli'],
       coverage: ['west', 'seoul'],
-      detectProb: { paramRef: 'SEN-ACR-PD-01' }
+      detectProb: { paramRef: 'SEN-ACR-PD-01' },
+      rangeKm: 250, rangeNote: '장거리 방공관제레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-ACR-W-RNG-01',
     },
     {
       id: 'LAR-C', name: '저고도 탐지레이더 (중부축)',
@@ -128,7 +131,8 @@
       role: '전방(철원권) 저고도 침투 항적 탐지 전용 레이더. 전방축선 담당, 수도권 종심은 미담당.',
       detects: ['uav_small', 'ac_low', 'heli', 'cruise'],
       coverage: ['central'],
-      detectProb: { paramRef: 'SEN-LAR-PD-01' }
+      detectProb: { paramRef: 'SEN-LAR-PD-01' },
+      rangeKm: 40, rangeNote: '저고도 탐지레이더 탐지범위 개념값', rangeRef: 'CVG-LAR-C-RNG-01',
     },
     {
       id: 'LLR-1C', name: '국지방공레이더 (1군단)',
@@ -137,7 +141,8 @@
       role: '군단 국지방공레이더(TPS-880K급 개념). 2022.12.26 무인기 최초 포착 주체. As-Is에서 항적이 국가방공체계에 미통합.',
       detects: ['uav_small', 'ac_low', 'heli'],
       coverage: ['west', 'seoul'],
-      detectProb: { paramRef: 'THR-UAV-RCS-01' }
+      detectProb: { paramRef: 'THR-UAV-RCS-01' },
+      rangeKm: 20, rangeNote: 'TPS-880K급 국지방공레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-LLR-1C-RNG-01',
     },
     {
       id: 'LLR-CD', name: '국지방공레이더 (수방사)',
@@ -146,7 +151,8 @@
       role: '수도권 국지방공레이더. JAOC에 항적 전송.',
       detects: ['uav_small', 'ac_low', 'heli'],
       coverage: ['seoul'],
-      detectProb: { paramRef: 'THR-UAV-RCS-01' }
+      detectProb: { paramRef: 'THR-UAV-RCS-01' },
+      rangeKm: 20, rangeNote: 'TPS-880K급 국지방공레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-LLR-CD-RNG-01',
     },
     {
       id: 'E737', name: 'E-737 항공통제기 (피스아이)',
@@ -155,7 +161,8 @@
       role: '공중조기경보통제기. 광역 하향탐지, Link-16으로 MCRC·KAOC에 항적 전파. 2m급 소형 무인기는 저RCS·지상클러터로 탐지 제한(SEN-E737-PD-01).',
       detects: ['fighter', 'ac_low', 'cruise', 'heli'],
       coverage: ['west', 'central', 'east', 'seoul'],
-      detectProb: { paramRef: 'SEN-E737-PD-01' }
+      detectProb: { paramRef: 'SEN-E737-PD-01' },
+      rangeKm: 370, rangeNote: 'MESA 레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-E737-RNG-01',
     },
     {
       id: 'GPR', name: '탄도탄 감시레이더 (그린파인)',
@@ -164,7 +171,8 @@
       role: '탄도탄 조기경보 전용 레이더. KAMDOC에 탄도탄 항적 전송.',
       detects: ['srbm', 'mrl_large'],
       coverage: ['west', 'central', 'east'],
-      detectProb: { paramRef: 'SEN-GPR-PD-01' }
+      detectProb: { paramRef: 'SEN-GPR-PD-01' },
+      rangeKm: 500, rangeNote: '그린파인 계열 탐지범위 개념값 (공개자료 기반, 보수적)', rangeRef: 'CVG-GPR-RNG-01',
     },
     {
       id: 'AEGIS-E', name: '이지스함 레이더 (동해)',
@@ -173,7 +181,8 @@
       role: 'SPY-1D(V) 레이더. 탄도탄·항공 항적 탐지, Link-16 전파. SM-2 모기지.',
       detects: ['srbm', 'mrl_large', 'fighter', 'cruise'],
       coverage: ['east', 'central'],
-      detectProb: { paramRef: 'SEN-SPY1-PD-01' }
+      detectProb: { paramRef: 'SEN-SPY1-PD-01' },
+      rangeKm: 300, rangeNote: 'SPY-1D(V) 대공 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-AEGIS-E-RNG-01',
     },
     {
       id: 'AEGIS-W', name: '이지스함 레이더 (서해)',
@@ -182,7 +191,8 @@
       role: 'SPY-1D(V) 레이더. 탄도탄·항공 항적 탐지, Link-16 전파. SM-2 모기지.',
       detects: ['srbm', 'mrl_large', 'fighter', 'cruise'],
       coverage: ['west', 'seoul'],
-      detectProb: { paramRef: 'SEN-SPY1-PD-01' }
+      detectProb: { paramRef: 'SEN-SPY1-PD-01' },
+      rangeKm: 300, rangeNote: 'SPY-1D(V) 대공 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-AEGIS-W-RNG-01',
     },
 
     // ══════════════════════ 무기체계 (Shooter) ══════════════════════
@@ -193,7 +203,7 @@
       role: '요격기 긴급출격(스크램블)·초계. 공중 위협 교전. KF-21은 국산 4.5세대 보라매(인도수출형 F-21 아님).',
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
-      engage: { channels: 4, engageTimeSec: 300, pk: { paramRef: 'WPN-FTR-PK-01' } }
+      engage: { rangeKm: 350, channels: 4, engageTimeSec: 300, pk: { paramRef: 'WPN-FTR-PK-01' } }
     },
     {
       id: 'SHORAD-1C', name: '단거리방공무기 (1군단: 신궁·천마·비호·벌컨)',
@@ -202,7 +212,7 @@
       role: '군단 저고도 방공. 제약: KP-SAM(신궁)·천마(K-31)는 탄도탄 요격 불가. 벌컨 유효고도 2km 한계.',
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
-      engage: { channels: 6, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' } },
+      engage: { rangeKm: 7, channels: 6, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' } },
       constraintRefs: ['WPN-SHIN-CON-01', 'C2-VULCAN-CEIL-01']
     },
     {
@@ -212,7 +222,7 @@
       role: '수도권 저고도 방공(신궁·벌컨·드론건 개념). 탄도탄 요격 불가 제약 동일.',
       controlledBy: { asis: ['JAOC-CD'], tobe: ['JAOC-CD'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
-      engage: { channels: 4, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' } },
+      engage: { rangeKm: 7, channels: 4, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' } },
       constraintRefs: ['WPN-SHIN-CON-01']
     },
     {
@@ -222,7 +232,7 @@
       role: '군단 AOC 통제 중거리 방공(개념). 항공기·순항미사일 대응.',
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
-      engage: { channels: 2, engageTimeSec: 90, pk: { paramRef: 'WPN-MSAM2-PK-01' } }
+      engage: { rangeKm: 40, channels: 2, engageTimeSec: 90, pk: { paramRef: 'WPN-MSAM2-PK-01' } }
     },
     {
       id: 'MDU-M', name: '미사일방어부대 (중거리: 천궁-II·PAC-3)',
@@ -231,7 +241,7 @@
       role: '하층 탄도탄 요격(요격고도 15–20km급) 및 항공 위협 대응.',
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: true, ac_low: false, heli: false, cruise: true, uav_small: false, srbm: true, mrl_large: true },
-      engage: { channels: 4, engageTimeSec: 45, pk: { paramRef: 'WPN-MSAM2-PK-01' } }
+      engage: { rangeKm: 40, channels: 4, engageTimeSec: 45, pk: { paramRef: 'WPN-MSAM2-PK-01' } }
     },
     {
       id: 'MDU-L', name: '미사일방어부대 (장거리: L-SAM)',
@@ -240,7 +250,7 @@
       role: '상층 탄도탄 요격(요격고도 40–70km 개념값).',
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: false, ac_low: false, heli: false, cruise: false, uav_small: false, srbm: true, mrl_large: true },
-      engage: { channels: 3, engageTimeSec: 40, pk: { paramRef: 'WPN-LSAM-PK-01' } }
+      engage: { rangeKm: 150, channels: 3, engageTimeSec: 40, pk: { paramRef: 'WPN-LSAM-PK-01' } }
     },
     {
       id: 'SM2-E', name: 'SM-2 (동해 이지스함)',
@@ -249,7 +259,7 @@
       role: '함대공 요격. 항공기·순항미사일 대응(대탄도탄 요격은 모델링 제외).',
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
-      engage: { channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' } }
+      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' } }
     },
     {
       id: 'SM2-W', name: 'SM-2 (서해 이지스함)',
@@ -258,7 +268,7 @@
       role: '함대공 요격. 항공기·순항미사일 대응(대탄도탄 요격은 모델링 제외).',
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
-      engage: { channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' } }
+      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' } }
     }
   ];
 

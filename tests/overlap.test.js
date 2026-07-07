@@ -32,7 +32,7 @@ var hiWest = hi.axes.find(function (a) { return a.axis === 'west'; }).raw;
 assert(Math.abs(hiWest - loWest * 2) < 1e-9, '강도 2배 → west raw 2배 (' + loWest + ' → ' + hiWest + ')');
 
 console.log('# To-Be(JAMDC2 융합) ≤ As-Is (축선별)');
-['sc1', 'sc3', 'sc4'].forEach(function (id) {
+['sc1', 'sc2', 'sc3'].forEach(function (id) {
   var a = heat(id, 'asis', 1), b = heat(id, 'tobe', 1);
   a.axes.forEach(function (axA, i) {
     var axB = b.axes[i];

@@ -1,12 +1,20 @@
 /**
- * K-JAMDS 시뮬레이터 — 시나리오 정의 (Phase 1)
+ * K-JAMDS 시뮬레이터 — 시나리오 정의
+ *
+ * 시나리오는 KJADS 구축안 문서의 "1. 문제점 및 현실태"가 제시한 3가지 문제 상황을
+ * 1:1로 재현한다 (문제 상황 1·2·3 → SC1·SC2·SC3).
  *
  * 병목은 여기서 지정하지 않는다. 시나리오는 위협 도착률(λ)·축선·구성만 정의하고,
- * 병목 노드/링크는 analysis/bottleneck.js 가 [시나리오 부하 × C2 토폴로지 × 모드]로부터
- * 분석적으로 도출한다. λ 단위: 건/분 (포아송 도착 가정, THR-DRONE-ARR-01).
+ * 병목 노드/링크는 analysis/bottleneck.js·engine/sim-engine.js 가
+ * [시나리오 부하 × C2 토폴로지 × 모드]로부터 도출한다.
  *
- * mix: [{ type: 위협클래스, axis: 'west'|'central'|'east'|'seoul', ratePerMin: λ }]
- * UI의 강도 슬라이더(intensity 0.5x~3.0x)가 전체 λ에 곱해진다.
+ * mix 항목 형식:
+ *  - { type, axis, ratePerMin }            : 포아송 연속 도착 스트림 (λ 건/분)
+ *  - { type, axis, burst, atSec, equivRatePerMin } : 일회성 동시 다발 침투
+ *      · burst    : atSec 시점에 동시 발생하는 위협 수 (강도 배수로 반올림 스케일)
+ *      · equivRatePerMin : 해석 모듈(M/M/c 정상상태 근사)용 등가 도착률 개념값
+ *        (burst를 위협 체공창(dwellSec) 수준 시간창에 균등 살포한 근사)
+ * UI의 강도 슬라이더(intensity 0.5x~3.0x)가 전체 λ·burst에 곱해진다.
  */
 (function () {
   'use strict';
@@ -15,61 +23,65 @@
   KJ.SCENARIOS = [
     {
       id: 'sc1',
-      name: 'SC1 · 소형 무인기 침투 (2022.12.26 재현)',
-      description: '북한 소형 무인기 5대의 서부·수도권 축선 침투 재현. 저탐지 표적의 항적소실 반복과 육·공군 협조 지연이 어떻게 상호작용하는지 관찰.',
-      basis: '합참 국회보고(2022.12.27, 연합뉴스·VOA); 한반도선진화재단 분석',
+      name: 'SC1 · 교전 중복·책임 공백 (책임구역 경계 침투)',
+      problem: '문제 상황 1',
+      description: '동일 침투 항공기·헬기가 수도군단 AOC·공군 미사일방어부대·수방사 JAOC의 ' +
+        '책임구역 경계 부근으로 접근하는 상황. 타 부대 교전 현황을 가시화할 수 없어 교전 책임 ' +
+        '경계가 불명확해지고, 음성 VTC 협조 의존으로 신속한 조율이 불가능한 중복교전·책임공백 ' +
+        '위험을 관찰한다.',
+      basis: 'KJADS 구축안 문제 상황 1 (교전 중복 및 책임 공백)',
+      // 다양화: 저속기·헬기·무인기·순항미사일 4개 위협클래스 × 서부/수도권 경계 축선.
+      // 모두 육(AOC·JAOC)·공(MCRC)·해(이지스) 복수 통제계통이 동시에 교전 가능한
+      // 클래스로 구성해 "경계 부근 중복교전·책임공백" 목적을 보존한다.
+      // KAOC 승인 부하 합계는 저부하로 유지(전환점 대조군: 전 스윕 구간 ρ<0.9).
       mix: [
-        { type: 'uav_small', axis: 'west', ratePerMin: 0.5 },
-        { type: 'uav_small', axis: 'seoul', ratePerMin: 0.3 }
+        { type: 'ac_low', axis: 'west', ratePerMin: 0.25 },
+        { type: 'ac_low', axis: 'seoul', ratePerMin: 0.15 },
+        { type: 'heli', axis: 'west', ratePerMin: 0.15 },
+        { type: 'heli', axis: 'seoul', ratePerMin: 0.1 },
+        { type: 'uav_small', axis: 'west', ratePerMin: 0.15 },
+        { type: 'uav_small', axis: 'seoul', ratePerMin: 0.1 },
+        { type: 'cruise', axis: 'west', ratePerMin: 0.25 }
       ],
       defaultMode: 'asis'
     },
     {
       id: 'sc2',
-      name: 'SC2 · 탄도탄 단독 공격',
-      description: 'KN-23급 SRBM 위주의 탄도탄 공격. KAMDOC 중심 단일 체계 처리 — 이원화 병목 없이 순수 처리용량을 관찰하는 대조군.',
-      basis: '공개 탄도탄 시험발사 보도 기반 개념 설정',
+      name: 'SC2 · 소형 무인기 동시 남파 (무인기 대응 실패)',
+      problem: '문제 상황 2',
+      description: '소형 무인기 8대 동시 남파(2022.12.26 확대 재현). 저고도·저속·소형 RCS ' +
+        '표적이 탐지 후 반복 소실되는 현상과, 이군종 센서 간 데이터 융합·공통 상황인식(COP) ' +
+        '부재, 무인기 전용 대응체계 미정립이 결합된 대응 실패 구조를 관찰한다.',
+      basis: 'KJADS 구축안 문제 상황 2 (무인기 대응 실패); 합참 국회보고(2022.12.27)',
+      // 다양화: 1차 남파 8대(문서 명세, t=60s) + 2차 남파 6대(t=900s) + 서부·수도권·
+      // 중부 3개 축선 산발 침투 스트림. 전 객체가 소형 무인기(uav_small)로,
+      // "저고도·저속·저RCS 반복 소실 + 저요격확률" 목적을 보존한다.
       mix: [
-        { type: 'srbm', axis: 'central', ratePerMin: 1.0 },
-        { type: 'srbm', axis: 'east', ratePerMin: 0.5 }
+        { type: 'uav_small', axis: 'west', burst: 5, atSec: 60, equivRatePerMin: 0.33 },
+        { type: 'uav_small', axis: 'seoul', burst: 3, atSec: 60, equivRatePerMin: 0.2 },
+        { type: 'uav_small', axis: 'west', burst: 4, atSec: 900, equivRatePerMin: 0.27 },
+        { type: 'uav_small', axis: 'central', burst: 2, atSec: 900, equivRatePerMin: 0.13 },
+        { type: 'uav_small', axis: 'west', ratePerMin: 0.3 },
+        { type: 'uav_small', axis: 'seoul', ratePerMin: 0.2 },
+        { type: 'uav_small', axis: 'central', ratePerMin: 0.15 }
       ],
       defaultMode: 'asis'
     },
     {
       id: 'sc3',
-      name: 'SC3 · 복합 섞어쏘기 포화공격',
-      description: 'SRBM + KN-25 연발 + 소형 무인기 + 전투기 동시 복합위협. 이용률 ρ>0.9 임계 초과 구간에서 As-Is 대비 To-Be 개선폭을 정량화하는 핵심 시나리오.',
-      basis: 'KN-25 발사간격 약 20초(THR-KN25-RNG-01); 복합위협 포아송 도착 가정',
+      name: 'SC3 · 전략적 섞어쏘기 (복합 동시 포화)',
+      problem: '문제 상황 3',
+      description: '전투기·무인기·TBM(전술탄도미사일)·방사포가 동시에 공격해오는 복합 동시 ' +
+        '위협 상황. 방공 처리 용량의 임계치(ρ≥0.9)를 초과하는 구간에서 As-Is 대비 To-Be ' +
+        '개선폭을 정량화하는 핵심 시나리오 — 복합 위협 동시 대응 체계 부재, 자산 현황 실시간 ' +
+        '동기화 미비, 지휘관 처리 용량 초과라는 구조적 문제를 재현한다.',
+      basis: 'KJADS 구축안 문제 상황 3 (전략적 섞어쏘기); KN-25 발사간격 약 20초(THR-KN25-RNG-01)',
       mix: [
         { type: 'srbm', axis: 'central', ratePerMin: 1.5 },
         { type: 'mrl_large', axis: 'east', ratePerMin: 3.0 },
         { type: 'uav_small', axis: 'west', ratePerMin: 1.0 },
         { type: 'uav_small', axis: 'seoul', ratePerMin: 0.5 },
-        { type: 'fighter', axis: 'west', ratePerMin: 0.5 },
-        { type: 'cruise', axis: 'west', ratePerMin: 0.8 }
-      ],
-      defaultMode: 'asis'
-    },
-    {
-      id: 'sc4',
-      name: 'SC4 · 서해축 순항미사일·무인기 혼합',
-      description: '서해 저고도 축선의 순항미사일·무인기 혼합 침투. 저고도 탐지 공백과 해상(이지스)·지상(군단)·공중(E-737) 센서 간 항적융합 유무의 효과 관찰.',
-      basis: '저고도 순항미사일 위협 공개 보도 기반 개념 설정',
-      mix: [
-        { type: 'cruise', axis: 'west', ratePerMin: 1.2 },
-        { type: 'uav_small', axis: 'west', ratePerMin: 0.8 },
-        { type: 'heli', axis: 'west', ratePerMin: 0.3 }
-      ],
-      defaultMode: 'asis'
-    },
-    {
-      id: 'sc5',
-      name: 'SC5 · 저강도 평시 (기준선)',
-      description: '평시 수준의 산발적 항적. 모든 노드가 정상 이용률에 머무는 기준선 — 병목이 "고정된 속성"이 아니라 부하의 함수임을 보이는 대조군.',
-      basis: '개념 설정 (저강도 λ)',
-      mix: [
-        { type: 'fighter', axis: 'east', ratePerMin: 0.1 },
-        { type: 'uav_small', axis: 'west', ratePerMin: 0.05 }
+        { type: 'fighter', axis: 'west', ratePerMin: 0.8 }
       ],
       defaultMode: 'asis'
     }
@@ -77,5 +89,10 @@
 
   KJ.scenarioById = function (id) {
     return KJ.SCENARIOS.find(function (s) { return s.id === id; }) || KJ.SCENARIOS[0];
+  };
+
+  /** mix 항목의 등가 도착률(건/분): 연속 스트림은 ratePerMin, burst는 equivRatePerMin 개념값 */
+  KJ.entryRate = function (entry) {
+    return entry.ratePerMin || entry.equivRatePerMin || 0;
   };
 })();

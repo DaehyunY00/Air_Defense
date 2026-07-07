@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>K-JAMDS C2 병목 분석 시뮬레이터 (Phase 1-5)</title>
+  <title>K-JAMDS C2 시뮬레이터 — KJADS 3대 문제 상황</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="css/style.css">
@@ -11,13 +11,13 @@
 <body>
   <!-- 제약 (c): 디스클레이머 상시 표출 -->
   <div id="disclaimer">
-    ⚠️ 본 시뮬레이터의 모든 수치·좌표·확률은 공개자료 기반 <b>정책연구용 개념값 · 실제 작전자료 아님</b>.
+    ⚠️ 본 시뮬레이터의 모든 수치·좌표·확률·범위는 공개자료 기반 <b>정책연구용 개념값 · 실제 작전자료 아님</b>.
     좌표는 도시 수준 개념좌표. 신궁·천마는 탄도탄 요격 불가로 모델링, KAMDOC↔THAAD 연동 미모델링.
   </div>
 
   <header>
-    <h1>K-JAMDS C2 프로세스 병목 분석 시뮬레이터
-      <small>한국형 합동방공체계 As-Is(분절형) ↔ To-Be(통합형) 비교 · Phase 1-5: 스캐폴딩·DES·Monte Carlo·재생시각화·V&V</small>
+    <h1>K-JAMDS C2 시뮬레이터
+      <small>KJADS 구축안 3대 문제 상황(교전 중복·무인기 대응 실패·전략적 섞어쏘기) · As-Is 분절형 ↔ To-Be 통합형</small>
     </h1>
     <span id="header-bn-count" class="bn-count">—</span>
   </header>
@@ -26,51 +26,77 @@
     <label>시나리오</label>
     <select id="scenario-select"></select>
     <label>체계 모드</label>
-    <div class="mode-toggle">
-      <button class="mode-btn" data-mode="asis">As-Is 분절형</button>
-      <button class="mode-btn" data-mode="tobe">To-Be K-JAMDS</button>
-    </div>
+    <label class="mode-switch" title="As-Is 분절형 ↔ To-Be K-JAMDS 통합형">
+      <span class="ms-side ms-asis">As-Is 분절형</span>
+      <input type="checkbox" id="mode-switch">
+      <span class="ms-track"><span class="ms-knob"></span></span>
+      <span class="ms-side ms-tobe">To-Be 통합형</span>
+    </label>
     <label>위협 강도</label>
     <input type="range" id="intensity-slider" min="0.5" max="3" step="0.1" value="1">
     <span id="intensity-value">×1.0</span>
   </div>
 
   <nav class="tabs">
-    <button class="tab-btn" data-tab="map">🗺️ 상황도</button>
-    <button class="tab-btn" data-tab="scenario">🎯 시나리오</button>
+    <button class="tab-btn" data-tab="sim">🎮 시뮬레이션</button>
     <button class="tab-btn" data-tab="analysis">📊 병목 분석 (해석)</button>
-    <button class="tab-btn" data-tab="des">⚙️ DES 시뮬레이션</button>
     <button class="tab-btn" data-tab="mc">🎲 Monte Carlo</button>
-    <button class="tab-btn" data-tab="playback">🎬 재생·시각화</button>
     <button class="tab-btn" data-tab="data">📚 근거자료·제약검증</button>
   </nav>
 
   <main>
-    <!-- ── 상황도 탭 ── -->
-    <section class="tab-panel" id="panel-map">
+    <!-- ── 시뮬레이션 탭: 실행 → 지도 시각화 → 결과창 ── -->
+    <section class="tab-panel" id="panel-sim">
       <div id="map"></div>
+
+      <!-- 위협 항적 로그 (지도 좌상단 오버레이) — 항적별 9단계 상태, 클릭으로 펼침 -->
+      <div id="threat-log" class="threat-log hidden">
+        <div class="tlog-head" id="tlog-head">
+          <span id="tlog-title">🛰 위협 항적 로그</span>
+          <button id="tlog-collapse" title="접기/펼치기">▾</button>
+        </div>
+        <div class="tlog-body" id="tlog-body"></div>
+      </div>
+
+      <!-- 실행 HUD (지도 오버레이) -->
+      <div class="sim-hud">
+        <div id="sim-scenario-blurb" class="sim-blurb"></div>
+        <div class="sim-hud-controls">
+          <label>seed <input type="number" id="sim-seed" min="0" step="1" value="12345"></label>
+          <label>시간(초) <input type="number" id="sim-dur" min="60" max="7200" step="60" value="1800"></label>
+          <label>재생 <select id="sim-speed">
+            <option value="10">10×</option>
+            <option value="30" selected>30×</option>
+            <option value="60">60×</option>
+            <option value="120">120×</option>
+          </select></label>
+        </div>
+        <div class="sim-hud-actions">
+          <button id="sim-run" class="run-btn">▶ 시뮬레이션 시작</button>
+          <button id="sim-play" class="run-btn ghost" disabled title="재생/일시멈춤">⏸ 일시멈춤</button>
+          <button id="sim-results" class="run-btn ghost" disabled>📊 결과 보기</button>
+        </div>
+        <div class="sim-progress"><div id="sim-progress-bar"></div></div>
+        <div class="sim-clock-row">
+          <span id="sim-clock">00:00 / 00:00</span>
+          <span id="sim-status" class="sim-status"></span>
+        </div>
+      </div>
+
       <div class="map-legend">
-        <h4>범례 (개념좌표)</h4>
-        <div class="row"><span style="width:12px;height:12px;background:#2e6fd8"></span> C2 ■ / 센서 ● / 무기 ▲ (색: 군별)</div>
-        <div class="row"><span style="color:#2e6fd8">■</span>공군 <span style="color:#3d8b40">■</span>육군 <span style="color:#00838f">■</span>해군 <span style="color:#7b1fa2">■</span>합동</div>
+        <h4>범례 (개념좌표·개념범위)</h4>
+        <div class="row"><b>아군 (기능별 색)</b></div>
+        <div class="row"><span style="color:#f0a020">■</span> 지휘통제 C2 &nbsp;<span style="color:#2e6fd8">●</span> 탐지 센서 &nbsp;<span style="color:#3d8b40">▲</span> 요격 무기</div>
+        <div class="row"><span class="lg-ring sensor"></span>탐지범위(파랑 점선) · <span class="lg-ring shooter"></span>교전범위(초록) <label style="margin-left:4px"><input type="checkbox" id="toggle-rings" checked> 표시</label></div>
         <div class="row"><span class="lg-line" style="border-color:#2e6fd8"></span> 데이터링크/Link-16</div>
         <div class="row"><span class="lg-line" style="border-color:#d32f2f;border-top-style:dashed"></span> 음성보고 (As-Is 지연 ≥180초)</div>
-        <div class="row"><span class="lg-line" style="border-color:#ef6c00;border-top-style:dotted"></span> SAWS 일방향 경보방송</div>
-        <div class="row">🔴 점멸 테두리 = 현재 시나리오에서 <b>도출된</b> 병목/포화 노드</div>
+        <div class="row"><b>적 위협 (붉은색 계열)</b></div>
+        <div class="row"><span style="color:#ff8a7a">●</span>무인기·저속기·헬기 <span style="color:#f4442e">●</span>전투기 <span style="color:#e01e1e">●</span>순항 <span style="color:#b3001b">●</span>탄도탄·방사포</div>
+        <div class="row">🔴 점멸 테두리 = 이번 실행에서 <b>도출된</b> 병목/포화 노드</div>
       </div>
     </section>
 
-    <!-- ── 시나리오 탭 ── -->
-    <section class="tab-panel" id="panel-scenario">
-      <div class="card">
-        <h2>시나리오 선택</h2>
-        <p>시나리오는 위협 구성·축선·도착률(λ)만 정의합니다. 병목 위치는 사전에 정해져 있지 않으며,
-           선택한 시나리오·강도·체계 모드에 따라 [병목 분석] 탭에서 분석적으로 도출됩니다.</p>
-      </div>
-      <div id="scenario-cards"></div>
-    </section>
-
-    <!-- ── 병목 분석 탭 ── -->
+    <!-- ── 병목 분석 탭 (정상상태 해석) ── -->
     <section class="tab-panel" id="panel-analysis">
       <div class="card">
         <h2>🔎 도출된 병목 (시나리오 × 토폴로지 × 모드 기반)</h2>
@@ -106,51 +132,6 @@
           <span><span class="sw" style="background:#3d8b40"></span>교전/요격</span>
         </div>
         <div class="note" id="analysis-note"></div>
-      </div>
-    </section>
-
-    <!-- ── DES 시뮬레이션 탭 ── -->
-    <section class="tab-panel" id="panel-des">
-      <div class="card">
-        <h2>⚙️ 이산사건 시뮬레이션 (DES) — 단일 복제</h2>
-        <p>개별 위협 객체를 생성해 9단계 C2 파이프라인(탐지→추적생성→식별→위협평가→WTA→결심→교전협조→교전명령→BDA→재교전)에
-           흘려보내고, 각 노드를 M/M/c/K 대기행렬로 처리한 관측 통계입니다. 상단 컨트롤바의 시나리오·모드·강도가 그대로 적용됩니다.
-           병목은 이 실행 결과에서 도출되며, seed·강도·시나리오·모드에 따라 달라집니다.</p>
-        <div id="des-context" class="analysis-context"></div>
-        <div class="des-controls">
-          <label>난수 seed <input type="number" id="des-seed" min="0" step="1" value="12345"></label>
-          <label>시뮬레이션 시간(초) <input type="number" id="des-dur" min="60" max="7200" step="60" value="1800"></label>
-          <button id="des-run" class="run-btn">▶ 시뮬레이션 실행</button>
-          <span id="des-meta" class="note"></span>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>결과 요약</h2>
-        <div id="des-summary" class="stat-grid"></div>
-      </div>
-
-      <div class="card">
-        <h2>As-Is ↔ To-Be 비교 (동일 seed)</h2>
-        <div id="des-compare"></div>
-      </div>
-
-      <div class="card">
-        <h2>🔎 도출된 병목 (관측 통계 기반)</h2>
-        <div id="des-bottlenecks"></div>
-        <h3 style="margin-top:12px">누수 사유 분해</h3>
-        <div id="des-leak" class="leak-row"></div>
-      </div>
-
-      <div class="card">
-        <h2>노드 관측 통계 (ρ 내림차순)</h2>
-        <table>
-          <thead>
-            <tr><th>노드</th><th>구분</th><th>도착</th><th>완료</th><th>드롭</th>
-                <th>관측 이용률 ρ</th><th>평균대기 Wq</th><th>최대 재고</th><th>판정</th></tr>
-          </thead>
-          <tbody id="des-node-body"></tbody>
-        </table>
       </div>
     </section>
 
@@ -190,89 +171,22 @@
       </div>
 
       <div class="card">
-        <h2>민감도 토네이도 (±20% 스윕, 누수율 기준)</h2>
+        <h2>민감도 토네이도 (±20% 스윕, 요격 실패율 기준)</h2>
         <div id="mc-tornado" class="tornado"></div>
         <div class="note" id="mc-tornado-note"></div>
       </div>
 
       <div class="card">
-        <h2>🚨 임계 전환점 — As-Is→To-Be 효과 정량화 (투자정당화 핵심)</h2>
+        <h2>🚨 임계 전환점 — As-Is→To-Be 효과 정량화</h2>
         <p>위협 강도를 0.5×~3.0× 스윕하며 각 점에서 As-Is/To-Be를 다중복제 실행합니다.
-           As-Is C2 최대 이용률 ρ가 임계(0.9)를 넘는 구간에서 두 체계의 누수율 격차가 어떻게
-           벌어지는지가 K-JAMDS 투자정당화의 정책적 핵심입니다(계획서 Recommendations 6).</p>
+           As-Is C2 최대 이용률 ρ가 임계(0.9)를 넘는 구간에서 두 체계의 요격 실패율 격차가 어떻게
+           벌어지는지를 정량화합니다(계획서 Recommendations 6).</p>
         <div class="des-controls">
           <button id="mc-transition-run" class="run-btn">▶ 임계 전환점 스윕 실행</button>
           <span class="note">현재 시나리오 기준, 11점 × 2모드 × 20복제</span>
         </div>
         <div id="mc-transition"></div>
         <div class="note" id="mc-transition-note"></div>
-      </div>
-    </section>
-
-    <!-- ── 재생·시각화 탭 ── -->
-    <section class="tab-panel" id="panel-playback">
-      <div class="card">
-        <h2>🎬 재생·시각화 — 위협궤적·대기열·Gantt·흐름도·히트맵</h2>
-        <p>DES를 trace 모드로 실행해 개별 위협의 9단계 이동을 애니메이션으로 재생합니다. 위협 위치는
-           축선 진입점→표적권역(개념좌표) 선형보간이며, 대기열 막대·노드 링은 재생 시각의 실측 재고/용량
-           비율을 실시간으로 반영합니다. 좌표는 여전히 도시 수준 개념좌표입니다.</p>
-        <div id="pb-context" class="analysis-context"></div>
-        <div class="des-controls">
-          <label>난수 seed <input type="number" id="pb-seed" min="0" step="1" value="12345"></label>
-          <label>재생 시간(초, 최대 900) <input type="number" id="pb-dur" min="60" max="900" step="30" value="600"></label>
-          <button id="pb-run" class="run-btn">▶ 정밀 재생 실행</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="pb-map-wrap"><svg id="pb-svg" viewBox="0 0 900 560" preserveAspectRatio="xMidYMid meet"></svg></div>
-        <div class="pb-transport">
-          <button id="pb-play" class="run-btn">▶ 재생</button>
-          <select id="pb-speed">
-            <option value="0.5">0.5×</option>
-            <option value="1" selected>1×</option>
-            <option value="2">2×</option>
-            <option value="5">5×</option>
-            <option value="10">10×</option>
-          </select>
-          <input type="range" id="pb-scrub" min="0" max="600" step="1" value="0">
-          <span id="pb-time" class="pb-time">00:00 / 00:00</span>
-        </div>
-        <div class="map-legend" style="position:static;margin-top:10px;max-width:none">
-          <h4>범례</h4>
-          <div class="row">C2 ■ · 센서 ● · 무기 ▲ (색: 군별) · 빨간 원(배경) = 축선별 중복교전 위험(현재 모드)</div>
-          <div class="row">노드 테두리 굵기·색 = 현재 재생시각 재고/용량 비율(주황 ≥0.7, 빨강 ≥0.9)</div>
-          <div class="row">점 색: <span style="color:#ffd166">■</span>무인기/저속기/헬기 <span style="color:#4ecdc4">■</span>전투기 <span style="color:#ef476f">■</span>순항미사일 <span style="color:#ff2d1a">■</span>탄도탄/방사포</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>대기열 실시간 현황 (재고/용량, 현재 재생시각)</h2>
-        <div id="pb-queues" class="pb-queue-grid"></div>
-      </div>
-
-      <div class="card">
-        <h2>단계별 흐름 (Sankey형 funnel — 전체 결과 기준)</h2>
-        <div id="pb-funnel"></div>
-      </div>
-
-      <div class="card">
-        <h2>위협별 Gantt 타임라인 (9단계 소요시간, 표본)</h2>
-        <div class="des-controls">
-          <label>표시 <select id="pb-gantt-filter">
-            <option value="all">전체</option>
-            <option value="killed">격추만</option>
-            <option value="leaked">누수만</option>
-          </select></label>
-        </div>
-        <div id="pb-gantt" class="pb-gantt"></div>
-        <div class="note" id="pb-gantt-note"></div>
-      </div>
-
-      <div class="card">
-        <h2>축선별 중복교전 위험 히트맵 (As-Is ↔ To-Be)</h2>
-        <div id="pb-heatmap"></div>
-        <div class="note" id="pb-heatmap-note"></div>
       </div>
     </section>
 
@@ -284,13 +198,25 @@
       </div>
       <div class="card">
         <h2>모델링 대상 목록 (C2 · 센서 · 무기체계)</h2>
-        <p>전 항목의 수치 근거는 <code>docs/params.md</code>의 파라미터 ID(신뢰도 A/B/C 등급 포함)를 참조합니다.</p>
+        <p>전 항목의 수치 근거는 <code>docs/params.md</code>의 파라미터 ID(신뢰도 A/B/C 등급 포함)를 참조합니다.
+           자산 범위 링(rangeKm)은 공개자료 기반 개념값입니다.</p>
         <table>
-          <thead><tr><th>ID</th><th>명칭</th><th>구분</th><th>존재 모드</th><th>파라미터 근거</th></tr></thead>
+          <thead><tr><th>ID</th><th>명칭</th><th>구분</th><th>존재 모드</th><th>범위(개념)</th><th>파라미터 근거</th></tr></thead>
           <tbody id="inventory-body"></tbody>
         </table>
       </div>
     </section>
+
+    <!-- ── 결과 모달 (시뮬레이션 종료 시 표시) ── -->
+    <div id="result-modal" class="modal-backdrop hidden">
+      <div class="modal">
+        <div class="modal-head">
+          <h2>📊 시뮬레이션 결과 — 정량 분석</h2>
+          <button id="modal-close" title="닫기">✕</button>
+        </div>
+        <div id="modal-body" class="modal-body"></div>
+      </div>
+    </div>
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -310,11 +236,11 @@
   <script src="js/analysis/transition.js"></script>
   <script src="js/analysis/overlap-heatmap.js"></script>
   <script src="js/ui/geo.js"></script>
+  <script src="js/ui/table-sort.js"></script>
   <script src="js/ui/map-view.js"></script>
   <script src="js/ui/panels.js"></script>
-  <script src="js/ui/des-panel.js"></script>
+  <script src="js/ui/sim-view.js"></script>
   <script src="js/ui/mc-panel.js"></script>
-  <script src="js/ui/playback-panel.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

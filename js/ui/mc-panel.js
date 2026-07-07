@@ -19,7 +19,7 @@
 
   var METRIC_META = {
     killRate: { label: '격추율', fmt: pct, kind: 'rate' },
-    leakRate: { label: '누수율', fmt: pct, kind: 'rate' },
+    leakRate: { label: '요격 실패율', fmt: pct, kind: 'rate' },
     detectRate: { label: '탐지율', fmt: pct, kind: 'rate' },
     meanTimeToKillSec: { label: '평균 격추시간', fmt: function (x) { return x.toFixed(0) + '초'; }, kind: 'sec' },
     bottleneckCount: { label: '도출 병목 수', fmt: function (x) { return x.toFixed(2) + '개'; }, kind: 'count' }
@@ -70,7 +70,7 @@
       el('mc-converge').innerHTML =
         '<div class="mc-conv ' + (cur.converged ? 'conv-ok' : 'conv-no') + '">' +
         (cur.converged
-          ? '✅ 수렴: ' + cur.convergedAt + '회 복제에서 누수율 95% 신뢰구간 반폭 ≤ 허용오차 ' + pp(cur.tol)
+          ? '✅ 수렴: ' + cur.convergedAt + '회 복제에서 요격 실패율 95% 신뢰구간 반폭 ≤ 허용오차 ' + pp(cur.tol)
           : '⚠️ 미수렴: 상한 ' + cur.reps + '회까지 허용오차 ' + pp(cur.tol) + ' 미달 (반폭 ' + pp(lr.ci) + ')') +
         '</div>' +
         '<div class="note">' + modeName + ' · ' + cur.reps + '회 복제 · 각 복제 독립 시드(baseSeed=' +
@@ -93,9 +93,10 @@
       // ── 민감도 토네이도 ──
       el('mc-tornado').innerHTML = this._tornado(res.sens);
       el('mc-tornado-note').textContent =
-        '기준 누수율 ' + pct(res.sens.base) + ' 대비, 각 인자를 ±' + (res.sens.deltaPct * 100).toFixed(0) +
-        '% 스케일했을 때의 누수율 변동(' + res.sens.reps + '회 복제 평균). 스윙이 큰 인자가 누수율을 가장 좌우 — ' +
-        '투자 우선순위 근거(계획서 V&V 민감도분석).';
+        '기준 요격 실패율 ' + pct(res.sens.base) + ' 대비, 각 인자를 ±' + (res.sens.deltaPct * 100).toFixed(0) +
+        '% 스케일했을 때의 요격 실패율 변동(' + res.sens.reps + '회 복제 평균). 스윙이 큰 인자가 요격 실패율을 가장 좌우 — ' +
+        '개선 우선순위 근거(계획서 V&V 민감도분석).';
+      if (KJ.tableSort) KJ.tableSort.attachAll(el('panel-mc')); // 숫자열 헤더 우측정렬 동기화
     },
 
     _compareTable: function (cur, oth, curName, othName) {
@@ -139,7 +140,7 @@
           '</div>' +
           '<div class="tor-swing">' + pp(r.swing) + '</div></div>';
       }).join('');
-      return '<div class="tor-head"><span>인자</span><span>누수율 변동 (기준선 ▎ ' + pct(sens.base) +
+      return '<div class="tor-head"><span>인자</span><span>요격 실패율 변동 (기준선 ▎ ' + pct(sens.base) +
         ')</span><span>스윙</span></div>' + bars;
     }
   };
@@ -147,7 +148,7 @@
   function now() { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); }
 
   // ── 임계 전환점 (Phase 5, 계획서 Recommendations 6) ──────────────────────────
-  // 강도 스윕에서 As-Is/To-Be 누수율 곡선과 ρ>0.9 임계 돌파점을 SVG 라인차트로 제시.
+  // 강도 스윕에서 As-Is/To-Be 요격 실패율 곡선과 ρ>0.9 임계 돌파점을 SVG 라인차트로 제시.
   // 계산은 analysis/transition.js (결정론적 — 동일 시나리오·seed → 동일 곡선).
 
   function runTransition() {
@@ -208,10 +209,10 @@
     svg += '<polyline points="' + poly('tobe') + '" fill="none" stroke="#3d8b40" stroke-width="2.5"/>';
     r.points.forEach(function (p) {
       svg += '<circle cx="' + px(p.x) + '" cy="' + py(p.asis.leakRate) + '" r="3.5" fill="#e05545">' +
-        '<title>As-Is ×' + p.x + ': 누수율 ' + pct(p.asis.leakRate) + ' (±' + pp(p.asis.leakCI) +
+        '<title>As-Is ×' + p.x + ': 요격 실패율 ' + pct(p.asis.leakRate) + ' (±' + pp(p.asis.leakCI) +
         '), C2 최대 ρ=' + p.asis.maxC2Rho.toFixed(2) + '</title></circle>' +
         '<circle cx="' + px(p.x) + '" cy="' + py(p.tobe.leakRate) + '" r="3.5" fill="#3d8b40">' +
-        '<title>To-Be ×' + p.x + ': 누수율 ' + pct(p.tobe.leakRate) + ' (±' + pp(p.tobe.leakCI) + ')</title></circle>';
+        '<title>To-Be ×' + p.x + ': 요격 실패율 ' + pct(p.tobe.leakRate) + ' (±' + pp(p.tobe.leakCI) + ')</title></circle>';
     });
     // 최대 격차 마커
     if (r.maxGapX !== null) {
@@ -225,8 +226,8 @@
 
     el('mc-transition').innerHTML =
       '<div class="tl-legend" style="margin:6px 0">' +
-      '<span><span class="sw" style="background:#e05545"></span>As-Is 누수율</span>' +
-      '<span><span class="sw" style="background:#3d8b40"></span>To-Be 누수율</span>' +
+      '<span><span class="sw" style="background:#e05545"></span>As-Is 요격 실패율</span>' +
+      '<span><span class="sw" style="background:#3d8b40"></span>To-Be 요격 실패율</span>' +
       '<span>가로축: 위협 강도 배수 · 점 툴팁: 95% CI·C2 최대 ρ</span></div>' + svg;
 
     el('mc-transition-note').textContent =

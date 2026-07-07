@@ -32,14 +32,19 @@ var shorads = KJ.NODES.filter(function (n) { return n.id.indexOf('SHORAD') === 0
 assert(shorads.length >= 2, 'SHORAD 노드 존재 (' + shorads.length + '개)');
 assert(shorads.every(function (n) { return n.canEngage.srbm === false && n.canEngage.mrl_large === false; }),
   '데이터: 전 SHORAD canEngage.srbm/mrl_large = false');
-// 행위 검증 1: DES — 탄도탄 단독 시나리오에서 SHORAD 교전 투입 0
-var des = KJ.runDES({ scenario: KJ.scenarioById('sc2'), mode: 'asis', intensity: 3, seed: 11, endTimeSec: 1800 });
+// 행위 검증 1: DES — 탄도탄 단독 구성(검증용 인라인 시나리오)에서 SHORAD 교전 투입 0
+var balScn = {
+  id: 'test-ballistic', name: '탄도탄 단독(검증용)',
+  mix: [{ type: 'srbm', axis: 'central', ratePerMin: 1.0 },
+        { type: 'srbm', axis: 'east', ratePerMin: 0.5 }]
+};
+var des = KJ.runDES({ scenario: balScn, mode: 'asis', intensity: 3, seed: 11, endTimeSec: 1800 });
 assert(des.nodes.filter(function (n) { return n.id.indexOf('SHORAD') === 0 && n.arrivals > 0; }).length === 0,
-  'DES 행위: 탄도탄 시나리오 강도 3.0에서도 SHORAD 도착 0건');
+  'DES 행위: 탄도탄 단독 구성 강도 3.0에서도 SHORAD 도착 0건');
 // 행위 검증 2: 해석 모듈 — SHORAD에 부하 배분 0
-var an = KJ.analyzeScenario(KJ.scenarioById('sc2'), 'asis', 3);
+var an = KJ.analyzeScenario(balScn, 'asis', 3);
 assert(an.nodes.filter(function (n) { return n.id.indexOf('SHORAD') === 0 && n.lambda > 0; }).length === 0,
-  '해석 행위: 탄도탄 시나리오에서 SHORAD 부하 λ=0');
+  '해석 행위: 탄도탄 단독 구성에서 SHORAD 부하 λ=0');
 
 // ── (b) THAAD 미모델링 ──
 console.log('# (b) KAMDOC↔THAAD 연동 부재');

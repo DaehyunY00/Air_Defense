@@ -413,8 +413,8 @@
     }
     this.schedule(t + threat.dwellSec, PRI.EXIT, 'EXIT', { threat: threat });
     this._beginDetect(threat, t);
-    // 다음 도착 (포아송: 지수 도착간격)
-    var ratePerSec = (entry.ratePerMin * this.intensity) / 60;
+    // 다음 도착 (포아송: 지수 도착간격) — burst 전용 항목(ratePerMin 부재)은 후속 도착 없음
+    var ratePerSec = ((entry.ratePerMin || 0) * this.intensity) / 60;
     if (ratePerSec > 0) {
       var next = t + this.rng.exponential(1 / ratePerSec);
       if (next <= this.endTime) this.schedule(next, PRI.SPAWN, 'SPAWN', { entry: entry });
@@ -440,7 +440,16 @@
     var self = this;
     // 각 위협 스트림 최초 도착 예약
     this.scenario.mix.forEach(function (entry) {
-      var ratePerSec = (entry.ratePerMin * self.intensity) / 60;
+      // 일회성 동시 다발(burst) — 문제 상황 2 "무인기 8대 동시 남파" 유형.
+      // 강도 배수로 반올림 스케일(강도 0 → 0대), 동시 이벤트는 (t, pri, seq)로 결정론 해소.
+      if (entry.burst) {
+        var n = Math.round(entry.burst * self.intensity);
+        var at = entry.atSec || 0;
+        for (var i = 0; i < n; i++) {
+          if (at <= self.endTime) self.schedule(at, PRI.SPAWN, 'SPAWN', { entry: entry });
+        }
+      }
+      var ratePerSec = ((entry.ratePerMin || 0) * self.intensity) / 60;
       if (ratePerSec <= 0) return;
       var first = self.rng.exponential(1 / ratePerSec);
       if (first <= self.endTime) self.schedule(first, PRI.SPAWN, 'SPAWN', { entry: entry });

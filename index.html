@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>K-JAMDS C2 병목 분석 시뮬레이터 (Phase 1)</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- 제약 (c): 디스클레이머 상시 표출 -->
+  <div id="disclaimer">
+    ⚠️ 본 시뮬레이터의 모든 수치·좌표·확률은 공개자료 기반 <b>정책연구용 개념값 · 실제 작전자료 아님</b>.
+    좌표는 도시 수준 개념좌표. 신궁·천마는 탄도탄 요격 불가로 모델링, KAMDOC↔THAAD 연동 미모델링.
+  </div>
+
+  <header>
+    <h1>K-JAMDS C2 프로세스 병목 분석 시뮬레이터
+      <small>한국형 합동방공체계 As-Is(분절형) ↔ To-Be(통합형) 비교 · Phase 1 스캐폴딩</small>
+    </h1>
+    <span id="header-bn-count" class="bn-count">—</span>
+  </header>
+
+  <div id="controls">
+    <label>시나리오</label>
+    <select id="scenario-select"></select>
+    <label>체계 모드</label>
+    <div class="mode-toggle">
+      <button class="mode-btn" data-mode="asis">As-Is 분절형</button>
+      <button class="mode-btn" data-mode="tobe">To-Be K-JAMDS</button>
+    </div>
+    <label>위협 강도</label>
+    <input type="range" id="intensity-slider" min="0.5" max="3" step="0.1" value="1">
+    <span id="intensity-value">×1.0</span>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab-btn" data-tab="map">🗺️ 상황도</button>
+    <button class="tab-btn" data-tab="scenario">🎯 시나리오</button>
+    <button class="tab-btn" data-tab="analysis">📊 병목 분석</button>
+    <button class="tab-btn" data-tab="data">📚 근거자료·제약검증</button>
+  </nav>
+
+  <main>
+    <!-- ── 상황도 탭 ── -->
+    <section class="tab-panel" id="panel-map">
+      <div id="map"></div>
+      <div class="map-legend">
+        <h4>범례 (개념좌표)</h4>
+        <div class="row"><span style="width:12px;height:12px;background:#2e6fd8"></span> C2 ■ / 센서 ● / 무기 ▲ (색: 군별)</div>
+        <div class="row"><span style="color:#2e6fd8">■</span>공군 <span style="color:#3d8b40">■</span>육군 <span style="color:#00838f">■</span>해군 <span style="color:#7b1fa2">■</span>합동</div>
+        <div class="row"><span class="lg-line" style="border-color:#2e6fd8"></span> 데이터링크/Link-16</div>
+        <div class="row"><span class="lg-line" style="border-color:#d32f2f;border-top-style:dashed"></span> 음성보고 (As-Is 지연 ≥180초)</div>
+        <div class="row"><span class="lg-line" style="border-color:#ef6c00;border-top-style:dotted"></span> SAWS 일방향 경보방송</div>
+        <div class="row">🔴 점멸 테두리 = 현재 시나리오에서 <b>도출된</b> 병목/포화 노드</div>
+      </div>
+    </section>
+
+    <!-- ── 시나리오 탭 ── -->
+    <section class="tab-panel" id="panel-scenario">
+      <div class="card">
+        <h2>시나리오 선택</h2>
+        <p>시나리오는 위협 구성·축선·도착률(λ)만 정의합니다. 병목 위치는 사전에 정해져 있지 않으며,
+           선택한 시나리오·강도·체계 모드에 따라 [병목 분석] 탭에서 분석적으로 도출됩니다.</p>
+      </div>
+      <div id="scenario-cards"></div>
+    </section>
+
+    <!-- ── 병목 분석 탭 ── -->
+    <section class="tab-panel" id="panel-analysis">
+      <div class="card">
+        <h2>🔎 도출된 병목 (시나리오 × 토폴로지 × 모드 기반)</h2>
+        <div id="bottleneck-summary"></div>
+      </div>
+      <div class="card">
+        <h2>노드 이용률 (M/M/c 정상상태 근사, ρ 내림차순)</h2>
+        <table>
+          <thead>
+            <tr><th>노드</th><th>구분</th><th>부하 λ<br>(건/분)</th><th>서버/채널 c</th>
+                <th>처리시간</th><th>이용률 ρ</th><th>평균대기 Wq</th><th>판정</th></tr>
+          </thead>
+          <tbody id="node-table-body"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>통신 링크 부하·지연</h2>
+        <table>
+          <thead>
+            <tr><th>링크</th><th>유형</th><th>지연</th><th>유통량 (건/분)</th><th>판정</th></tr>
+          </thead>
+          <tbody id="link-table-body"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>위협별 탐지→교전 타임라인 (경로 고정지연 추정)</h2>
+        <div id="timeline-rows"></div>
+        <div class="tl-legend">
+          <span><span class="sw" style="background:#2e6fd8"></span>탐지·보고</span>
+          <span><span class="sw" style="background:#7b1fa2"></span>협조/융합</span>
+          <span><span class="sw" style="background:#f0a020"></span>결심/승인</span>
+          <span><span class="sw" style="background:#00838f"></span>교전명령</span>
+          <span><span class="sw" style="background:#3d8b40"></span>교전/요격</span>
+        </div>
+        <div class="note" id="analysis-note"></div>
+      </div>
+    </section>
+
+    <!-- ── 근거자료 탭 ── -->
+    <section class="tab-panel" id="panel-data">
+      <div class="card">
+        <h2>제약조건 어서션 (상시 검증)</h2>
+        <ul id="constraint-list"></ul>
+      </div>
+      <div class="card">
+        <h2>모델링 대상 목록 (C2 · 센서 · 무기체계)</h2>
+        <p>전 항목의 수치 근거는 <code>docs/params.md</code>의 파라미터 ID(신뢰도 A/B/C 등급 포함)를 참조합니다.</p>
+        <table>
+          <thead><tr><th>ID</th><th>명칭</th><th>구분</th><th>존재 모드</th><th>파라미터 근거</th></tr></thead>
+          <tbody id="inventory-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="js/data/nodes.js"></script>
+  <script src="js/data/links.js"></script>
+  <script src="js/data/threats.js"></script>
+  <script src="js/data/scenarios.js"></script>
+  <script src="js/core/router.js"></script>
+  <script src="js/core/constraints.js"></script>
+  <script src="js/analysis/bottleneck.js"></script>
+  <script src="js/ui/map-view.js"></script>
+  <script src="js/ui/panels.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

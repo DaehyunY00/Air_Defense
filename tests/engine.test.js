@@ -26,6 +26,9 @@ var r1 = run('sc3', 'asis', 1.5, 42);
 var r2 = run('sc3', 'asis', 1.5, 42);
 assert(JSON.stringify(r1) === JSON.stringify(r2), '동일 seed/config → 완전 동일 결과 (결정론)');
 assert(JSON.stringify(r1) !== JSON.stringify(run('sc3', 'asis', 1.5, 43)), 'seed 변경 → 결과 변화');
+// seed 0 보존 (리뷰 지적: (seed>>>0)||1 은 0을 1로 붕괴시켰음)
+var s0 = run('sc3', 'asis', 1.5, 0), s1 = run('sc3', 'asis', 1.5, 1);
+assert(s0.config.seed === 0 && JSON.stringify(s0) !== JSON.stringify(s1), 'seed 0 보존 (seed 1과 구별)');
 
 console.log('# 극한값');
 var empty = { id: 'empty', name: 'empty', mix: [] };

@@ -12,7 +12,7 @@
   window.KJ = window.KJ || {};
 
   var DEFAULTS = { tab: 'map', sc: 'sc1', mode: 'asis', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
-  var VALID_TABS = ['map', 'scenario', 'analysis', 'des', 'data'];
+  var VALID_TABS = ['map', 'scenario', 'analysis', 'des', 'mc', 'data'];
 
   KJ.router = {
     /** 현재 해시를 상태 객체로 파싱 (유효성 검증 포함) */

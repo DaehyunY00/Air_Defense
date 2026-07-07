@@ -204,6 +204,21 @@ li.chk-fail { background: #43140f; }
 .leak-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .leak-chip { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 3px 10px; font-size: 11px; }
 
+/* ── Monte Carlo 패널 ── */
+.mc-conv { padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; }
+.conv-ok { background: #143518; color: #7dd982; }
+.conv-no { background: #40300a; color: #ffcf70; }
+.tornado { margin-top: 4px; }
+.tor-head, .tor-row { display: grid; grid-template-columns: 140px 1fr 70px; align-items: center; gap: 10px; }
+.tor-head { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.tor-head span:last-child, .tor-swing { text-align: right; }
+.tor-row { margin-bottom: 7px; font-size: 12px; }
+.tor-label { color: var(--text); }
+.tor-track { position: relative; height: 18px; background: #0d1117; border-radius: 4px; }
+.tor-bar { position: absolute; top: 3px; height: 12px; background: linear-gradient(90deg, #2e6fd8, #e05545); border-radius: 3px; opacity: 0.85; }
+.tor-base { position: absolute; top: -2px; height: 22px; width: 2px; background: #cfd8e3; z-index: 2; }
+.tor-swing { font-variant-numeric: tabular-nums; color: #cfe0f2; }
+
 /* ── 지도 범례 ── */
 .map-legend {
   position: absolute; bottom: 20px; left: 12px; z-index: 1000;

@@ -40,6 +40,7 @@
     <button class="tab-btn" data-tab="scenario">🎯 시나리오</button>
     <button class="tab-btn" data-tab="analysis">📊 병목 분석 (해석)</button>
     <button class="tab-btn" data-tab="des">⚙️ DES 시뮬레이션</button>
+    <button class="tab-btn" data-tab="mc">🎲 Monte Carlo</button>
     <button class="tab-btn" data-tab="data">📚 근거자료·제약검증</button>
   </nav>
 
@@ -152,6 +153,48 @@
       </div>
     </section>
 
+    <!-- ── Monte Carlo 탭 ── -->
+    <section class="tab-panel" id="panel-mc">
+      <div class="card">
+        <h2>🎲 Monte Carlo — 다중복제 통계·수렴판정·민감도</h2>
+        <p>DES 단일 복제를 다수 반복해 Welford 스트리밍 분산으로 핵심 지표의 95% 신뢰구간을 추정하고,
+           반폭이 허용오차 이하로 수렴하면 정지합니다. As-Is↔To-Be 차이의 통계적 유의성과 파라미터 ±20%
+           민감도(토네이도)를 함께 산출합니다. 상단 컨트롤바의 시나리오·모드·강도가 적용됩니다.</p>
+        <div id="mc-context" class="analysis-context"></div>
+        <div class="des-controls">
+          <label>최대 복제수 <input type="number" id="mc-maxreps" min="30" max="2000" step="10" value="500"></label>
+          <label>허용오차(%p) <input type="number" id="mc-tol" min="0.1" max="10" step="0.1" value="1"></label>
+          <label>baseSeed <input type="number" id="mc-seed" min="0" step="1" value="12345" readonly title="상단 딥링크 seed 사용"></label>
+          <label>시뮬레이션(초) <input type="number" id="mc-dur" value="1800" readonly title="상단 딥링크 dur 사용"></label>
+          <button id="mc-run" class="run-btn">▶ Monte Carlo 실행</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>수렴 판정</h2>
+        <div id="mc-converge"></div>
+      </div>
+
+      <div class="card">
+        <h2>지표별 통계 (현재 모드, 평균 ± 95% CI)</h2>
+        <table>
+          <thead><tr><th>지표</th><th>평균</th><th>95% CI 반폭</th><th>95% 신뢰구간</th><th>복제수 n</th></tr></thead>
+          <tbody id="mc-metrics-body"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>As-Is ↔ To-Be 통계적 유의성</h2>
+        <div id="mc-compare"></div>
+      </div>
+
+      <div class="card">
+        <h2>민감도 토네이도 (±20% 스윕, 누수율 기준)</h2>
+        <div id="mc-tornado" class="tornado"></div>
+        <div class="note" id="mc-tornado-note"></div>
+      </div>
+    </section>
+
     <!-- ── 근거자료 탭 ── -->
     <section class="tab-panel" id="panel-data">
       <div class="card">
@@ -181,9 +224,11 @@
   <script src="js/core/heap.js"></script>
   <script src="js/analysis/bottleneck.js"></script>
   <script src="js/engine/sim-engine.js"></script>
+  <script src="js/analysis/mc-runner.js"></script>
   <script src="js/ui/map-view.js"></script>
   <script src="js/ui/panels.js"></script>
   <script src="js/ui/des-panel.js"></script>
+  <script src="js/ui/mc-panel.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

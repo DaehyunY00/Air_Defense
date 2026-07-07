@@ -49,6 +49,8 @@
       KJ.panels.renderAnalysis(state, analysis);
     } else if (state.tab === 'des') {
       KJ.desPanel.render(state);
+    } else if (state.tab === 'mc') {
+      KJ.mcPanel.render(state);
     } else if (state.tab === 'data') {
       KJ.panels.renderData();
     }
@@ -88,6 +90,9 @@
     });
     document.getElementById('des-run').addEventListener('click', function () {
       KJ.desPanel.run(state);
+    });
+    document.getElementById('mc-run').addEventListener('click', function () {
+      KJ.mcPanel.run(state);
     });
     KJ.router.onChange(function () {
       state = KJ.router.parse();

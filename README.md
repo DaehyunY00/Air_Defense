@@ -36,12 +36,14 @@ js/
     heap.js                 # (Phase 2) 이벤트 큐용 이진 최소힙
   analysis/
     bottleneck.js           # 시나리오 기반 병목 도출 (M/M/c 해석적 정상상태 근사)
+    mc-runner.js            # ★ (Phase 3) Monte Carlo: Welford CI 수렴판정·민감도 스윕
   engine/
-    sim-engine.js           # ★ (Phase 2) DES 엔진: 9단계 파이프라인·FSM·M/M/c/K·병목 도출
+    sim-engine.js           # (Phase 2) DES 엔진: 9단계 파이프라인·FSM·M/M/c/K·병목 도출
   ui/
     map-view.js             # Leaflet 지도 (개념좌표·링크·병목 하이라이트)
     panels.js               # 시나리오/분석/근거자료 탭 렌더러
     des-panel.js            # (Phase 2) DES 실행·관측통계·As-Is↔To-Be 비교 탭
+    mc-panel.js             # (Phase 3) MC 수렴·유의성 비교·민감도 토네이도 탭
   main.js                   # 부트스트랩·상태 관리 (해시 = 상태 단일원천)
 docs/
   params.md                 # 파라미터 근거표 (ID·출처·인용·신뢰도 A/B/C·MC 적용방식)
@@ -101,8 +103,8 @@ docs/
 ## Phase 로드맵
 
 - [x] **Phase 1 — 스캐폴딩**: 다중 파일 구조, Leaflet 지도, 탭·딥링크, 데이터 모델, 시나리오 기반 병목 도출 프레임워크(정상상태 M/M/c 근사), 제약 어서션
-- [x] **Phase 2 — DES 엔진** (현재): 이벤트 큐(이진 min-heap), 시뮬레이션 클록, 위협/노드 FSM, 9단계 C2 파이프라인, M/M/c/K 대기열, seeded RNG(Mulberry32)+분포 샘플러, DES 실행 UI·As-Is↔To-Be 비교, 재현성·극한값 회귀 테스트
-- [ ] **Phase 3 — Monte Carlo**: Welford 수렴판정, 다중복제 신뢰구간, 분포 샘플러 확대, 민감도 스윕(±20%)
+- [x] **Phase 2 — DES 엔진**: 이벤트 큐(이진 min-heap), 시뮬레이션 클록, 위협/노드 FSM, 9단계 C2 파이프라인, M/M/c/K 대기열, seeded RNG(Mulberry32)+분포 샘플러, DES 실행 UI·As-Is↔To-Be 비교, 재현성·극한값 회귀 테스트
+- [x] **Phase 3 — Monte Carlo** (현재): Welford 스트리밍 평균/분산, 95% CI 수렴판정, 다중복제 신뢰구간, As-Is↔To-Be 통계적 유의성(CI 비중첩), 파라미터 ±20% 민감도 스윕(토네이도), 분포 샘플러 이론값 수렴 테스트
 - [ ] **Phase 4 — 시각화 고도화**: 위협궤적 애니메이션, Gantt/Sankey/히트맵
 - [ ] **Phase 5 — 통합검증·문서화**: V&V, 회귀 스위트
 
@@ -111,11 +113,26 @@ docs/
 ```bash
 # JS 구문 검증 (Phase 종료 게이트)
 for f in $(find js -name '*.js'); do node --check "$f"; done
+
+# 헤드리스 회귀 테스트 (저장소 루트에서)
+node tests/engine.test.js   # DES: 재현성·극한값·시나리오 병목·제약·보존 (seed 0 포함)
+node tests/mc.test.js       # MC: Welford 정확성·샘플러 이론값 수렴·CI 축소·유의성·민감도·성능
 ```
 
-DES 엔진의 헤드리스 회귀 테스트(재현성·극한값·시나리오 기반 병목·보존 항등식)는 `window.KJ`
-네임스페이스를 Node에서 로드해 실행할 수 있습니다. 브라우저에서는 **[DES 시뮬레이션] 탭**에서
-seed·시간·강도를 지정해 단일 복제를 실행하고 관측 통계와 As-Is↔To-Be 비교를 확인합니다.
+두 테스트는 `window.KJ` 네임스페이스를 Node에서 로드해 실행합니다. 브라우저에서는
+**[DES 시뮬레이션] 탭**(단일 복제 관측통계·As-Is↔To-Be 비교)과 **[Monte Carlo] 탭**
+(수렴판정·신뢰구간·통계적 유의성·민감도 토네이도)에서 대화형으로 확인합니다.
+
+### 통계 방법론 (Phase 3)
+
+- **Welford 온라인 분산**: 매 복제마다 평균·표본분산을 스트리밍 갱신, 수치적으로 안정.
+- **수렴판정**: 주지표(누수율) 95% CI 반폭 = z·s/√n 이 허용오차(기본 1%p) 이하로 떨어지면 정지
+  (최소 30회 보장, 상한까지 미수렴 시 상한 정지). 근거: 계획서 Recommendations 3.
+- **통계적 유의성**: As-Is·To-Be를 동일 baseSeed 파생 독립 시드로 각각 복제해, 두 95% CI가
+  겹치지 않으면 개선이 표본변동으로 설명되지 않는 유의한 차이로 판정.
+- **민감도 스윕**: 처리시간·통신지연·탐지확률·요격확률·위협강도를 각각 ±20% 스케일해 누수율
+  변동을 측정(토네이도). 포화 시나리오에서 탐지확률 영향이 미미한 반면 처리시간·강도가 지배적이라는
+  결과는 "병목은 처리용량"이라는 진단을 정량적으로 뒷받침한다.
 
 제약조건 어서션(신궁·천마 탄도탄 교전 불가, THAAD 미모델링, 디스클레이머 상시 표출,
 개념좌표 주석, KF-21 보라매 표기)은 앱 내 **[근거자료·제약검증] 탭**에서 상시 확인됩니다.

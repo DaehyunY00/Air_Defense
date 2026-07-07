@@ -50,8 +50,15 @@
     this.scenario = cfg.scenario;
     this.mode = cfg.mode;
     this.intensity = cfg.intensity === undefined ? 1 : cfg.intensity; // 강도 0 허용
-    this.seed = (cfg.seed >>> 0) || 1;
+    this.seed = cfg.seed === undefined ? 1 : (cfg.seed >>> 0); // seed 0 보존
     this.endTime = cfg.endTimeSec || 1800;
+    // 민감도 스윕용 파라미터 배수(기본 1). 서비스시간·통신지연·탐지확률·요격확률을
+    // 전역 스케일링해 ±20% 스윕 등에 사용 (Phase 3 mc-runner). 근거: 계획서 V&V 민감도분석.
+    var m = cfg.mult || {};
+    this.mult = {
+      service: m.service || 1, delay: m.delay || 1,
+      detect: m.detect || 1, pk: m.pk || 1
+    };
     this.rng = KJ.makeRng(this.seed);
     this.heap = new KJ.MinHeap();
     this.now = 0;
@@ -83,7 +90,7 @@
         K = c * SHOOTER_QUEUE_MULT;
       }
       self.nodeState[n.id] = {
-        node: n, c: c, mean: mean, K: K,
+        node: n, c: c, mean: mean * self.mult.service, K: K,
         busy: 0, queue: [], lastT: 0,
         busyTime: 0, qTime: 0,
         arrivals: 0, completions: 0, drops: 0,
@@ -153,11 +160,15 @@
     this._advance(ns, t);
     ns.busy--;
     ns.completions++;
-    if (ns.queue.length > 0) {
+    // 다음 대기 작업 인출 — 이미 공역이탈(누수)·폐기된 항적은 건너뜀(track abandonment/reneging).
+    // 포화 노드가 이미 떠난 항적에 유령 서비스 부하를 계상하지 않도록 한다.
+    while (ns.queue.length > 0) {
       var nx = ns.queue.shift();
+      if (!nx.job.threat.alive || nx.job.threat.pipelineDead) continue; // 재고에서 폐기
       ns.busy++;
       ns.waitAccum += (t - nx.enqT); ns.waitCount++;
       this._startService(ns, t, nx.job, nx.onDone);
+      break;
     }
     if (d.onDone) d.onDone(t, d.job);
   };
@@ -180,7 +191,7 @@
     var threat = d.threat;
     if (!threat.alive || threat.detected || threat.pipelineDead) return;
     var tt = KJ.threatType(threat.type);
-    var p = tt.detectFactor; // per-scan 탐지확률(개념) — 저탐지 위협은 재시도 반복
+    var p = Math.min(1, tt.detectFactor * this.mult.detect); // per-scan 탐지확률(민감도 배수 적용)
     if (this.rng.raw() < p) {
       threat.detected = true;
       this.global.detected++;
@@ -204,7 +215,7 @@
     });
     if (!best) { threat.leakReason = 'no_report_path'; return; }
     this._recordLink(best.from, best.c2, best.comm, 'report');
-    this.schedule(t + best.delay, PRI.LINK_ARRIVE, 'C2_ARRIVE', { threat: threat, c2: best.c2 });
+    this.schedule(t + best.delay * this.mult.delay, PRI.LINK_ARRIVE, 'C2_ARRIVE', { threat: threat, c2: best.c2 });
   };
 
   /** 3·4·5 식별·위협평가·WTA: C2(또는 To-Be JAMDC2) 서버 처리 */
@@ -224,7 +235,7 @@
       var comm = this._link(c2Id, 'JAMDC2', 'report') || this._link(c2Id, 'JAMDC2', null);
       var delay = comm ? comm.delaySec : 0;
       if (comm) this._recordLink(c2Id, 'JAMDC2', comm, 'report');
-      this.schedule(t + delay, PRI.LINK_ARRIVE, 'FUSION_ARRIVE', { threat: threat });
+      this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'FUSION_ARRIVE', { threat: threat });
       return;
     }
     this._decision(threat, t, c2Id);
@@ -254,7 +265,7 @@
       delay += l.comm[self.mode].delaySec;
       self._recordLink(l.from, l.to, l.comm[self.mode], 'coord');
     });
-    this.schedule(t + delay, PRI.LINK_ARRIVE, 'APPROVE_ARRIVE', { threat: threat, appr: approvalId });
+    this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'APPROVE_ARRIVE', { threat: threat, appr: approvalId });
   };
 
   Simulation.prototype._onApproveArrive = function (t, d) {
@@ -286,7 +297,7 @@
     var delay = comm ? comm.delaySec : 0;
     if (comm) this._recordLink(controlC2, shooter.id, comm, 'command');
     this.global.engaged++;
-    this.schedule(t + delay, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: threat, shooter: shooter.id });
+    this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: threat, shooter: shooter.id });
   };
 
   Simulation.prototype._onShooterArrive = function (t, d) {
@@ -316,10 +327,12 @@
 
   /** 요격확률(개념값). 소형 무인기는 저효율(2022.12.26 격추실패 반영). */
   Simulation.prototype._pk = function (shooter, threat) {
-    if (threat.type === 'uav_small') return this.rng.triangular(0.1, 0.3, 0.5);
-    if (shooter.category === 'shooter' && (threat.type === 'srbm' || threat.type === 'mrl_large'))
-      return this.rng.triangular(0.6, 0.75, 0.9);
-    return this.rng.triangular(0.6, 0.8, 0.9);
+    var pk;
+    if (threat.type === 'uav_small') pk = this.rng.triangular(0.1, 0.3, 0.5);
+    else if (shooter.category === 'shooter' && (threat.type === 'srbm' || threat.type === 'mrl_large'))
+      pk = this.rng.triangular(0.6, 0.75, 0.9);
+    else pk = this.rng.triangular(0.6, 0.8, 0.9);
+    return Math.max(0, Math.min(1, pk * this.mult.pk)); // 민감도 배수 적용, [0,1] 클램프
   };
 
   // ── 발생·이탈 ──

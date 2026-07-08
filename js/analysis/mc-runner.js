@@ -41,11 +41,12 @@
       killRate: r.global.killRate,
       leakRate: r.global.leakRate,
       detectRate: r.global.spawned ? r.global.detected / r.global.spawned : 0,
+      meanTimeToEngageSec: r.global.meanTimeToEngageSec,
       meanTimeToKillSec: r.global.meanTimeToKillSec,
       bottleneckCount: r.bottlenecks.length
     };
   }
-  var METRIC_KEYS = ['killRate', 'leakRate', 'detectRate', 'meanTimeToKillSec', 'bottleneckCount'];
+  var METRIC_KEYS = ['killRate', 'leakRate', 'detectRate', 'meanTimeToEngageSec', 'meanTimeToKillSec', 'bottleneckCount'];
 
   /**
    * Monte Carlo 실행.

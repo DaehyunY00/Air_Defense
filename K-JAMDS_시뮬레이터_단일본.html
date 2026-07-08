@@ -2617,7 +2617,10 @@ li.chk-fail { background: #43140f; }
       service: m.service || 1, delay: m.delay || 1,
       detect: m.detect || 1, pk: m.pk || 1
     };
+    // 처리(procRng)와 도착(arrRng) 스트림 분리 — 공통난수(CRN). arrRng는 seed에서 독립적으로
+    // 파생(황금비 해시)해, 도착열이 처리 무작위성과 얽히지 않고 모드 불변이 되도록 한다.
     this.rng = KJ.makeRng(this.seed);
+    this.arrRng = KJ.makeRng((Math.imul(this.seed ^ 0x9E3779B9, 0x85EBCA6B) >>> 0));
     this.heap = new KJ.MinHeap();
     this.now = 0;
     this.seq = 0;
@@ -2627,7 +2630,7 @@ li.chk-fail { background: #43140f; }
     this.global = {
       spawned: 0, detected: 0, engaged: 0, killed: 0, leaked: 0,
       reachedC2: 0, everEngaged: 0,
-      leakReasons: {}, timeToKill: []
+      leakReasons: {}, timeToKill: [], timeToEngage: []
     };
     this.eventCount = 0;
     this.log = [];        // 표본 이벤트 로그(앞부분만 보존)
@@ -2902,7 +2905,12 @@ li.chk-fail { background: #43140f; }
     var delay = comm ? comm.delaySec : 0;
     if (comm) this._recordLink(controlC2, shooter.id, comm, 'command');
     this.global.engaged++;
-    if (!threat._countedEngaged) { threat._countedEngaged = true; this.global.everEngaged++; }
+    if (!threat._countedEngaged) {
+      threat._countedEngaged = true; this.global.everEngaged++;
+      // C2 결심~교전 지연(지연 시간 지표): 생성→최초 교전명령까지. As-Is 음성협조(180초)와
+      // To-Be 사전승인 자동교전의 차이를 직접 포착하는 핵심 C2 지표.
+      this.global.timeToEngage.push(t - threat.spawnT);
+    }
     this._mark(threat, '교전명령#' + (threat.tries + 1) + ':' + shooter.id, t);
     this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: threat, shooter: shooter.id });
   };
@@ -2974,7 +2982,7 @@ li.chk-fail { background: #43140f; }
     // 다음 도착 (포아송: 지수 도착간격) — burst 전용 항목(ratePerMin 부재)은 후속 도착 없음
     var ratePerSec = ((entry.ratePerMin || 0) * this.intensity) / 60;
     if (ratePerSec > 0) {
-      var next = t + this.rng.exponential(1 / ratePerSec);
+      var next = t + this.arrRng.exponential(1 / ratePerSec); // 도착 전용 스트림(CRN)
       if (next <= this.endTime) this.schedule(next, PRI.SPAWN, 'SPAWN', { entry: entry });
     }
   };
@@ -3009,7 +3017,7 @@ li.chk-fail { background: #43140f; }
       }
       var ratePerSec = ((entry.ratePerMin || 0) * self.intensity) / 60;
       if (ratePerSec <= 0) return;
-      var first = self.rng.exponential(1 / ratePerSec);
+      var first = self.arrRng.exponential(1 / ratePerSec); // 도착 전용 스트림(CRN)
       if (first <= self.endTime) self.schedule(first, PRI.SPAWN, 'SPAWN', { entry: entry });
     });
 
@@ -3025,6 +3033,14 @@ li.chk-fail { background: #43140f; }
     Object.keys(this.nodeState).forEach(function (id) {
       self._advance(self.nodeState[id], self.endTime);
     });
+    // trace 마감: 관측창 종료 시점에도 결말(격추/누수)이 확정되지 않은 항적은 "진행중"으로
+    // 종료 마커를 남긴다. exitT는 설정하지 않으므로(=null 유지) 누수로 오분류되지 않고,
+    // Gantt·항적로그가 관측 절단(spawn 직후 종료)된 항적도 빈 궤적 없이 표현한다.
+    if (this.trace) {
+      this.threatTraces.forEach(function (tr) {
+        if (tr.exitT === null) tr.stages.push({ name: '관측종료(진행중)', t: self.endTime });
+      });
+    }
     return this._results();
   };
 
@@ -3111,6 +3127,8 @@ li.chk-fail { background: #43140f; }
 
     var ttk = this.global.timeToKill;
     var meanTTK = ttk.length ? ttk.reduce(function (s, x) { return s + x; }, 0) / ttk.length : 0;
+    var tte = this.global.timeToEngage;
+    var meanTTE = tte.length ? tte.reduce(function (s, x) { return s + x; }, 0) / tte.length : 0;
 
     var result = {
       config: {
@@ -3126,7 +3144,8 @@ li.chk-fail { background: #43140f; }
         leakReasons: this.global.leakReasons,
         killRate: this.global.spawned ? this.global.killed / this.global.spawned : 0,
         leakRate: this.global.spawned ? this.global.leaked / this.global.spawned : 0,
-        meanTimeToKillSec: meanTTK
+        meanTimeToKillSec: meanTTK,
+        meanTimeToEngageSec: meanTTE
       },
       // 단계별 흐름 카운트 (Sankey/funnel용) — trace 없이도 항상 제공(집계 카운터라 저비용)
       flow: {
@@ -3222,11 +3241,12 @@ li.chk-fail { background: #43140f; }
       killRate: r.global.killRate,
       leakRate: r.global.leakRate,
       detectRate: r.global.spawned ? r.global.detected / r.global.spawned : 0,
+      meanTimeToEngageSec: r.global.meanTimeToEngageSec,
       meanTimeToKillSec: r.global.meanTimeToKillSec,
       bottleneckCount: r.bottlenecks.length
     };
   }
-  var METRIC_KEYS = ['killRate', 'leakRate', 'detectRate', 'meanTimeToKillSec', 'bottleneckCount'];
+  var METRIC_KEYS = ['killRate', 'leakRate', 'detectRate', 'meanTimeToEngageSec', 'meanTimeToKillSec', 'bottleneckCount'];
 
   /**
    * Monte Carlo 실행.
@@ -4805,6 +4825,7 @@ li.chk-fail { background: #43140f; }
     killRate: { label: '격추율', fmt: pct, kind: 'rate' },
     leakRate: { label: '요격 실패율', fmt: pct, kind: 'rate' },
     detectRate: { label: '탐지율', fmt: pct, kind: 'rate' },
+    meanTimeToEngageSec: { label: '평균 교전지연(결심~교전)', fmt: function (x) { return x.toFixed(0) + '초'; }, kind: 'sec' },
     meanTimeToKillSec: { label: '평균 격추시간', fmt: function (x) { return x.toFixed(0) + '초'; }, kind: 'sec' },
     bottleneckCount: { label: '도출 병목 수', fmt: function (x) { return x.toFixed(2) + '개'; }, kind: 'count' }
   };
@@ -4889,7 +4910,7 @@ li.chk-fail { background: #43140f; }
         var a = cur.metrics[key], b = oth.metrics[key];
         var overlap = a.lo <= b.hi && b.lo <= a.hi;
         var better;
-        if (key === 'leakRate' || key === 'meanTimeToKillSec' || key === 'bottleneckCount') better = cur.metrics[key].mean < oth.metrics[key].mean;
+        if (key === 'leakRate' || key === 'meanTimeToEngageSec' || key === 'meanTimeToKillSec' || key === 'bottleneckCount') better = cur.metrics[key].mean < oth.metrics[key].mean;
         else better = cur.metrics[key].mean > oth.metrics[key].mean;
         var sig = overlap ? '<span class="badge badge-idle">유의차 없음</span>'
           : '<span class="badge badge-ok">유의(95% CI 비중첩)</span>';
@@ -4900,10 +4921,12 @@ li.chk-fail { background: #43140f; }
       }
       return '<table><thead><tr><th>지표</th><th>' + curName + ' (현재)</th><th>' + othName +
         '</th><th>통계적 유의성</th></tr></thead><tbody>' +
-        ['killRate', 'leakRate', 'detectRate', 'meanTimeToKillSec', 'bottleneckCount'].map(row).join('') +
+        ['killRate', 'leakRate', 'detectRate', 'meanTimeToEngageSec', 'meanTimeToKillSec', 'bottleneckCount'].map(row).join('') +
         '</tbody></table>' +
-        '<div class="note">동일 시나리오·강도·baseSeed에서 체계 모드만 교체해 각각 독립 복제. 95% 신뢰구간이 ' +
-        '겹치지 않으면 두 체계의 차이가 표본변동으로 설명되지 않는(통계적으로 유의한) 개선임을 뜻한다.</div>';
+        '<div class="note">동일 시나리오·강도·baseSeed에서 체계 모드만 교체해 각각 독립 복제. ' +
+        '공통난수(CRN)로 도착 스트림을 분리해, 복제 i의 As-Is와 To-Be는 <b>완전히 동일한 위협열</b>을 ' +
+        '마주한다(같은 위협에 대한 짝지은 비교). 95% 신뢰구간이 겹치지 않으면 두 체계의 차이가 ' +
+        '표본변동으로 설명되지 않는(통계적으로 유의한) 개선임을 뜻한다.</div>';
     },
 
     _tornado: function (sens) {

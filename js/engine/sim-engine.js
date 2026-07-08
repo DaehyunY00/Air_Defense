@@ -24,6 +24,15 @@
  * ── 재현성 ──
  *   모든 무작위성은 seed 기반 Mulberry32(core/rng.js)에서만 나오고, 이벤트 동시성은
  *   (t, 우선순위, 삽입순서)로 결정론적으로 해소되므로, 동일 config는 동일 결과를 낸다.
+ *
+ * ── 공통난수(CRN)로 As-Is↔To-Be 페어링 (검토 반영) ──
+ *   난수 스트림을 둘로 분리한다:
+ *     · arrRng  — 위협 도착(시나리오 그 자체): 도착간격만 소비. 파이프라인 처리와 무관하므로
+ *                 모드(asis/tobe)와 독립적으로 동일한 도착 스케줄(시각·유형·축선·수)을 생성한다.
+ *     · procRng — 처리 무작위성: 탐지 판정·서비스시간·요격확률(pk) 등 체계의 확률적 응답.
+ *   덕분에 동일 seed에서 As-Is와 To-Be는 "같은 위협(시나리오)"을 마주하고, 두 형상의 차이가
+ *   서로 다른 위협표본이 아니라 오직 C2 구조 차이에서 비롯됨을 보장한다(공통난수 분산감소).
+ *   (분리 전에는 단일 스트림이 도착과 처리를 교대로 소비해, 모드가 바뀌면 도착열이 어긋났다.)
  */
 (function () {
   'use strict';
@@ -59,7 +68,10 @@
       service: m.service || 1, delay: m.delay || 1,
       detect: m.detect || 1, pk: m.pk || 1
     };
+    // 처리(procRng)와 도착(arrRng) 스트림 분리 — 공통난수(CRN). arrRng는 seed에서 독립적으로
+    // 파생(황금비 해시)해, 도착열이 처리 무작위성과 얽히지 않고 모드 불변이 되도록 한다.
     this.rng = KJ.makeRng(this.seed);
+    this.arrRng = KJ.makeRng((Math.imul(this.seed ^ 0x9E3779B9, 0x85EBCA6B) >>> 0));
     this.heap = new KJ.MinHeap();
     this.now = 0;
     this.seq = 0;
@@ -69,7 +81,7 @@
     this.global = {
       spawned: 0, detected: 0, engaged: 0, killed: 0, leaked: 0,
       reachedC2: 0, everEngaged: 0,
-      leakReasons: {}, timeToKill: []
+      leakReasons: {}, timeToKill: [], timeToEngage: []
     };
     this.eventCount = 0;
     this.log = [];        // 표본 이벤트 로그(앞부분만 보존)
@@ -344,7 +356,12 @@
     var delay = comm ? comm.delaySec : 0;
     if (comm) this._recordLink(controlC2, shooter.id, comm, 'command');
     this.global.engaged++;
-    if (!threat._countedEngaged) { threat._countedEngaged = true; this.global.everEngaged++; }
+    if (!threat._countedEngaged) {
+      threat._countedEngaged = true; this.global.everEngaged++;
+      // C2 결심~교전 지연(지연 시간 지표): 생성→최초 교전명령까지. As-Is 음성협조(180초)와
+      // To-Be 사전승인 자동교전의 차이를 직접 포착하는 핵심 C2 지표.
+      this.global.timeToEngage.push(t - threat.spawnT);
+    }
     this._mark(threat, '교전명령#' + (threat.tries + 1) + ':' + shooter.id, t);
     this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: threat, shooter: shooter.id });
   };
@@ -413,10 +430,11 @@
     }
     this.schedule(t + threat.dwellSec, PRI.EXIT, 'EXIT', { threat: threat });
     this._beginDetect(threat, t);
-    // 다음 도착 (포아송: 지수 도착간격) — burst 전용 항목(ratePerMin 부재)은 후속 도착 없음
+    // 다음 도착 (포아송: 지수 도착간격) — burst 전용 항목(ratePerMin 부재)은 후속 도착 없음.
+    // 도착간격은 arrRng(도착 전용 스트림)에서만 소비 → 모드 불변(CRN).
     var ratePerSec = ((entry.ratePerMin || 0) * this.intensity) / 60;
     if (ratePerSec > 0) {
-      var next = t + this.rng.exponential(1 / ratePerSec);
+      var next = t + this.arrRng.exponential(1 / ratePerSec);
       if (next <= this.endTime) this.schedule(next, PRI.SPAWN, 'SPAWN', { entry: entry });
     }
   };
@@ -451,7 +469,7 @@
       }
       var ratePerSec = ((entry.ratePerMin || 0) * self.intensity) / 60;
       if (ratePerSec <= 0) return;
-      var first = self.rng.exponential(1 / ratePerSec);
+      var first = self.arrRng.exponential(1 / ratePerSec); // 도착 전용 스트림(CRN)
       if (first <= self.endTime) self.schedule(first, PRI.SPAWN, 'SPAWN', { entry: entry });
     });
 
@@ -467,6 +485,14 @@
     Object.keys(this.nodeState).forEach(function (id) {
       self._advance(self.nodeState[id], self.endTime);
     });
+    // trace 마감: 관측창 종료 시점에도 결말(격추/누수)이 확정되지 않은 항적은 "진행중"으로
+    // 종료 마커를 남긴다. exitT는 설정하지 않으므로(=null 유지) 누수로 오분류되지 않고,
+    // Gantt·항적로그가 관측 절단(spawn 직후 종료)된 항적도 빈 궤적 없이 표현된다.
+    if (this.trace) {
+      this.threatTraces.forEach(function (tr) {
+        if (tr.exitT === null) tr.stages.push({ name: '관측종료(진행중)', t: self.endTime });
+      });
+    }
     return this._results();
   };
 
@@ -553,6 +579,8 @@
 
     var ttk = this.global.timeToKill;
     var meanTTK = ttk.length ? ttk.reduce(function (s, x) { return s + x; }, 0) / ttk.length : 0;
+    var tte = this.global.timeToEngage;
+    var meanTTE = tte.length ? tte.reduce(function (s, x) { return s + x; }, 0) / tte.length : 0;
 
     var result = {
       config: {
@@ -568,7 +596,8 @@
         leakReasons: this.global.leakReasons,
         killRate: this.global.spawned ? this.global.killed / this.global.spawned : 0,
         leakRate: this.global.spawned ? this.global.leaked / this.global.spawned : 0,
-        meanTimeToKillSec: meanTTK
+        meanTimeToKillSec: meanTTK,
+        meanTimeToEngageSec: meanTTE
       },
       // 단계별 흐름 카운트 (Sankey/funnel용) — trace 없이도 항상 제공(집계 카운터라 저비용)
       flow: {

@@ -433,3 +433,84 @@ SC2(문제 상황 2 — 무인기 8대 동시 남파)는 포아송 연속 도착
 정상상태 M/M/c 해석 모듈은 시간 개념이 없으므로, burst 항목에는 등가 도착률
 `equivRatePerMin`(burst를 위협 체공창 dwellSec≈15분에 균등 살포한 개념 근사)을 병기해
 사용한다(`KJ.entryRate`). 강도 배수는 burst 수에 반올림 스케일로 적용된다(강도 0 → 0대).
+
+---
+
+## Phase 7 — C2 모델 고도화 파라미터 (선행연구 조사 기반)
+
+> Phase 7 고도화는 2026-07 선행연구 조사(공개 학술문헌·표준·해외 IAMD 공개자료)에서
+> **실제 확인된 출처만** 방법론 근거로 사용한다. 수치 자체는 여전히 정책연구용 개념값(C)이며,
+> 방법론(분포 선택·큐 규율·알고리즘)의 근거 등급을 별도로 표기한다.
+
+### [C2-SVC-DIST-01] C2 결심·처리시간 분포: 지수 → 로그정규(CV=0.5)
+- **값/분포**: Lognormal(평균 = 기존 노드별 serviceTimeSec, CV = 0.5) — C2 노드에만 적용,
+  교전채널 점유시간은 지수 유지
+- **출처(방법론)**: 인간 결심·과제수행시간의 우편향(로그정규) 모델링 관행 — Moffat,
+  "Modelling Human Decision-Making in Simulation Models of Conflict", The International C2
+  Journal v1n1 (DoD CCRP, 공개); 반응시간 분포의 로그정규 적합성에 관한 공개 문헌 다수
+- **적용범위**: `engine/sim-engine.js` `_startService` (C2 카테고리 노드)
+- **신뢰도 등급**: 방법론 B / CV=0.5 수치 C(개념값)
+- **MC 적용방식**: 평균은 민감도 배수(service) 적용, CV 고정. `serviceDist:'exp'` 옵션으로
+  M/M/c 가정 복원(해석해 교차검증 모드, tests/analytic.test.js)
+- **비고**: M/G/c 근사(Allen-Cunneen)상 Wq ≈ M/M/c × (1+CV²)/2 = 0.625배 — 교차검증
+  테스트에서 비율 0.4~0.9 관측 확인
+
+### [THR-PRI-01] 위협 우선순위 클래스 (비선점 우선순위 큐)
+- **값/분포**: 1=탄도탄·방사포, 2=전투기·순항미사일, 3=저속기·헬기, 4=소형무인기, 5=오경보
+- **출처(방법론)**: TEWA 위협평가의 시간임계(time-critical) 우선 원칙 — Johansson & Falkman,
+  "Performance Evaluation of TEWA Systems…" (Springer 2009, 공개 초록); 비선점 마르코프
+  우선순위 큐 해석 문헌(공개). 서열 자체는 개념 설정
+- **적용범위**: `_nodeArrive` 큐 삽입 규율(discipline='priority', 동순위 FCFS).
+  포화 시 저우선(무인기) 대기 폭증이 관측 지표(priorityWait)로 산출됨
+- **신뢰도 등급**: 방법론 B / 서열 C
+- **MC 적용방식**: 고정 (discipline='fifo' 옵션으로 무효화 가능)
+
+### [ENV-FT-RATE-01 / ENV-FT-ESC-01] 오경보(클러터) 트랙 발생률·상위보고 확률
+- **값/분포**: SC1·SC3·SC4 = 0.5건/분, SC2 = 1.0건/분 (강도 배수 적용) /
+  상위보고(정밀조사) 확률 As-Is 0.3, To-Be 0.1
+- **출처(실증 동기)**: 2022.12.26 대응 간 "새떼·풍선 오인" 등 미식별 항적 다수 처리
+  — 합참 국회보고(2022.12.27)·국회회의록(공개). 수치는 개념값
+- **적용범위**: 시나리오 `falseTracks` → 센서 보고경로 → C2 식별·위협평가 서버 용량 소모.
+  격추/누수 통계 불산입(분모 왜곡 방지), C2 부하에만 기여
+- **신뢰도 등급**: 실증 동기 A(사건 사실관계) / 수치 C
+- **MC 적용방식**: 강도 배수 연동, seed 재현
+
+### [WPN-INV-01 / WPN-INV-RSV-01] 요격자산 재고·예비율 임계 정책 (원칙 5)
+- **값/분포**: FTR 24 / SHORAD-1C 48 / SHORAD-CD 32 / MSAM-1C 16 / MDU-M 32 / MDU-L 18 /
+  SM2 각 16 (발·소티 개념). 예비율 20% 이하 → 저우선(pri≥3) 교전 보류, 0 → 교전 불가
+- **출처(방법론)**: 유한자산 대기체계(M/M/c/K·재고 임계) 군사 적용 — Li et al., "Performance
+  Analysis and Optimal Allocation of Layered Defense M/M/N Queueing Systems" (Math. Problems
+  in Eng. 2016, 공개); 다목적 DWTA의 탄 소모 최소화 목적함수(공개 문헌). 수치·20% 정책은 개념값
+- **적용범위**: `_shooterCandidates`(자격 필터)·`_dispatchEngage`(커밋 차감)·
+  결과 `inventory`/`inventory_denied`
+- **신뢰도 등급**: 방법론 B / 수치·정책 C
+- **MC 적용방식**: 고정 (향후 재고 초기값 민감도 스윕 후보)
+
+### [C2-OUTAGE-01 / C2-FALLBACK-DLY-01] 링크 두절 창·권한위임 전환 지연 (원칙 6)
+- **값/분포**: SC4 두절 창 300~1,200초(육↔공 협조 링크) / 권한위임 전환 지연 45초(개념)
+- **출처(방법론)**: 분산·저하 환경 C2의 중앙-분권 전환 개념 — CSBA, "Mosaic Warfare:
+  …Decision-Centric Operations" (2020, 공개 보고서); NATO IAMD Policy(2025, 공개)의
+  분권 교전통제 원칙. 수치는 개념값
+- **적용범위**: `_linkUp`(가용성)·`_decision`(구조적 경로 존재 + 가용 경로 부재 시 fallback)·
+  결과 `global.fallback`. 구조적 경로 부재는 종전대로 책임공백(responsibility_gap) 유지
+- **신뢰도 등급**: 방법론 B / 수치 C
+- **MC 적용방식**: 시나리오 고정 창 (향후 MTBF/MTTR 확률화 후보)
+
+### [ENV-WAVE-01] 파상(비정상 포아송) 도착 — thinning 표본화
+- **값/분포**: SC3 방사포: 기본 1.5건/분, ON 60초×4배 / OFF 120초 (평균 3.0건/분 보존)
+- **출처(방법론)**: 비정상 포아송과정의 thinning(간축) 표본화 — 표준 확률과정 기법(교과서 수준);
+  KN-25 연발 사격 간격 보도(THR-KN25-RNG-01, 기존 B급)
+- **적용범위**: `_scheduleNextArrival`. 해석 모듈은 평균률(ratePerMin×등가)로 근사
+- **신뢰도 등급**: 방법론 B / 구간 수치 C
+- **MC 적용방식**: 강도 배수는 기본률·ON률에 공통 적용, seed 재현
+
+### [WTA-HUNG-01 / WTA-EPOCH-01] To-Be 배치 WTA — 헝가리안 최적 할당·결심주기
+- **값/분포**: 결심주기 4초(개념). 비용 = (1−Pk기대값) + 0.2×무기 부하율 + 명령지연/600
+- **출처(방법론)**: WTA 정식화·해법 서베이 — Kline, Ahner & Hill, "The Weapon-Target
+  Assignment Problem" (Computers & OR, 2019); Ahuja et al., "Exact and Heuristic Algorithms
+  for the WTA Problem" (Operations Research, 2007); 할당문제 헝가리안 O(n³)(교과서 수준).
+  Any-Sensor-Best-Shooter 개념 — Northrop Grumman IBCS 공개자료
+- **적용범위**: `core/hungarian.js` + `_onWtaEpoch`(To-Be 전용). As-Is는 탐욕(최소부하)
+  유지 — 분절 체계의 국지 결정 표현. 가중치·주기는 개념값
+- **신뢰도 등급**: 방법론 B(공개 학술 서베이·제조사 공식자료) / 가중치·주기 C
+- **MC 적용방식**: `wtaBatch:false` 옵션으로 탐욕 대비 효과 분리 측정 (8시드 평균 비열등 회귀 고정)

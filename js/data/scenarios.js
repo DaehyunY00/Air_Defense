@@ -14,6 +14,16 @@
  *      · burst    : atSec 시점에 동시 발생하는 위협 수 (강도 배수로 반올림 스케일)
  *      · equivRatePerMin : 해석 모듈(M/M/c 정상상태 근사)용 등가 도착률 개념값
  *        (burst를 위협 체공창(dwellSec) 수준 시간창에 균등 살포한 근사)
+ *  - { ..., wave: { onSec, offSec, mult } } : 파상(비정상 포아송) 도착 — ON 구간 동안
+ *      도착률이 ratePerMin×mult로 상승, OFF 구간은 ratePerMin. 주기 = onSec+offSec,
+ *      t=0부터 ON으로 시작. thinning(간축법)으로 표본화(ENV-WAVE-01, 재현성 유지).
+ *
+ * 시나리오 선택 필드 (Phase 7):
+ *  - falseTracks: { ratePerMin }  : 오경보(클러터: 조류·풍선·비협조 민간기 오인) 트랙
+ *      발생률. 오경보 트랙도 식별·위협평가 서버 용량을 소모(2022.12.26 "새떼 오인" 부하
+ *      재현, ENV-FT-RATE-01). 격추/누수 통계에는 불산입, 강도 배수 적용.
+ *  - outages: [{ from, to, kind, fromSec, toSec }] : 통신 링크 두절 창(Degraded Mode,
+ *      C2-OUTAGE-01). 두절 중 협조경로 상실 시 엔진이 권한위임(fallback)으로 전환.
  * UI의 강도 슬라이더(intensity 0.5x~3.0x)가 전체 λ·burst에 곱해진다.
  */
 (function () {
@@ -43,6 +53,8 @@
         { type: 'uav_small', axis: 'seoul', ratePerMin: 0.1 },
         { type: 'cruise', axis: 'west', ratePerMin: 0.25 }
       ],
+      // 경계 침투 상황의 미식별·오인 트랙(민간 경항공기·조류 등) — 식별 부하 유발
+      falseTracks: { ratePerMin: 0.5, paramRef: 'ENV-FT-RATE-01' },
       defaultMode: 'asis'
     },
     {
@@ -65,6 +77,8 @@
         { type: 'uav_small', axis: 'seoul', ratePerMin: 0.2 },
         { type: 'uav_small', axis: 'central', ratePerMin: 0.15 }
       ],
+      // 2022.12.26 실증: "새떼·풍선 오인" 다수 — 저피탐 소형표적 혼재 시 오경보 부하 최대
+      falseTracks: { ratePerMin: 1.0, paramRef: 'ENV-FT-RATE-01' },
       defaultMode: 'asis'
     },
     {
@@ -78,10 +92,40 @@
       basis: 'KJADS 구축안 문제 상황 3 (전략적 섞어쏘기); KN-25 발사간격 약 20초(THR-KN25-RNG-01)',
       mix: [
         { type: 'srbm', axis: 'central', ratePerMin: 1.5 },
-        { type: 'mrl_large', axis: 'east', ratePerMin: 3.0 },
+        // 방사포는 연발 사격 특성상 파상(비정상 포아송) 도착 — 평균 λ는 종전과 동일한
+        // 3.0/분(= (60×6 + 120×1.5)/180)이되, ON 구간에 집중되는 배치성 부하를 재현.
+        { type: 'mrl_large', axis: 'east', ratePerMin: 1.5, wave: { onSec: 60, offSec: 120, mult: 4 } },
         { type: 'uav_small', axis: 'west', ratePerMin: 1.0 },
         { type: 'uav_small', axis: 'seoul', ratePerMin: 0.5 },
         { type: 'fighter', axis: 'west', ratePerMin: 0.8 }
+      ],
+      falseTracks: { ratePerMin: 0.5, paramRef: 'ENV-FT-RATE-01' },
+      defaultMode: 'asis'
+    },
+    {
+      id: 'sc4',
+      name: 'SC4 · C2 통신 두절·분권 전환 (Degraded Mode)',
+      problem: '문제 상황 4 (KJADS 원칙 6: 강건성·복원력)',
+      description: '교전협조의 핵심인 육↔공 협조 링크가 전자전·장비 고장 등으로 일정 시간 ' +
+        '두절되는 상황(300~1,200초 창). 협조경로 상실 시 상위 승인 대기가 불가능해지고, ' +
+        '엔진은 권한위임 지연(개념값 45초) 후 현장 통제소가 자체 승인하는 분권(fallback) ' +
+        '모드로 전환한다. 중앙-분권 전환 빈도·지연과 두절 창 전후의 누수율 변화를 관찰해 ' +
+        'To-Be(우회 경로 보유)의 복원력을 정량 비교한다.',
+      basis: 'KJADS 6대 설계 원칙 중 원칙 6 (Degraded Mode·Fallback C2·중앙-분권-자율 전환)',
+      mix: [
+        { type: 'ac_low', axis: 'west', ratePerMin: 0.3 },
+        { type: 'heli', axis: 'west', ratePerMin: 0.2 },
+        { type: 'heli', axis: 'seoul', ratePerMin: 0.15 },
+        { type: 'uav_small', axis: 'west', ratePerMin: 0.25 },
+        { type: 'uav_small', axis: 'seoul', ratePerMin: 0.15 },
+        { type: 'fighter', axis: 'west', ratePerMin: 0.4 }
+      ],
+      falseTracks: { ratePerMin: 0.5, paramRef: 'ENV-FT-RATE-01' },
+      // 두절 창: 육→공 협조 링크(As-Is 음성 VTC / To-Be 데이터링크) 동시 두절.
+      // To-Be는 JAMDC2 경유 우회 협조경로가 살아 있어 영향이 작다(복원력 비교 목적).
+      outages: [
+        { from: 'AOC-1C', to: 'MCRC', kind: 'coord', fromSec: 300, toSec: 1200, paramRef: 'C2-OUTAGE-01' },
+        { from: 'JAOC-CD', to: 'MCRC', kind: 'coord', fromSec: 300, toSec: 1200, paramRef: 'C2-OUTAGE-01' }
       ],
       defaultMode: 'asis'
     }

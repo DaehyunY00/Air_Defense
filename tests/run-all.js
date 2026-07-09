@@ -37,6 +37,8 @@ if (!failures) console.log('  전체 통과');
 // ── 2) 회귀 테스트 스위트 ──
 var suites = [
   ['engine.test.js', 'DES 엔진 (재현성·극한값·시나리오 병목·보존·trace)'],
+  ['phase7.test.js', 'Phase 7 (헝가리안 WTA·우선순위 큐·오경보·재고·Degraded·파상도착)'],
+  ['analytic.test.js', '해석해 교차검증 (M/M/c/K vs DES — 결과 확인 상설 회귀)'],
   ['mc.test.js', 'Monte Carlo (Welford·샘플러·수렴·유의성·민감도)'],
   ['overlap.test.js', '중복교전 히트맵 (순수성·스케일링·융합허브)'],
   ['transition.test.js', '임계 전환점 (Rec.6 — ρ>0.9 구간 개선폭)'],

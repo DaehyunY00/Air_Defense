@@ -9,6 +9,10 @@
  * dwellSec: 위협이 요격 가능 공역에 머무는 시간 창(개념값, 초). 이 시간 내 격추하지 못하면
  *   누수(leak)로 처리 — DES 엔진(Phase 2)의 교전기회 상실 판정에 사용. 탄도탄은 비행시간이
  *   짧아 창이 좁고(승인 지연이 곧 요격기회 상실), 저속 무인기는 창이 넓다.
+ * priority: 비선점 우선순위 큐(Phase 7)의 위협 우선순위 클래스(작을수록 먼저 처리).
+ *   1=탄도탄·방사포(시간임계), 2=전투기·순항미사일, 3=저속기·헬기, 4=소형 무인기.
+ *   근거: TEWA 위협평가의 시간임계(time-critical) 우선 원칙(THR-PRI-01, 개념 서열).
+ *   오경보(클러터) 트랙은 엔진에서 priority 5로 취급된다.
  */
 (function () {
   'use strict';
@@ -17,46 +21,46 @@
   KJ.THREAT_TYPES = {
     uav_small: {
       key: 'uav_small', name: '소형 무인기 (2m급)',
-      speedKmh: 100, altBand: 'low', dwellSec: 900,
+      speedKmh: 100, altBand: 'low', dwellSec: 900, priority: 4,
       detectFactor: 0.4, paramRef: 'THR-UAV-RCS-01',
       approvalLevel: { asis: 'KAOC', tobe: null },
       note: '2022.12.26 침투 사건 모사. 저탐지·항적소실 반복. To-Be는 사전승인 자동교전(위협별 자동화 차등).'
     },
     ac_low: {
       key: 'ac_low', name: '저속 침투기 (AN-2급)',
-      speedKmh: 180, altBand: 'low', dwellSec: 600,
+      speedKmh: 180, altBand: 'low', dwellSec: 600, priority: 3,
       detectFactor: 0.6, paramRef: 'THR-AN2-RCS-01',
       approvalLevel: { asis: 'KAOC', tobe: 'MCRC' }
     },
     heli: {
       key: 'heli', name: '헬기 (저고도 침투)',
-      speedKmh: 250, altBand: 'low', dwellSec: 420,
+      speedKmh: 250, altBand: 'low', dwellSec: 420, priority: 3,
       detectFactor: 0.7, paramRef: 'THR-HELI-RCS-01',
       approvalLevel: { asis: 'KAOC', tobe: 'MCRC' }
     },
     fighter: {
       key: 'fighter', name: '전투기',
-      speedKmh: 900, altBand: 'medium', dwellSec: 180,
+      speedKmh: 900, altBand: 'medium', dwellSec: 180, priority: 2,
       detectFactor: 0.9, paramRef: 'SEN-ACR-PD-01',
       approvalLevel: { asis: 'KAOC', tobe: 'MCRC' }
     },
     cruise: {
       key: 'cruise', name: '순항미사일',
-      speedKmh: 800, altBand: 'low', dwellSec: 120,
+      speedKmh: 800, altBand: 'low', dwellSec: 120, priority: 2,
       detectFactor: 0.5, paramRef: 'THR-CM-RCS-01',
       approvalLevel: { asis: 'MCRC', tobe: null },
       note: 'To-Be: Human-on-the-loop 자동교전 대상.'
     },
     srbm: {
       key: 'srbm', name: '단거리 탄도미사일 (KN-23급)',
-      speedKmh: 6000, altBand: 'ballistic', dwellSec: 90,
+      speedKmh: 6000, altBand: 'ballistic', dwellSec: 90, priority: 1,
       detectFactor: 0.95, paramRef: 'SEN-GPR-PD-01',
       approvalLevel: { asis: 'KAMDOC', tobe: null },
       note: '비행시간 수분 이내 — 승인 지연이 곧 요격기회 상실. To-Be 사전승인 자동교전.'
     },
     mrl_large: {
       key: 'mrl_large', name: '초대형 방사포 (KN-25급)',
-      speedKmh: 5000, altBand: 'ballistic', dwellSec: 80,
+      speedKmh: 5000, altBand: 'ballistic', dwellSec: 80, priority: 1,
       detectFactor: 0.9, paramRef: 'THR-KN25-RNG-01',
       approvalLevel: { asis: 'KAMDOC', tobe: null },
       note: '발사간격 약 20초 연발 — 포화 유발 위협.'

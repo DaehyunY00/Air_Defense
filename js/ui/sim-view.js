@@ -26,7 +26,8 @@
   var LEAK_LABEL = {
     not_detected: '미탐지', no_sensor: '탐지 공백(센서 부재)', no_report_path: '보고경로 부재',
     responsibility_gap: '책임공백(협조경로 부재)', no_shooter: '교전수단 부재(제약)',
-    missed: '명중 실패(기회소진)', timeout: '처리지연 초과(공역이탈)'
+    missed: '명중 실패(기회소진)', timeout: '처리지연 초과(공역이탈)',
+    inventory_denied: '재고 고갈/예비율 보류(원칙 5)'
   };
   var LEVEL_BADGE = {
     idle: '<span class="badge badge-idle">유휴</span>',
@@ -562,6 +563,39 @@
           return '<span class="leak-chip">' + esc(leakLabel(r)) + ': <b>' + g.leakReasons[r] + '</b></span>';
         }).join(' ')
       : '<span class="bn-none">요격 실패 없음</span>') + '</div>';
+
+    // ⑤-2 Phase 7 C2 프로세스 지표 (오경보·우선순위 대기·권한위임·재고)
+    html += '<h3>C2 프로세스 지표 (Phase 7: 오경보·우선순위·분권 전환·재고)</h3><div class="stat-grid">';
+    var ftG = g.falseTracks || { spawned: 0, dismissed: 0, escalated: 0 };
+    html += statCard('오경보 트랙 처리', ftG.spawned + '건 (상위보고 ' + ftG.escalated + ')');
+    var pw = run.res.priorityWait || {};
+    var pwHi = pw['1'] || pw['2'], pwLo = pw['4'] || pw['3'];
+    html += statCard('결심대기 고우선/저우선',
+      (pwHi ? pwHi.meanWaitSec.toFixed(0) : '–') + 's / ' + (pwLo ? pwLo.meanWaitSec.toFixed(0) : '–') + 's',
+      (pwHi && pwLo && pwLo.meanWaitSec > pwHi.meanWaitSec * 2) ? 'crit' : '');
+    var fb = g.fallback || { count: 0, meanDelaySec: 0 };
+    html += statCard('권한위임(분권 전환)', fb.count + '건' +
+      (fb.count ? ' · +' + fb.meanDelaySec.toFixed(0) + 's' : ''), fb.count > 0 ? 'crit' : '');
+    var invRows = run.res.inventory || [];
+    var invUsed = invRows.reduce(function (s, v) { return s + v.used; }, 0);
+    var invStart = invRows.reduce(function (s, v) { return s + v.start; }, 0);
+    var invExh = invRows.filter(function (v) { return v.left === 0; }).length;
+    html += statCard('요격자산 소모', invUsed + '/' + invStart + '발' +
+      (invExh ? ' · 고갈 ' + invExh + '개소' : ''), invExh > 0 ? 'crit' : '');
+    html += '</div>';
+    if (invRows.some(function (v) { return v.used > 0 || v.denied > 0; })) {
+      html += '<table><thead><tr><th>무기체계</th><th>초기</th><th>사용</th><th>잔여</th><th>보류(재고)</th></tr></thead><tbody>' +
+        invRows.filter(function (v) { return v.used > 0 || v.denied > 0; })
+          .sort(function (a, b) { return (a.left / a.start) - (b.left / b.start); })
+          .map(function (v) {
+            var warn = v.left <= Math.ceil(v.start * 0.2);
+            return '<tr' + (warn ? ' class="row-warn"' : '') + '><td>' + esc(v.name) + '</td>' +
+              '<td class="num">' + v.start + '</td><td class="num">' + v.used + '</td>' +
+              '<td class="num">' + (warn ? '<b style="color:#ff9a8d">' + v.left + '</b>' : v.left) + '</td>' +
+              '<td class="num">' + v.denied + '</td></tr>';
+          }).join('') + '</tbody></table>' +
+        '<div class="note">임계치 관리(원칙 5): 재고 20% 이하 시 저우선 위협 교전 보류, 0이면 교전 불가 (WPN-INV-RSV-01 개념 정책).</div>';
+    }
 
     // ⑥ 단계별 흐름 (funnel)
     var f = run.res.flow;

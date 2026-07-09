@@ -8,6 +8,9 @@
  *  - c2      : 지휘통제 노드 (대기행렬 서버로 모델링: servers c, serviceTimeSec μ⁻¹, capacity K)
  *  - sensor  : 탐지·추적 센서 (detects: 탐지 가능 위협 클래스, coverage: 담당 축선)
  *  - shooter : 교전 무기체계 (canEngage: 위협 클래스별 교전 가능 여부 — 제약조건 포함)
+ *              engage.inventory: 요격자산 재고(발·소티, 정책연구용 개념값 WPN-INV-01).
+ *              Phase 7 임계치 관리: 재고 20% 이하이면 저우선(priority≥3) 위협 교전 보류,
+ *              0이면 교전 불가 — M/M/c/K의 유한자산 제약을 재고 상태변수로 승격.
  *
  * modes: 노드가 존재하는 시나리오 모드. 생략 시 ['asis','tobe'] 공통.
  * queue.serviceTimeSec: 항적 1건 처리시간(초). asis/tobe 구분. 신뢰도 등급은 docs/params.md 참조.
@@ -203,7 +206,7 @@
       role: '요격기 긴급출격(스크램블)·초계. 공중 위협 교전. KF-21은 국산 4.5세대 보라매(인도수출형 F-21 아님).',
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
-      engage: { rangeKm: 350, channels: 4, engageTimeSec: 300, pk: { paramRef: 'WPN-FTR-PK-01' } }
+      engage: { inventory: 24, invRef: 'WPN-INV-01', rangeKm: 350, channels: 4, engageTimeSec: 300, pk: { paramRef: 'WPN-FTR-PK-01' } }
     },
     {
       id: 'SHORAD-1C', name: '단거리방공무기 (1군단: 신궁·천마·비호·벌컨)',
@@ -212,7 +215,7 @@
       role: '군단 저고도 방공. 제약: KP-SAM(신궁)·천마(K-31)는 탄도탄 요격 불가. 벌컨 유효고도 2km 한계.',
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
-      engage: { rangeKm: 7, channels: 6, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' } },
+      engage: { inventory: 48, invRef: 'WPN-INV-01', rangeKm: 7, channels: 6, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' } },
       constraintRefs: ['WPN-SHIN-CON-01', 'C2-VULCAN-CEIL-01']
     },
     {
@@ -222,7 +225,7 @@
       role: '수도권 저고도 방공(신궁·벌컨·드론건 개념). 탄도탄 요격 불가 제약 동일.',
       controlledBy: { asis: ['JAOC-CD'], tobe: ['JAOC-CD'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
-      engage: { rangeKm: 7, channels: 4, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' } },
+      engage: { inventory: 32, invRef: 'WPN-INV-01', rangeKm: 7, channels: 4, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' } },
       constraintRefs: ['WPN-SHIN-CON-01']
     },
     {
@@ -232,7 +235,7 @@
       role: '군단 AOC 통제 중거리 방공(개념). 항공기·순항미사일 대응.',
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
-      engage: { rangeKm: 40, channels: 2, engageTimeSec: 90, pk: { paramRef: 'WPN-MSAM2-PK-01' } }
+      engage: { inventory: 16, invRef: 'WPN-INV-01', rangeKm: 40, channels: 2, engageTimeSec: 90, pk: { paramRef: 'WPN-MSAM2-PK-01' } }
     },
     {
       id: 'MDU-M', name: '미사일방어부대 (중거리: 천궁-II·PAC-3)',
@@ -241,7 +244,7 @@
       role: '하층 탄도탄 요격(요격고도 15–20km급) 및 항공 위협 대응.',
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: true, ac_low: false, heli: false, cruise: true, uav_small: false, srbm: true, mrl_large: true },
-      engage: { rangeKm: 40, channels: 4, engageTimeSec: 45, pk: { paramRef: 'WPN-MSAM2-PK-01' } }
+      engage: { inventory: 32, invRef: 'WPN-INV-01', rangeKm: 40, channels: 4, engageTimeSec: 45, pk: { paramRef: 'WPN-MSAM2-PK-01' } }
     },
     {
       id: 'MDU-L', name: '미사일방어부대 (장거리: L-SAM)',
@@ -250,7 +253,7 @@
       role: '상층 탄도탄 요격(요격고도 40–70km 개념값).',
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: false, ac_low: false, heli: false, cruise: false, uav_small: false, srbm: true, mrl_large: true },
-      engage: { rangeKm: 150, channels: 3, engageTimeSec: 40, pk: { paramRef: 'WPN-LSAM-PK-01' } }
+      engage: { inventory: 18, invRef: 'WPN-INV-01', rangeKm: 150, channels: 3, engageTimeSec: 40, pk: { paramRef: 'WPN-LSAM-PK-01' } }
     },
     {
       id: 'SM2-E', name: 'SM-2 (동해 이지스함)',
@@ -259,7 +262,7 @@
       role: '함대공 요격. 항공기·순항미사일 대응(대탄도탄 요격은 모델링 제외).',
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
-      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' } }
+      engage: { inventory: 16, invRef: 'WPN-INV-01', rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' } }
     },
     {
       id: 'SM2-W', name: 'SM-2 (서해 이지스함)',
@@ -268,7 +271,7 @@
       role: '함대공 요격. 항공기·순항미사일 대응(대탄도탄 요격은 모델링 제외).',
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
-      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' } }
+      engage: { inventory: 16, invRef: 'WPN-INV-01', rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' } }
     }
   ];
 

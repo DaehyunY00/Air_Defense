@@ -18,7 +18,7 @@ var path = require('path');
 var fs = require('fs');
 var root = path.join(__dirname, '..');
 ['data/nodes.js', 'data/links.js', 'data/threats.js', 'data/scenarios.js', 'data/axes.js',
- 'core/rng.js', 'core/heap.js', 'engine/sim-engine.js', 'analysis/bottleneck.js'].forEach(function (f) {
+ 'core/rng.js', 'core/heap.js', 'core/hungarian.js', 'engine/sim-engine.js', 'analysis/bottleneck.js'].forEach(function (f) {
   require(path.join(root, 'js', f));
 });
 var KJ = global.KJ;

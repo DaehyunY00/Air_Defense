@@ -10,7 +10,7 @@ global.window = global;
 var path = require('path');
 var root = path.join(__dirname, '..', 'js');
 ['data/nodes.js', 'data/links.js', 'data/threats.js', 'data/scenarios.js',
- 'core/rng.js', 'core/heap.js', 'engine/sim-engine.js',
+ 'core/rng.js', 'core/heap.js', 'core/hungarian.js', 'engine/sim-engine.js',
  'analysis/mc-runner.js', 'analysis/transition.js'].forEach(function (f) {
   require(path.join(root, f));
 });

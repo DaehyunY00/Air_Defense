@@ -5108,7 +5108,8 @@ li.chk-fail { background: #43140f; }
       { label: '중복교전 위험 (축선 합)', mom: 'MoCE', a: overlapRiskSum('asis'), b: overlapRiskSum('tobe'), kind: 'raw', lower: true,
         tip: '서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합.' },
       { label: '비용교환비 (저가 포화위협)', mom: 'MoFE', a: asisG.cost.exchangeSat, b: tobeG.cost.exchangeSat, kind: 'ratio', lower: true,
-        tip: '무인기·장사정포 대응에 소모한 개념 요격탄 비용 ÷ 격추 위협가치 (WPN/THR-*-COST-01, 타 전역 공개수치 기반 개념값 — 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모.' },
+        tip: '무인기·장사정포 대응에 소모한 개념 요격탄 비용 ÷ 격추 위협가치 (WPN/THR-*-COST-01, 타 전역 공개수치 기반 개념값 — 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모. ' +
+          '주의: 다른 지표와 달리 To-Be가 항상 개선되는 지표가 아님 — Best-Shooter 배정·재교전 횟수 차이로 시나리오·강도에 따라 악화되는 경우도 실재함(docs/metrics-verification.md 참조).' },
       // ── 보조 지표 ──
       { label: '평균 격추시간', mom: 'MoP', a: asisG.meanTimeToKillSec, b: tobeG.meanTimeToKillSec, kind: 'sec', lower: true,
         tip: '격추 성공 항적의 생성→격추 평균 소요.' },

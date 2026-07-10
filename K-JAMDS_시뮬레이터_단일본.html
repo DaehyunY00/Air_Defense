@@ -831,6 +831,12 @@ li.tlog-future { color: #4a5666; }
 
 /* ── As-Is ↔ To-Be 좌·우 직관 비교 블록 ── */
 .vs-block { margin: 4px 0 8px; }
+
+/* Phase D — MoM 계층 라벨 칩 (MoP/MoCE/MoFE, NATO COBP) */
+.mom { display: inline-block; font-size: 9px; font-weight: 700; border-radius: 4px; padding: 0 4px; vertical-align: 1px; cursor: help; }
+.mom-mop { background: #1d3a5f; color: #9cc4f0; }
+.mom-moce { background: #4a3a14; color: #ecc55e; }
+.mom-mofe { background: #1f4a24; color: #8fdc96; }
 .vs-headrow, .vs-row {
   display: grid; grid-template-columns: 60px 1fr 150px 1fr 60px;
   align-items: center; gap: 8px;
@@ -1017,6 +1023,12 @@ li.chk-fail { background: #43140f; }
 .leak-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .leak-chip { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 3px 10px; font-size: 11px; }
 
+/* Phase C — 실패 항적 타임라인 (결과 모달) */
+.ftl { border: 1px solid var(--border); border-radius: 6px; margin: 4px 0; padding: 4px 8px; background: var(--panel-2); }
+.ftl summary { cursor: pointer; font-size: 12px; }
+.ftl[open] summary { border-bottom: 1px dashed var(--border); padding-bottom: 4px; margin-bottom: 4px; }
+.ftl .tlog-stages { font-size: 11px; }
+
 /* ── Monte Carlo 패널 ── */
 .mc-conv { padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; }
 .conv-ok { background: #143518; color: #7dd982; }
@@ -1086,7 +1098,6 @@ li.chk-fail { background: #43140f; }
 .map-legend h4 { font-size: 11px; margin-bottom: 6px; color: #aecbeb; }
 .map-legend .row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
 .lg-line { display: inline-block; width: 24px; height: 0; border-top: 2px solid; }
-
 </style>
 </head>
 <body>
@@ -1319,6 +1330,9 @@ li.chk-fail { background: #43140f; }
  *  - c2      : 지휘통제 노드 (대기행렬 서버로 모델링: servers c, serviceTimeSec μ⁻¹, capacity K)
  *  - sensor  : 탐지·추적 센서 (detects: 탐지 가능 위협 클래스, coverage: 담당 축선)
  *  - shooter : 교전 무기체계 (canEngage: 위협 클래스별 교전 가능 여부 — 제약조건 포함)
+ *              wtaSuit: 고도대역(altBand)별 Best-Shooter 개념 적합도 가중(정밀화 Phase B-1,
+ *              C2-WTA-SUIT-01). To-Be WTA 점수에만 사용 — canEngage 제약이 항상 우선하며
+ *              신궁·천마의 탄도탄 배제는 wtaSuit와 무관하게 유지된다.
  *
  * modes: 노드가 존재하는 시나리오 모드. 생략 시 ['asis','tobe'] 공통.
  * queue.serviceTimeSec: 항적 1건 처리시간(초). asis/tobe 구분. 신뢰도 등급은 docs/params.md 참조.
@@ -1514,7 +1528,8 @@ li.chk-fail { background: #43140f; }
       role: '요격기 긴급출격(스크램블)·초계. 공중 위협 교전. KF-21은 국산 4.5세대 보라매(인도수출형 F-21 아님).',
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
-      engage: { rangeKm: 350, channels: 4, engageTimeSec: 300, pk: { paramRef: 'WPN-FTR-PK-01' } }
+      wtaSuit: { low: 0.7, medium: 1.2, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
+      engage: { rangeKm: 350, channels: 4, engageTimeSec: 300, pk: { paramRef: 'WPN-FTR-PK-01' }, costPerShotM: 0.5, costRef: 'WPN-FTR-COST-01' }
     },
     {
       id: 'SHORAD-1C', name: '단거리방공무기 (1군단: 신궁·천마·비호·벌컨)',
@@ -1523,7 +1538,8 @@ li.chk-fail { background: #43140f; }
       role: '군단 저고도 방공. 제약: KP-SAM(신궁)·천마(K-31)는 탄도탄 요격 불가. 벌컨 유효고도 2km 한계.',
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
-      engage: { rangeKm: 7, channels: 6, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' } },
+      wtaSuit: { low: 1.3, medium: 0.5, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
+      engage: { rangeKm: 7, channels: 6, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' }, costPerShotM: 0.2, costRef: 'WPN-SHORAD-COST-01' },
       constraintRefs: ['WPN-SHIN-CON-01', 'C2-VULCAN-CEIL-01']
     },
     {
@@ -1533,7 +1549,8 @@ li.chk-fail { background: #43140f; }
       role: '수도권 저고도 방공(신궁·벌컨·드론건 개념). 탄도탄 요격 불가 제약 동일.',
       controlledBy: { asis: ['JAOC-CD'], tobe: ['JAOC-CD'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
-      engage: { rangeKm: 7, channels: 4, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' } },
+      wtaSuit: { low: 1.3, medium: 0.5, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
+      engage: { rangeKm: 7, channels: 4, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' }, costPerShotM: 0.2, costRef: 'WPN-SHORAD-COST-01' },
       constraintRefs: ['WPN-SHIN-CON-01']
     },
     {
@@ -1543,7 +1560,8 @@ li.chk-fail { background: #43140f; }
       role: '군단 AOC 통제 중거리 방공(개념). 항공기·순항미사일 대응.',
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
-      engage: { rangeKm: 40, channels: 2, engageTimeSec: 90, pk: { paramRef: 'WPN-MSAM2-PK-01' } }
+      wtaSuit: { low: 0.8, medium: 1.1, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
+      engage: { rangeKm: 40, channels: 2, engageTimeSec: 90, pk: { paramRef: 'WPN-MSAM2-PK-01' }, costPerShotM: 1.5, costRef: 'WPN-MSAM-COST-01' }
     },
     {
       id: 'MDU-M', name: '미사일방어부대 (중거리: 천궁-II·PAC-3)',
@@ -1552,7 +1570,8 @@ li.chk-fail { background: #43140f; }
       role: '하층 탄도탄 요격(요격고도 15–20km급) 및 항공 위협 대응.',
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: true, ac_low: false, heli: false, cruise: true, uav_small: false, srbm: true, mrl_large: true },
-      engage: { rangeKm: 40, channels: 4, engageTimeSec: 45, pk: { paramRef: 'WPN-MSAM2-PK-01' } }
+      wtaSuit: { low: 0.7, medium: 0.9, ballistic: 1.2, paramRef: 'C2-WTA-SUIT-01' },
+      engage: { rangeKm: 40, channels: 4, engageTimeSec: 45, pk: { paramRef: 'WPN-MSAM2-PK-01' }, costPerShotM: 3, costRef: 'WPN-MDUM-COST-01' }
     },
     {
       id: 'MDU-L', name: '미사일방어부대 (장거리: L-SAM)',
@@ -1561,7 +1580,8 @@ li.chk-fail { background: #43140f; }
       role: '상층 탄도탄 요격(요격고도 40–70km 개념값).',
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: false, ac_low: false, heli: false, cruise: false, uav_small: false, srbm: true, mrl_large: true },
-      engage: { rangeKm: 150, channels: 3, engageTimeSec: 40, pk: { paramRef: 'WPN-LSAM-PK-01' } }
+      wtaSuit: { low: 0, medium: 0, ballistic: 1.3, paramRef: 'C2-WTA-SUIT-01' },
+      engage: { rangeKm: 150, channels: 3, engageTimeSec: 40, pk: { paramRef: 'WPN-LSAM-PK-01' }, costPerShotM: 8, costRef: 'WPN-LSAM-COST-01' }
     },
     {
       id: 'SM2-E', name: 'SM-2 (동해 이지스함)',
@@ -1570,7 +1590,8 @@ li.chk-fail { background: #43140f; }
       role: '함대공 요격. 항공기·순항미사일 대응(대탄도탄 요격은 모델링 제외).',
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
-      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' } }
+      wtaSuit: { low: 0.8, medium: 1.0, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
+      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' }, costPerShotM: 2.1, costRef: 'WPN-SM2-COST-01' }
     },
     {
       id: 'SM2-W', name: 'SM-2 (서해 이지스함)',
@@ -1579,7 +1600,8 @@ li.chk-fail { background: #43140f; }
       role: '함대공 요격. 항공기·순항미사일 대응(대탄도탄 요격은 모델링 제외).',
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
-      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' } }
+      wtaSuit: { low: 0.8, medium: 1.0, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
+      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' }, costPerShotM: 2.1, costRef: 'WPN-SM2-COST-01' }
     }
   ];
 
@@ -1593,7 +1615,6 @@ li.chk-fail { background: #43140f; }
     });
   };
 })();
-
 </script>
   <script>/* js/data/links.js (inlined) */
 /**
@@ -1681,7 +1702,6 @@ li.chk-fail { background: #43140f; }
     return KJ.LINKS.filter(function (l) { return !!l.comm[mode]; });
   };
 })();
-
 </script>
   <script>/* js/data/threats.js (inlined) */
 /**
@@ -1695,6 +1715,26 @@ li.chk-fail { background: #43140f; }
  * dwellSec: 위협이 요격 가능 공역에 머무는 시간 창(개념값, 초). 이 시간 내 격추하지 못하면
  *   누수(leak)로 처리 — DES 엔진(Phase 2)의 교전기회 상실 판정에 사용. 탄도탄은 비행시간이
  *   짧아 창이 좁고(승인 지연이 곧 요격기회 상실), 저속 무인기는 창이 넓다.
+ *
+ * ── 발사권역·사거리 정합(정밀화 Phase A) ──
+ * rangeBandKm: 공개자료 기반 개념 사거리대 {min,max} (실제 제원 아님 — docs/params.md THR-*-RNG-*).
+ * originZones: 이 위협이 발사될 수 있는 개념 발사권역 태그 목록. axes.js의 축선별
+ *   launchZones와 대조해 "축선 배분이 사거리·발사권역과 모순되지 않는지"를
+ *   KJ.checkAxisThreatFit(axes.js)가 검증한다(회귀 어서션 포함).
+ *   태그: 'dmz'(DMZ 인접 근거리) | 'coastal'(서해·연안) | 'deep'(종심).
+ *   ※ 전부 개념 권역이며 실제 발사원점·배치 자료가 아님.
+ *
+ * ── 위협 단가(정밀화 Phase D, THR-*-COST-01) ──
+ * unitCostM: 위협 1기 개념 단가(백만 USD). 비용교환비(MoFE) 계산 전용 — 공개자료 기반
+ *   개념값이며 대부분 타 전역 공개수치의 유추라 한반도 보정이 필요(docs/params.md Caveat).
+ *
+ * ── 위협별 자동화 차등(정밀화 Phase B-3, C2-AUTO-LEVEL-01) ──
+ * automation: {asis, tobe} — 결심 단계의 인간개입 수준(구 note 텍스트를 엔진 플래그로 승격).
+ *   'human-in-loop' : 승인권자(approvalLevel)까지 coord 협조경로 + 승인 처리 필요 (As-Is 기본)
+ *   'human-on-loop' : 감독하 자동교전 — 승인 처리(서비스)는 남되 coord 협조경로 홉 생략
+ *                     (COP 공유 전제). approvalLevel이 null이면 감독만 하고 홉 없음
+ *   'auto-preauth'  : 사전승인 자동교전 — 결심 홉 자체 생략 (구 approval=null 우회의 일반화)
+ * 엔진 _decision이 이 플래그를 참조한다. 부하 기반 동적 권한위임(B-2)과는 별개 축.
  */
 (function () {
   'use strict';
@@ -1705,53 +1745,73 @@ li.chk-fail { background: #43140f; }
       key: 'uav_small', name: '소형 무인기 (2m급)',
       speedKmh: 100, altBand: 'low', dwellSec: 900,
       detectFactor: 0.4, paramRef: 'THR-UAV-RCS-01',
+      rangeBandKm: { min: 50, max: 300 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-UAV-RNG-01',
+      unitCostM: 0.01, costRef: 'THR-UAV-COST-01',
       approvalLevel: { asis: 'KAOC', tobe: null },
+      automation: { asis: 'human-in-loop', tobe: 'auto-preauth' },
       note: '2022.12.26 침투 사건 모사. 저탐지·항적소실 반복. To-Be는 사전승인 자동교전(위협별 자동화 차등).'
     },
     ac_low: {
       key: 'ac_low', name: '저속 침투기 (AN-2급)',
       speedKmh: 180, altBand: 'low', dwellSec: 600,
       detectFactor: 0.6, paramRef: 'THR-AN2-RCS-01',
-      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' }
+      rangeBandKm: { min: 100, max: 900 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-AN2-RNG-01',
+      unitCostM: 0.3, costRef: 'THR-AN2-COST-01',
+      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' },
+      automation: { asis: 'human-in-loop', tobe: 'human-on-loop' }
     },
     heli: {
       key: 'heli', name: '헬기 (저고도 침투)',
       speedKmh: 250, altBand: 'low', dwellSec: 420,
       detectFactor: 0.7, paramRef: 'THR-HELI-RCS-01',
-      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' }
+      rangeBandKm: { min: 50, max: 500 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-HELI-RNG-01',
+      unitCostM: 3, costRef: 'THR-HELI-COST-01',
+      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' },
+      automation: { asis: 'human-in-loop', tobe: 'human-on-loop' }
     },
     fighter: {
       key: 'fighter', name: '전투기',
       speedKmh: 900, altBand: 'medium', dwellSec: 180,
       detectFactor: 0.9, paramRef: 'SEN-ACR-PD-01',
-      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' }
+      rangeBandKm: { min: 200, max: 1500 }, originZones: ['dmz', 'coastal', 'deep'], rangeRef: 'THR-FTR-RNG-01',
+      unitCostM: 25, costRef: 'THR-FTR-COST-01',
+      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' },
+      automation: { asis: 'human-in-loop', tobe: 'human-on-loop' }
     },
     cruise: {
       key: 'cruise', name: '순항미사일',
       speedKmh: 800, altBand: 'low', dwellSec: 120,
       detectFactor: 0.5, paramRef: 'THR-CM-RCS-01',
+      rangeBandKm: { min: 150, max: 2000 }, originZones: ['dmz', 'coastal', 'deep'], rangeRef: 'THR-CM-RNG-01',
+      unitCostM: 1.5, costRef: 'THR-CM-COST-01',
       approvalLevel: { asis: 'MCRC', tobe: null },
+      automation: { asis: 'human-in-loop', tobe: 'human-on-loop' },
       note: 'To-Be: Human-on-the-loop 자동교전 대상.'
     },
     srbm: {
       key: 'srbm', name: '단거리 탄도미사일 (KN-23급)',
       speedKmh: 6000, altBand: 'ballistic', dwellSec: 90,
       detectFactor: 0.95, paramRef: 'SEN-GPR-PD-01',
+      rangeBandKm: { min: 400, max: 690 }, originZones: ['deep'], rangeRef: 'THR-KN23-RNG-01',
+      unitCostM: 3, costRef: 'THR-KN23-COST-01',
       approvalLevel: { asis: 'KAMDOC', tobe: null },
-      note: '비행시간 수분 이내 — 승인 지연이 곧 요격기회 상실. To-Be 사전승인 자동교전.'
+      automation: { asis: 'human-in-loop', tobe: 'auto-preauth' },
+      note: '비행시간 수분 이내 — 승인 지연이 곧 요격기회 상실. To-Be 사전승인 자동교전. 종심 발사→광역 표적(저각 발사 시 단축 가능, rangeBandKm.min은 정합검증 미사용).'
     },
     mrl_large: {
       key: 'mrl_large', name: '초대형 방사포 (KN-25급)',
       speedKmh: 5000, altBand: 'ballistic', dwellSec: 80,
       detectFactor: 0.9, paramRef: 'THR-KN25-RNG-01',
+      rangeBandKm: { min: 350, max: 400 }, originZones: ['deep'], rangeRef: 'THR-KN25-RNG-01',
+      unitCostM: 1, costRef: 'THR-KN25-COST-01',
       approvalLevel: { asis: 'KAMDOC', tobe: null },
-      note: '발사간격 약 20초 연발 — 포화 유발 위협.'
+      automation: { asis: 'human-in-loop', tobe: 'auto-preauth' },
+      note: '발사간격 약 20초 연발 — 포화 유발 위협. 중거리 종심 발사권역.'
     }
   };
 
   KJ.threatType = function (key) { return KJ.THREAT_TYPES[key] || null; };
 })();
-
 </script>
   <script>/* js/data/scenarios.js (inlined) */
 /**
@@ -1852,7 +1912,6 @@ li.chk-fail { background: #43140f; }
     return entry.ratePerMin || entry.equivRatePerMin || 0;
   };
 })();
-
 </script>
   <script>/* js/data/axes.js (inlined) */
 /**
@@ -1864,32 +1923,90 @@ li.chk-fail { background: #43140f; }
  * 동일하게 도시 수준 개념좌표다(디스클레이머 동일 적용).
  *
  * 위치(t) = lerp(entry, target, clamp((t - spawnT) / dwellSec, 0, 1))
+ *
+ * ── 발사권역·사거리 정합(정밀화 Phase A, ENV-AXIS-FIT-01) ──
+ * 각 축선에 이 축선을 경유할 수 있는 개념 발사권역 태그(launchZones)와, 개념
+ * 발사원점→표적권역 거리(conceptReachKm)를 부여한다. threats.js의 위협별
+ * originZones(허용 발사권역)·rangeBandKm(개념 사거리대)와 대조해,
+ *  (1) 권역 정합: 위협의 originZones ∩ 축선의 launchZones ≠ ∅
+ *      (예: 근거리 무인기가 지나치게 종심('deep')에서 출발하지 않도록 —
+ *       'seoul' 축선은 'dmz' 전용이라 종심 전용 위협의 배분이 거부됨)
+ *  (2) 사거리 정합: 위협 rangeBandKm.max ≥ 축선 conceptReachKm
+ *      (min은 저각·단축발사 가능성 때문에 검증에 쓰지 않음 — threats.js 주석)
+ * 을 KJ.checkAxisThreatFit / KJ.validateScenarioOrigins 가 검증한다.
+ * entry 좌표·권역·거리는 전부 개념값이며 실제 침투경로·발사원점이 아니다.
  */
 (function () {
   'use strict';
   window.KJ = window.KJ || {};
 
+  /** 개념 발사권역 태그 정의 (실제 배치·발사원점 아님) */
+  KJ.ORIGIN_ZONES = {
+    dmz: 'DMZ 인접 근거리 발사권역(개념)',
+    coastal: '서해·연안 발사권역(개념)',
+    deep: '종심 발사권역(개념)'
+  };
+
   KJ.AXES = {
     west: {
       label: '서부축(서해)',
       entry: [37.90, 125.30], entryNote: '백령도 인근 개념좌표(서해 북방)',
-      target: [37.55, 126.98], targetNote: '서울 개념좌표(방호 표적권역)'
+      target: [37.55, 126.98], targetNote: '서울 개념좌표(방호 표적권역)',
+      launchZones: ['coastal', 'deep'], conceptReachKm: 150,
+      reachNote: '서해 연안·종심 개념 발사권→수도권 표적 개념거리 (ENV-AXIS-FIT-01)'
     },
     central: {
       label: '중부축(DMZ)',
       entry: [38.25, 127.31], entryNote: '철원 인근 개념좌표(중부전선)',
-      target: [37.15, 127.10], targetNote: '수도권 남부 개념좌표(오산·평택 권역)'
+      target: [37.15, 127.10], targetNote: '수도권 남부 개념좌표(오산·평택 권역)',
+      launchZones: ['dmz', 'deep'], conceptReachKm: 130,
+      reachNote: 'DMZ 인접·종심 개념 발사권→수도권 남부 표적 개념거리 (ENV-AXIS-FIT-01)'
     },
     east: {
       label: '동부축(DMZ~동해)',
       entry: [38.30, 128.40], entryNote: '고성 인근 개념좌표(동부전선)',
-      target: [37.80, 128.90], targetNote: '강릉 인근 개념좌표(동해 함대 권역)'
+      target: [37.80, 128.90], targetNote: '강릉 인근 개념좌표(동해 함대 권역)',
+      launchZones: ['dmz', 'deep'], conceptReachKm: 130,
+      reachNote: 'DMZ 인접·종심 개념 발사권→동해 권역 표적 개념거리 (ENV-AXIS-FIT-01)'
     },
     seoul: {
       label: '수도권 직접침투',
       entry: [37.75, 126.90], entryNote: '고양 인근 개념좌표(2022.12.26 재현 진입점)',
-      target: [37.56, 126.99], targetNote: '서울 도심 개념좌표'
+      target: [37.56, 126.99], targetNote: '서울 도심 개념좌표',
+      launchZones: ['dmz'], conceptReachKm: 60,
+      reachNote: 'DMZ 인접 근거리 개념 발사권→서울 도심 개념거리 — 근거리 위협 전용 축선 (ENV-AXIS-FIT-01)'
     }
+  };
+
+  /**
+   * 위협 유형 × 축선의 발사권역·사거리 정합성 검증 (ENV-AXIS-FIT-01).
+   * @returns { ok:boolean, reasons:string[] } — ok=false면 reasons에 모순 사유
+   */
+  KJ.checkAxisThreatFit = function (typeKey, axisKey) {
+    var tt = KJ.threatType(typeKey), ax = KJ.AXES[axisKey];
+    var reasons = [];
+    if (!tt || !ax) return { ok: false, reasons: ['알 수 없는 위협/축선: ' + typeKey + '@' + axisKey] };
+    var zones = tt.originZones || [];
+    var zoneOk = (ax.launchZones || []).some(function (z) { return zones.indexOf(z) !== -1; });
+    if (!zoneOk) {
+      reasons.push(tt.name + '의 발사권역(' + zones.join(',') + ')이 ' + ax.label +
+        ' 축선의 발사권역(' + (ax.launchZones || []).join(',') + ')과 불일치');
+    }
+    if (tt.rangeBandKm && ax.conceptReachKm && tt.rangeBandKm.max < ax.conceptReachKm) {
+      reasons.push(tt.name + '의 개념 최대사거리 ' + tt.rangeBandKm.max + 'km < 축선 개념거리 ' +
+        ax.conceptReachKm + 'km');
+    }
+    return { ok: reasons.length === 0, reasons: reasons };
+  };
+
+  /** 시나리오 mix 전체의 축선-사거리 정합 위반 목록 (회귀 어서션·데이터 탭 표출용) */
+  KJ.validateScenarioOrigins = function (scenario) {
+    var violations = [];
+    (scenario.mix || []).forEach(function (entry) {
+      var fit = KJ.checkAxisThreatFit(entry.type, entry.axis);
+      if (!fit.ok) violations.push({ type: entry.type, axis: entry.axis, reasons: fit.reasons });
+    });
+    return violations;
   };
 
   /** 위협 위치(t) 선형보간: entry→target, [0,1] 클램프 진행률 */
@@ -1903,7 +2020,6 @@ li.chk-fail { background: #43140f; }
     ];
   };
 })();
-
 </script>
   <script>/* js/core/router.js (inlined) */
 /**
@@ -1980,7 +2096,6 @@ li.chk-fail { background: #43140f; }
     }
   };
 })();
-
 </script>
   <script>/* js/core/constraints.js (inlined) */
 /**
@@ -2046,7 +2161,6 @@ li.chk-fail { background: #43140f; }
     return checks;
   };
 })();
-
 </script>
   <script>/* js/core/rng.js (inlined) */
 /**
@@ -2144,7 +2258,6 @@ li.chk-fail { background: #43140f; }
     };
   };
 })();
-
 </script>
   <script>/* js/core/heap.js (inlined) */
 /**
@@ -2202,7 +2315,6 @@ li.chk-fail { background: #43140f; }
 
   KJ.MinHeap = MinHeap;
 })();
-
 </script>
   <script>/* js/analysis/bottleneck.js (inlined) */
 /**
@@ -2553,7 +2665,6 @@ li.chk-fail { background: #43140f; }
     };
   }
 })();
-
 </script>
   <script>/* js/engine/sim-engine.js (inlined) */
 /**
@@ -2601,6 +2712,14 @@ li.chk-fail { background: #43140f; }
   // 병목 판정 임계값 (Phase 1과 동일 기준: 계획서 ENV-RHO-THRESH-01)
   var RHO_WARN = 0.7, RHO_BOTTLENECK = 0.9;
 
+  // ── 정밀화 Phase B-2: 부하 기반 중앙↔분권 동적 전환 임계 (C2-DELEG-THRESH-01) ──
+  // 승인권자 노드가 [전 결심서버 점유(busy≥c) AND 대기열 길이 ≥ c×배수]로 관측되면
+  // 그 결심을 하위/자동으로 위임(분권 전환)한다. To-Be는 COP 공유·자동화 전제로 조기
+  // 전환(대기 c×1), As-Is는 수동 절차 탓에 대기가 서버수의 4배로 누적되어야 전환(느림/준부재).
+  // 하드코딩된 병목이 아니라 부하의 함수: 시나리오·강도가 낮으면 어느 모드에서도 전환이
+  // 일어나지 않는다(회귀로 고정).
+  var DELEG_QUEUE_MULT = { asis: 4, tobe: 1 };
+
   /**
    * @param {object} cfg { scenario, mode, intensity, seed, endTimeSec }
    */
@@ -2629,6 +2748,14 @@ li.chk-fail { background: #43140f; }
       reachedC2: 0, everEngaged: 0,
       leakReasons: {}, timeToKill: []
     };
+    // Phase B-2: 동적 권한위임(분권 전환) 관측 상태 — 전환 시점·횟수·노드별 분포
+    this.deleg = { count: 0, firstT: null, byNode: {} };
+    // Phase B/D: 결심 지연(MoP) — 탐지→최초 교전명령 소요의 집계 (trace 무관 항상 수집)
+    this.decisionDelaySum = 0;
+    this.decisionDelayCount = 0;
+    // Phase D: 비용교환비(MoFE) — 개념 요격탄 소모비용 / 격추 위협가치 (백만 USD 개념)
+    // sat*는 저가 포화위협(장사정포·소형무인기) 부분집합. 전부 개념값(WPN/THR-*-COST-01).
+    this.cost = { interceptM: 0, killedThreatM: 0, interceptSatM: 0, killedThreatSatM: 0 };
     this.eventCount = 0;
     this.log = [];        // 표본 이벤트 로그(앞부분만 보존)
 
@@ -2790,6 +2917,7 @@ li.chk-fail { background: #43140f; }
     var p = Math.min(1, tt.detectFactor * this.mult.detect); // per-scan 탐지확률(민감도 배수 적용)
     if (this.rng.raw() < p) {
       threat.detected = true;
+      threat._detectT = t; // 결심 지연(MoP) 기준 시각
       this.global.detected++;
       this._mark(threat, '탐지', t);
       this._onDetected(threat, t);
@@ -2853,12 +2981,39 @@ li.chk-fail { background: #43140f; }
     });
   };
 
-  /** 6·7 결심·교전협조/권한위임: As-Is는 승인권자까지 coord 최단경로 홉 */
+  /**
+   * 6·7 결심·교전협조/권한위임.
+   * 정밀화 Phase B-3: 위협별 자동화 차등 플래그(threats.js automation, C2-AUTO-LEVEL-01)를
+   * 참조해 결심 홉을 생략/단축한다 — 구 approval=null 우회의 일반화.
+   *  - auto-preauth : 결심 홉 생략(사전승인 자동교전)
+   *  - human-on-loop: 승인 처리(서비스)는 수행하되 coord 협조경로 홉 생략(COP 감독)
+   *  - human-in-loop: 승인권자까지 coord 최단경로 홉 + 승인 처리(As-Is 기본)
+   * 정밀화 Phase B-2: 승인권자 노드가 임계(DELEG_THRESH, 모드별) 이상 혼잡하면 결심을
+   * 하위/자동으로 동적 위임(중앙→분권 전환)하고 전환 시점·횟수를 기록한다.
+   */
   Simulation.prototype._decision = function (threat, t, controlC2) {
     var tt = KJ.threatType(threat.type);
+    var auto = tt.automation ? tt.automation[this.mode] : null;
     var approvalId = tt.approvalLevel ? tt.approvalLevel[this.mode] : null;
-    if (!approvalId || approvalId === controlC2 || !this.nodeState[approvalId]) {
-      this._doEngage(threat, t);       // 승인 불필요(자동교전) 또는 동일 노드 승인
+    if (auto === 'auto-preauth' || !approvalId || approvalId === controlC2 || !this.nodeState[approvalId]) {
+      this._doEngage(threat, t);       // 승인 불필요(사전승인 자동교전) 또는 동일 노드 승인
+      return;
+    }
+    // B-2: 부하 기반 동적 권한위임 — 승인권자의 관측 대기열이 임계 초과 시 분권 전환
+    var apprNs = this.nodeState[approvalId];
+    if (apprNs.busy >= apprNs.c &&
+        apprNs.queue.length >= apprNs.c * DELEG_QUEUE_MULT[this.mode]) {
+      this.deleg.count++;
+      if (this.deleg.firstT === null) this.deleg.firstT = t;
+      this.deleg.byNode[approvalId] = (this.deleg.byNode[approvalId] || 0) + 1;
+      this._mark(threat, '권한위임:' + approvalId, t);
+      this._doEngage(threat, t);
+      return;
+    }
+    if (auto === 'human-on-loop') {
+      // 감독하 자동교전: 협조경로 홉 생략, 승인권자 처리만 수행
+      this._mark(threat, '감독승인개시:' + approvalId, t);
+      this.schedule(t, PRI.LINK_ARRIVE, 'APPROVE_ARRIVE', { threat: threat, appr: approvalId });
       return;
     }
     var path = coordPath(controlC2, approvalId, this.mode);
@@ -2881,7 +3036,14 @@ li.chk-fail { background: #43140f; }
     });
   };
 
-  /** 8 교전명령: WTA로 무기 선택(최소부하) → 명령 링크 → 교전채널 투입 */
+  /**
+   * 8 교전명령: WTA로 무기 선택 → 명령 링크 → 교전채널 투입.
+   * 정밀화 Phase B-1 — 모드별 WTA 차등:
+   *  - As-Is : COP 부재로 무기별 적합도 비교가 불가 — 관측 가능한 최소부하 선택(기존 동작).
+   *  - To-Be : Best-Shooter 적합도 점수 = wtaSuit[위협 고도대역](개념 가중, C2-WTA-SUIT-01)
+   *            × 잔여 교전용량(0.25+0.75×(1-충전율)). 동점은 노드 id 사전순(결정론).
+   * canEngage 제약(신궁·천마 탄도탄 배제 등)은 두 모드 모두에서 항상 우선 필터다.
+   */
   Simulation.prototype._doEngage = function (threat, t) {
     if (!threat.alive || threat.pipelineDead) return;
     var mode = this.mode, type = threat.type;
@@ -2891,18 +3053,38 @@ li.chk-fail { background: #43140f; }
     });
     if (shooters.length === 0) { threat.leakReason = 'no_shooter'; return; } // 교전 불가(제약)
     var self = this, best = null;
-    shooters.forEach(function (sh) {
-      var ns = self.nodeState[sh.id];
-      var load = ns ? (ns.busy + ns.queue.length) : 0;
-      if (!best || load < best.load) best = { sh: sh, load: load };
-    });
+    if (mode === 'tobe') {
+      var altBand = KJ.threatType(type).altBand;
+      shooters.forEach(function (sh) {
+        var ns = self.nodeState[sh.id];
+        var remain = ns ? Math.max(0, 1 - (ns.busy + ns.queue.length) / ns.K) : 1;
+        var suit = sh.wtaSuit ? (sh.wtaSuit[altBand] || 0) : 1;
+        var score = suit * (0.25 + 0.75 * remain);
+        if (!best || score > best.score ||
+            (score === best.score && sh.id < best.sh.id)) best = { sh: sh, score: score };
+      });
+    } else {
+      shooters.forEach(function (sh) {
+        var ns = self.nodeState[sh.id];
+        var load = ns ? (ns.busy + ns.queue.length) : 0;
+        if (!best || load < best.load) best = { sh: sh, load: load };
+      });
+    }
     var shooter = best.sh;
     var controlC2 = shooter.controlledBy[mode][0];
     var comm = this._link(controlC2, shooter.id, 'command');
     var delay = comm ? comm.delaySec : 0;
     if (comm) this._recordLink(controlC2, shooter.id, comm, 'command');
     this.global.engaged++;
-    if (!threat._countedEngaged) { threat._countedEngaged = true; this.global.everEngaged++; }
+    if (!threat._countedEngaged) {
+      threat._countedEngaged = true;
+      this.global.everEngaged++;
+      // 결심 지연(MoP): 탐지→최초 교전명령 (협조/승인/위임 지연이 모두 포함됨)
+      if (threat._detectT != null) {
+        this.decisionDelaySum += (t - threat._detectT);
+        this.decisionDelayCount++;
+      }
+    }
     this._mark(threat, '교전명령#' + (threat.tries + 1) + ':' + shooter.id, t);
     this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: threat, shooter: shooter.id });
   };
@@ -2915,16 +3097,26 @@ li.chk-fail { background: #43140f; }
     });
   };
 
+  // 비용교환비의 '저가 포화위협' 부분집합 (계획서: 장사정포·UAV 대응 소모 비용)
+  var SAT_THREATS = { uav_small: true, mrl_large: true };
+
   /** 9 BDA: 요격확률 판정 → 실패 시 재교전 피드백(폐루프) */
   Simulation.prototype._onEngageEnd = function (t, threat, shooterId) {
     if (!threat.alive) return;
     var shooter = KJ.nodeById(shooterId);
     threat.tries++;
+    // Phase D: 교전 시도 1회 = 요격탄 1발 소모(개념) — 비용교환비(MoFE) 집계
+    var shot = (shooter.engage && shooter.engage.costPerShotM) || 0;
+    this.cost.interceptM += shot;
+    if (SAT_THREATS[threat.type]) this.cost.interceptSatM += shot;
     var pk = this._pk(shooter, threat);
     if (this.rng.raw() < pk) {
       threat.alive = false; threat.killed = true;
       this.global.killed++;
       this.global.timeToKill.push(t - threat.spawnT);
+      var tv = KJ.threatType(threat.type).unitCostM || 0;
+      this.cost.killedThreatM += tv;
+      if (SAT_THREATS[threat.type]) this.cost.killedThreatSatM += tv;
       this._mark(threat, '격추성공#' + threat.tries, t);
       if (threat._trace) { threat._trace.exitT = t; threat._trace.outcome = 'killed'; }
     } else if (threat.tries < MAX_ENGAGE_TRIES && t < threat.spawnT + threat.dwellSec) {
@@ -2956,7 +3148,7 @@ li.chk-fail { background: #43140f; }
       id: entry.type + '#' + this.threatSeq, type: entry.type, axis: entry.axis,
       spawnT: t, dwellSec: tt.dwellSec, alive: true, killed: false,
       detected: false, pipelineDead: false, tries: 0, leakReason: null,
-      _trace: null, _countedC2: false, _countedEngaged: false
+      _trace: null, _countedC2: false, _countedEngaged: false, _detectT: null
     };
     if (this.trace) {
       if (this.threatTraces.length < this.traceCap) {
@@ -3126,7 +3318,24 @@ li.chk-fail { background: #43140f; }
         leakReasons: this.global.leakReasons,
         killRate: this.global.spawned ? this.global.killed / this.global.spawned : 0,
         leakRate: this.global.spawned ? this.global.leaked / this.global.spawned : 0,
-        meanTimeToKillSec: meanTTK
+        meanTimeToKillSec: meanTTK,
+        // 결심 지연(MoP): 탐지→최초 교전명령 평균(초) — 협조/승인/위임 지연 포함
+        meanDecisionDelaySec: this.decisionDelayCount
+          ? this.decisionDelaySum / this.decisionDelayCount : 0,
+        // 동적 권한위임(분권 전환) 관측: 전환 횟수·최초 전환 시각·승인노드별 분포 (B-2)
+        delegation: {
+          count: this.deleg.count, firstT: this.deleg.firstT, byNode: this.deleg.byNode
+        },
+        // 비용교환비(MoFE, 백만 USD 개념): exchange = 소모 요격탄 비용 / 격추 위협가치
+        // (>1이면 아군이 더 비싼 자원을 소모). sat*는 저가 포화위협(무인기·방사포) 부분집합
+        cost: {
+          interceptM: this.cost.interceptM,
+          killedThreatM: this.cost.killedThreatM,
+          exchange: this.cost.killedThreatM > 0 ? this.cost.interceptM / this.cost.killedThreatM : null,
+          interceptSatM: this.cost.interceptSatM,
+          killedThreatSatM: this.cost.killedThreatSatM,
+          exchangeSat: this.cost.killedThreatSatM > 0 ? this.cost.interceptSatM / this.cost.killedThreatSatM : null
+        }
       },
       // 단계별 흐름 카운트 (Sankey/funnel용) — trace 없이도 항상 제공(집계 카운터라 저비용)
       flow: {
@@ -3173,10 +3382,34 @@ li.chk-fail { background: #43140f; }
 
   KJ.Simulation = Simulation;
 
+  // ── 정밀화 Phase C: 요격 실패(누수) 원인 코드 → 병목 분류(taxonomy) ──
+  // 엔진이 태깅하는 leakReason 코드의 정본 분류. UI(대조표·타임라인)와 회귀 테스트가
+  // 공유한다. group은 구조적 병목 축(어느 계층의 실패인가), structural은 C2 구조 개선
+  // (To-Be)으로 줄어야 하는 원인인지(명중실패 같은 순수 종말 성능과 구분)를 뜻한다.
+  KJ.LEAK_TAXONOMY = {
+    not_detected: { label: '미탐지', group: '탐지 공백', structural: true },
+    no_sensor: { label: '탐지 공백(센서 부재)', group: '탐지 공백', structural: true },
+    no_report_path: { label: '보고경로 부재(항적 비융합)', group: '항적 비융합·보고경로 부재', structural: true },
+    responsibility_gap: { label: '책임공백(협조경로 부재)', group: '책임 공백', structural: true },
+    overflow: { label: '포화손실', group: '처리 포화', structural: true }, // 'overflow:<노드>' 접두 코드
+    no_shooter: { label: '교전수단 부재(제약)', group: '교전수단 제약', structural: false },
+    missed: { label: '명중 실패(기회소진)', group: '명중 실패', structural: false },
+    timeout: { label: '처리지연 초과(공역이탈)', group: '처리지연 초과', structural: true }
+  };
+
+  /** leakReason 코드(‘overflow:<노드>’ 접두 포함)를 taxonomy 항목으로 해석 */
+  KJ.leakTaxonomy = function (code) {
+    if (KJ.LEAK_TAXONOMY[code]) return KJ.LEAK_TAXONOMY[code];
+    if (code && code.indexOf('overflow:') === 0) {
+      var base = KJ.LEAK_TAXONOMY.overflow;
+      return { label: base.label + '(' + code.slice(9) + ')', group: base.group, structural: base.structural };
+    }
+    return { label: String(code), group: '기타', structural: false };
+  };
+
   /** 편의 실행기: 단일 복제(replication) 실행. Phase 3 Monte Carlo가 이를 다수 집계한다. */
   KJ.runDES = function (cfg) { return new Simulation(cfg).run(); };
 })();
-
 </script>
   <script>/* js/analysis/mc-runner.js (inlined) */
 /**
@@ -3341,7 +3574,6 @@ li.chk-fail { background: #43140f; }
     return Object.assign({}, cfg, { intensity: cfg.intensity * scale });
   }
 })();
-
 </script>
   <script>/* js/analysis/transition.js (inlined) */
 /**
@@ -3446,7 +3678,6 @@ li.chk-fail { background: #43140f; }
     };
   };
 })();
-
 </script>
   <script>/* js/analysis/overlap-heatmap.js (inlined) */
 /**
@@ -3552,7 +3783,6 @@ li.chk-fail { background: #43140f; }
     return { axes: results, maxRaw: maxRaw };
   };
 })();
-
 </script>
   <script>/* js/ui/geo.js (inlined) */
 /**
@@ -3577,7 +3807,6 @@ li.chk-fail { background: #43140f; }
     }
   };
 })();
-
 </script>
   <script>/* js/ui/table-sort.js (inlined) */
 /**
@@ -3704,7 +3933,6 @@ li.chk-fail { background: #43140f; }
     KJ.tableSort.attachAll(document);
   });
 })();
-
 </script>
   <script>/* js/ui/map-view.js (inlined) */
 /**
@@ -3939,7 +4167,6 @@ li.chk-fail { background: #43140f; }
     return h + '</div>';
   }
 })();
-
 </script>
   <script>/* js/ui/panels.js (inlined) */
 /**
@@ -4072,7 +4299,6 @@ li.chk-fail { background: #43140f; }
     }
   };
 })();
-
 </script>
   <script>/* js/ui/sim-view.js (inlined) */
 /**
@@ -4099,12 +4325,7 @@ li.chk-fail { background: #43140f; }
     uav_small: '#ff8a7a', ac_low: '#ff7261', heli: '#ff7261',
     fighter: '#f4442e', cruise: '#e01e1e', srbm: '#b3001b', mrl_large: '#d90429'
   };
-  // 요격 실패(구 '누수') 세부 사유 — 전체 개념이 '요격 실패'이므로 missed는 '명중 실패'로 구분
-  var LEAK_LABEL = {
-    not_detected: '미탐지', no_sensor: '탐지 공백(센서 부재)', no_report_path: '보고경로 부재',
-    responsibility_gap: '책임공백(협조경로 부재)', no_shooter: '교전수단 부재(제약)',
-    missed: '명중 실패(기회소진)', timeout: '처리지연 초과(공역이탈)'
-  };
+  // 요격 실패(구 '누수') 세부 사유 라벨·분류는 엔진 정본 KJ.LEAK_TAXONOMY(Phase C)를 사용.
   var LEVEL_BADGE = {
     idle: '<span class="badge badge-idle">유휴</span>',
     normal: '<span class="badge badge-ok">정상</span>',
@@ -4124,6 +4345,8 @@ li.chk-fail { background: #43140f; }
     if (name === '융합처리완료') return '④⑤ 융합·AI식별·WTA (JAMDC2)';
     if (name.indexOf('협조개시:') === 0) return '⑥⑦ 결심·교전협조 (' + name.slice(5) + ')';
     if (name.indexOf('승인완료:') === 0) return '⑥ 교전승인 (' + name.slice(5) + ')';
+    if (name.indexOf('권한위임:') === 0) return '⑦ 동적 권한위임 → 분권 교전 (' + name.slice(5) + ' 포화)';
+    if (name.indexOf('감독승인개시:') === 0) return '⑥ 감독하 자동교전 승인 (' + name.slice(7) + ')';
     if (name.indexOf('교전명령#') === 0) return '⑧ ' + name;
     if (name.indexOf('격추성공#') === 0) return '⑨ BDA: 격추 ✔';
     if (name.indexOf('교전실패#') === 0) return '⑨ BDA: ' + name;
@@ -4316,15 +4539,20 @@ li.chk-fail { background: #43140f; }
   // ── trace → 애니메이션용 위협 목록 ──
   // 동시 다발(burst)처럼 같은 축선·같은 시각에 발생한 위협이 정확히 겹쳐 보이지 않도록,
   // 위협 ID 기반 결정론적 수직 오프셋(±0.06° 이내 개념 산개)을 부여한다.
+  // Phase A 정밀화: 4개 축선에 여러 위협 유형이 뭉쳐 보이는 문제를, 유형 인덱스 기반
+  // 결정론적 진입 오프셋(seed 무관, ID·유형에서 파생)으로 추가 분산한다 — 개념 산개 표시일 뿐
+  // 실제 발사원점·경로가 아니다(burst 산개 로직과 동일 방식).
   function buildThreats(res) {
+    var typeKeys = Object.keys(KJ.THREAT_TYPES);
     return (res.threatTraces || []).map(function (tr, idx) {
       var tt = KJ.threatType(tr.type);
       var lane = (idx % 7) - 3; // -3..3
+      var typeLane = typeKeys.indexOf(tr.type) - (typeKeys.length - 1) / 2; // 유형별 고정 산개
       return {
         id: tr.id, type: tr.type, axis: tr.axis, typeName: tt.name,
         spawnT: tr.spawnT, exitT: tr.exitT, outcome: tr.outcome, dwellSec: tt.dwellSec,
         stages: tr.stages,
-        offLat: lane * 0.02, offLon: lane * 0.015
+        offLat: lane * 0.02 + typeLane * 0.008, offLon: lane * 0.015 + typeLane * 0.006
       };
     });
   }
@@ -4595,6 +4823,9 @@ li.chk-fail { background: #43140f; }
       statCard('격추', g.killed + '건 (' + pct(g.killRate) + ')') +
       statCard('요격 실패', g.leaked + '건 (' + pct(g.leakRate) + ')', g.leakRate > 0.3 ? 'crit' : '') +
       statCard('평균 격추시간', g.meanTimeToKillSec.toFixed(0) + '초') +
+      statCard('결심 지연', g.meanDecisionDelaySec.toFixed(0) + '초') +
+      statCard('분권 전환', g.delegation.count + '건' +
+        (g.delegation.firstT !== null ? ' (최초 ' + fmtTime(g.delegation.firstT) + ')' : '')) +
       statCard('도출 병목', run.res.bottlenecks.length + '건') + '</div>';
 
     // ② As-Is ↔ To-Be 좌·우 직관 비교 (현재 모드와 무관하게 좌=As-Is, 우=To-Be로 고정)
@@ -4631,14 +4862,12 @@ li.chk-fail { background: #43140f; }
       }).join('') + '</ul>'
       : '<div class="bn-none">이 실행에서 도출된 병목 없음 (병목은 부하의 함수 — 강도·시나리오를 바꿔보세요)</div>';
 
-    // ⑤ 요격 실패 사유
-    var reasons = Object.keys(g.leakReasons);
-    html += '<h3>요격 실패 사유 분해</h3><div class="leak-row">' + (reasons.length
-      ? reasons.sort(function (a, b) { return g.leakReasons[b] - g.leakReasons[a]; })
-        .map(function (r) {
-          return '<span class="leak-chip">' + esc(leakLabel(r)) + ': <b>' + g.leakReasons[r] + '</b></span>';
-        }).join(' ')
-      : '<span class="bn-none">요격 실패 없음</span>') + '</div>';
+    // ⑤ 요격 실패 원인 분해 — As-Is ↔ To-Be 대조표 (Phase C: 원인코드 × 모드 건수/비율)
+    html += '<h3>요격 실패 원인 분해 — As-Is ↔ To-Be 대조 (동일 seed·강도)</h3>' +
+      leakCompareTable(asisG, tobeG);
+
+    // ⑤-2 실패 항적 타임라인 (Phase C: 개별 항적이 9단계 중 어디서 왜 멈췄는지)
+    html += failedTimelineSection(run.res);
 
     // ⑥ 단계별 흐름 (funnel)
     var f = run.res.flow;
@@ -4701,10 +4930,79 @@ li.chk-fail { background: #43140f; }
     if (KJ.tableSort) KJ.tableSort.attachAll(el('modal-body')); // 모달 표도 열 정렬 지원
   }
 
-  function leakLabel(r) {
-    if (LEAK_LABEL[r]) return LEAK_LABEL[r];
-    if (r.indexOf('overflow:') === 0) return '포화손실(' + r.slice(9) + ')';
-    return r;
+  function leakLabel(r) { return KJ.leakTaxonomy(r).label; }
+
+  /**
+   * Phase C — 요격 실패 원인 대조표: 원인코드 × 모드(As-Is/To-Be) 건수·비율(생성 대비)·Δ.
+   * 구조적 원인(공백·포화·지연)이 To-Be에서 줄고 일부가 순수 명중 실패로 이동하는
+   * "구조 개선의 이동 경로"를 드러낸다. 라벨·분류는 엔진 정본 KJ.LEAK_TAXONOMY.
+   */
+  function leakCompareTable(asisG, tobeG) {
+    var codes = {};
+    Object.keys(asisG.leakReasons).forEach(function (r) { codes[r] = true; });
+    Object.keys(tobeG.leakReasons).forEach(function (r) { codes[r] = true; });
+    var list = Object.keys(codes);
+    if (list.length === 0) return '<div class="bn-none">양 모드 모두 요격 실패 없음</div>';
+    list.sort(function (a, b) {
+      return (asisG.leakReasons[b] || 0) - (asisG.leakReasons[a] || 0);
+    });
+    var rows = list.map(function (r) {
+      var tax = KJ.leakTaxonomy(r);
+      var a = asisG.leakReasons[r] || 0, b = tobeG.leakReasons[r] || 0;
+      var ap = asisG.spawned ? (a / asisG.spawned * 100) : 0;
+      var bp = tobeG.spawned ? (b / tobeG.spawned * 100) : 0;
+      var d = bp - ap; // 비율 기준 Δ(%p) — 모드 간 생성 수 차이를 보정
+      var cls = Math.abs(d) < 0.05 ? 'vs-flat' : (tax.structural ? (d < 0 ? 'vs-good' : 'vs-bad') : 'vs-flat');
+      return '<tr><td>' + esc(tax.group) + (tax.structural ? ' <span class="badge badge-warn" title="C2 구조 개선(To-Be)으로 감소가 기대되는 원인">구조</span>' : '') +
+        '</td><td>' + esc(tax.label) + '</td>' +
+        '<td class="num">' + a + ' (' + ap.toFixed(1) + '%)</td>' +
+        '<td class="num">' + b + ' (' + bp.toFixed(1) + '%)</td>' +
+        '<td class="num"><span class="' + cls + '">' + (d > 0 ? '+' : '') + d.toFixed(1) + '%p</span></td></tr>';
+    }).join('');
+    return '<table><thead><tr><th>병목 분류</th><th>원인</th><th>As-Is 건수(비율)</th>' +
+      '<th>To-Be 건수(비율)</th><th>Δ%p</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<div class="note">비율 = 각 모드 생성 위협 대비. [구조] 표시 원인(공백·포화·지연)은 To-Be에서 감소하고, ' +
+      '그중 일부가 순수 명중 실패로 이동하는 것이 구조적 개선의 정상 경로입니다.</div>';
+  }
+
+  /**
+   * Phase C — 실패 항적 타임라인: trace된 실패 항적별로 "생성→…→(멈춘 단계)"와 멈춘 사유를
+   * 표시. 모든 단계 시각은 엔진이 [spawnT, exitT] 경계 내로 보장(Phase 5 exitT 클램프 회귀).
+   */
+  var FAILED_TL_CAP = 40;
+  function failedTimelineSection(res) {
+    var failed = (res.threatTraces || []).filter(function (tr) {
+      return tr.outcome && tr.outcome.indexOf('leaked:') === 0;
+    });
+    var html = '<h3>실패 항적 타임라인 (개별 항적 — 멈춘 단계·사유)</h3>';
+    if (failed.length === 0) {
+      return html + '<div class="bn-none">추적된 실패 항적 없음' +
+        (res.traceTruncated ? ' (trace 상한 절삭 — 통계는 전체 모집단 기준)' : '') + '</div>';
+    }
+    var shown = failed.slice(0, FAILED_TL_CAP);
+    html += shown.map(function (tr) {
+      var reason = tr.outcome.slice(7);
+      var tax = KJ.leakTaxonomy(reason);
+      // 멈춘 단계 = 마지막 '누수:' 단계 직전의 실제 진행 단계
+      var lastIdx = tr.stages.length - 1;
+      while (lastIdx > 0 && tr.stages[lastIdx].name.indexOf('누수:') === 0) lastIdx--;
+      var stopped = tr.stages[lastIdx];
+      var tt = KJ.threatType(tr.type);
+      return '<details class="ftl"><summary>' +
+        '<b>' + esc(tr.id) + '</b> <i>(' + esc(tt ? tt.name : tr.type) + ' · ' + esc(tr.axis) + ')</i> — ' +
+        '멈춘 단계: <b>' + esc(stageLabel(stopped.name)) + '</b> (' + fmtTime(stopped.t) + ') · ' +
+        '사유: <span class="badge badge-bad">' + esc(tax.label) + '</span> <i>[' + esc(tax.group) + ']</i>' +
+        '</summary><ul class="tlog-stages">' +
+        tr.stages.map(function (s) {
+          return '<li>' + fmtTime(s.t) + ' · ' + esc(stageLabel(s.name)) + '</li>';
+        }).join('') +
+        '</ul></details>';
+    }).join('');
+    if (failed.length > shown.length) {
+      html += '<div class="note">실패 항적 ' + failed.length + '건 중 ' + shown.length +
+        '건 표시 (표시 상한 — 통계·대조표는 전체 기준)</div>';
+    }
+    return html;
   }
   function statCard(label, val, cls) {
     return '<div class="stat-card' + (cls ? ' stat-' + cls : '') + '">' +
@@ -4713,43 +5011,101 @@ li.chk-fail { background: #43140f; }
   }
   function signed(n) { return (n > 0 ? '+' : '') + n; }
 
+  /** 링크 전달 1건당 평균 통신지연(초) — 음성(As-Is)↔데이터링크(To-Be) 대비 (MoP) */
+  function commMeanDelay(res) {
+    var num = 0, den = 0;
+    res.links.forEach(function (l) { num += l.delaySec * l.count; den += l.count; });
+    return den ? num / den : 0;
+  }
+  /** 구조적 실패(공백·포화·지연) 건수 — taxonomy structural 합 (MoCE) */
+  function structuralLeaks(g) {
+    var n = 0;
+    Object.keys(g.leakReasons).forEach(function (r) {
+      if (KJ.leakTaxonomy(r).structural) n += g.leakReasons[r];
+    });
+    return n;
+  }
+  /** 축선 중복교전 위험도 합 (overlap-heatmap raw 합, MoCE) */
+  function overlapRiskSum(mode) {
+    var h = KJ.computeOverlapHeat(KJ.scenarioById(run.cfg.sc), mode, run.cfg.x);
+    return h.axes.reduce(function (s, a) { return s + a.raw; }, 0);
+  }
+
+  // MoM 계층 라벨 (NATO COBP/SAS-026, ENV-MOM-COBP-01): MoP 과정(성능) ·
+  // MoCE C2 효과성 · MoFE 전력 효과성. 각 지표에 정의·근거 툴팁을 부착한다.
+  var MOM_TIP = {
+    MoP: 'Measure of Performance — 체계 내부 과정 성능 (NATO COBP/SAS-026)',
+    MoCE: 'Measure of C2 Effectiveness — 지휘통제 효과성 (NATO COBP/SAS-026)',
+    MoFE: 'Measure of Force Effectiveness — 전력 전체의 임무 효과 (NATO COBP/SAS-026)'
+  };
+
   /**
-   * As-Is(좌)↔To-Be(우) 좌·우 발산형 시각 비교 블록.
-   * 각 지표를 중앙 라벨 기준으로 왼쪽(As-Is, 적색)·오른쪽(To-Be, 초록) 막대로 마주보게 그려
-   * 어느 쪽이 크고 얼마나 개선됐는지 한눈에 보이게 한다.
+   * As-Is(좌)↔To-Be(우) 좌·우 발산형 시각 비교 블록 (Phase D 확장).
+   * 우선 대조 지표(결심 지연·누출률·격추율·중복교전 위험·비용교환비)를 상단에 두고,
+   * 과정(MoP)·C2 효과성(MoCE)·결과(MoFE) 지표를 MoM 계층 라벨·툴팁과 함께 나란히 보인다.
    */
   function vsCompare(asisG, tobeG, asisRes, tobeRes) {
     var rows = [
-      { label: '요격 실패율', a: asisG.leakRate, b: tobeG.leakRate, kind: 'rate', lower: true, max: 1 },
-      { label: '격추율', a: asisG.killRate, b: tobeG.killRate, kind: 'rate', lower: false, max: 1 },
-      { label: '평균 격추시간', a: asisG.meanTimeToKillSec, b: tobeG.meanTimeToKillSec, kind: 'sec', lower: true },
-      { label: '도출 병목 수', a: asisRes.bottlenecks.length, b: tobeRes.bottlenecks.length, kind: 'cnt', lower: true }
+      // ── 우선 대조 지표 (상단 강조) ──
+      { label: '결심 지연 (탐지→교전개시)', mom: 'MoP', a: asisG.meanDecisionDelaySec, b: tobeG.meanDecisionDelaySec, kind: 'sec', lower: true,
+        tip: 'F2T2EA Find→Engage 평균 소요(초). 협조·승인·권한위임 홉과 C2 대기(Wq)가 모두 포함된 관측치 — As-Is 음성 협조(≥180s) 부담이 드러남.' },
+      { label: '요격 실패율 (누출률)', mom: 'MoFE', a: asisG.leakRate, b: tobeG.leakRate, kind: 'rate', lower: true, max: 1,
+        tip: '생성 위협 중 격추하지 못하고 공역을 통과(누수)한 비율.' },
+      { label: '격추율', mom: 'MoFE', a: asisG.killRate, b: tobeG.killRate, kind: 'rate', lower: false, max: 1,
+        tip: '생성 위협 중 격추 비율.' },
+      { label: '중복교전 위험 (축선 합)', mom: 'MoCE', a: overlapRiskSum('asis'), b: overlapRiskSum('tobe'), kind: 'raw', lower: true,
+        tip: '서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합.' },
+      { label: '비용교환비 (저가 포화위협)', mom: 'MoFE', a: asisG.cost.exchangeSat, b: tobeG.cost.exchangeSat, kind: 'ratio', lower: true,
+        tip: '무인기·장사정포 대응에 소모한 개념 요격탄 비용 ÷ 격추 위협가치 (WPN/THR-*-COST-01, 타 전역 공개수치 기반 개념값 — 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모.' },
+      // ── 보조 지표 ──
+      { label: '평균 격추시간', mom: 'MoP', a: asisG.meanTimeToKillSec, b: tobeG.meanTimeToKillSec, kind: 'sec', lower: true,
+        tip: '격추 성공 항적의 생성→격추 평균 소요.' },
+      { label: '통신지연 부하 (전달 1건 평균)', mom: 'MoP', a: commMeanDelay(asisRes), b: commMeanDelay(tobeRes), kind: 'sec', lower: true,
+        tip: '실제 발생한 링크 전달의 평균 지연 — 음성(As-Is 180s)↔데이터링크(To-Be 2s) 구조 차이의 관측치 (C2-VOICE-DLY-01).' },
+      { label: '구조적 실패 (공백·포화·지연)', mom: 'MoCE', a: structuralLeaks(asisG), b: structuralLeaks(tobeG), kind: 'cnt', lower: true,
+        tip: '실패 원인 중 구조적 원인(탐지공백·보고경로·책임공백·포화·처리지연) 합 — 원인 대조표의 요약 지표.' },
+      { label: '도출 병목 수', mom: 'MoCE', a: asisRes.bottlenecks.length, b: tobeRes.bottlenecks.length, kind: 'cnt', lower: true,
+        tip: '관측 통계(ρ≥0.9·드롭·공백)에서 도출된 병목 수 (ENV-RHO-THRESH-01).' }
     ];
     function fmt(v, kind) {
+      if (v === null || v === undefined || (kind !== 'cnt' && !isFinite(v))) return '—';
       if (kind === 'rate') return (v * 100).toFixed(0) + '%';
       if (kind === 'sec') return v.toFixed(0) + '초';
+      if (kind === 'raw') return v.toFixed(1);
+      if (kind === 'ratio') return v.toFixed(2) + '배';
       return v + '건';
     }
     function deltaText(d, kind) {
       var av = Math.abs(d);
       if (kind === 'rate') return (av * 100).toFixed(0) + '%p';
       if (kind === 'sec') return av.toFixed(0) + '초';
+      if (kind === 'raw') return av.toFixed(1);
+      if (kind === 'ratio') return av.toFixed(2);
       return av + '건';
     }
     var body = rows.map(function (r) {
-      var max = r.max || Math.max(r.a, r.b, 1e-9);
-      var aw = Math.min(100, r.a / max * 100), bw = Math.min(100, r.b / max * 100);
-      var d = r.b - r.a;                       // To-Be − As-Is
-      var improved = r.lower ? d < 0 : d > 0;
-      var same = Math.abs(d) < (r.kind === 'cnt' ? 0.5 : 1e-9);
-      // 화살표 = 값 변화 방향(▲증가·▼감소), 색·라벨 = 개선/악화 (지표별 좋은 방향이 다름)
-      var arrow = same ? '=' : (d > 0 ? '▲' : '▼');
-      var dcls = same ? 'vs-flat' : (improved ? 'vs-good' : 'vs-bad');
-      var deltaLabel = same ? '동일' : (arrow + ' ' + deltaText(d, r.kind) + (improved ? ' 개선' : ' 악화'));
-      return '<div class="vs-row">' +
+      var aNum = (typeof r.a === 'number' && isFinite(r.a)) ? r.a : null;
+      var bNum = (typeof r.b === 'number' && isFinite(r.b)) ? r.b : null;
+      var max = r.max || Math.max(aNum || 0, bNum || 0, 1e-9);
+      var aw = aNum === null ? 0 : Math.min(100, aNum / max * 100);
+      var bw = bNum === null ? 0 : Math.min(100, bNum / max * 100);
+      var deltaLabel, dcls;
+      if (aNum === null || bNum === null) {
+        deltaLabel = '판정 불가'; dcls = 'vs-flat';
+      } else {
+        var d = bNum - aNum;                   // To-Be − As-Is
+        var improved = r.lower ? d < 0 : d > 0;
+        var same = Math.abs(d) < (r.kind === 'cnt' ? 0.5 : 1e-9);
+        // 화살표 = 값 변화 방향(▲증가·▼감소), 색·라벨 = 개선/악화 (지표별 좋은 방향이 다름)
+        var arrow = same ? '=' : (d > 0 ? '▲' : '▼');
+        dcls = same ? 'vs-flat' : (improved ? 'vs-good' : 'vs-bad');
+        deltaLabel = same ? '동일' : (arrow + ' ' + deltaText(d, r.kind) + (improved ? ' 개선' : ' 악화'));
+      }
+      return '<div class="vs-row" title="' + esc(r.tip || '') + '">' +
         '<div class="vs-val asis">' + fmt(r.a, r.kind) + '</div>' +
         '<div class="vs-track l"><div class="vs-fill asis" style="width:' + aw.toFixed(0) + '%"></div></div>' +
-        '<div class="vs-mid"><div class="vs-metric">' + esc(r.label) + '</div>' +
+        '<div class="vs-mid"><div class="vs-metric"><span class="mom mom-' + r.mom.toLowerCase() +
+        '" title="' + esc(MOM_TIP[r.mom]) + '">' + r.mom + '</span> ' + esc(r.label) + '</div>' +
         '<div class="vs-delta ' + dcls + '">' + deltaLabel + '</div></div>' +
         '<div class="vs-track r"><div class="vs-fill tobe" style="width:' + bw.toFixed(0) + '%"></div></div>' +
         '<div class="vs-val tobe">' + fmt(r.b, r.kind) + '</div>' +
@@ -4760,8 +5116,10 @@ li.chk-fail { background: #43140f; }
       '<div class="vs-side-mid">지표</div>' +
       '<div class="vs-side tobe">To-Be 통합형 ▶</div></div>' +
       body +
-      '<div class="note">막대 길이 = 값의 상대 크기(요격 실패율·격추율은 0~100%, 나머지는 두 값 중 최대 기준). ' +
-      '가운데 화살표 초록 ▼/▲ = To-Be가 개선된 방향.</div></div>';
+      '<div class="note">막대 길이 = 값의 상대 크기(비율 지표는 0~100%, 나머지는 두 값 중 최대 기준). ' +
+      '가운데 화살표 초록 ▼/▲ = To-Be가 개선된 방향. 상단 5개가 우선 대조 지표. ' +
+      'MoM 계층: MoP 과정(성능) · MoCE C2 효과성 · MoFE 전력 효과성 — NATO COBP(SAS-026) 근거, ' +
+      '지표 위에 마우스를 올리면 정의·근거 툴팁이 표시됩니다. 비용교환비는 개념 단가 기반(한반도 보정 필요).</div></div>';
   }
 
   // seed/dur 입력을 사용자가 만진 뒤에는 re-render가 값을 덮어쓰지 않음
@@ -4779,7 +5137,6 @@ li.chk-fail { background: #43140f; }
     });
   });
 })();
-
 </script>
   <script>/* js/ui/mc-panel.js (inlined) */
 /**
@@ -5030,7 +5387,6 @@ li.chk-fail { background: #43140f; }
     if (btn) btn.addEventListener('click', runTransition);
   });
 })();
-
 </script>
   <script>/* js/main.js (inlined) */
 /**
@@ -5178,7 +5534,6 @@ li.chk-fail { background: #43140f; }
     render();
   });
 })();
-
 </script>
 </body>
 </html>

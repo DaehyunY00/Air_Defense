@@ -83,6 +83,27 @@
 - **신뢰도 등급**: C
 - **MC 적용방식**: 민감도스윕 대상
 
+### [C2-WTA-SUIT-01] Best-Shooter 적합도 개념 가중치 (정밀화 Phase B-1, `js/data/nodes.js` wtaSuit)
+- **값/분포**: 무기별 × 위협 고도대역(low/medium/ballistic) 개념 가중 — FTR {0.7/1.2/0} · SHORAD {1.3/0.5/0} · MSAM-1C {0.8/1.1/0} · MDU-M {0.7/0.9/1.2} · MDU-L {0/0/1.3} · SM-2 {0.8/1.0/0}. WTA 점수 = wtaSuit[고도대역] × (0.25+0.75×잔여용량비). 동점은 노드 id 사전순(결정론)
+- **출처**: 개념 설정 — 2022.12.26 소형표적 대응 저효율(전투기·헬기 격추 실패), 저고도 표적↔단거리방공 적합, 탄도탄↔MD 자산 적합의 상식적 서열화. K-JAMDS "Any Sensor, Best Shooter" 개념(합참 구축안)의 구현
+- **적용범위**: DES `_doEngage` **To-Be 모드 전용** (As-Is는 COP 부재로 적합도 비교 불가 — 최소부하 선택 유지). canEngage 제약(신궁·천마 탄도탄 배제)이 어떤 경우에도 우선
+- **신뢰도 등급**: C(개념 가중)
+- **MC 적용방식**: 고정 (민감도스윕 후보)
+
+### [C2-DELEG-THRESH-01] 부하 기반 중앙↔분권 동적 전환 임계 (정밀화 Phase B-2)
+- **값/분포**: 승인권자 노드 관측 상태가 [전 결심서버 점유(busy≥c) AND 대기열 ≥ c×배수]일 때 해당 결심을 하위/자동으로 위임(분권 전환). 배수: **As-Is 4 / To-Be 1**
+- **출처**: 개념 설정 — 임무형 지휘(권한위임) 원칙의 부하 트리거화. To-Be는 COP 공유·자동화로 조기 전환, As-Is는 수동 절차로 포화가 누적되어야 전환(느림/준부재)
+- **적용범위**: DES `_decision`. 전환 시점·횟수·승인노드별 분포가 `global.delegation`으로 관측됨. **하드코딩된 병목이 아니라 부하의 함수** — 저강도에서는 어느 모드도 전환 0건(회귀 고정, tests/refine.test.js B-2)
+- **신뢰도 등급**: C(개념 임계)
+- **MC 적용방식**: 고정 (민감도스윕 후보)
+
+### [C2-AUTO-LEVEL-01] 위협별 자동화 차등 (정밀화 Phase B-3, `js/data/threats.js` automation)
+- **값/분포**: human-in-loop(승인권자까지 협조경로+승인 처리) / human-on-loop(감독하 자동교전 — 승인 처리만, 협조 홉 생략) / auto-preauth(사전승인 자동교전 — 결심 홉 생략). As-Is 전 위협 in-loop; To-Be 무인기·순항(주1)·탄도탄 auto-preauth 또는 on-loop, 유인기 위협 on-loop
+- **출처**: 합참 K-JAMDS 구축 개념안(AI 기반 표적 식별·무기 배정)·무인기 사전승인 자동교전 개념 — 기존 threats.js note 텍스트의 엔진 플래그 승격
+- **적용범위**: DES `_decision` (구 approval=null 우회의 일반화). 주1: cruise는 on-loop이나 To-Be approvalLevel=null이라 홉 없는 감독 자동교전으로 동작
+- **신뢰도 등급**: C(개념 구분)
+- **MC 적용방식**: 고정
+
 ### [C2-VULCAN-CEIL-01] 대공포(벌컨) 유효고도 한계 vs 무인기 비행고도
 - **값/분포**: 벌컨 최대사거리 지상 2 km / 소형 무인기 비행 3 km (고정)
 - **단위**: km
@@ -216,6 +237,47 @@
 - **신뢰도 등급**: C
 - **MC 적용방식**: 분포샘플링
 
+### [WPN-*-COST-01] 요격탄 1발 개념 단가 (정밀화 Phase D, `js/data/nodes.js` engage.costPerShotM)
+
+비용교환비(MoFE) 계산 전용 개념 단가(백만 USD). **대부분 타 전역(미국 등) 공개수치의
+유추이므로 한반도 획득단가로 보정이 필요**(Caveat). DES 교전 판정·병목 도출에는 사용되지 않음.
+
+| ID | 무기 | 1발 개념 단가(M USD) | 근거 성격 | 신뢰도 |
+|---|---|---|---|---|
+| WPN-FTR-COST-01 | 전투기(공대공 미사일 1발 개념) | 0.5 | 중거리 공대공 미사일급 공개 단가 유추 | C |
+| WPN-SHORAD-COST-01 | 신궁(휴대용 SAM급) | 0.2 | 휴대용 지대공유도탄급 공개 단가 유추 | C |
+| WPN-MSAM-COST-01 | 천궁 계열 | 1.5 | 중거리 지대공유도탄 공개 보도 유추 | C |
+| WPN-MDUM-COST-01 | 천궁-II·PAC-3급 | 3 | PAC-3/천궁-II 단가 보도(수십억 원대) 유추 | C |
+| WPN-LSAM-COST-01 | L-SAM | 8 | 상층 요격탄급 공개 단가(THAAD류) 유추 | C |
+| WPN-SM2-COST-01 | SM-2 | 2.1 | SM-2 계열 공개 단가(약 $2.1M) | B |
+
+### [THR-*-COST-01] 위협 1기 개념 단가 (정밀화 Phase D, `js/data/threats.js` unitCostM)
+
+| ID | 위협 | 개념 단가(M USD) | 근거 성격 | 신뢰도 |
+|---|---|---|---|---|
+| THR-UAV-COST-01 | 소형 무인기 | 0.01 | 상용급 소형 무인기 단가(수천~수만 달러) 개념 | C |
+| THR-AN2-COST-01 | AN-2급 | 0.3 | 구형 기체 잔존가치 개념 | C |
+| THR-HELI-COST-01 | 헬기 | 3 | 중형 군용헬기 공개 단가 유추 | C |
+| THR-FTR-COST-01 | 전투기 | 25 | 4세대급 전투기 공개 단가 유추 | C |
+| THR-CM-COST-01 | 순항미사일 | 1.5 | 순항미사일급 공개 단가 유추 | C |
+| THR-KN23-COST-01 | KN-23급 SRBM | 3 | 이스칸데르급 단가 추정 보도 유추 | C |
+| THR-KN25-COST-01 | KN-25급 방사포탄 | 1 | 유도 방사포탄 개념 단가 | C |
+
+### [ENV-COST-EXCH-01] 비용교환비(MoFE) 정의
+- **값/분포**: exchange = 소모 요격탄 개념비용 합 ÷ 격추 위협가치 합 (교전 시도 1회 = 1발 소모 개념). exchangeSat는 저가 포화위협(uav_small·mrl_large) 부분집합. 격추 0이면 null(0나눗셈 없음)
+- **출처**: 방공 비용교환(cost-exchange) 논의 공개 문헌(저가 드론·방사포 대응의 비대칭 비용 문제) — 개념 정식화
+- **적용범위**: DES `_onEngageEnd` 집계 → `global.cost`. 결과창 비교 블록(MoFE 행)
+- **신뢰도 등급**: C(개념 정의; 단가는 WPN/THR-*-COST-01)
+- **MC 적용방식**: 고정 단가(민감도스윕 후보)
+- **비고**: Caveat — 단가가 타 전역 공개수치 기반이므로 절대값보다 As-Is↔To-Be 상대비교에 사용
+
+### [ENV-MOM-COBP-01] 지표 계층(MoM) 라벨링
+- **값/분포**: MoP(과정 성능: 결심 지연·평균 격추시간·통신지연 부하) / MoCE(C2 효과성: 중복교전 위험·구조적 실패·도출 병목 수) / MoFE(전력 효과성: 누출률·격추율·비용교환비)
+- **출처**: NATO Code of Best Practice for C2 Assessment(COBP, SAS-026) — MoP/MoCE/MoFE 계층
+- **적용범위**: 결과창 As-Is↔To-Be 비교 블록의 지표 태그·툴팁 (js/ui/sim-view.js)
+- **신뢰도 등급**: B(방법론 계층) / C(개별 지표의 계층 배정)
+- **MC 적용방식**: 라벨(계산 무관)
+
 ---
 
 ## THR (위협)
@@ -256,6 +318,30 @@
 - **출처**: 개념 설정
 - **신뢰도 등급**: C
 - **MC 적용방식**: 분포샘플링
+
+### [THR-*-RNG] 위협별 개념 사거리대·발사권역 (정밀화 Phase A, `js/data/threats.js` rangeBandKm·originZones)
+
+위협 유형별 개념 사거리대와 허용 발사권역 태그. `js/data/axes.js`의 축선별
+launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한다(ENV-AXIS-FIT-01,
+`tests/refine.test.js`로 회귀 고정). **전부 공개자료 기반 개념값이며 실제 제원·배치·발사원점이 아님.**
+발사권역 태그: `dmz`(DMZ 인접 근거리) / `coastal`(서해·연안) / `deep`(종심).
+
+| ID | 위협 | 개념 사거리대(km) | 발사권역 | 출처 성격 | 신뢰도 |
+|---|---|---|---|---|---|
+| THR-UAV-RNG-01 | 소형 무인기(2m급) | 50–300 | dmz·coastal | 2022.12.26 침투 무인기 항속거리 보도(서울 왕복 비행) 기반 개념 | C |
+| THR-AN2-RNG-01 | 저속 침투기(AN-2급) | 100–900 | dmz·coastal | AN-2 항속거리 공개 스펙(약 900km) 기반 개념 | B |
+| THR-HELI-RNG-01 | 헬기(저고도 침투) | 50–500 | dmz·coastal | 중형 헬기 전투행동반경 공개 스펙 기반 개념 | C |
+| THR-FTR-RNG-01 | 전투기 | 200–1,500 | dmz·coastal·deep | 전투기 전투행동반경 공개 스펙 기반 개념 | C |
+| THR-CM-RNG-01 | 순항미사일 | 150–2,000 | dmz·coastal·deep | 북 순항미사일(화살 계열) 사거리 주장 보도(≈1,500–2,000km) 기반 개념 | B |
+| THR-KN23-RNG-01 | SRBM(KN-23급) | 400–690 | deep | KN-23 사거리 분석 보도(≈450–690km) 기반 개념. 저각·단축발사 가능성으로 min은 정합검증 미사용 | B |
+| THR-KN25-RNG-01 | 초대형 방사포(KN-25급) | 350–400 | deep | 기존 THR-KN25-RNG-01(사거리·발사간격)과 동일 출처 | B |
+
+### [ENV-AXIS-FIT-01] 축선-사거리·발사권역 정합 검증 규칙
+- **값/분포**: (1) 위협 originZones ∩ 축선 launchZones ≠ ∅, (2) 위협 rangeBandKm.max ≥ 축선 conceptReachKm. 축선 개념거리: west 150 / central 130 / east 130 / seoul 60 km. seoul 축선은 launchZones=['dmz'] (근거리 전용 — 종심 위협 배분 차단)
+- **출처**: 개념 설정 — 위협 출발점(축선 entry)이 위협 사거리·발사권역과 모순되지 않게 하는 데이터 정합 규칙
+- **적용범위**: `KJ.checkAxisThreatFit`/`KJ.validateScenarioOrigins`(js/data/axes.js). 시나리오 mix 배분 검증(회귀 고정). DES 부하·병목 계산에는 개입하지 않음(데이터 계층 전용 — 시드 고정 스냅샷으로 무회귀 검증)
+- **신뢰도 등급**: C(개념 규칙)
+- **MC 적용방식**: 고정(검증 기준)
 
 ### [THR-CM-RCS-01] 순항미사일 저고도 비행 탐지 특성
 - **값/분포**: detectFactor 0.5 (개념 — 지형추적 저고도 비행)

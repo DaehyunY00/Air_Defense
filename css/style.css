@@ -159,6 +159,12 @@ li.tlog-future { color: #4a5666; }
 
 /* ── As-Is ↔ To-Be 좌·우 직관 비교 블록 ── */
 .vs-block { margin: 4px 0 8px; }
+
+/* Phase D — MoM 계층 라벨 칩 (MoP/MoCE/MoFE, NATO COBP) */
+.mom { display: inline-block; font-size: 9px; font-weight: 700; border-radius: 4px; padding: 0 4px; vertical-align: 1px; cursor: help; }
+.mom-mop { background: #1d3a5f; color: #9cc4f0; }
+.mom-moce { background: #4a3a14; color: #ecc55e; }
+.mom-mofe { background: #1f4a24; color: #8fdc96; }
 .vs-headrow, .vs-row {
   display: grid; grid-template-columns: 60px 1fr 150px 1fr 60px;
   align-items: center; gap: 8px;
@@ -344,6 +350,12 @@ li.chk-fail { background: #43140f; }
 .cmp-bad { color: #ff9a8d; font-weight: 700; }
 .leak-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .leak-chip { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 3px 10px; font-size: 11px; }
+
+/* Phase C — 실패 항적 타임라인 (결과 모달) */
+.ftl { border: 1px solid var(--border); border-radius: 6px; margin: 4px 0; padding: 4px 8px; background: var(--panel-2); }
+.ftl summary { cursor: pointer; font-size: 12px; }
+.ftl[open] summary { border-bottom: 1px dashed var(--border); padding-bottom: 4px; margin-bottom: 4px; }
+.ftl .tlog-stages { font-size: 11px; }
 
 /* ── Monte Carlo 패널 ── */
 .mc-conv { padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; }

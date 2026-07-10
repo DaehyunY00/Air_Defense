@@ -22,12 +22,7 @@
     uav_small: '#ff8a7a', ac_low: '#ff7261', heli: '#ff7261',
     fighter: '#f4442e', cruise: '#e01e1e', srbm: '#b3001b', mrl_large: '#d90429'
   };
-  // 요격 실패(구 '누수') 세부 사유 — 전체 개념이 '요격 실패'이므로 missed는 '명중 실패'로 구분
-  var LEAK_LABEL = {
-    not_detected: '미탐지', no_sensor: '탐지 공백(센서 부재)', no_report_path: '보고경로 부재',
-    responsibility_gap: '책임공백(협조경로 부재)', no_shooter: '교전수단 부재(제약)',
-    missed: '명중 실패(기회소진)', timeout: '처리지연 초과(공역이탈)'
-  };
+  // 요격 실패(구 '누수') 세부 사유 라벨·분류는 엔진 정본 KJ.LEAK_TAXONOMY(Phase C)를 사용.
   var LEVEL_BADGE = {
     idle: '<span class="badge badge-idle">유휴</span>',
     normal: '<span class="badge badge-ok">정상</span>',
@@ -47,6 +42,8 @@
     if (name === '융합처리완료') return '④⑤ 융합·AI식별·WTA (JAMDC2)';
     if (name.indexOf('협조개시:') === 0) return '⑥⑦ 결심·교전협조 (' + name.slice(5) + ')';
     if (name.indexOf('승인완료:') === 0) return '⑥ 교전승인 (' + name.slice(5) + ')';
+    if (name.indexOf('권한위임:') === 0) return '⑦ 동적 권한위임 → 분권 교전 (' + name.slice(5) + ' 포화)';
+    if (name.indexOf('감독승인개시:') === 0) return '⑥ 감독하 자동교전 승인 (' + name.slice(7) + ')';
     if (name.indexOf('교전명령#') === 0) return '⑧ ' + name;
     if (name.indexOf('격추성공#') === 0) return '⑨ BDA: 격추 ✔';
     if (name.indexOf('교전실패#') === 0) return '⑨ BDA: ' + name;
@@ -239,15 +236,20 @@
   // ── trace → 애니메이션용 위협 목록 ──
   // 동시 다발(burst)처럼 같은 축선·같은 시각에 발생한 위협이 정확히 겹쳐 보이지 않도록,
   // 위협 ID 기반 결정론적 수직 오프셋(±0.06° 이내 개념 산개)을 부여한다.
+  // Phase A 정밀화: 4개 축선에 여러 위협 유형이 뭉쳐 보이는 문제를, 유형 인덱스 기반
+  // 결정론적 진입 오프셋(seed 무관, ID·유형에서 파생)으로 추가 분산한다 — 개념 산개 표시일 뿐
+  // 실제 발사원점·경로가 아니다(burst 산개 로직과 동일 방식).
   function buildThreats(res) {
+    var typeKeys = Object.keys(KJ.THREAT_TYPES);
     return (res.threatTraces || []).map(function (tr, idx) {
       var tt = KJ.threatType(tr.type);
       var lane = (idx % 7) - 3; // -3..3
+      var typeLane = typeKeys.indexOf(tr.type) - (typeKeys.length - 1) / 2; // 유형별 고정 산개
       return {
         id: tr.id, type: tr.type, axis: tr.axis, typeName: tt.name,
         spawnT: tr.spawnT, exitT: tr.exitT, outcome: tr.outcome, dwellSec: tt.dwellSec,
         stages: tr.stages,
-        offLat: lane * 0.02, offLon: lane * 0.015
+        offLat: lane * 0.02 + typeLane * 0.008, offLon: lane * 0.015 + typeLane * 0.006
       };
     });
   }
@@ -518,6 +520,9 @@
       statCard('격추', g.killed + '건 (' + pct(g.killRate) + ')') +
       statCard('요격 실패', g.leaked + '건 (' + pct(g.leakRate) + ')', g.leakRate > 0.3 ? 'crit' : '') +
       statCard('평균 격추시간', g.meanTimeToKillSec.toFixed(0) + '초') +
+      statCard('결심 지연', g.meanDecisionDelaySec.toFixed(0) + '초') +
+      statCard('분권 전환', g.delegation.count + '건' +
+        (g.delegation.firstT !== null ? ' (최초 ' + fmtTime(g.delegation.firstT) + ')' : '')) +
       statCard('도출 병목', run.res.bottlenecks.length + '건') + '</div>';
 
     // ② As-Is ↔ To-Be 좌·우 직관 비교 (현재 모드와 무관하게 좌=As-Is, 우=To-Be로 고정)
@@ -554,14 +559,12 @@
       }).join('') + '</ul>'
       : '<div class="bn-none">이 실행에서 도출된 병목 없음 (병목은 부하의 함수 — 강도·시나리오를 바꿔보세요)</div>';
 
-    // ⑤ 요격 실패 사유
-    var reasons = Object.keys(g.leakReasons);
-    html += '<h3>요격 실패 사유 분해</h3><div class="leak-row">' + (reasons.length
-      ? reasons.sort(function (a, b) { return g.leakReasons[b] - g.leakReasons[a]; })
-        .map(function (r) {
-          return '<span class="leak-chip">' + esc(leakLabel(r)) + ': <b>' + g.leakReasons[r] + '</b></span>';
-        }).join(' ')
-      : '<span class="bn-none">요격 실패 없음</span>') + '</div>';
+    // ⑤ 요격 실패 원인 분해 — As-Is ↔ To-Be 대조표 (Phase C: 원인코드 × 모드 건수/비율)
+    html += '<h3>요격 실패 원인 분해 — As-Is ↔ To-Be 대조 (동일 seed·강도)</h3>' +
+      leakCompareTable(asisG, tobeG);
+
+    // ⑤-2 실패 항적 타임라인 (Phase C: 개별 항적이 9단계 중 어디서 왜 멈췄는지)
+    html += failedTimelineSection(run.res);
 
     // ⑥ 단계별 흐름 (funnel)
     var f = run.res.flow;
@@ -624,10 +627,79 @@
     if (KJ.tableSort) KJ.tableSort.attachAll(el('modal-body')); // 모달 표도 열 정렬 지원
   }
 
-  function leakLabel(r) {
-    if (LEAK_LABEL[r]) return LEAK_LABEL[r];
-    if (r.indexOf('overflow:') === 0) return '포화손실(' + r.slice(9) + ')';
-    return r;
+  function leakLabel(r) { return KJ.leakTaxonomy(r).label; }
+
+  /**
+   * Phase C — 요격 실패 원인 대조표: 원인코드 × 모드(As-Is/To-Be) 건수·비율(생성 대비)·Δ.
+   * 구조적 원인(공백·포화·지연)이 To-Be에서 줄고 일부가 순수 명중 실패로 이동하는
+   * "구조 개선의 이동 경로"를 드러낸다. 라벨·분류는 엔진 정본 KJ.LEAK_TAXONOMY.
+   */
+  function leakCompareTable(asisG, tobeG) {
+    var codes = {};
+    Object.keys(asisG.leakReasons).forEach(function (r) { codes[r] = true; });
+    Object.keys(tobeG.leakReasons).forEach(function (r) { codes[r] = true; });
+    var list = Object.keys(codes);
+    if (list.length === 0) return '<div class="bn-none">양 모드 모두 요격 실패 없음</div>';
+    list.sort(function (a, b) {
+      return (asisG.leakReasons[b] || 0) - (asisG.leakReasons[a] || 0);
+    });
+    var rows = list.map(function (r) {
+      var tax = KJ.leakTaxonomy(r);
+      var a = asisG.leakReasons[r] || 0, b = tobeG.leakReasons[r] || 0;
+      var ap = asisG.spawned ? (a / asisG.spawned * 100) : 0;
+      var bp = tobeG.spawned ? (b / tobeG.spawned * 100) : 0;
+      var d = bp - ap; // 비율 기준 Δ(%p) — 모드 간 생성 수 차이를 보정
+      var cls = Math.abs(d) < 0.05 ? 'vs-flat' : (tax.structural ? (d < 0 ? 'vs-good' : 'vs-bad') : 'vs-flat');
+      return '<tr><td>' + esc(tax.group) + (tax.structural ? ' <span class="badge badge-warn" title="C2 구조 개선(To-Be)으로 감소가 기대되는 원인">구조</span>' : '') +
+        '</td><td>' + esc(tax.label) + '</td>' +
+        '<td class="num">' + a + ' (' + ap.toFixed(1) + '%)</td>' +
+        '<td class="num">' + b + ' (' + bp.toFixed(1) + '%)</td>' +
+        '<td class="num"><span class="' + cls + '">' + (d > 0 ? '+' : '') + d.toFixed(1) + '%p</span></td></tr>';
+    }).join('');
+    return '<table><thead><tr><th>병목 분류</th><th>원인</th><th>As-Is 건수(비율)</th>' +
+      '<th>To-Be 건수(비율)</th><th>Δ%p</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<div class="note">비율 = 각 모드 생성 위협 대비. [구조] 표시 원인(공백·포화·지연)은 To-Be에서 감소하고, ' +
+      '그중 일부가 순수 명중 실패로 이동하는 것이 구조적 개선의 정상 경로입니다.</div>';
+  }
+
+  /**
+   * Phase C — 실패 항적 타임라인: trace된 실패 항적별로 "생성→…→(멈춘 단계)"와 멈춘 사유를
+   * 표시. 모든 단계 시각은 엔진이 [spawnT, exitT] 경계 내로 보장(Phase 5 exitT 클램프 회귀).
+   */
+  var FAILED_TL_CAP = 40;
+  function failedTimelineSection(res) {
+    var failed = (res.threatTraces || []).filter(function (tr) {
+      return tr.outcome && tr.outcome.indexOf('leaked:') === 0;
+    });
+    var html = '<h3>실패 항적 타임라인 (개별 항적 — 멈춘 단계·사유)</h3>';
+    if (failed.length === 0) {
+      return html + '<div class="bn-none">추적된 실패 항적 없음' +
+        (res.traceTruncated ? ' (trace 상한 절삭 — 통계는 전체 모집단 기준)' : '') + '</div>';
+    }
+    var shown = failed.slice(0, FAILED_TL_CAP);
+    html += shown.map(function (tr) {
+      var reason = tr.outcome.slice(7);
+      var tax = KJ.leakTaxonomy(reason);
+      // 멈춘 단계 = 마지막 '누수:' 단계 직전의 실제 진행 단계
+      var lastIdx = tr.stages.length - 1;
+      while (lastIdx > 0 && tr.stages[lastIdx].name.indexOf('누수:') === 0) lastIdx--;
+      var stopped = tr.stages[lastIdx];
+      var tt = KJ.threatType(tr.type);
+      return '<details class="ftl"><summary>' +
+        '<b>' + esc(tr.id) + '</b> <i>(' + esc(tt ? tt.name : tr.type) + ' · ' + esc(tr.axis) + ')</i> — ' +
+        '멈춘 단계: <b>' + esc(stageLabel(stopped.name)) + '</b> (' + fmtTime(stopped.t) + ') · ' +
+        '사유: <span class="badge badge-bad">' + esc(tax.label) + '</span> <i>[' + esc(tax.group) + ']</i>' +
+        '</summary><ul class="tlog-stages">' +
+        tr.stages.map(function (s) {
+          return '<li>' + fmtTime(s.t) + ' · ' + esc(stageLabel(s.name)) + '</li>';
+        }).join('') +
+        '</ul></details>';
+    }).join('');
+    if (failed.length > shown.length) {
+      html += '<div class="note">실패 항적 ' + failed.length + '건 중 ' + shown.length +
+        '건 표시 (표시 상한 — 통계·대조표는 전체 기준)</div>';
+    }
+    return html;
   }
   function statCard(label, val, cls) {
     return '<div class="stat-card' + (cls ? ' stat-' + cls : '') + '">' +
@@ -636,43 +708,101 @@
   }
   function signed(n) { return (n > 0 ? '+' : '') + n; }
 
+  /** 링크 전달 1건당 평균 통신지연(초) — 음성(As-Is)↔데이터링크(To-Be) 대비 (MoP) */
+  function commMeanDelay(res) {
+    var num = 0, den = 0;
+    res.links.forEach(function (l) { num += l.delaySec * l.count; den += l.count; });
+    return den ? num / den : 0;
+  }
+  /** 구조적 실패(공백·포화·지연) 건수 — taxonomy structural 합 (MoCE) */
+  function structuralLeaks(g) {
+    var n = 0;
+    Object.keys(g.leakReasons).forEach(function (r) {
+      if (KJ.leakTaxonomy(r).structural) n += g.leakReasons[r];
+    });
+    return n;
+  }
+  /** 축선 중복교전 위험도 합 (overlap-heatmap raw 합, MoCE) */
+  function overlapRiskSum(mode) {
+    var h = KJ.computeOverlapHeat(KJ.scenarioById(run.cfg.sc), mode, run.cfg.x);
+    return h.axes.reduce(function (s, a) { return s + a.raw; }, 0);
+  }
+
+  // MoM 계층 라벨 (NATO COBP/SAS-026, ENV-MOM-COBP-01): MoP 과정(성능) ·
+  // MoCE C2 효과성 · MoFE 전력 효과성. 각 지표에 정의·근거 툴팁을 부착한다.
+  var MOM_TIP = {
+    MoP: 'Measure of Performance — 체계 내부 과정 성능 (NATO COBP/SAS-026)',
+    MoCE: 'Measure of C2 Effectiveness — 지휘통제 효과성 (NATO COBP/SAS-026)',
+    MoFE: 'Measure of Force Effectiveness — 전력 전체의 임무 효과 (NATO COBP/SAS-026)'
+  };
+
   /**
-   * As-Is(좌)↔To-Be(우) 좌·우 발산형 시각 비교 블록.
-   * 각 지표를 중앙 라벨 기준으로 왼쪽(As-Is, 적색)·오른쪽(To-Be, 초록) 막대로 마주보게 그려
-   * 어느 쪽이 크고 얼마나 개선됐는지 한눈에 보이게 한다.
+   * As-Is(좌)↔To-Be(우) 좌·우 발산형 시각 비교 블록 (Phase D 확장).
+   * 우선 대조 지표(결심 지연·누출률·격추율·중복교전 위험·비용교환비)를 상단에 두고,
+   * 과정(MoP)·C2 효과성(MoCE)·결과(MoFE) 지표를 MoM 계층 라벨·툴팁과 함께 나란히 보인다.
    */
   function vsCompare(asisG, tobeG, asisRes, tobeRes) {
     var rows = [
-      { label: '요격 실패율', a: asisG.leakRate, b: tobeG.leakRate, kind: 'rate', lower: true, max: 1 },
-      { label: '격추율', a: asisG.killRate, b: tobeG.killRate, kind: 'rate', lower: false, max: 1 },
-      { label: '평균 격추시간', a: asisG.meanTimeToKillSec, b: tobeG.meanTimeToKillSec, kind: 'sec', lower: true },
-      { label: '도출 병목 수', a: asisRes.bottlenecks.length, b: tobeRes.bottlenecks.length, kind: 'cnt', lower: true }
+      // ── 우선 대조 지표 (상단 강조) ──
+      { label: '결심 지연 (탐지→교전개시)', mom: 'MoP', a: asisG.meanDecisionDelaySec, b: tobeG.meanDecisionDelaySec, kind: 'sec', lower: true,
+        tip: 'F2T2EA Find→Engage 평균 소요(초). 협조·승인·권한위임 홉과 C2 대기(Wq)가 모두 포함된 관측치 — As-Is 음성 협조(≥180s) 부담이 드러남.' },
+      { label: '요격 실패율 (누출률)', mom: 'MoFE', a: asisG.leakRate, b: tobeG.leakRate, kind: 'rate', lower: true, max: 1,
+        tip: '생성 위협 중 격추하지 못하고 공역을 통과(누수)한 비율.' },
+      { label: '격추율', mom: 'MoFE', a: asisG.killRate, b: tobeG.killRate, kind: 'rate', lower: false, max: 1,
+        tip: '생성 위협 중 격추 비율.' },
+      { label: '중복교전 위험 (축선 합)', mom: 'MoCE', a: overlapRiskSum('asis'), b: overlapRiskSum('tobe'), kind: 'raw', lower: true,
+        tip: '서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합.' },
+      { label: '비용교환비 (저가 포화위협)', mom: 'MoFE', a: asisG.cost.exchangeSat, b: tobeG.cost.exchangeSat, kind: 'ratio', lower: true,
+        tip: '무인기·장사정포 대응에 소모한 개념 요격탄 비용 ÷ 격추 위협가치 (WPN/THR-*-COST-01, 타 전역 공개수치 기반 개념값 — 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모.' },
+      // ── 보조 지표 ──
+      { label: '평균 격추시간', mom: 'MoP', a: asisG.meanTimeToKillSec, b: tobeG.meanTimeToKillSec, kind: 'sec', lower: true,
+        tip: '격추 성공 항적의 생성→격추 평균 소요.' },
+      { label: '통신지연 부하 (전달 1건 평균)', mom: 'MoP', a: commMeanDelay(asisRes), b: commMeanDelay(tobeRes), kind: 'sec', lower: true,
+        tip: '실제 발생한 링크 전달의 평균 지연 — 음성(As-Is 180s)↔데이터링크(To-Be 2s) 구조 차이의 관측치 (C2-VOICE-DLY-01).' },
+      { label: '구조적 실패 (공백·포화·지연)', mom: 'MoCE', a: structuralLeaks(asisG), b: structuralLeaks(tobeG), kind: 'cnt', lower: true,
+        tip: '실패 원인 중 구조적 원인(탐지공백·보고경로·책임공백·포화·처리지연) 합 — 원인 대조표의 요약 지표.' },
+      { label: '도출 병목 수', mom: 'MoCE', a: asisRes.bottlenecks.length, b: tobeRes.bottlenecks.length, kind: 'cnt', lower: true,
+        tip: '관측 통계(ρ≥0.9·드롭·공백)에서 도출된 병목 수 (ENV-RHO-THRESH-01).' }
     ];
     function fmt(v, kind) {
+      if (v === null || v === undefined || (kind !== 'cnt' && !isFinite(v))) return '—';
       if (kind === 'rate') return (v * 100).toFixed(0) + '%';
       if (kind === 'sec') return v.toFixed(0) + '초';
+      if (kind === 'raw') return v.toFixed(1);
+      if (kind === 'ratio') return v.toFixed(2) + '배';
       return v + '건';
     }
     function deltaText(d, kind) {
       var av = Math.abs(d);
       if (kind === 'rate') return (av * 100).toFixed(0) + '%p';
       if (kind === 'sec') return av.toFixed(0) + '초';
+      if (kind === 'raw') return av.toFixed(1);
+      if (kind === 'ratio') return av.toFixed(2);
       return av + '건';
     }
     var body = rows.map(function (r) {
-      var max = r.max || Math.max(r.a, r.b, 1e-9);
-      var aw = Math.min(100, r.a / max * 100), bw = Math.min(100, r.b / max * 100);
-      var d = r.b - r.a;                       // To-Be − As-Is
-      var improved = r.lower ? d < 0 : d > 0;
-      var same = Math.abs(d) < (r.kind === 'cnt' ? 0.5 : 1e-9);
-      // 화살표 = 값 변화 방향(▲증가·▼감소), 색·라벨 = 개선/악화 (지표별 좋은 방향이 다름)
-      var arrow = same ? '=' : (d > 0 ? '▲' : '▼');
-      var dcls = same ? 'vs-flat' : (improved ? 'vs-good' : 'vs-bad');
-      var deltaLabel = same ? '동일' : (arrow + ' ' + deltaText(d, r.kind) + (improved ? ' 개선' : ' 악화'));
-      return '<div class="vs-row">' +
+      var aNum = (typeof r.a === 'number' && isFinite(r.a)) ? r.a : null;
+      var bNum = (typeof r.b === 'number' && isFinite(r.b)) ? r.b : null;
+      var max = r.max || Math.max(aNum || 0, bNum || 0, 1e-9);
+      var aw = aNum === null ? 0 : Math.min(100, aNum / max * 100);
+      var bw = bNum === null ? 0 : Math.min(100, bNum / max * 100);
+      var deltaLabel, dcls;
+      if (aNum === null || bNum === null) {
+        deltaLabel = '판정 불가'; dcls = 'vs-flat';
+      } else {
+        var d = bNum - aNum;                   // To-Be − As-Is
+        var improved = r.lower ? d < 0 : d > 0;
+        var same = Math.abs(d) < (r.kind === 'cnt' ? 0.5 : 1e-9);
+        // 화살표 = 값 변화 방향(▲증가·▼감소), 색·라벨 = 개선/악화 (지표별 좋은 방향이 다름)
+        var arrow = same ? '=' : (d > 0 ? '▲' : '▼');
+        dcls = same ? 'vs-flat' : (improved ? 'vs-good' : 'vs-bad');
+        deltaLabel = same ? '동일' : (arrow + ' ' + deltaText(d, r.kind) + (improved ? ' 개선' : ' 악화'));
+      }
+      return '<div class="vs-row" title="' + esc(r.tip || '') + '">' +
         '<div class="vs-val asis">' + fmt(r.a, r.kind) + '</div>' +
         '<div class="vs-track l"><div class="vs-fill asis" style="width:' + aw.toFixed(0) + '%"></div></div>' +
-        '<div class="vs-mid"><div class="vs-metric">' + esc(r.label) + '</div>' +
+        '<div class="vs-mid"><div class="vs-metric"><span class="mom mom-' + r.mom.toLowerCase() +
+        '" title="' + esc(MOM_TIP[r.mom]) + '">' + r.mom + '</span> ' + esc(r.label) + '</div>' +
         '<div class="vs-delta ' + dcls + '">' + deltaLabel + '</div></div>' +
         '<div class="vs-track r"><div class="vs-fill tobe" style="width:' + bw.toFixed(0) + '%"></div></div>' +
         '<div class="vs-val tobe">' + fmt(r.b, r.kind) + '</div>' +
@@ -683,8 +813,10 @@
       '<div class="vs-side-mid">지표</div>' +
       '<div class="vs-side tobe">To-Be 통합형 ▶</div></div>' +
       body +
-      '<div class="note">막대 길이 = 값의 상대 크기(요격 실패율·격추율은 0~100%, 나머지는 두 값 중 최대 기준). ' +
-      '가운데 화살표 초록 ▼/▲ = To-Be가 개선된 방향.</div></div>';
+      '<div class="note">막대 길이 = 값의 상대 크기(비율 지표는 0~100%, 나머지는 두 값 중 최대 기준). ' +
+      '가운데 화살표 초록 ▼/▲ = To-Be가 개선된 방향. 상단 5개가 우선 대조 지표. ' +
+      'MoM 계층: MoP 과정(성능) · MoCE C2 효과성 · MoFE 전력 효과성 — NATO COBP(SAS-026) 근거, ' +
+      '지표 위에 마우스를 올리면 정의·근거 툴팁이 표시됩니다. 비용교환비는 개념 단가 기반(한반도 보정 필요).</div></div>';
   }
 
   // seed/dur 입력을 사용자가 만진 뒤에는 re-render가 값을 덮어쓰지 않음

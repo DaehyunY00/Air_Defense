@@ -257,6 +257,30 @@
 - **신뢰도 등급**: C
 - **MC 적용방식**: 분포샘플링
 
+### [THR-*-RNG] 위협별 개념 사거리대·발사권역 (정밀화 Phase A, `js/data/threats.js` rangeBandKm·originZones)
+
+위협 유형별 개념 사거리대와 허용 발사권역 태그. `js/data/axes.js`의 축선별
+launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한다(ENV-AXIS-FIT-01,
+`tests/refine.test.js`로 회귀 고정). **전부 공개자료 기반 개념값이며 실제 제원·배치·발사원점이 아님.**
+발사권역 태그: `dmz`(DMZ 인접 근거리) / `coastal`(서해·연안) / `deep`(종심).
+
+| ID | 위협 | 개념 사거리대(km) | 발사권역 | 출처 성격 | 신뢰도 |
+|---|---|---|---|---|---|
+| THR-UAV-RNG-01 | 소형 무인기(2m급) | 50–300 | dmz·coastal | 2022.12.26 침투 무인기 항속거리 보도(서울 왕복 비행) 기반 개념 | C |
+| THR-AN2-RNG-01 | 저속 침투기(AN-2급) | 100–900 | dmz·coastal | AN-2 항속거리 공개 스펙(약 900km) 기반 개념 | B |
+| THR-HELI-RNG-01 | 헬기(저고도 침투) | 50–500 | dmz·coastal | 중형 헬기 전투행동반경 공개 스펙 기반 개념 | C |
+| THR-FTR-RNG-01 | 전투기 | 200–1,500 | dmz·coastal·deep | 전투기 전투행동반경 공개 스펙 기반 개념 | C |
+| THR-CM-RNG-01 | 순항미사일 | 150–2,000 | dmz·coastal·deep | 북 순항미사일(화살 계열) 사거리 주장 보도(≈1,500–2,000km) 기반 개념 | B |
+| THR-KN23-RNG-01 | SRBM(KN-23급) | 400–690 | deep | KN-23 사거리 분석 보도(≈450–690km) 기반 개념. 저각·단축발사 가능성으로 min은 정합검증 미사용 | B |
+| THR-KN25-RNG-01 | 초대형 방사포(KN-25급) | 350–400 | deep | 기존 THR-KN25-RNG-01(사거리·발사간격)과 동일 출처 | B |
+
+### [ENV-AXIS-FIT-01] 축선-사거리·발사권역 정합 검증 규칙
+- **값/분포**: (1) 위협 originZones ∩ 축선 launchZones ≠ ∅, (2) 위협 rangeBandKm.max ≥ 축선 conceptReachKm. 축선 개념거리: west 150 / central 130 / east 130 / seoul 60 km. seoul 축선은 launchZones=['dmz'] (근거리 전용 — 종심 위협 배분 차단)
+- **출처**: 개념 설정 — 위협 출발점(축선 entry)이 위협 사거리·발사권역과 모순되지 않게 하는 데이터 정합 규칙
+- **적용범위**: `KJ.checkAxisThreatFit`/`KJ.validateScenarioOrigins`(js/data/axes.js). 시나리오 mix 배분 검증(회귀 고정). DES 부하·병목 계산에는 개입하지 않음(데이터 계층 전용 — 시드 고정 스냅샷으로 무회귀 검증)
+- **신뢰도 등급**: C(개념 규칙)
+- **MC 적용방식**: 고정(검증 기준)
+
 ### [THR-CM-RCS-01] 순항미사일 저고도 비행 탐지 특성
 - **값/분포**: detectFactor 0.5 (개념 — 지형추적 저고도 비행)
 - **출처**: 북한 순항미사일(화살 계열) 시험발사 보도 기반 개념 설정

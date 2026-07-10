@@ -1,0 +1,38 @@
+{
+  "sc1/asis": {
+    "spawned": 49,
+    "killed": 29,
+    "leaked": 9,
+    "bn": ""
+  },
+  "sc1/tobe": {
+    "spawned": 59,
+    "killed": 44,
+    "leaked": 8,
+    "bn": ""
+  },
+  "sc2/asis": {
+    "spawned": 53,
+    "killed": 26,
+    "leaked": 14,
+    "bn": "link:AOC-1C→MCRC"
+  },
+  "sc2/tobe": {
+    "spawned": 42,
+    "killed": 23,
+    "leaked": 12,
+    "bn": ""
+  },
+  "sc3/asis": {
+    "spawned": 319,
+    "killed": 94,
+    "leaked": 202,
+    "bn": "link:AOC-1C→MCRC"
+  },
+  "sc3/tobe": {
+    "spawned": 313,
+    "killed": 164,
+    "leaked": 118,
+    "bn": ""
+  }
+}

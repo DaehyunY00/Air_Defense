@@ -239,15 +239,20 @@
   // ── trace → 애니메이션용 위협 목록 ──
   // 동시 다발(burst)처럼 같은 축선·같은 시각에 발생한 위협이 정확히 겹쳐 보이지 않도록,
   // 위협 ID 기반 결정론적 수직 오프셋(±0.06° 이내 개념 산개)을 부여한다.
+  // Phase A 정밀화: 4개 축선에 여러 위협 유형이 뭉쳐 보이는 문제를, 유형 인덱스 기반
+  // 결정론적 진입 오프셋(seed 무관, ID·유형에서 파생)으로 추가 분산한다 — 개념 산개 표시일 뿐
+  // 실제 발사원점·경로가 아니다(burst 산개 로직과 동일 방식).
   function buildThreats(res) {
+    var typeKeys = Object.keys(KJ.THREAT_TYPES);
     return (res.threatTraces || []).map(function (tr, idx) {
       var tt = KJ.threatType(tr.type);
       var lane = (idx % 7) - 3; // -3..3
+      var typeLane = typeKeys.indexOf(tr.type) - (typeKeys.length - 1) / 2; // 유형별 고정 산개
       return {
         id: tr.id, type: tr.type, axis: tr.axis, typeName: tt.name,
         spawnT: tr.spawnT, exitT: tr.exitT, outcome: tr.outcome, dwellSec: tt.dwellSec,
         stages: tr.stages,
-        offLat: lane * 0.02, offLon: lane * 0.015
+        offLat: lane * 0.02 + typeLane * 0.008, offLon: lane * 0.015 + typeLane * 0.006
       };
     });
   }

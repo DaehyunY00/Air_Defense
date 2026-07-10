@@ -9,6 +9,14 @@
  * dwellSec: 위협이 요격 가능 공역에 머무는 시간 창(개념값, 초). 이 시간 내 격추하지 못하면
  *   누수(leak)로 처리 — DES 엔진(Phase 2)의 교전기회 상실 판정에 사용. 탄도탄은 비행시간이
  *   짧아 창이 좁고(승인 지연이 곧 요격기회 상실), 저속 무인기는 창이 넓다.
+ *
+ * ── 발사권역·사거리 정합(정밀화 Phase A) ──
+ * rangeBandKm: 공개자료 기반 개념 사거리대 {min,max} (실제 제원 아님 — docs/params.md THR-*-RNG-*).
+ * originZones: 이 위협이 발사될 수 있는 개념 발사권역 태그 목록. axes.js의 축선별
+ *   launchZones와 대조해 "축선 배분이 사거리·발사권역과 모순되지 않는지"를
+ *   KJ.checkAxisThreatFit(axes.js)가 검증한다(회귀 어서션 포함).
+ *   태그: 'dmz'(DMZ 인접 근거리) | 'coastal'(서해·연안) | 'deep'(종심).
+ *   ※ 전부 개념 권역이며 실제 발사원점·배치 자료가 아님.
  */
 (function () {
   'use strict';
@@ -19,6 +27,7 @@
       key: 'uav_small', name: '소형 무인기 (2m급)',
       speedKmh: 100, altBand: 'low', dwellSec: 900,
       detectFactor: 0.4, paramRef: 'THR-UAV-RCS-01',
+      rangeBandKm: { min: 50, max: 300 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-UAV-RNG-01',
       approvalLevel: { asis: 'KAOC', tobe: null },
       note: '2022.12.26 침투 사건 모사. 저탐지·항적소실 반복. To-Be는 사전승인 자동교전(위협별 자동화 차등).'
     },
@@ -26,24 +35,28 @@
       key: 'ac_low', name: '저속 침투기 (AN-2급)',
       speedKmh: 180, altBand: 'low', dwellSec: 600,
       detectFactor: 0.6, paramRef: 'THR-AN2-RCS-01',
+      rangeBandKm: { min: 100, max: 900 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-AN2-RNG-01',
       approvalLevel: { asis: 'KAOC', tobe: 'MCRC' }
     },
     heli: {
       key: 'heli', name: '헬기 (저고도 침투)',
       speedKmh: 250, altBand: 'low', dwellSec: 420,
       detectFactor: 0.7, paramRef: 'THR-HELI-RCS-01',
+      rangeBandKm: { min: 50, max: 500 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-HELI-RNG-01',
       approvalLevel: { asis: 'KAOC', tobe: 'MCRC' }
     },
     fighter: {
       key: 'fighter', name: '전투기',
       speedKmh: 900, altBand: 'medium', dwellSec: 180,
       detectFactor: 0.9, paramRef: 'SEN-ACR-PD-01',
+      rangeBandKm: { min: 200, max: 1500 }, originZones: ['dmz', 'coastal', 'deep'], rangeRef: 'THR-FTR-RNG-01',
       approvalLevel: { asis: 'KAOC', tobe: 'MCRC' }
     },
     cruise: {
       key: 'cruise', name: '순항미사일',
       speedKmh: 800, altBand: 'low', dwellSec: 120,
       detectFactor: 0.5, paramRef: 'THR-CM-RCS-01',
+      rangeBandKm: { min: 150, max: 2000 }, originZones: ['dmz', 'coastal', 'deep'], rangeRef: 'THR-CM-RNG-01',
       approvalLevel: { asis: 'MCRC', tobe: null },
       note: 'To-Be: Human-on-the-loop 자동교전 대상.'
     },
@@ -51,15 +64,17 @@
       key: 'srbm', name: '단거리 탄도미사일 (KN-23급)',
       speedKmh: 6000, altBand: 'ballistic', dwellSec: 90,
       detectFactor: 0.95, paramRef: 'SEN-GPR-PD-01',
+      rangeBandKm: { min: 400, max: 690 }, originZones: ['deep'], rangeRef: 'THR-KN23-RNG-01',
       approvalLevel: { asis: 'KAMDOC', tobe: null },
-      note: '비행시간 수분 이내 — 승인 지연이 곧 요격기회 상실. To-Be 사전승인 자동교전.'
+      note: '비행시간 수분 이내 — 승인 지연이 곧 요격기회 상실. To-Be 사전승인 자동교전. 종심 발사→광역 표적(저각 발사 시 단축 가능, rangeBandKm.min은 정합검증 미사용).'
     },
     mrl_large: {
       key: 'mrl_large', name: '초대형 방사포 (KN-25급)',
       speedKmh: 5000, altBand: 'ballistic', dwellSec: 80,
       detectFactor: 0.9, paramRef: 'THR-KN25-RNG-01',
+      rangeBandKm: { min: 350, max: 400 }, originZones: ['deep'], rangeRef: 'THR-KN25-RNG-01',
       approvalLevel: { asis: 'KAMDOC', tobe: null },
-      note: '발사간격 약 20초 연발 — 포화 유발 위협.'
+      note: '발사간격 약 20초 연발 — 포화 유발 위협. 중거리 종심 발사권역.'
     }
   };
 

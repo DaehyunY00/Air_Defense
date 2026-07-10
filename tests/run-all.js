@@ -40,7 +40,8 @@ var suites = [
   ['mc.test.js', 'Monte Carlo (Welford·샘플러·수렴·유의성·민감도)'],
   ['overlap.test.js', '중복교전 히트맵 (순수성·스케일링·융합허브)'],
   ['transition.test.js', '임계 전환점 (Rec.6 — ρ>0.9 구간 개선폭)'],
-  ['constraints.test.js', '제약 어서션 (Rec.5 — a~e)']
+  ['constraints.test.js', '제약 어서션 (Rec.5 — a~e)'],
+  ['refine.test.js', '정밀화 (Phase A~D — 정합·WTA·권한위임·원인분포·신규지표)']
 ];
 suites.forEach(function (s) {
   console.log('\n== ' + s[1] + ' ==');

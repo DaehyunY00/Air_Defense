@@ -84,15 +84,47 @@
       </div>
 
       <div class="map-legend">
-        <h4>범례 (개념좌표·개념범위)</h4>
-        <div class="row"><b>아군 (기능별 색)</b></div>
-        <div class="row"><span style="color:#f0a020">■</span> 지휘통제 C2 &nbsp;<span style="color:#2e6fd8">●</span> 탐지 센서 &nbsp;<span style="color:#3d8b40">▲</span> 요격 무기</div>
-        <div class="row"><span class="lg-ring sensor"></span>탐지범위(파랑 점선) · <span class="lg-ring shooter"></span>교전범위(초록) <label style="margin-left:4px"><input type="checkbox" id="toggle-rings" checked> 표시</label></div>
-        <div class="row"><span class="lg-line" style="border-color:#2e6fd8"></span> 데이터링크/Link-16</div>
-        <div class="row"><span class="lg-line" style="border-color:#d32f2f;border-top-style:dashed"></span> 음성보고 (As-Is 지연 ≥180초)</div>
-        <div class="row"><b>적 위협 (붉은색 계열)</b></div>
-        <div class="row"><span style="color:#ff8a7a">●</span>무인기·저속기·헬기 <span style="color:#f4442e">●</span>전투기 <span style="color:#e01e1e">●</span>순항 <span style="color:#b3001b">●</span>탄도탄·방사포</div>
-        <div class="row">🔴 점멸 테두리 = 이번 실행에서 <b>도출된</b> 병목/포화 노드</div>
+        <h4>범례 <span class="lg-h4-sub">(개념좌표·개념범위)</span></h4>
+
+        <div class="lg-group">
+          <div class="lg-group-label">아군 (기능별 색)</div>
+          <div class="lg-chips">
+            <span class="lg-chip"><span style="color:#f0a020">■</span>지휘통제 C2</span>
+            <span class="lg-chip"><span style="color:#2e6fd8">●</span>탐지 센서</span>
+            <span class="lg-chip"><span style="color:#3d8b40">▲</span>요격 무기</span>
+          </div>
+          <div class="lg-row">
+            <span class="lg-ring sensor"></span>
+            <span>탐지범위 (파랑 점선)</span>
+          </div>
+          <div class="lg-row">
+            <span class="lg-ring shooter"></span>
+            <span>교전범위 (초록) <label class="lg-toggle"><input type="checkbox" id="toggle-rings" checked> 표시</label></span>
+          </div>
+          <div class="lg-row">
+            <span class="lg-line" style="border-color:#2e6fd8"></span>
+            <span>데이터링크 / Link-16</span>
+          </div>
+          <div class="lg-row">
+            <span class="lg-line" style="border-color:#d32f2f;border-top-style:dashed"></span>
+            <span>음성보고 (As-Is 지연 ≥180초)</span>
+          </div>
+        </div>
+
+        <div class="lg-group">
+          <div class="lg-group-label">적 위협 (붉은색 계열)</div>
+          <div class="lg-chips">
+            <span class="lg-chip"><span style="color:#ff8a7a">●</span>무인기·저속기·헬기</span>
+            <span class="lg-chip"><span style="color:#f4442e">●</span>전투기</span>
+            <span class="lg-chip"><span style="color:#e01e1e">●</span>순항미사일</span>
+            <span class="lg-chip"><span style="color:#b3001b">●</span>탄도탄·방사포</span>
+          </div>
+        </div>
+
+        <div class="lg-row lg-note">
+          <span class="lg-blink-dot">🔴</span>
+          <span>점멸 테두리 = 이번 실행에서 <b>도출된</b> 병목/포화 노드</span>
+        </div>
       </div>
     </section>
 

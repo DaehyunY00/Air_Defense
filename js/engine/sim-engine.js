@@ -84,6 +84,9 @@
     // Phase B/D: 결심 지연(MoP) — 탐지→최초 교전명령 소요의 집계 (trace 무관 항상 수집)
     this.decisionDelaySum = 0;
     this.decisionDelayCount = 0;
+    // Phase D: 비용교환비(MoFE) — 개념 요격탄 소모비용 / 격추 위협가치 (백만 USD 개념)
+    // sat*는 저가 포화위협(장사정포·소형무인기) 부분집합. 전부 개념값(WPN/THR-*-COST-01).
+    this.cost = { interceptM: 0, killedThreatM: 0, interceptSatM: 0, killedThreatSatM: 0 };
     this.eventCount = 0;
     this.log = [];        // 표본 이벤트 로그(앞부분만 보존)
 
@@ -425,16 +428,26 @@
     });
   };
 
+  // 비용교환비의 '저가 포화위협' 부분집합 (계획서: 장사정포·UAV 대응 소모 비용)
+  var SAT_THREATS = { uav_small: true, mrl_large: true };
+
   /** 9 BDA: 요격확률 판정 → 실패 시 재교전 피드백(폐루프) */
   Simulation.prototype._onEngageEnd = function (t, threat, shooterId) {
     if (!threat.alive) return;
     var shooter = KJ.nodeById(shooterId);
     threat.tries++;
+    // Phase D: 교전 시도 1회 = 요격탄 1발 소모(개념) — 비용교환비(MoFE) 집계
+    var shot = (shooter.engage && shooter.engage.costPerShotM) || 0;
+    this.cost.interceptM += shot;
+    if (SAT_THREATS[threat.type]) this.cost.interceptSatM += shot;
     var pk = this._pk(shooter, threat);
     if (this.rng.raw() < pk) {
       threat.alive = false; threat.killed = true;
       this.global.killed++;
       this.global.timeToKill.push(t - threat.spawnT);
+      var tv = KJ.threatType(threat.type).unitCostM || 0;
+      this.cost.killedThreatM += tv;
+      if (SAT_THREATS[threat.type]) this.cost.killedThreatSatM += tv;
       this._mark(threat, '격추성공#' + threat.tries, t);
       if (threat._trace) { threat._trace.exitT = t; threat._trace.outcome = 'killed'; }
     } else if (threat.tries < MAX_ENGAGE_TRIES && t < threat.spawnT + threat.dwellSec) {
@@ -643,6 +656,16 @@
         // 동적 권한위임(분권 전환) 관측: 전환 횟수·최초 전환 시각·승인노드별 분포 (B-2)
         delegation: {
           count: this.deleg.count, firstT: this.deleg.firstT, byNode: this.deleg.byNode
+        },
+        // 비용교환비(MoFE, 백만 USD 개념): exchange = 소모 요격탄 비용 / 격추 위협가치
+        // (>1이면 아군이 더 비싼 자원을 소모). sat*는 저가 포화위협(무인기·방사포) 부분집합
+        cost: {
+          interceptM: this.cost.interceptM,
+          killedThreatM: this.cost.killedThreatM,
+          exchange: this.cost.killedThreatM > 0 ? this.cost.interceptM / this.cost.killedThreatM : null,
+          interceptSatM: this.cost.interceptSatM,
+          killedThreatSatM: this.cost.killedThreatSatM,
+          exchangeSat: this.cost.killedThreatSatM > 0 ? this.cost.interceptSatM / this.cost.killedThreatSatM : null
         }
       },
       // 단계별 흐름 카운트 (Sankey/funnel용) — trace 없이도 항상 제공(집계 카운터라 저비용)

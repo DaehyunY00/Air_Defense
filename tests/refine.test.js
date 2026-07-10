@@ -230,5 +230,49 @@ console.log('# C-3 trace 실패 항적에 멈춘 단계 식별 가능');
   }), '실패 trace의 사유가 전부 taxonomy로 분류됨');
 })();
 
+// ══════════ Phase D — 지표 정리·추가 (MoM) ══════════
+console.log('# D-1 비용 개념값 데이터 (WPN/THR-*-COST-01)');
+assert(shooters.every(function (n) {
+  return n.engage && n.engage.costPerShotM > 0 && typeof n.engage.costRef === 'string';
+}), '전 무기 costPerShotM·costRef 보유 (개념 단가)');
+assert(typeKeys.every(function (k) {
+  var t = KJ.THREAT_TYPES[k];
+  return t.unitCostM > 0 && typeof t.costRef === 'string';
+}), '전 위협 unitCostM·costRef 보유 (개념 단가)');
+assert(KJ.THREAT_TYPES.uav_small.unitCostM < KJ.THREAT_TYPES.fighter.unitCostM,
+  '저가 포화위협(무인기) 단가 < 고가 위협(전투기) — 서열 정합');
+
+console.log('# D-2 비용교환비(MoFE) 계산·결정론');
+var dRun = runX('sc2', 'asis', 2, 42);
+var dc = dRun.global.cost;
+assert(dc.interceptM > 0 && dRun.global.engaged > 0, '교전 발생 시 요격탄 소모비용 > 0');
+assert(dc.exchange !== null && Math.abs(dc.exchange - dc.interceptM / dc.killedThreatM) < 1e-9,
+  'exchange = interceptM / killedThreatM (항등식)');
+assert(dc.interceptSatM <= dc.interceptM && dc.killedThreatSatM <= dc.killedThreatM,
+  '저가 포화위협 부분집합 ≤ 전체 (보존)');
+var dRun2 = runX('sc2', 'asis', 2, 42);
+assert(JSON.stringify(dRun.global.cost) === JSON.stringify(dRun2.global.cost),
+  '비용 지표도 동일 seed → 완전 동일 (결정론)');
+var dTobe = runX('sc2', 'tobe', 2, 42);
+assert(dTobe.global.cost.exchangeSat < dc.exchangeSat,
+  'SC2(무인기 포화): To-Be 비용교환비 < As-Is (' +
+  dTobe.global.cost.exchangeSat.toFixed(1) + ' < ' + dc.exchangeSat.toFixed(1) + ')');
+// 극한값: 교전 0이면 비용 0·exchange null (NaN 없음)
+var dEmpty = KJ.runDES({ scenario: { id: 'e', name: 'e', mix: [] }, mode: 'asis', intensity: 1, seed: 1, endTimeSec: 600 });
+assert(dEmpty.global.cost.interceptM === 0 && dEmpty.global.cost.exchange === null,
+  '위협 0: 비용 0·exchange null (0나눗셈 없음)');
+
+console.log('# D-3 결심 지연·통신지연 대비 (MoP)');
+var dA = runX('sc3', 'asis', 1.5, 42), dB = runX('sc3', 'tobe', 1.5, 42);
+assert(typeof dA.global.meanDecisionDelaySec === 'number' && dA.global.meanDecisionDelaySec >= 0,
+  'meanDecisionDelaySec 제공 (trace 무관)');
+function commMean(res) {
+  var num = 0, den = 0;
+  res.links.forEach(function (l) { num += l.delaySec * l.count; den += l.count; });
+  return den ? num / den : 0;
+}
+assert(commMean(dB) < commMean(dA),
+  'To-Be 링크 전달 평균지연 < As-Is (' + commMean(dB).toFixed(1) + 's < ' + commMean(dA).toFixed(1) + 's — 음성↔데이터링크)');
+
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

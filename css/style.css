@@ -159,6 +159,12 @@ li.tlog-future { color: #4a5666; }
 
 /* ── As-Is ↔ To-Be 좌·우 직관 비교 블록 ── */
 .vs-block { margin: 4px 0 8px; }
+
+/* Phase D — MoM 계층 라벨 칩 (MoP/MoCE/MoFE, NATO COBP) */
+.mom { display: inline-block; font-size: 9px; font-weight: 700; border-radius: 4px; padding: 0 4px; vertical-align: 1px; cursor: help; }
+.mom-mop { background: #1d3a5f; color: #9cc4f0; }
+.mom-moce { background: #4a3a14; color: #ecc55e; }
+.mom-mofe { background: #1f4a24; color: #8fdc96; }
 .vs-headrow, .vs-row {
   display: grid; grid-template-columns: 60px 1fr 150px 1fr 60px;
   align-items: center; gap: 8px;

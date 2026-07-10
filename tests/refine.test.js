@@ -157,5 +157,78 @@ assert(cmpB.global.meanDecisionDelaySec < cmpA.global.meanDecisionDelaySec,
   'To-Be 결심 지연 < As-Is (' + cmpB.global.meanDecisionDelaySec.toFixed(0) + 's < ' +
   cmpA.global.meanDecisionDelaySec.toFixed(0) + 's)');
 
+// ══════════ Phase C — 실패원인 taxonomy·모드 대조 ══════════
+console.log('# C-1 실패원인 taxonomy 완전성 (KJ.LEAK_TAXONOMY)');
+assert(['not_detected', 'no_sensor', 'no_report_path', 'responsibility_gap', 'overflow',
+        'no_shooter', 'missed', 'timeout'].every(function (c) {
+  var t = KJ.LEAK_TAXONOMY[c];
+  return t && t.label && t.group && typeof t.structural === 'boolean';
+}), '전 원인코드 8종에 label·group(병목 분류)·structural 부여');
+assert(KJ.leakTaxonomy('overflow:KAOC').label.indexOf('KAOC') !== -1 &&
+       KJ.leakTaxonomy('overflow:KAOC').group === KJ.LEAK_TAXONOMY.overflow.group,
+  'overflow:<노드> 접두 코드가 노드명 포함 라벨로 해석됨');
+// 행위: 고강도 실행에서 관측되는 모든 leakReason이 taxonomy로 해석 가능(기타 없음)
+(function () {
+  var unknown = [];
+  [0, 21, 42].forEach(function (sd) {
+    ['sc2', 'sc3'].forEach(function (id) {
+      ['asis', 'tobe'].forEach(function (m) {
+        var r = runX(id, m, 3, sd);
+        Object.keys(r.global.leakReasons).forEach(function (code) {
+          if (KJ.leakTaxonomy(code).group === '기타') unknown.push(code);
+        });
+      });
+    });
+  });
+  assert(unknown.length === 0, '관측된 전 leakReason이 taxonomy에 매핑 (미지 코드: ' + unknown.join(',') + ')');
+})();
+
+console.log('# C-2 As-Is↔To-Be 원인분포 — 구조적 개선의 이동 경로');
+function aggReasons(id, x, mode, seeds) {
+  var agg = { structuralRate: 0, missedShare: 0, byCode: {}, spawned: 0, structural: 0, missed: 0, leaked: 0 };
+  seeds.forEach(function (sd) {
+    var r = runX(id, mode, x, sd);
+    agg.spawned += r.global.spawned;
+    Object.keys(r.global.leakReasons).forEach(function (code) {
+      var n = r.global.leakReasons[code];
+      agg.leaked += n;
+      var key = code.indexOf('overflow:') === 0 ? 'overflow' : code;
+      agg.byCode[key] = (agg.byCode[key] || 0) + n;
+      if (KJ.leakTaxonomy(code).structural) agg.structural += n; else if (key === 'missed') agg.missed += n;
+    });
+  });
+  agg.structuralRate = agg.spawned ? agg.structural / agg.spawned : 0;
+  agg.missedShare = agg.leaked ? agg.missed / agg.leaked : 0;
+  return agg;
+}
+var SEEDS = [0, 21, 42, 77, 100];
+[['sc2', 2], ['sc3', 3]].forEach(function (p) {
+  var a = aggReasons(p[0], p[1], 'asis', SEEDS), b = aggReasons(p[0], p[1], 'tobe', SEEDS);
+  assert(b.structuralRate < a.structuralRate,
+    p[0] + ' x' + p[1] + ': To-Be 구조적 원인 비율 < As-Is (' +
+    (b.structuralRate * 100).toFixed(1) + '% < ' + (a.structuralRate * 100).toFixed(1) + '%)');
+  assert(b.missedShare >= a.missedShare,
+    p[0] + ' x' + p[1] + ': To-Be에서 실패 중 명중실패 비중 ≥ As-Is (구조적→종말 성능으로 이동: ' +
+    (a.missedShare * 100).toFixed(1) + '% → ' + (b.missedShare * 100).toFixed(1) + '%)');
+  assert((b.byCode.responsibility_gap || 0) <= (a.byCode.responsibility_gap || 0),
+    p[0] + ' x' + p[1] + ': To-Be responsibility_gap ≤ As-Is');
+  assert((b.byCode.no_report_path || 0) <= (a.byCode.no_report_path || 0),
+    p[0] + ' x' + p[1] + ': To-Be no_report_path ≤ As-Is');
+});
+
+console.log('# C-3 trace 실패 항적에 멈춘 단계 식별 가능');
+(function () {
+  var r = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 2, seed: 21, endTimeSec: 1800, trace: true, traceCap: 300 });
+  var failed = r.threatTraces.filter(function (tr) { return tr.outcome && tr.outcome.indexOf('leaked:') === 0; });
+  assert(failed.length > 0, '실패 항적 trace 존재 (' + failed.length + '건)');
+  assert(failed.every(function (tr) {
+    return tr.stages[tr.stages.length - 1].name.indexOf('누수:') === 0;
+  }), '실패 trace의 마지막 단계는 누수 마감(멈춘 단계 = 그 직전 단계로 식별 가능)');
+  assert(failed.every(function (tr) {
+    var reason = tr.outcome.slice(7);
+    return KJ.leakTaxonomy(reason).group !== '기타';
+  }), '실패 trace의 사유가 전부 taxonomy로 분류됨');
+})();
+
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

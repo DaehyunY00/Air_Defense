@@ -22,12 +22,7 @@
     uav_small: '#ff8a7a', ac_low: '#ff7261', heli: '#ff7261',
     fighter: '#f4442e', cruise: '#e01e1e', srbm: '#b3001b', mrl_large: '#d90429'
   };
-  // 요격 실패(구 '누수') 세부 사유 — 전체 개념이 '요격 실패'이므로 missed는 '명중 실패'로 구분
-  var LEAK_LABEL = {
-    not_detected: '미탐지', no_sensor: '탐지 공백(센서 부재)', no_report_path: '보고경로 부재',
-    responsibility_gap: '책임공백(협조경로 부재)', no_shooter: '교전수단 부재(제약)',
-    missed: '명중 실패(기회소진)', timeout: '처리지연 초과(공역이탈)'
-  };
+  // 요격 실패(구 '누수') 세부 사유 라벨·분류는 엔진 정본 KJ.LEAK_TAXONOMY(Phase C)를 사용.
   var LEVEL_BADGE = {
     idle: '<span class="badge badge-idle">유휴</span>',
     normal: '<span class="badge badge-ok">정상</span>',
@@ -561,14 +556,12 @@
       }).join('') + '</ul>'
       : '<div class="bn-none">이 실행에서 도출된 병목 없음 (병목은 부하의 함수 — 강도·시나리오를 바꿔보세요)</div>';
 
-    // ⑤ 요격 실패 사유
-    var reasons = Object.keys(g.leakReasons);
-    html += '<h3>요격 실패 사유 분해</h3><div class="leak-row">' + (reasons.length
-      ? reasons.sort(function (a, b) { return g.leakReasons[b] - g.leakReasons[a]; })
-        .map(function (r) {
-          return '<span class="leak-chip">' + esc(leakLabel(r)) + ': <b>' + g.leakReasons[r] + '</b></span>';
-        }).join(' ')
-      : '<span class="bn-none">요격 실패 없음</span>') + '</div>';
+    // ⑤ 요격 실패 원인 분해 — As-Is ↔ To-Be 대조표 (Phase C: 원인코드 × 모드 건수/비율)
+    html += '<h3>요격 실패 원인 분해 — As-Is ↔ To-Be 대조 (동일 seed·강도)</h3>' +
+      leakCompareTable(asisG, tobeG);
+
+    // ⑤-2 실패 항적 타임라인 (Phase C: 개별 항적이 9단계 중 어디서 왜 멈췄는지)
+    html += failedTimelineSection(run.res);
 
     // ⑥ 단계별 흐름 (funnel)
     var f = run.res.flow;
@@ -631,10 +624,79 @@
     if (KJ.tableSort) KJ.tableSort.attachAll(el('modal-body')); // 모달 표도 열 정렬 지원
   }
 
-  function leakLabel(r) {
-    if (LEAK_LABEL[r]) return LEAK_LABEL[r];
-    if (r.indexOf('overflow:') === 0) return '포화손실(' + r.slice(9) + ')';
-    return r;
+  function leakLabel(r) { return KJ.leakTaxonomy(r).label; }
+
+  /**
+   * Phase C — 요격 실패 원인 대조표: 원인코드 × 모드(As-Is/To-Be) 건수·비율(생성 대비)·Δ.
+   * 구조적 원인(공백·포화·지연)이 To-Be에서 줄고 일부가 순수 명중 실패로 이동하는
+   * "구조 개선의 이동 경로"를 드러낸다. 라벨·분류는 엔진 정본 KJ.LEAK_TAXONOMY.
+   */
+  function leakCompareTable(asisG, tobeG) {
+    var codes = {};
+    Object.keys(asisG.leakReasons).forEach(function (r) { codes[r] = true; });
+    Object.keys(tobeG.leakReasons).forEach(function (r) { codes[r] = true; });
+    var list = Object.keys(codes);
+    if (list.length === 0) return '<div class="bn-none">양 모드 모두 요격 실패 없음</div>';
+    list.sort(function (a, b) {
+      return (asisG.leakReasons[b] || 0) - (asisG.leakReasons[a] || 0);
+    });
+    var rows = list.map(function (r) {
+      var tax = KJ.leakTaxonomy(r);
+      var a = asisG.leakReasons[r] || 0, b = tobeG.leakReasons[r] || 0;
+      var ap = asisG.spawned ? (a / asisG.spawned * 100) : 0;
+      var bp = tobeG.spawned ? (b / tobeG.spawned * 100) : 0;
+      var d = bp - ap; // 비율 기준 Δ(%p) — 모드 간 생성 수 차이를 보정
+      var cls = Math.abs(d) < 0.05 ? 'vs-flat' : (tax.structural ? (d < 0 ? 'vs-good' : 'vs-bad') : 'vs-flat');
+      return '<tr><td>' + esc(tax.group) + (tax.structural ? ' <span class="badge badge-warn" title="C2 구조 개선(To-Be)으로 감소가 기대되는 원인">구조</span>' : '') +
+        '</td><td>' + esc(tax.label) + '</td>' +
+        '<td class="num">' + a + ' (' + ap.toFixed(1) + '%)</td>' +
+        '<td class="num">' + b + ' (' + bp.toFixed(1) + '%)</td>' +
+        '<td class="num"><span class="' + cls + '">' + (d > 0 ? '+' : '') + d.toFixed(1) + '%p</span></td></tr>';
+    }).join('');
+    return '<table><thead><tr><th>병목 분류</th><th>원인</th><th>As-Is 건수(비율)</th>' +
+      '<th>To-Be 건수(비율)</th><th>Δ%p</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<div class="note">비율 = 각 모드 생성 위협 대비. [구조] 표시 원인(공백·포화·지연)은 To-Be에서 감소하고, ' +
+      '그중 일부가 순수 명중 실패로 이동하는 것이 구조적 개선의 정상 경로입니다.</div>';
+  }
+
+  /**
+   * Phase C — 실패 항적 타임라인: trace된 실패 항적별로 "생성→…→(멈춘 단계)"와 멈춘 사유를
+   * 표시. 모든 단계 시각은 엔진이 [spawnT, exitT] 경계 내로 보장(Phase 5 exitT 클램프 회귀).
+   */
+  var FAILED_TL_CAP = 40;
+  function failedTimelineSection(res) {
+    var failed = (res.threatTraces || []).filter(function (tr) {
+      return tr.outcome && tr.outcome.indexOf('leaked:') === 0;
+    });
+    var html = '<h3>실패 항적 타임라인 (개별 항적 — 멈춘 단계·사유)</h3>';
+    if (failed.length === 0) {
+      return html + '<div class="bn-none">추적된 실패 항적 없음' +
+        (res.traceTruncated ? ' (trace 상한 절삭 — 통계는 전체 모집단 기준)' : '') + '</div>';
+    }
+    var shown = failed.slice(0, FAILED_TL_CAP);
+    html += shown.map(function (tr) {
+      var reason = tr.outcome.slice(7);
+      var tax = KJ.leakTaxonomy(reason);
+      // 멈춘 단계 = 마지막 '누수:' 단계 직전의 실제 진행 단계
+      var lastIdx = tr.stages.length - 1;
+      while (lastIdx > 0 && tr.stages[lastIdx].name.indexOf('누수:') === 0) lastIdx--;
+      var stopped = tr.stages[lastIdx];
+      var tt = KJ.threatType(tr.type);
+      return '<details class="ftl"><summary>' +
+        '<b>' + esc(tr.id) + '</b> <i>(' + esc(tt ? tt.name : tr.type) + ' · ' + esc(tr.axis) + ')</i> — ' +
+        '멈춘 단계: <b>' + esc(stageLabel(stopped.name)) + '</b> (' + fmtTime(stopped.t) + ') · ' +
+        '사유: <span class="badge badge-bad">' + esc(tax.label) + '</span> <i>[' + esc(tax.group) + ']</i>' +
+        '</summary><ul class="tlog-stages">' +
+        tr.stages.map(function (s) {
+          return '<li>' + fmtTime(s.t) + ' · ' + esc(stageLabel(s.name)) + '</li>';
+        }).join('') +
+        '</ul></details>';
+    }).join('');
+    if (failed.length > shown.length) {
+      html += '<div class="note">실패 항적 ' + failed.length + '건 중 ' + shown.length +
+        '건 표시 (표시 상한 — 통계·대조표는 전체 기준)</div>';
+    }
+    return html;
   }
   function statCard(label, val, cls) {
     return '<div class="stat-card' + (cls ? ' stat-' + cls : '') + '">' +

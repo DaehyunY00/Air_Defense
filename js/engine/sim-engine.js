@@ -43,6 +43,14 @@
   // 병목 판정 임계값 (Phase 1과 동일 기준: 계획서 ENV-RHO-THRESH-01)
   var RHO_WARN = 0.7, RHO_BOTTLENECK = 0.9;
 
+  // ── 정밀화 Phase B-2: 부하 기반 중앙↔분권 동적 전환 임계 (C2-DELEG-THRESH-01) ──
+  // 승인권자 노드가 [전 결심서버 점유(busy≥c) AND 대기열 길이 ≥ c×배수]로 관측되면
+  // 그 결심을 하위/자동으로 위임(분권 전환)한다. To-Be는 COP 공유·자동화 전제로 조기
+  // 전환(대기 c×1), As-Is는 수동 절차 탓에 대기가 서버수의 4배로 누적되어야 전환(느림/준부재).
+  // 하드코딩된 병목이 아니라 부하의 함수: 시나리오·강도가 낮으면 어느 모드에서도 전환이
+  // 일어나지 않는다(회귀로 고정).
+  var DELEG_QUEUE_MULT = { asis: 4, tobe: 1 };
+
   /**
    * @param {object} cfg { scenario, mode, intensity, seed, endTimeSec }
    */
@@ -71,6 +79,11 @@
       reachedC2: 0, everEngaged: 0,
       leakReasons: {}, timeToKill: []
     };
+    // Phase B-2: 동적 권한위임(분권 전환) 관측 상태 — 전환 시점·횟수·노드별 분포
+    this.deleg = { count: 0, firstT: null, byNode: {} };
+    // Phase B/D: 결심 지연(MoP) — 탐지→최초 교전명령 소요의 집계 (trace 무관 항상 수집)
+    this.decisionDelaySum = 0;
+    this.decisionDelayCount = 0;
     this.eventCount = 0;
     this.log = [];        // 표본 이벤트 로그(앞부분만 보존)
 
@@ -232,6 +245,7 @@
     var p = Math.min(1, tt.detectFactor * this.mult.detect); // per-scan 탐지확률(민감도 배수 적용)
     if (this.rng.raw() < p) {
       threat.detected = true;
+      threat._detectT = t; // 결심 지연(MoP) 기준 시각
       this.global.detected++;
       this._mark(threat, '탐지', t);
       this._onDetected(threat, t);
@@ -295,12 +309,39 @@
     });
   };
 
-  /** 6·7 결심·교전협조/권한위임: As-Is는 승인권자까지 coord 최단경로 홉 */
+  /**
+   * 6·7 결심·교전협조/권한위임.
+   * 정밀화 Phase B-3: 위협별 자동화 차등 플래그(threats.js automation, C2-AUTO-LEVEL-01)를
+   * 참조해 결심 홉을 생략/단축한다 — 구 approval=null 우회의 일반화.
+   *  - auto-preauth : 결심 홉 생략(사전승인 자동교전)
+   *  - human-on-loop: 승인 처리(서비스)는 수행하되 coord 협조경로 홉 생략(COP 감독)
+   *  - human-in-loop: 승인권자까지 coord 최단경로 홉 + 승인 처리(As-Is 기본)
+   * 정밀화 Phase B-2: 승인권자 노드가 임계(DELEG_THRESH, 모드별) 이상 혼잡하면 결심을
+   * 하위/자동으로 동적 위임(중앙→분권 전환)하고 전환 시점·횟수를 기록한다.
+   */
   Simulation.prototype._decision = function (threat, t, controlC2) {
     var tt = KJ.threatType(threat.type);
+    var auto = tt.automation ? tt.automation[this.mode] : null;
     var approvalId = tt.approvalLevel ? tt.approvalLevel[this.mode] : null;
-    if (!approvalId || approvalId === controlC2 || !this.nodeState[approvalId]) {
-      this._doEngage(threat, t);       // 승인 불필요(자동교전) 또는 동일 노드 승인
+    if (auto === 'auto-preauth' || !approvalId || approvalId === controlC2 || !this.nodeState[approvalId]) {
+      this._doEngage(threat, t);       // 승인 불필요(사전승인 자동교전) 또는 동일 노드 승인
+      return;
+    }
+    // B-2: 부하 기반 동적 권한위임 — 승인권자의 관측 대기열이 임계 초과 시 분권 전환
+    var apprNs = this.nodeState[approvalId];
+    if (apprNs.busy >= apprNs.c &&
+        apprNs.queue.length >= apprNs.c * DELEG_QUEUE_MULT[this.mode]) {
+      this.deleg.count++;
+      if (this.deleg.firstT === null) this.deleg.firstT = t;
+      this.deleg.byNode[approvalId] = (this.deleg.byNode[approvalId] || 0) + 1;
+      this._mark(threat, '권한위임:' + approvalId, t);
+      this._doEngage(threat, t);
+      return;
+    }
+    if (auto === 'human-on-loop') {
+      // 감독하 자동교전: 협조경로 홉 생략, 승인권자 처리만 수행
+      this._mark(threat, '감독승인개시:' + approvalId, t);
+      this.schedule(t, PRI.LINK_ARRIVE, 'APPROVE_ARRIVE', { threat: threat, appr: approvalId });
       return;
     }
     var path = coordPath(controlC2, approvalId, this.mode);
@@ -323,7 +364,14 @@
     });
   };
 
-  /** 8 교전명령: WTA로 무기 선택(최소부하) → 명령 링크 → 교전채널 투입 */
+  /**
+   * 8 교전명령: WTA로 무기 선택 → 명령 링크 → 교전채널 투입.
+   * 정밀화 Phase B-1 — 모드별 WTA 차등:
+   *  - As-Is : COP 부재로 무기별 적합도 비교가 불가 — 관측 가능한 최소부하 선택(기존 동작).
+   *  - To-Be : Best-Shooter 적합도 점수 = wtaSuit[위협 고도대역](개념 가중, C2-WTA-SUIT-01)
+   *            × 잔여 교전용량(0.25+0.75×(1-충전율)). 동점은 노드 id 사전순(결정론).
+   * canEngage 제약(신궁·천마 탄도탄 배제 등)은 두 모드 모두에서 항상 우선 필터다.
+   */
   Simulation.prototype._doEngage = function (threat, t) {
     if (!threat.alive || threat.pipelineDead) return;
     var mode = this.mode, type = threat.type;
@@ -333,18 +381,38 @@
     });
     if (shooters.length === 0) { threat.leakReason = 'no_shooter'; return; } // 교전 불가(제약)
     var self = this, best = null;
-    shooters.forEach(function (sh) {
-      var ns = self.nodeState[sh.id];
-      var load = ns ? (ns.busy + ns.queue.length) : 0;
-      if (!best || load < best.load) best = { sh: sh, load: load };
-    });
+    if (mode === 'tobe') {
+      var altBand = KJ.threatType(type).altBand;
+      shooters.forEach(function (sh) {
+        var ns = self.nodeState[sh.id];
+        var remain = ns ? Math.max(0, 1 - (ns.busy + ns.queue.length) / ns.K) : 1;
+        var suit = sh.wtaSuit ? (sh.wtaSuit[altBand] || 0) : 1;
+        var score = suit * (0.25 + 0.75 * remain);
+        if (!best || score > best.score ||
+            (score === best.score && sh.id < best.sh.id)) best = { sh: sh, score: score };
+      });
+    } else {
+      shooters.forEach(function (sh) {
+        var ns = self.nodeState[sh.id];
+        var load = ns ? (ns.busy + ns.queue.length) : 0;
+        if (!best || load < best.load) best = { sh: sh, load: load };
+      });
+    }
     var shooter = best.sh;
     var controlC2 = shooter.controlledBy[mode][0];
     var comm = this._link(controlC2, shooter.id, 'command');
     var delay = comm ? comm.delaySec : 0;
     if (comm) this._recordLink(controlC2, shooter.id, comm, 'command');
     this.global.engaged++;
-    if (!threat._countedEngaged) { threat._countedEngaged = true; this.global.everEngaged++; }
+    if (!threat._countedEngaged) {
+      threat._countedEngaged = true;
+      this.global.everEngaged++;
+      // 결심 지연(MoP): 탐지→최초 교전명령 (협조/승인/위임 지연이 모두 포함됨)
+      if (threat._detectT != null) {
+        this.decisionDelaySum += (t - threat._detectT);
+        this.decisionDelayCount++;
+      }
+    }
     this._mark(threat, '교전명령#' + (threat.tries + 1) + ':' + shooter.id, t);
     this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: threat, shooter: shooter.id });
   };
@@ -398,7 +466,7 @@
       id: entry.type + '#' + this.threatSeq, type: entry.type, axis: entry.axis,
       spawnT: t, dwellSec: tt.dwellSec, alive: true, killed: false,
       detected: false, pipelineDead: false, tries: 0, leakReason: null,
-      _trace: null, _countedC2: false, _countedEngaged: false
+      _trace: null, _countedC2: false, _countedEngaged: false, _detectT: null
     };
     if (this.trace) {
       if (this.threatTraces.length < this.traceCap) {
@@ -568,7 +636,14 @@
         leakReasons: this.global.leakReasons,
         killRate: this.global.spawned ? this.global.killed / this.global.spawned : 0,
         leakRate: this.global.spawned ? this.global.leaked / this.global.spawned : 0,
-        meanTimeToKillSec: meanTTK
+        meanTimeToKillSec: meanTTK,
+        // 결심 지연(MoP): 탐지→최초 교전명령 평균(초) — 협조/승인/위임 지연 포함
+        meanDecisionDelaySec: this.decisionDelayCount
+          ? this.decisionDelaySum / this.decisionDelayCount : 0,
+        // 동적 권한위임(분권 전환) 관측: 전환 횟수·최초 전환 시각·승인노드별 분포 (B-2)
+        delegation: {
+          count: this.deleg.count, firstT: this.deleg.firstT, byNode: this.deleg.byNode
+        }
       },
       // 단계별 흐름 카운트 (Sankey/funnel용) — trace 없이도 항상 제공(집계 카운터라 저비용)
       flow: {

@@ -6,9 +6,9 @@
     "bn": ""
   },
   "sc1/tobe": {
-    "spawned": 59,
+    "spawned": 53,
     "killed": 44,
-    "leaked": 8,
+    "leaked": 7,
     "bn": ""
   },
   "sc2/asis": {
@@ -18,9 +18,9 @@
     "bn": "link:AOC-1C→MCRC"
   },
   "sc2/tobe": {
-    "spawned": 42,
-    "killed": 23,
-    "leaked": 12,
+    "spawned": 58,
+    "killed": 33,
+    "leaked": 16,
     "bn": ""
   },
   "sc3/asis": {
@@ -30,9 +30,9 @@
     "bn": "link:AOC-1C→MCRC"
   },
   "sc3/tobe": {
-    "spawned": 313,
-    "killed": 164,
-    "leaked": 118,
-    "bn": ""
+    "spawned": 338,
+    "killed": 162,
+    "leaked": 156,
+    "bn": "node:MDU-L,node:MDU-M"
   }
 }

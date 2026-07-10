@@ -8,6 +8,9 @@
  *  - c2      : 지휘통제 노드 (대기행렬 서버로 모델링: servers c, serviceTimeSec μ⁻¹, capacity K)
  *  - sensor  : 탐지·추적 센서 (detects: 탐지 가능 위협 클래스, coverage: 담당 축선)
  *  - shooter : 교전 무기체계 (canEngage: 위협 클래스별 교전 가능 여부 — 제약조건 포함)
+ *              wtaSuit: 고도대역(altBand)별 Best-Shooter 개념 적합도 가중(정밀화 Phase B-1,
+ *              C2-WTA-SUIT-01). To-Be WTA 점수에만 사용 — canEngage 제약이 항상 우선하며
+ *              신궁·천마의 탄도탄 배제는 wtaSuit와 무관하게 유지된다.
  *
  * modes: 노드가 존재하는 시나리오 모드. 생략 시 ['asis','tobe'] 공통.
  * queue.serviceTimeSec: 항적 1건 처리시간(초). asis/tobe 구분. 신뢰도 등급은 docs/params.md 참조.
@@ -203,6 +206,7 @@
       role: '요격기 긴급출격(스크램블)·초계. 공중 위협 교전. KF-21은 국산 4.5세대 보라매(인도수출형 F-21 아님).',
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
+      wtaSuit: { low: 0.7, medium: 1.2, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
       engage: { rangeKm: 350, channels: 4, engageTimeSec: 300, pk: { paramRef: 'WPN-FTR-PK-01' } }
     },
     {
@@ -212,6 +216,7 @@
       role: '군단 저고도 방공. 제약: KP-SAM(신궁)·천마(K-31)는 탄도탄 요격 불가. 벌컨 유효고도 2km 한계.',
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
+      wtaSuit: { low: 1.3, medium: 0.5, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
       engage: { rangeKm: 7, channels: 6, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' } },
       constraintRefs: ['WPN-SHIN-CON-01', 'C2-VULCAN-CEIL-01']
     },
@@ -222,6 +227,7 @@
       role: '수도권 저고도 방공(신궁·벌컨·드론건 개념). 탄도탄 요격 불가 제약 동일.',
       controlledBy: { asis: ['JAOC-CD'], tobe: ['JAOC-CD'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
+      wtaSuit: { low: 1.3, medium: 0.5, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
       engage: { rangeKm: 7, channels: 4, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' } },
       constraintRefs: ['WPN-SHIN-CON-01']
     },
@@ -232,6 +238,7 @@
       role: '군단 AOC 통제 중거리 방공(개념). 항공기·순항미사일 대응.',
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
+      wtaSuit: { low: 0.8, medium: 1.1, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
       engage: { rangeKm: 40, channels: 2, engageTimeSec: 90, pk: { paramRef: 'WPN-MSAM2-PK-01' } }
     },
     {
@@ -241,6 +248,7 @@
       role: '하층 탄도탄 요격(요격고도 15–20km급) 및 항공 위협 대응.',
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: true, ac_low: false, heli: false, cruise: true, uav_small: false, srbm: true, mrl_large: true },
+      wtaSuit: { low: 0.7, medium: 0.9, ballistic: 1.2, paramRef: 'C2-WTA-SUIT-01' },
       engage: { rangeKm: 40, channels: 4, engageTimeSec: 45, pk: { paramRef: 'WPN-MSAM2-PK-01' } }
     },
     {
@@ -250,6 +258,7 @@
       role: '상층 탄도탄 요격(요격고도 40–70km 개념값).',
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: false, ac_low: false, heli: false, cruise: false, uav_small: false, srbm: true, mrl_large: true },
+      wtaSuit: { low: 0, medium: 0, ballistic: 1.3, paramRef: 'C2-WTA-SUIT-01' },
       engage: { rangeKm: 150, channels: 3, engageTimeSec: 40, pk: { paramRef: 'WPN-LSAM-PK-01' } }
     },
     {
@@ -259,6 +268,7 @@
       role: '함대공 요격. 항공기·순항미사일 대응(대탄도탄 요격은 모델링 제외).',
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
+      wtaSuit: { low: 0.8, medium: 1.0, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
       engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' } }
     },
     {
@@ -268,6 +278,7 @@
       role: '함대공 요격. 항공기·순항미사일 대응(대탄도탄 요격은 모델링 제외).',
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
+      wtaSuit: { low: 0.8, medium: 1.0, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
       engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' } }
     }
   ];

@@ -17,6 +17,14 @@
  *   KJ.checkAxisThreatFit(axes.js)가 검증한다(회귀 어서션 포함).
  *   태그: 'dmz'(DMZ 인접 근거리) | 'coastal'(서해·연안) | 'deep'(종심).
  *   ※ 전부 개념 권역이며 실제 발사원점·배치 자료가 아님.
+ *
+ * ── 위협별 자동화 차등(정밀화 Phase B-3, C2-AUTO-LEVEL-01) ──
+ * automation: {asis, tobe} — 결심 단계의 인간개입 수준(구 note 텍스트를 엔진 플래그로 승격).
+ *   'human-in-loop' : 승인권자(approvalLevel)까지 coord 협조경로 + 승인 처리 필요 (As-Is 기본)
+ *   'human-on-loop' : 감독하 자동교전 — 승인 처리(서비스)는 남되 coord 협조경로 홉 생략
+ *                     (COP 공유 전제). approvalLevel이 null이면 감독만 하고 홉 없음
+ *   'auto-preauth'  : 사전승인 자동교전 — 결심 홉 자체 생략 (구 approval=null 우회의 일반화)
+ * 엔진 _decision이 이 플래그를 참조한다. 부하 기반 동적 권한위임(B-2)과는 별개 축.
  */
 (function () {
   'use strict';
@@ -29,6 +37,7 @@
       detectFactor: 0.4, paramRef: 'THR-UAV-RCS-01',
       rangeBandKm: { min: 50, max: 300 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-UAV-RNG-01',
       approvalLevel: { asis: 'KAOC', tobe: null },
+      automation: { asis: 'human-in-loop', tobe: 'auto-preauth' },
       note: '2022.12.26 침투 사건 모사. 저탐지·항적소실 반복. To-Be는 사전승인 자동교전(위협별 자동화 차등).'
     },
     ac_low: {
@@ -36,21 +45,24 @@
       speedKmh: 180, altBand: 'low', dwellSec: 600,
       detectFactor: 0.6, paramRef: 'THR-AN2-RCS-01',
       rangeBandKm: { min: 100, max: 900 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-AN2-RNG-01',
-      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' }
+      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' },
+      automation: { asis: 'human-in-loop', tobe: 'human-on-loop' }
     },
     heli: {
       key: 'heli', name: '헬기 (저고도 침투)',
       speedKmh: 250, altBand: 'low', dwellSec: 420,
       detectFactor: 0.7, paramRef: 'THR-HELI-RCS-01',
       rangeBandKm: { min: 50, max: 500 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-HELI-RNG-01',
-      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' }
+      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' },
+      automation: { asis: 'human-in-loop', tobe: 'human-on-loop' }
     },
     fighter: {
       key: 'fighter', name: '전투기',
       speedKmh: 900, altBand: 'medium', dwellSec: 180,
       detectFactor: 0.9, paramRef: 'SEN-ACR-PD-01',
       rangeBandKm: { min: 200, max: 1500 }, originZones: ['dmz', 'coastal', 'deep'], rangeRef: 'THR-FTR-RNG-01',
-      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' }
+      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' },
+      automation: { asis: 'human-in-loop', tobe: 'human-on-loop' }
     },
     cruise: {
       key: 'cruise', name: '순항미사일',
@@ -58,6 +70,7 @@
       detectFactor: 0.5, paramRef: 'THR-CM-RCS-01',
       rangeBandKm: { min: 150, max: 2000 }, originZones: ['dmz', 'coastal', 'deep'], rangeRef: 'THR-CM-RNG-01',
       approvalLevel: { asis: 'MCRC', tobe: null },
+      automation: { asis: 'human-in-loop', tobe: 'human-on-loop' },
       note: 'To-Be: Human-on-the-loop 자동교전 대상.'
     },
     srbm: {
@@ -66,6 +79,7 @@
       detectFactor: 0.95, paramRef: 'SEN-GPR-PD-01',
       rangeBandKm: { min: 400, max: 690 }, originZones: ['deep'], rangeRef: 'THR-KN23-RNG-01',
       approvalLevel: { asis: 'KAMDOC', tobe: null },
+      automation: { asis: 'human-in-loop', tobe: 'auto-preauth' },
       note: '비행시간 수분 이내 — 승인 지연이 곧 요격기회 상실. To-Be 사전승인 자동교전. 종심 발사→광역 표적(저각 발사 시 단축 가능, rangeBandKm.min은 정합검증 미사용).'
     },
     mrl_large: {
@@ -74,6 +88,7 @@
       detectFactor: 0.9, paramRef: 'THR-KN25-RNG-01',
       rangeBandKm: { min: 350, max: 400 }, originZones: ['deep'], rangeRef: 'THR-KN25-RNG-01',
       approvalLevel: { asis: 'KAMDOC', tobe: null },
+      automation: { asis: 'human-in-loop', tobe: 'auto-preauth' },
       note: '발사간격 약 20초 연발 — 포화 유발 위협. 중거리 종심 발사권역.'
     }
   };

@@ -75,5 +75,87 @@ Object.keys(SNAPSHOT).forEach(function (key) {
     '스냅샷 ' + key + ' 일치 (기대 ' + JSON.stringify(SNAPSHOT[key]) + ' / 실제 ' + JSON.stringify(got) + ')');
 });
 
+// ══════════ Phase B — C2 고도화 ══════════
+console.log('# B-1 Best-Shooter 적합도 WTA (C2-WTA-SUIT-01)');
+var shooters = KJ.NODES.filter(function (n) { return n.category === 'shooter'; });
+assert(shooters.every(function (n) {
+  return n.wtaSuit && ['low', 'medium', 'ballistic'].every(function (b) {
+    return typeof n.wtaSuit[b] === 'number' && n.wtaSuit[b] >= 0;
+  }) && n.wtaSuit.paramRef === 'C2-WTA-SUIT-01';
+}), '전 무기(' + shooters.length + '기) wtaSuit(low/medium/ballistic)·paramRef 보유');
+assert(shooters.filter(function (n) { return n.canEngage.srbm === false; })
+  .every(function (n) { return n.wtaSuit.ballistic === 0; }),
+  '탄도탄 교전불가 무기는 wtaSuit.ballistic=0 (데이터 정합)');
+// 행위: 저고도 소형표적 단독 구성 — To-Be는 저고도 적합 무기(SHORAD)에 집중, 부적합(FTR) 회피
+var uavScn = {
+  id: 'test-uav', name: '무인기 단독(검증용)',
+  mix: [{ type: 'uav_small', axis: 'west', ratePerMin: 1.2 },
+        { type: 'uav_small', axis: 'seoul', ratePerMin: 0.8 }]
+};
+function shooterArr(r, prefix) {
+  return r.nodes.filter(function (n) { return n.id.indexOf(prefix) === 0; })
+    .reduce(function (s, n) { return s + n.arrivals; }, 0);
+}
+var uavA = KJ.runDES({ scenario: uavScn, mode: 'asis', intensity: 1.5, seed: 7, endTimeSec: 1800 });
+var uavB = KJ.runDES({ scenario: uavScn, mode: 'tobe', intensity: 1.5, seed: 7, endTimeSec: 1800 });
+assert(shooterArr(uavB, 'SHORAD') > shooterArr(uavB, 'FTR'),
+  'To-Be: 저고도 표적을 SHORAD(적합)에 집중 (SHORAD ' + shooterArr(uavB, 'SHORAD') + ' > FTR ' + shooterArr(uavB, 'FTR') + ')');
+assert(shooterArr(uavB, 'FTR') / Math.max(1, uavB.global.engaged) <=
+       shooterArr(uavA, 'FTR') / Math.max(1, uavA.global.engaged),
+  'To-Be의 부적합 무기(FTR) 배정 비율 ≤ As-Is (적합 무기로 더 자주 교전)');
+
+console.log('# B-2 부하 기반 동적 권한위임 (C2-DELEG-THRESH-01 — 부하의 함수)');
+function runX(id, mode, x, seed) {
+  return KJ.runDES({ scenario: KJ.scenarioById(id), mode: mode, intensity: x, seed: seed, endTimeSec: 1800 });
+}
+assert(runX('sc3', 'asis', 0.5, 42).global.delegation.count === 0 &&
+       runX('sc3', 'asis', 1.5, 42).global.delegation.count === 0,
+  'SC3 As-Is 저·중강도: 전환 0건 (전환은 하드코딩이 아니라 부하의 함수)');
+var d3 = runX('sc3', 'asis', 3, 42).global.delegation;
+assert(d3.count > 0 && d3.byNode.KAOC > 0 && d3.firstT !== null,
+  'SC3 As-Is 강도 3.0: 승인 포화 → 분권 전환 발생 (' + d3.count + '건, 최초 t=' + (d3.firstT || 0).toFixed(0) + 's)');
+// 동일 포화 구성·시드에서 To-Be가 더 이르고 더 많이 전환 (COP 기반 조기 분권)
+var ftrScn = {
+  id: 'test-ftr', name: '전투기 포화(검증용)',
+  mix: [{ type: 'fighter', axis: 'west', ratePerMin: 6 },
+        { type: 'fighter', axis: 'east', ratePerMin: 6 }]
+};
+var fA = KJ.runDES({ scenario: ftrScn, mode: 'asis', intensity: 1, seed: 5, endTimeSec: 1800 }).global.delegation;
+var fB = KJ.runDES({ scenario: ftrScn, mode: 'tobe', intensity: 1, seed: 5, endTimeSec: 1800 }).global.delegation;
+assert(fA.count > 0 && fB.count > 0, '포화 구성: 양 모드 전환 발생 (As-Is ' + fA.count + ' · To-Be ' + fB.count + ')');
+assert(fB.firstT < fA.firstT, 'To-Be 최초 전환이 더 이름 (' + fB.firstT.toFixed(0) + 's < ' + fA.firstT.toFixed(0) + 's)');
+assert(fB.count > fA.count, 'To-Be 전환 빈도 > As-Is (임계 차등: 대기 c×1 vs c×4)');
+var fB2 = KJ.runDES({ scenario: ftrScn, mode: 'tobe', intensity: 1, seed: 5, endTimeSec: 1800 }).global.delegation;
+assert(JSON.stringify(fB) === JSON.stringify(fB2), '전환 기록도 동일 seed → 완전 동일 (결정론)');
+
+console.log('# B-3 위협별 자동화 차등 플래그 (C2-AUTO-LEVEL-01)');
+var AUTO_LEVELS = ['human-in-loop', 'human-on-loop', 'auto-preauth'];
+assert(typeKeys.every(function (k) {
+  var a = KJ.THREAT_TYPES[k].automation;
+  return a && AUTO_LEVELS.indexOf(a.asis) !== -1 && AUTO_LEVELS.indexOf(a.tobe) !== -1;
+}), '전 위협 automation{asis,tobe} 플래그 보유 (유효값)');
+assert(typeKeys.every(function (k) { return KJ.THREAT_TYPES[k].automation.asis === 'human-in-loop'; }),
+  'As-Is는 전 위협 human-in-loop (기존 승인 동작 보존)');
+assert(KJ.THREAT_TYPES.srbm.automation.tobe === 'auto-preauth' &&
+       KJ.THREAT_TYPES.uav_small.automation.tobe === 'auto-preauth',
+  '탄도탄·무인기 To-Be 사전승인 자동교전 (note 텍스트의 플래그 승격)');
+
+console.log('# B 종합 — 제약·개선 방향');
+var balScn3 = {
+  id: 'test-ballistic', name: '탄도탄 단독(검증용)',
+  mix: [{ type: 'srbm', axis: 'central', ratePerMin: 1.0 },
+        { type: 'mrl_large', axis: 'east', ratePerMin: 1.5 }]
+};
+['asis', 'tobe'].forEach(function (m) {
+  var r = KJ.runDES({ scenario: balScn3, mode: m, intensity: 3, seed: 11, endTimeSec: 1800 });
+  assert(r.nodes.filter(function (n) { return n.id.indexOf('SHORAD') === 0 && n.arrivals > 0; }).length === 0,
+    m + ' 강도 3.0: 신궁·천마 탄도탄 교전투입 0 (새 WTA에서도 canEngage 제약 우선)');
+});
+var cmpA = runX('sc3', 'asis', 1.5, 42), cmpB = runX('sc3', 'tobe', 1.5, 42);
+assert(cmpB.global.leakRate < cmpA.global.leakRate, 'To-Be 누수율 < As-Is (동일 seed)');
+assert(cmpB.global.meanDecisionDelaySec < cmpA.global.meanDecisionDelaySec,
+  'To-Be 결심 지연 < As-Is (' + cmpB.global.meanDecisionDelaySec.toFixed(0) + 's < ' +
+  cmpA.global.meanDecisionDelaySec.toFixed(0) + 's)');
+
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

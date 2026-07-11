@@ -166,7 +166,7 @@ DES 결과 노드표(`sim-view.js:604-621`)와 해석 탭 노드표(`panels.js:4
 node tests/run-all.js
 
 # 2) 스크린샷 재캡처 (로컬 서버 필요)
-python3 -m http.server 8000 --bind 127.0.0.1 &
+./scripts/serve.sh &
 node scripts/capture-metrics.mjs http://localhost:8000
 # → docs/screenshots/*.png 갱신 (playwright-core + Chromium 필요:
 #    npm install playwright-core 후 npx playwright install chromium,

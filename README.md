@@ -36,11 +36,16 @@
 
 ```bash
 # 로컬 서버 실행 (권장 — 타일 로딩 CORS 회피)
-python3 -m http.server 8000 --bind 127.0.0.1
+./scripts/serve.sh
 # 브라우저에서 http://localhost:8000 접속
-# (--bind 없이 실행하면 터미널에 IPv6 주소(http://[::]:8000/)가 뜨는데, 그 링크를
-#  그대로 클릭하면 안 열릴 수 있음 — 반드시 위 http://localhost:8000 으로 접속)
 ```
+
+`scripts/serve.sh`는 `python3 -m http.server`를 127.0.0.1에 명시적으로 바인딩해 실행한다.
+`--bind` 없이 직접 실행하면(특히 macOS) 터미널에 IPv6 주소(`http://[::]:8000/`)가 떠서
+그 링크를 그대로 클릭해도 브라우저가 열리지 않는 경우가 있는데, 이 스크립트를 쓰면 항상
+`http://127.0.0.1:8000/`처럼 바로 열리는 링크가 출력된다. 포트를 바꾸려면
+`./scripts/serve.sh 9000`처럼 인자로 지정한다. (직접 실행하려면
+`python3 -m http.server 8000 --bind 127.0.0.1`도 동일하게 동작한다.)
 
 외부 의존성은 Leaflet 1.9.4(CDN) 하나뿐입니다. CDN 접근이 불가한 폐쇄망에서는
 지도 탭이 자동으로 내장 SVG 개념도로 대체(graceful degradation)되며 나머지 기능은 동일하게 동작합니다.

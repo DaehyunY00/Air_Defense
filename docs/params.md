@@ -337,7 +337,7 @@ launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한
 | THR-KN25-RNG-01 | 초대형 방사포(KN-25급) | 350–400 | deep | 기존 THR-KN25-RNG-01(사거리·발사간격)과 동일 출처 | B |
 
 ### [ENV-AXIS-FIT-01] 축선-사거리·발사권역 정합 검증 규칙
-- **값/분포**: (1) 위협 originZones ∩ 축선 launchZones ≠ ∅, (2) 위협 rangeBandKm.max ≥ 축선 conceptReachKm. 축선 개념거리: west 150 / central 130 / east 130 / seoul 60 km. seoul 축선은 launchZones=['dmz'] (근거리 전용 — 종심 위협 배분 차단)
+- **값/분포**: (1) 위협 originZones ∩ 축선 launchZones ≠ ∅, (2) 위협 rangeBandKm.max ≥ 축선 conceptReachKm. 축선 개념거리(북측 진입점 기준): west 150 / central 140 / east 200 / seoul 70 km. seoul 축선은 launchZones=['dmz'] (근거리 전용 — 종심 위협 배분 차단)
 - **출처**: 개념 설정 — 위협 출발점(축선 entry)이 위협 사거리·발사권역과 모순되지 않게 하는 데이터 정합 규칙
 - **적용범위**: `KJ.checkAxisThreatFit`/`KJ.validateScenarioOrigins`(js/data/axes.js). 시나리오 mix 배분 검증(회귀 고정). DES 부하·병목 계산에는 개입하지 않음(데이터 계층 전용 — 시드 고정 스냅샷으로 무회귀 검증)
 - **신뢰도 등급**: C(개념 규칙)
@@ -449,12 +449,12 @@ launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한
 ## 재생·시각화 파라미터 (Phase 4, `js/data/axes.js` · `js/engine/sim-engine.js` trace · `js/analysis/overlap-heatmap.js`)
 
 ### [ENV-PB-AXES-01] 축선별 진입점→표적권역 개념좌표
-- **값/분포**: west(백령도 개념→서울), central(철원 개념→오산·평택 권역), east(고성 개념→강릉 권역), seoul(고양 개념→서울 도심) — 전부 도시 수준 개념좌표
-- **출처**: 개념 설정(위협궤적 애니메이션·히트맵 전용). 실제 침투경로·표적이 아님
+- **값/분포**: west(해주 개념→서울), central(평강 개념→오산·평택 권역), east(원산 개념→강릉 권역), seoul(개성 개념→서울 도심) — 전부 도시 수준 개념좌표. 진입점은 북측 발사권역의 개념 표시(위협 다양화 개편 — 지도에서 위협이 북한 지역에서 출발)
+- **출처**: 개념 설정(위협궤적 애니메이션·히트맵 전용). 실제 침투경로·발사원점·표적이 아님
 - **적용범위**: 위협 위치(t) = lerp(entry, target, clamp((t−spawnT)/dwellSec, 0, 1))
 - **신뢰도 등급**: C(시각화 목적 개념값)
 - **MC 적용방식**: 고정
-- **비고**: 시나리오 축선 키('west'|'central'|'east'|'seoul')와 1:1 대응
+- **비고**: 시나리오 축선 키('west'|'central'|'east'|'seoul')와 1:1 대응. 구 좌표(백령도·철원·고성·고양 개념)는 위협 다양화 개편에서 북측 개념좌표로 대체
 
 ### [ENV-PB-TRACECAP-01] 재생용 trace 상한
 - **값/분포**: 위협 추적 300건, 노드 재고 시계열 20,000 샘플 (초과 시 truncated 플래그로 명시, 은폐 없음)

@@ -31,34 +31,37 @@
     deep: '종심 발사권역(개념)'
   };
 
+  // 진입점(entry)은 북측 발사권역의 도시 수준 개념좌표 — 지도에서 위협이 북한 지역에서
+  // 출발하는 것으로 보이도록 한다. 실제 발사원점·배치가 아닌 개념 표시이며, targetNote와
+  // 함께 전 좌표에 '개념' 표기를 유지한다(제약 어서션 d).
   KJ.AXES = {
     west: {
       label: '서부축(서해)',
-      entry: [37.90, 125.30], entryNote: '백령도 인근 개념좌표(서해 북방)',
+      entry: [38.04, 125.70], entryNote: '해주 인근 개념좌표(북측 서해안 발사권)',
       target: [37.55, 126.98], targetNote: '서울 개념좌표(방호 표적권역)',
       launchZones: ['coastal', 'deep'], conceptReachKm: 150,
-      reachNote: '서해 연안·종심 개념 발사권→수도권 표적 개념거리 (ENV-AXIS-FIT-01)'
+      reachNote: '북측 서해안·종심 개념 발사권→수도권 표적 개념거리 (ENV-AXIS-FIT-01)'
     },
     central: {
       label: '중부축(DMZ)',
-      entry: [38.25, 127.31], entryNote: '철원 인근 개념좌표(중부전선)',
+      entry: [38.42, 127.30], entryNote: '평강 인근 개념좌표(북측 중부 종심 발사권)',
       target: [37.15, 127.10], targetNote: '수도권 남부 개념좌표(오산·평택 권역)',
-      launchZones: ['dmz', 'deep'], conceptReachKm: 130,
-      reachNote: 'DMZ 인접·종심 개념 발사권→수도권 남부 표적 개념거리 (ENV-AXIS-FIT-01)'
+      launchZones: ['dmz', 'deep'], conceptReachKm: 140,
+      reachNote: '북측 중부 종심 개념 발사권→수도권 남부 표적 개념거리 (ENV-AXIS-FIT-01)'
     },
     east: {
-      label: '동부축(DMZ~동해)',
-      entry: [38.30, 128.40], entryNote: '고성 인근 개념좌표(동부전선)',
+      label: '동부축(동해안)',
+      entry: [39.16, 127.44], entryNote: '원산 인근 개념좌표(북측 동해안 발사권)',
       target: [37.80, 128.90], targetNote: '강릉 인근 개념좌표(동해 함대 권역)',
-      launchZones: ['dmz', 'deep'], conceptReachKm: 130,
-      reachNote: 'DMZ 인접·종심 개념 발사권→동해 권역 표적 개념거리 (ENV-AXIS-FIT-01)'
+      launchZones: ['dmz', 'deep'], conceptReachKm: 200,
+      reachNote: '북측 동해안 개념 발사권→동해 권역 표적 개념거리 (ENV-AXIS-FIT-01)'
     },
     seoul: {
       label: '수도권 직접침투',
-      entry: [37.75, 126.90], entryNote: '고양 인근 개념좌표(2022.12.26 재현 진입점)',
+      entry: [37.96, 126.55], entryNote: '개성 인근 개념좌표(2022.12.26 침투경로 북측 재현 진입점)',
       target: [37.56, 126.99], targetNote: '서울 도심 개념좌표',
-      launchZones: ['dmz'], conceptReachKm: 60,
-      reachNote: 'DMZ 인접 근거리 개념 발사권→서울 도심 개념거리 — 근거리 위협 전용 축선 (ENV-AXIS-FIT-01)'
+      launchZones: ['dmz'], conceptReachKm: 70,
+      reachNote: '북측 DMZ 인접 근거리 개념 발사권→서울 도심 개념거리 — 근거리 위협 전용 축선 (ENV-AXIS-FIT-01)'
     }
   };
 

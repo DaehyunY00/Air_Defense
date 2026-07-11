@@ -30,18 +30,22 @@
         '경계가 불명확해지고, 음성 VTC 협조 의존으로 신속한 조율이 불가능한 중복교전·책임공백 ' +
         '위험을 관찰한다.',
       basis: 'KJADS 구축안 문제 상황 1 (교전 중복 및 책임 공백)',
-      // 다양화: 저속기·헬기·무인기·순항미사일 4개 위협클래스 × 서부/수도권 경계 축선.
+      // 다양화: 저속기·헬기·무인기·순항미사일 4개 위협클래스 × 서부/수도권/중부 경계 축선.
       // 모두 육(AOC·JAOC)·공(MCRC)·해(이지스) 복수 통제계통이 동시에 교전 가능한
-      // 클래스로 구성해 "경계 부근 중복교전·책임공백" 목적을 보존한다.
+      // 클래스로 구성해 "경계 부근 중복교전·책임공백" 목적을 보존한다. 중부축은
+      // 1군단 AOC↔MCRC 책임 경계를 표현(위협 다양화 — 서부·수도권 편중 해소).
       // KAOC 승인 부하 합계는 저부하로 유지(전환점 대조군: 전 스윕 구간 ρ<0.9).
       mix: [
-        { type: 'ac_low', axis: 'west', ratePerMin: 0.25 },
+        { type: 'ac_low', axis: 'west', ratePerMin: 0.2 },
         { type: 'ac_low', axis: 'seoul', ratePerMin: 0.15 },
+        { type: 'ac_low', axis: 'central', ratePerMin: 0.15 },
         { type: 'heli', axis: 'west', ratePerMin: 0.15 },
+        { type: 'heli', axis: 'central', ratePerMin: 0.1 },
         { type: 'heli', axis: 'seoul', ratePerMin: 0.1 },
         { type: 'uav_small', axis: 'west', ratePerMin: 0.15 },
         { type: 'uav_small', axis: 'seoul', ratePerMin: 0.1 },
-        { type: 'cruise', axis: 'west', ratePerMin: 0.25 }
+        { type: 'cruise', axis: 'west', ratePerMin: 0.2 },
+        { type: 'cruise', axis: 'central', ratePerMin: 0.1 }
       ],
       defaultMode: 'asis'
     },
@@ -63,7 +67,7 @@
         { type: 'uav_small', axis: 'central', burst: 2, atSec: 900, equivRatePerMin: 0.13 },
         { type: 'uav_small', axis: 'west', ratePerMin: 0.3 },
         { type: 'uav_small', axis: 'seoul', ratePerMin: 0.2 },
-        { type: 'uav_small', axis: 'central', ratePerMin: 0.15 }
+        { type: 'uav_small', axis: 'central', ratePerMin: 0.25 }
       ],
       defaultMode: 'asis'
     },
@@ -76,12 +80,19 @@
         '개선폭을 정량화하는 핵심 시나리오 — 복합 위협 동시 대응 체계 부재, 자산 현황 실시간 ' +
         '동기화 미비, 지휘관 처리 용량 초과라는 구조적 문제를 재현한다.',
       basis: 'KJADS 구축안 문제 상황 3 (전략적 섞어쏘기); KN-25 발사간격 약 20초(THR-KN25-RNG-01)',
+      // 다양화: 방사포를 동부 편중에서 동부+중부(평강권 종심 개념)로 분산하고,
+      // 중부축에 순항·무인기·전투기를 추가해 "복합 동시 포화"가 전 축선에서 전개되게 함
+      // (위협 다양화 — 서부·동부 편중 해소, 축선-사거리 정합 ENV-AXIS-FIT-01 준수).
       mix: [
         { type: 'srbm', axis: 'central', ratePerMin: 1.5 },
-        { type: 'mrl_large', axis: 'east', ratePerMin: 3.0 },
+        { type: 'mrl_large', axis: 'east', ratePerMin: 2.0 },
+        { type: 'mrl_large', axis: 'central', ratePerMin: 1.0 },
+        { type: 'cruise', axis: 'central', ratePerMin: 0.3 },
         { type: 'uav_small', axis: 'west', ratePerMin: 1.0 },
+        { type: 'uav_small', axis: 'central', ratePerMin: 0.4 },
         { type: 'uav_small', axis: 'seoul', ratePerMin: 0.5 },
-        { type: 'fighter', axis: 'west', ratePerMin: 0.8 }
+        { type: 'fighter', axis: 'west', ratePerMin: 0.5 },
+        { type: 'fighter', axis: 'central', ratePerMin: 0.3 }
       ],
       defaultMode: 'asis'
     }

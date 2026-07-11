@@ -37,7 +37,8 @@
         fallback = true;
         return;
       }
-      map = L.map(id, { zoomControl: true }).setView([37.3, 127.3], 7);
+      // 북측 개념 발사권(해주·평강·원산)에서 출발하는 위협 궤적이 보이도록 중심 상향
+      map = L.map(id, { zoomControl: true }).setView([37.8, 127.3], 7);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 12,
         attribution: '&copy; OpenStreetMap contributors | 좌표는 도시 수준 개념좌표'

@@ -101,12 +101,15 @@ SCENARIOS.forEach(function (id) {
 });
 assert(UI_X.every(function (x) { return exch.sc2[x].tobe < exch.sc2[x].asis; }),
   'SC2(무인기 포화)는 전 UI강도에서 To-Be 비용교환비 < As-Is (일관된 개선 — refine.test.js D-2와 정합)');
-assert(exch.sc1[3].tobe > exch.sc1[3].asis,
-  'SC1 x3.0: To-Be 비용교환비(' + exch.sc1[3].tobe.toFixed(1) + ') > As-Is(' + exch.sc1[3].asis.toFixed(1) +
+// 재기준선(위협 다양화 — 중부축 추가·북측 진입점): 다양화 이전에는 SC1 x3.0에서도 반전이
+// 관측됐으나(77→108), 새 믹스에서는 SC1이 전 강도 개선으로 바뀜. 반전 사례는 SC3 저강도에
+// 남아 있음 — "방향이 시나리오·강도에 따라 반전될 수 있다"는 발견 3의 본질은 유지된다.
+assert(exch.sc3[0.5].tobe > exch.sc3[0.5].asis,
+  'SC3 x0.5: To-Be 비용교환비(' + exch.sc3[0.5].tobe.toFixed(2) + ') > As-Is(' + exch.sc3[0.5].asis.toFixed(2) +
   ') — 방향 반전 실재(감사 보고서 발견 3, seed=' + SEED + ' 고정 재현)');
 assert(exch.sc3[1].tobe > exch.sc3[1].asis,
   'SC3 x1.0: To-Be 비용교환비(' + exch.sc3[1].tobe.toFixed(2) + ') > As-Is(' + exch.sc3[1].asis.toFixed(2) +
-  ') — SC1과 별개 시나리오에서도 반전 재확인');
+  ') — 별개 강도에서도 반전 재확인');
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

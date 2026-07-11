@@ -2021,18 +2021,22 @@ li.chk-fail { background: #43140f; }
         '경계가 불명확해지고, 음성 VTC 협조 의존으로 신속한 조율이 불가능한 중복교전·책임공백 ' +
         '위험을 관찰한다.',
       basis: 'KJADS 구축안 문제 상황 1 (교전 중복 및 책임 공백)',
-      // 다양화: 저속기·헬기·무인기·순항미사일 4개 위협클래스 × 서부/수도권 경계 축선.
+      // 다양화: 저속기·헬기·무인기·순항미사일 4개 위협클래스 × 서부/수도권/중부 경계 축선.
       // 모두 육(AOC·JAOC)·공(MCRC)·해(이지스) 복수 통제계통이 동시에 교전 가능한
-      // 클래스로 구성해 "경계 부근 중복교전·책임공백" 목적을 보존한다.
+      // 클래스로 구성해 "경계 부근 중복교전·책임공백" 목적을 보존한다. 중부축은
+      // 1군단 AOC↔MCRC 책임 경계를 표현(위협 다양화 — 서부·수도권 편중 해소).
       // KAOC 승인 부하 합계는 저부하로 유지(전환점 대조군: 전 스윕 구간 ρ<0.9).
       mix: [
-        { type: 'ac_low', axis: 'west', ratePerMin: 0.25 },
+        { type: 'ac_low', axis: 'west', ratePerMin: 0.2 },
         { type: 'ac_low', axis: 'seoul', ratePerMin: 0.15 },
+        { type: 'ac_low', axis: 'central', ratePerMin: 0.15 },
         { type: 'heli', axis: 'west', ratePerMin: 0.15 },
+        { type: 'heli', axis: 'central', ratePerMin: 0.1 },
         { type: 'heli', axis: 'seoul', ratePerMin: 0.1 },
         { type: 'uav_small', axis: 'west', ratePerMin: 0.15 },
         { type: 'uav_small', axis: 'seoul', ratePerMin: 0.1 },
-        { type: 'cruise', axis: 'west', ratePerMin: 0.25 }
+        { type: 'cruise', axis: 'west', ratePerMin: 0.2 },
+        { type: 'cruise', axis: 'central', ratePerMin: 0.1 }
       ],
       defaultMode: 'asis'
     },
@@ -2054,7 +2058,7 @@ li.chk-fail { background: #43140f; }
         { type: 'uav_small', axis: 'central', burst: 2, atSec: 900, equivRatePerMin: 0.13 },
         { type: 'uav_small', axis: 'west', ratePerMin: 0.3 },
         { type: 'uav_small', axis: 'seoul', ratePerMin: 0.2 },
-        { type: 'uav_small', axis: 'central', ratePerMin: 0.15 }
+        { type: 'uav_small', axis: 'central', ratePerMin: 0.25 }
       ],
       defaultMode: 'asis'
     },
@@ -2067,12 +2071,19 @@ li.chk-fail { background: #43140f; }
         '개선폭을 정량화하는 핵심 시나리오 — 복합 위협 동시 대응 체계 부재, 자산 현황 실시간 ' +
         '동기화 미비, 지휘관 처리 용량 초과라는 구조적 문제를 재현한다.',
       basis: 'KJADS 구축안 문제 상황 3 (전략적 섞어쏘기); KN-25 발사간격 약 20초(THR-KN25-RNG-01)',
+      // 다양화: 방사포를 동부 편중에서 동부+중부(평강권 종심 개념)로 분산하고,
+      // 중부축에 순항·무인기·전투기를 추가해 "복합 동시 포화"가 전 축선에서 전개되게 함
+      // (위협 다양화 — 서부·동부 편중 해소, 축선-사거리 정합 ENV-AXIS-FIT-01 준수).
       mix: [
         { type: 'srbm', axis: 'central', ratePerMin: 1.5 },
-        { type: 'mrl_large', axis: 'east', ratePerMin: 3.0 },
+        { type: 'mrl_large', axis: 'east', ratePerMin: 2.0 },
+        { type: 'mrl_large', axis: 'central', ratePerMin: 1.0 },
+        { type: 'cruise', axis: 'central', ratePerMin: 0.3 },
         { type: 'uav_small', axis: 'west', ratePerMin: 1.0 },
+        { type: 'uav_small', axis: 'central', ratePerMin: 0.4 },
         { type: 'uav_small', axis: 'seoul', ratePerMin: 0.5 },
-        { type: 'fighter', axis: 'west', ratePerMin: 0.8 }
+        { type: 'fighter', axis: 'west', ratePerMin: 0.5 },
+        { type: 'fighter', axis: 'central', ratePerMin: 0.3 }
       ],
       defaultMode: 'asis'
     }
@@ -2122,34 +2133,37 @@ li.chk-fail { background: #43140f; }
     deep: '종심 발사권역(개념)'
   };
 
+  // 진입점(entry)은 북측 발사권역의 도시 수준 개념좌표 — 지도에서 위협이 북한 지역에서
+  // 출발하는 것으로 보이도록 한다. 실제 발사원점·배치가 아닌 개념 표시이며, targetNote와
+  // 함께 전 좌표에 '개념' 표기를 유지한다(제약 어서션 d).
   KJ.AXES = {
     west: {
       label: '서부축(서해)',
-      entry: [37.90, 125.30], entryNote: '백령도 인근 개념좌표(서해 북방)',
+      entry: [38.04, 125.70], entryNote: '해주 인근 개념좌표(북측 서해안 발사권)',
       target: [37.55, 126.98], targetNote: '서울 개념좌표(방호 표적권역)',
       launchZones: ['coastal', 'deep'], conceptReachKm: 150,
-      reachNote: '서해 연안·종심 개념 발사권→수도권 표적 개념거리 (ENV-AXIS-FIT-01)'
+      reachNote: '북측 서해안·종심 개념 발사권→수도권 표적 개념거리 (ENV-AXIS-FIT-01)'
     },
     central: {
       label: '중부축(DMZ)',
-      entry: [38.25, 127.31], entryNote: '철원 인근 개념좌표(중부전선)',
+      entry: [38.42, 127.30], entryNote: '평강 인근 개념좌표(북측 중부 종심 발사권)',
       target: [37.15, 127.10], targetNote: '수도권 남부 개념좌표(오산·평택 권역)',
-      launchZones: ['dmz', 'deep'], conceptReachKm: 130,
-      reachNote: 'DMZ 인접·종심 개념 발사권→수도권 남부 표적 개념거리 (ENV-AXIS-FIT-01)'
+      launchZones: ['dmz', 'deep'], conceptReachKm: 140,
+      reachNote: '북측 중부 종심 개념 발사권→수도권 남부 표적 개념거리 (ENV-AXIS-FIT-01)'
     },
     east: {
-      label: '동부축(DMZ~동해)',
-      entry: [38.30, 128.40], entryNote: '고성 인근 개념좌표(동부전선)',
+      label: '동부축(동해안)',
+      entry: [39.16, 127.44], entryNote: '원산 인근 개념좌표(북측 동해안 발사권)',
       target: [37.80, 128.90], targetNote: '강릉 인근 개념좌표(동해 함대 권역)',
-      launchZones: ['dmz', 'deep'], conceptReachKm: 130,
-      reachNote: 'DMZ 인접·종심 개념 발사권→동해 권역 표적 개념거리 (ENV-AXIS-FIT-01)'
+      launchZones: ['dmz', 'deep'], conceptReachKm: 200,
+      reachNote: '북측 동해안 개념 발사권→동해 권역 표적 개념거리 (ENV-AXIS-FIT-01)'
     },
     seoul: {
       label: '수도권 직접침투',
-      entry: [37.75, 126.90], entryNote: '고양 인근 개념좌표(2022.12.26 재현 진입점)',
+      entry: [37.96, 126.55], entryNote: '개성 인근 개념좌표(2022.12.26 침투경로 북측 재현 진입점)',
       target: [37.56, 126.99], targetNote: '서울 도심 개념좌표',
-      launchZones: ['dmz'], conceptReachKm: 60,
-      reachNote: 'DMZ 인접 근거리 개념 발사권→서울 도심 개념거리 — 근거리 위협 전용 축선 (ENV-AXIS-FIT-01)'
+      launchZones: ['dmz'], conceptReachKm: 70,
+      reachNote: '북측 DMZ 인접 근거리 개념 발사권→서울 도심 개념거리 — 근거리 위협 전용 축선 (ENV-AXIS-FIT-01)'
     }
   };
 
@@ -3976,7 +3990,8 @@ li.chk-fail { background: #43140f; }
   'use strict';
   window.KJ = window.KJ || {};
 
-  var BOUNDS = { latMin: 36.3, latMax: 38.5, lonMin: 125.3, lonMax: 130.0 };
+  // 위협 진입점이 북측 개념좌표(원산 39.16 등)로 확장되어 latMax를 39.5로 상향
+  var BOUNDS = { latMin: 36.3, latMax: 39.5, lonMin: 125.2, lonMax: 130.0 };
 
   KJ.geo = {
     BOUNDS: BOUNDS,
@@ -4156,7 +4171,8 @@ li.chk-fail { background: #43140f; }
         fallback = true;
         return;
       }
-      map = L.map(id, { zoomControl: true }).setView([37.3, 127.3], 7);
+      // 북측 개념 발사권(해주·평강·원산)에서 출발하는 위협 궤적이 보이도록 중심 상향
+      map = L.map(id, { zoomControl: true }).setView([37.8, 127.3], 7);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 12,
         attribution: '&copy; OpenStreetMap contributors | 좌표는 도시 수준 개념좌표'

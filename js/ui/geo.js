@@ -7,7 +7,8 @@
   'use strict';
   window.KJ = window.KJ || {};
 
-  var BOUNDS = { latMin: 36.3, latMax: 38.5, lonMin: 125.3, lonMax: 130.0 };
+  // 위협 진입점이 북측 개념좌표(원산 39.16 등)로 확장되어 latMax를 39.5로 상향
+  var BOUNDS = { latMin: 36.3, latMax: 39.5, lonMin: 125.2, lonMax: 130.0 };
 
   KJ.geo = {
     BOUNDS: BOUNDS,

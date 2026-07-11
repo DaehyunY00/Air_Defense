@@ -36,8 +36,10 @@
 
 ```bash
 # 로컬 서버 실행 (권장 — 타일 로딩 CORS 회피)
-python3 -m http.server 8000
+python3 -m http.server 8000 --bind 127.0.0.1
 # 브라우저에서 http://localhost:8000 접속
+# (--bind 없이 실행하면 터미널에 IPv6 주소(http://[::]:8000/)가 뜨는데, 그 링크를
+#  그대로 클릭하면 안 열릴 수 있음 — 반드시 위 http://localhost:8000 으로 접속)
 ```
 
 외부 의존성은 Leaflet 1.9.4(CDN) 하나뿐입니다. CDN 접근이 불가한 폐쇄망에서는

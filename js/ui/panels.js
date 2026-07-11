@@ -326,19 +326,21 @@
   function renderTaxonomyTable(ca, cb) {
     var body = el('taxonomy-body');
     if (!body) return;
+    // 발생 단계(stage)는 엔진 정본 KJ.LEAK_TAXONOMY에서 읽는다 — 결과 모달 대조표와 동일 출처
     var rows = [
-      { code: 'not_detected', stage: '① 탐지', fixer: '센서·융합' },
-      { code: 'no_sensor', stage: '① 탐지', fixer: '센서 배치' },
-      { code: 'no_report_path', stage: '② 추적생성', fixer: 'To-Be 융합' },
-      { code: 'responsibility_gap', stage: '⑥⑦ 결심·협조', fixer: 'To-Be 통합 C2', core: true },
-      { code: 'overflow', stage: '③④⑤ C2 / ⑧ 교전', fixer: '처리용량·자동화',
+      { code: 'not_detected', fixer: '센서·융합' },
+      { code: 'no_sensor', fixer: '센서 배치' },
+      { code: 'no_report_path', fixer: 'To-Be 융합' },
+      { code: 'responsibility_gap', fixer: 'To-Be 통합 C2', core: true },
+      { code: 'overflow', fixer: '처리용량·자동화',
         count: function (c) { return (c.overflow_c2 || 0) + (c.overflow_shooter || 0); } },
-      { code: 'no_shooter', stage: '⑧ 교전명령', fixer: '무기체계 능력' },
-      { code: 'missed', stage: '⑨ BDA', fixer: '무기 Pk·재교전' },
-      { code: 'timeout', stage: '⑨ 종합', fixer: '전 단계 지연' }
+      { code: 'no_shooter', fixer: '무기체계 능력' },
+      { code: 'missed', fixer: '무기 Pk·재교전' },
+      { code: 'timeout', fixer: '전 단계 지연' }
     ];
     body.innerHTML = rows.map(function (r, i) {
       var meta = KJ.leakTaxonomy(r.code);
+      r.stage = meta.stage;
       var a = r.count ? r.count(ca) : (ca[r.code] || 0);
       var b = r.count ? r.count(cb) : (cb[r.code] || 0);
       var d = b - a;
@@ -449,6 +451,8 @@
         if (n.queue && n.queue.paramRef) refs.push(n.queue.paramRef);
         if (n.detectProb && n.detectProb.paramRef) refs.push(n.detectProb.paramRef);
         if (n.engage && n.engage.pk && n.engage.pk.paramRef) refs.push(n.engage.pk.paramRef);
+        if (n.wtaSuit && n.wtaSuit.paramRef) refs.push(n.wtaSuit.paramRef);       // Best-Shooter 적합도 (Phase B-1)
+        if (n.engage && n.engage.costRef) refs.push(n.engage.costRef);            // 요격탄 개념 단가 (Phase D)
         if (n.rangeRef) refs.push(n.rangeRef);
         (n.constraintRefs || []).forEach(function (r) { refs.push(r); });
         var km = n.category === 'sensor' ? n.rangeKm
@@ -460,6 +464,26 @@
           '<td class="refs">' + refs.map(esc).join('<br>') + '</td></tr>';
       }).join('');
       el('inventory-body').innerHTML = nodeRows;
+
+      // ── 위협 유형 표 (Phase A~D 데이터: 사거리대·발사권역·단가·자동화 차등) ──
+      var AUTO_SHORT = { 'human-in-loop': '유인결심', 'human-on-loop': '감독자동', 'auto-preauth': '사전승인' };
+      var threatRows = Object.keys(KJ.THREAT_TYPES).map(function (k) {
+        var t = KJ.THREAT_TYPES[k];
+        var refs = [t.paramRef, t.rangeRef, t.costRef].filter(function (r, i, arr) {
+          return r && arr.indexOf(r) === i; // 중복 근거 ID 제거 (예: KN-25는 paramRef=rangeRef)
+        });
+        var zones = (t.originZones || []).join('·');
+        return '<tr><td>' + esc(t.key) + '</td><td>' + esc(t.name) + '</td>' +
+          '<td>' + esc(t.altBand) + '</td>' +
+          '<td class="num">' + t.dwellSec + 's</td>' +
+          '<td class="num">' + (t.rangeBandKm ? t.rangeBandKm.min + '–' + t.rangeBandKm.max + 'km' : '—') + '</td>' +
+          '<td>' + esc(zones || '—') + '</td>' +
+          '<td class="num">' + (t.unitCostM != null ? t.unitCostM : '—') + '</td>' +
+          '<td>' + esc((AUTO_SHORT[t.automation && t.automation.asis] || '—') + ' → ' +
+                       (AUTO_SHORT[t.automation && t.automation.tobe] || '—')) + '</td>' +
+          '<td class="refs">' + refs.map(esc).join('<br>') + '</td></tr>';
+      }).join('');
+      el('threat-inventory-body').innerHTML = threatRows;
       if (KJ.tableSort) KJ.tableSort.attachAll(el('panel-data'));
     }
   };

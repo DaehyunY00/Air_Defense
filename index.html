@@ -256,7 +256,8 @@
         <h2>🚨 임계 전환점 — As-Is→To-Be 효과 정량화</h2>
         <p>위협 강도를 0.5×~3.0× 스윕하며 각 점에서 As-Is/To-Be를 다중복제 실행합니다.
            As-Is C2 최대 이용률 ρ가 임계(0.9)를 넘는 구간에서 두 체계의 요격 실패율 격차가 어떻게
-           벌어지는지를 정량화합니다(계획서 Recommendations 6).</p>
+           벌어지는지를 정량화합니다(계획서 Recommendations 6). [분석] 탭 9단계 파이프라인 중
+           <b>③④⑤ C2 처리 포화 단계</b>의 임계 거동을 다중복제 통계로 뒷받침하는 카드입니다.</p>
         <div class="des-controls">
           <button id="mc-transition-run" class="run-btn">▶ 임계 전환점 스윕 실행</button>
           <span class="note">현재 시나리오 기준, 11점 × 2모드 × 20복제</span>
@@ -275,10 +276,22 @@
       <div class="card">
         <h2>모델링 대상 목록 (C2 · 센서 · 무기체계)</h2>
         <p>전 항목의 수치 근거는 <code>docs/params.md</code>의 파라미터 ID(신뢰도 A/B/C 등급 포함)를 참조합니다.
-           자산 범위 링(rangeKm)은 공개자료 기반 개념값입니다.</p>
+           자산 범위 링(rangeKm)·WTA 적합도·요격탄 단가는 공개자료 기반 개념값입니다.</p>
         <table>
           <thead><tr><th>ID</th><th>명칭</th><th>구분</th><th>존재 모드</th><th>범위(개념)</th><th>파라미터 근거</th></tr></thead>
           <tbody id="inventory-body"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>위협 유형 목록 (사거리대 · 발사권역 · 단가 · 자동화 차등)</h2>
+        <p>위협별 개념 사거리대·발사권역(THR-*-RNG, ENV-AXIS-FIT-01 정합검증), 개념 단가
+           (THR-*-COST-01 — 비용교환비 전용, 한반도 보정 필요), 결심 자동화 차등
+           (C2-AUTO-LEVEL-01)을 표시합니다. 전부 공개자료 기반 정책연구용 개념값입니다.</p>
+        <table>
+          <thead><tr><th>ID</th><th>명칭</th><th>고도대역</th><th>체공창</th>
+              <th>개념 사거리대</th><th>발사권역(개념)</th><th>단가(M$, 개념)</th>
+              <th>자동화 As-Is→To-Be</th><th>파라미터 근거</th></tr></thead>
+          <tbody id="threat-inventory-body"></tbody>
         </table>
       </div>
     </section>

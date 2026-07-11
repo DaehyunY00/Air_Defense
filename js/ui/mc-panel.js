@@ -17,12 +17,22 @@
   function pct(x) { return (x * 100).toFixed(1) + '%'; }
   function pp(x) { return (x * 100).toFixed(2) + '%p'; }
 
+  // MoM 계층 라벨(NATO COBP/SAS-026, ENV-MOM-COBP-01) — 결과 모달·[분석] 탭과 동일 분류
+  var MOM_TIP = {
+    MoP: 'Measure of Performance — 체계 내부 과정 성능 (NATO COBP/SAS-026)',
+    MoCE: 'Measure of C2 Effectiveness — 지휘통제 효과성 (NATO COBP/SAS-026)',
+    MoFE: 'Measure of Force Effectiveness — 전력 전체의 임무 효과 (NATO COBP/SAS-026)'
+  };
+  function momChip(mom) {
+    return '<span class="mom mom-' + mom.toLowerCase() + '" title="' + MOM_TIP[mom] + '">' + mom + '</span> ';
+  }
+
   var METRIC_META = {
-    killRate: { label: '격추율', fmt: pct, kind: 'rate' },
-    leakRate: { label: '요격 실패율', fmt: pct, kind: 'rate' },
-    detectRate: { label: '탐지율', fmt: pct, kind: 'rate' },
-    meanTimeToKillSec: { label: '평균 격추시간', fmt: function (x) { return x.toFixed(0) + '초'; }, kind: 'sec' },
-    bottleneckCount: { label: '도출 병목 수', fmt: function (x) { return x.toFixed(2) + '개'; }, kind: 'count' }
+    killRate: { label: '격추율', mom: 'MoFE', fmt: pct, kind: 'rate' },
+    leakRate: { label: '요격 실패율', mom: 'MoFE', fmt: pct, kind: 'rate' },
+    detectRate: { label: '탐지율', mom: 'MoP', fmt: pct, kind: 'rate' },
+    meanTimeToKillSec: { label: '평균 격추시간', mom: 'MoP', fmt: function (x) { return x.toFixed(0) + '초'; }, kind: 'sec' },
+    bottleneckCount: { label: '도출 병목 수', mom: 'MoCE', fmt: function (x) { return x.toFixed(2) + '개'; }, kind: 'count' }
   };
 
   var last = null;
@@ -36,7 +46,9 @@
       el('mc-context').textContent =
         KJ.scenarioById(state.sc).name + ' · ' +
         (state.mode === 'asis' ? 'As-Is 분절형' : 'To-Be K-JAMDS') +
-        ' · 강도 ×' + Number(state.x).toFixed(1);
+        ' · 강도 ×' + Number(state.x).toFixed(1) +
+        ' · baseSeed ' + state.seed + ' · ' + state.dur + '초' +
+        ' — seed·시간은 [시뮬레이션] 탭 입력값을 따릅니다.';
       if (last) this._renderResult(last);
     },
 
@@ -79,7 +91,7 @@
       // ── 지표별 통계 (현재 모드) ──
       el('mc-metrics-body').innerHTML = Object.keys(METRIC_META).map(function (k) {
         var m = cur.metrics[k], meta = METRIC_META[k];
-        return '<tr><td>' + meta.label + '</td>' +
+        return '<tr><td>' + momChip(meta.mom) + meta.label + '</td>' +
           '<td class="num">' + meta.fmt(m.mean) + '</td>' +
           '<td class="num">± ' + (meta.kind === 'rate' ? pp(m.ci) : (m.ci != null ? m.ci.toFixed(2) : '—')) + '</td>' +
           '<td class="num">[' + (m.lo != null ? meta.fmt(Math.max(0, m.lo)) : '—') + ', ' +
@@ -109,7 +121,7 @@
         else better = cur.metrics[key].mean > oth.metrics[key].mean;
         var sig = overlap ? '<span class="badge badge-idle">유의차 없음</span>'
           : '<span class="badge badge-ok">유의(95% CI 비중첩)</span>';
-        return '<tr><td>' + meta.label + '</td>' +
+        return '<tr><td>' + momChip(meta.mom) + meta.label + '</td>' +
           '<td class="num">' + meta.fmt(a.mean) + ' ± ' + (meta.kind === 'rate' ? pp(a.ci) : (a.ci != null ? a.ci.toFixed(2) : '—')) + '</td>' +
           '<td class="num">' + meta.fmt(b.mean) + ' ± ' + (meta.kind === 'rate' ? pp(b.ci) : (b.ci != null ? b.ci.toFixed(2) : '—')) + '</td>' +
           '<td>' + sig + '</td></tr>';

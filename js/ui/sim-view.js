@@ -579,15 +579,15 @@
     // ⑤-2 실패 항적 타임라인 (Phase C: 개별 항적이 9단계 중 어디서 왜 멈췄는지)
     html += failedTimelineSection(run.res);
 
-    // ⑥ 단계별 흐름 (funnel)
+    // ⑥ 단계별 흐름 (funnel) — 라벨의 번호는 9단계 파이프라인 관문([분석] 탭과 동일 기준)
     var f = run.res.flow;
     var stages = [
-      { label: '생성', n: f.spawned }, { label: '탐지', n: f.detected },
-      { label: 'C2 도달', n: f.reachedC2 }, { label: '교전 개시', n: f.everEngaged },
-      { label: '격추', n: f.killed }
+      { label: '생성 (위협 도착)', n: f.spawned }, { label: '① 탐지', n: f.detected },
+      { label: '②~⑤ C2 도달·처리', n: f.reachedC2 }, { label: '⑥~⑧ 교전 개시', n: f.everEngaged },
+      { label: '⑨ 격추', n: f.killed }
     ];
     var maxN = f.spawned || 1;
-    html += '<h3>단계별 흐름 (생성→탐지→C2→교전→격추)</h3>' + stages.map(function (s, i) {
+    html += '<h3>단계별 흐름 — 9단계 파이프라인 관문 통과 (생성→탐지→C2→교전→격추)</h3>' + stages.map(function (s, i) {
       var w = (s.n / maxN * 100).toFixed(1);
       var loss = i > 0 ? stages[i - 1].n - s.n : 0;
       return '<div class="pb-funnel-row"><div class="pb-funnel-label">' + s.label + '</div>' +
@@ -665,13 +665,15 @@
       var cls = Math.abs(d) < 0.05 ? 'vs-flat' : (tax.structural ? (d < 0 ? 'vs-good' : 'vs-bad') : 'vs-flat');
       return '<tr><td>' + esc(tax.group) + (tax.structural ? ' <span class="badge badge-warn" title="C2 구조 개선(To-Be)으로 감소가 기대되는 원인">구조</span>' : '') +
         '</td><td>' + esc(tax.label) + '</td>' +
+        '<td>' + esc(tax.stage || '—') + '</td>' +
         '<td class="num">' + a + ' (' + ap.toFixed(1) + '%)</td>' +
         '<td class="num">' + b + ' (' + bp.toFixed(1) + '%)</td>' +
         '<td class="num"><span class="' + cls + '">' + (d > 0 ? '+' : '') + d.toFixed(1) + '%p</span></td></tr>';
     }).join('');
-    return '<table><thead><tr><th>병목 분류</th><th>원인</th><th>As-Is 건수(비율)</th>' +
+    return '<table><thead><tr><th>병목 분류</th><th>원인</th><th>발생 단계</th><th>As-Is 건수(비율)</th>' +
       '<th>To-Be 건수(비율)</th><th>Δ%p</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<div class="note">비율 = 각 모드 생성 위협 대비. [구조] 표시 원인(공백·포화·지연)은 To-Be에서 감소하고, ' +
+      '<div class="note">비율 = 각 모드 생성 위협 대비. 발생 단계는 9단계 파이프라인 기준([분석] 탭과 동일 정본). ' +
+      '[구조] 표시 원인(공백·포화·지연)은 To-Be에서 감소하고, ' +
       '그중 일부가 순수 명중 실패로 이동하는 것이 구조적 개선의 정상 경로입니다.</div>';
   }
 

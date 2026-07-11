@@ -714,28 +714,35 @@
   KJ.Simulation = Simulation;
 
   // ── 정밀화 Phase C: 요격 실패(누수) 원인 코드 → 병목 분류(taxonomy) ──
-  // 엔진이 태깅하는 leakReason 코드의 정본 분류. UI(대조표·타임라인)와 회귀 테스트가
-  // 공유한다. group은 구조적 병목 축(어느 계층의 실패인가), structural은 C2 구조 개선
-  // (To-Be)으로 줄어야 하는 원인인지(명중실패 같은 순수 종말 성능과 구분)를 뜻한다.
+  // 엔진이 태깅하는 leakReason 코드의 정본 분류. UI(대조표·타임라인·분석 탭 파이프라인)와
+  // 회귀 테스트가 공유한다. group은 구조적 병목 축(어느 계층의 실패인가), structural은
+  // C2 구조 개선(To-Be)으로 줄어야 하는 원인인지(명중실패 같은 순수 종말 성능과 구분),
+  // stage는 9단계 파이프라인 중 이 실패가 발생하는 단계(분석 탭 매핑과 동일 정본)를 뜻한다.
   KJ.LEAK_TAXONOMY = {
-    not_detected: { label: '미탐지', group: '탐지 공백', structural: true },
-    no_sensor: { label: '탐지 공백(센서 부재)', group: '탐지 공백', structural: true },
-    no_report_path: { label: '보고경로 부재(항적 비융합)', group: '항적 비융합·보고경로 부재', structural: true },
-    responsibility_gap: { label: '책임공백(협조경로 부재)', group: '책임 공백', structural: true },
-    overflow: { label: '포화손실', group: '처리 포화', structural: true }, // 'overflow:<노드>' 접두 코드
-    no_shooter: { label: '교전수단 부재(제약)', group: '교전수단 제약', structural: false },
-    missed: { label: '명중 실패(기회소진)', group: '명중 실패', structural: false },
-    timeout: { label: '처리지연 초과(공역이탈)', group: '처리지연 초과', structural: true }
+    not_detected: { label: '미탐지', group: '탐지 공백', structural: true, stage: '① 탐지' },
+    no_sensor: { label: '탐지 공백(센서 부재)', group: '탐지 공백', structural: true, stage: '① 탐지' },
+    no_report_path: { label: '보고경로 부재(항적 비융합)', group: '항적 비융합·보고경로 부재', structural: true, stage: '② 추적생성' },
+    responsibility_gap: { label: '책임공백(협조경로 부재)', group: '책임 공백', structural: true, stage: '⑥⑦ 결심·협조' },
+    overflow: { label: '포화손실', group: '처리 포화', structural: true, stage: '③④⑤ C2 / ⑧ 교전' }, // 'overflow:<노드>' 접두 코드
+    no_shooter: { label: '교전수단 부재(제약)', group: '교전수단 제약', structural: false, stage: '⑧ 교전명령' },
+    missed: { label: '명중 실패(기회소진)', group: '명중 실패', structural: false, stage: '⑨ BDA' },
+    timeout: { label: '처리지연 초과(공역이탈)', group: '처리지연 초과', structural: true, stage: '⑨ 종합' }
   };
 
-  /** leakReason 코드(‘overflow:<노드>’ 접두 포함)를 taxonomy 항목으로 해석 */
+  /**
+   * leakReason 코드(‘overflow:<노드>’ 접두 포함)를 taxonomy 항목으로 해석.
+   * overflow는 포화된 노드의 카테고리에 따라 발생 단계를 C2 처리(③④⑤)와
+   * 교전명령(⑧)으로 정밀화한다.
+   */
   KJ.leakTaxonomy = function (code) {
     if (KJ.LEAK_TAXONOMY[code]) return KJ.LEAK_TAXONOMY[code];
     if (code && code.indexOf('overflow:') === 0) {
       var base = KJ.LEAK_TAXONOMY.overflow;
-      return { label: base.label + '(' + code.slice(9) + ')', group: base.group, structural: base.structural };
+      var node = KJ.nodeById(code.slice(9));
+      var stage = node && node.category === 'shooter' ? '⑧ 교전명령' : '③④⑤ C2 처리';
+      return { label: base.label + '(' + code.slice(9) + ')', group: base.group, structural: base.structural, stage: stage };
     }
-    return { label: String(code), group: '기타', structural: false };
+    return { label: String(code), group: '기타', structural: false, stage: '—' };
   };
 
   /** 편의 실행기: 단일 복제(replication) 실행. Phase 3 Monte Carlo가 이를 다수 집계한다. */

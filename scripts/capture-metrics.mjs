@@ -26,7 +26,8 @@ const TARGETS = [
   { name: 'sc3-asis-x1.5-saturation', hash: '#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345', tab: 'sim' },
   { name: 'sc1-asis-x1-boundary', hash: '#tab=sim&sc=sc1&mode=asis&x=1&seed=12345', tab: 'sim' },
   { name: 'sc2-asis-x1-uav-burst', hash: '#tab=sim&sc=sc2&mode=asis&x=1&seed=12345', tab: 'sim' },
-  { name: 'sc3-mc-transition-tornado', hash: '#tab=mc&sc=sc3&mode=asis&x=1&seed=12345', tab: 'mc' }
+  { name: 'sc3-mc-transition-tornado', hash: '#tab=mc&sc=sc3&mode=asis&x=1&seed=12345', tab: 'mc' },
+  { name: 'sc3-analysis-pipeline', hash: '#tab=analysis&sc=sc3&mode=asis&x=1.5&seed=12345', tab: 'analysis' }
 ];
 
 /**
@@ -103,6 +104,23 @@ async function captureMcTab(page, target) {
   return { fallback: false, modalPath: p, mapPath: null };
 }
 
+/** [분석] 탭 — 9단계 파이프라인·taxonomy 표가 렌더된 전체 패널 캡처 */
+async function captureAnalysisTab(page, target) {
+  await hardGoto(page, `${baseUrl}/index.html${target.hash}`);
+  await page.waitForSelector('#pipeline-stages .pl-stage', { timeout: 30000 });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    const panel = document.querySelector('#panel-analysis');
+    if (panel) { panel.style.height = 'auto'; panel.style.overflow = 'visible'; }
+    const main = document.querySelector('main');
+    if (main) { main.style.overflow = 'visible'; }
+  });
+  await page.waitForTimeout(200);
+  const p = path.join(outDir, `${target.name}.png`);
+  await page.locator('#panel-analysis').screenshot({ path: p });
+  return { fallback: false, modalPath: p, mapPath: null };
+}
+
 async function main() {
   const browser = await chromium.launch({ headless: true, executablePath: CHROMIUM_PATH });
   const page = await browser.newPage({ viewport: { width: 1680, height: 1000 } });
@@ -112,7 +130,9 @@ async function main() {
   const results = [];
   for (const target of TARGETS) {
     console.log(`캡처 중: ${target.name} (${target.hash})`);
-    const res = target.tab === 'mc' ? await captureMcTab(page, target) : await captureSimTab(page, target);
+    const res = target.tab === 'mc' ? await captureMcTab(page, target)
+      : target.tab === 'analysis' ? await captureAnalysisTab(page, target)
+      : await captureSimTab(page, target);
     results.push({ ...target, ...res });
   }
 

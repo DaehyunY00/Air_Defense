@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>K-JAMDS C2 시뮬레이터 — 사용자 가이드</title>
+<style>
+  /* 인쇄(PDF) 친화 스타일 — scripts/build-guide-pdf.mjs 로 A4 PDF 생성 */
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    /* PDF 빌드 환경은 TrueType 한글(NanumGothic)을 사용 — Chromium PDF 백엔드가
+       CFF(OTF) 한글 폰트를 임베드하지 못하는 제약 회피. 로컬 열람 시엔 시스템 한글 폰트로 폴백 */
+    font-family: "NanumGothic", "Noto Sans KR", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    font-size: 10.5pt; line-height: 1.65; color: #1a2330; word-break: keep-all;
+  }
+  h1 { font-size: 21pt; margin: 0 0 4mm; }
+  h2 { font-size: 14pt; margin: 9mm 0 3mm; padding: 1.5mm 3mm; background: #eef3f9; border-left: 4px solid #2e6fd8; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 6mm 0 2mm; color: #1d4e8f; page-break-after: avoid; }
+  p { margin: 0 0 2.5mm; }
+  ul, ol { margin: 0 0 3mm 6mm; }
+  li { margin-bottom: 1.2mm; }
+  code { font-family: "SF Mono", Consolas, "D2Coding", monospace; font-size: 9pt; background: #f0f3f7; padding: 0 1.2mm; border-radius: 2px; }
+  pre { background: #f0f3f7; border: 1px solid #d8e0ea; border-radius: 4px; padding: 3mm; font-size: 9pt; margin: 0 0 3mm; white-space: pre-wrap; }
+  table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm; font-size: 9pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #c9d4e0; padding: 1.6mm 2.4mm; text-align: left; vertical-align: top; }
+  th { background: #e6edf6; font-weight: 700; }
+  tr:nth-child(even) td { background: #f7fafc; }
+  img.shot { width: 100%; border: 1px solid #c9d4e0; border-radius: 4px; margin: 1mm 0 1mm; }
+  .caption { font-size: 8.5pt; color: #5b6b7e; margin: 0 0 4mm; text-align: center; }
+  .box { border: 1.5px solid #b3541e; background: #fdf3ec; border-radius: 4px; padding: 3mm 4mm; margin: 0 0 4mm; }
+  .box.blue { border-color: #2e6fd8; background: #eef3f9; }
+  .box.green { border-color: #2f6b36; background: #eef7ef; }
+  .box b.t { display: block; margin-bottom: 1mm; }
+  .kbd { display: inline-block; border: 1px solid #aab6c4; border-bottom-width: 2px; border-radius: 3px; padding: 0 1.6mm; font-size: 9pt; background: #fff; }
+  .cover { text-align: center; padding-top: 45mm; page-break-after: always; }
+  .cover .sub { font-size: 13pt; color: #45566b; margin-bottom: 10mm; }
+  .cover .meta { font-size: 10pt; color: #5b6b7e; margin-top: 14mm; }
+  .disc { border: 2px solid #b3541e; background: #fdf3ec; border-radius: 6px; padding: 4mm 6mm; margin: 12mm auto 0; max-width: 150mm; text-align: left; font-size: 9.5pt; }
+  .toc { page-break-after: always; }
+  .toc ol { margin-left: 8mm; }
+  .toc li { margin-bottom: 1.6mm; }
+  .pb { page-break-before: always; }
+  .tag { display: inline-block; font-size: 8pt; font-weight: 700; border-radius: 3px; padding: 0 1.6mm; vertical-align: 1px; }
+  .tag.mop { background: #dce8f8; color: #1d4e8f; }
+  .tag.moce { background: #f6ecd2; color: #7a5b10; }
+  .tag.mofe { background: #ddf0df; color: #205c27; }
+  .good { color: #1d7a28; font-weight: 700; }
+  .bad { color: #b3261e; font-weight: 700; }
+  .muted { color: #5b6b7e; }
+  .step { display: flex; gap: 3mm; margin-bottom: 2.5mm; page-break-inside: avoid; }
+  .step .n { flex-shrink: 0; width: 7mm; height: 7mm; border-radius: 50%; background: #2e6fd8; color: #fff; font-weight: 700; text-align: center; line-height: 7mm; font-size: 10pt; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ 표지 ═══════════ -->
+<div class="cover">
+  <h1>K-JAMDS C2 시뮬레이터<br>사용자 가이드</h1>
+  <div class="sub">기초 조작 · 용어 사전 · 화면별 설명 · 결과 해석 방법</div>
+  <div class="meta">
+    한국형 합동 방공·미사일방어(K-JAMDS) C2 병목 분석 시뮬레이터<br>
+    As-Is(분절형) ↔ To-Be(통합형) 지휘통제 구조 상대비교 도구
+  </div>
+  <div class="disc">
+    ⚠️ <b>디스클레이머</b> — 본 시뮬레이터와 이 문서의 모든 수치·좌표·확률·범위는
+    공개자료(오픈소스) 기반의 <b>정책연구용 개념값이며 실제 작전자료가 아닙니다</b>.
+    모든 좌표는 도시 수준 개념좌표입니다. KP-SAM(신궁)·천마(K-31)는 탄도탄 요격 불가로
+    모델링하며, KAMDOC↔THAAD 연동은 모델링하지 않습니다. 결과는 절대값 예측이 아니라
+    <b>As-Is↔To-Be 상대비교</b>로만 해석해야 합니다.
+  </div>
+</div>
+
+<!-- ═══════════ 목차 ═══════════ -->
+<div class="toc">
+  <h2>목차</h2>
+  <ol>
+    <li>이 도구는 무엇인가 — 목적과 핵심 원칙</li>
+    <li>시작하기 — 실행과 5단계 기본 워크플로</li>
+    <li>상단 컨트롤 — 시나리오·모드·강도·seed·시간</li>
+    <li>[시뮬레이션] 탭 — 지도, 애니메이션, 결과창 읽는 법</li>
+    <li>[분석] 탭 — 9단계 파이프라인 병목·해결 지표</li>
+    <li>[Monte Carlo] 탭 — 통계적 검증</li>
+    <li>[근거자료·제약검증] 탭</li>
+    <li>용어 사전</li>
+    <li>결과 해석 방법 — 목적별 분석 레시피</li>
+    <li>FAQ·문제 해결</li>
+    <li>부록 — 재현 명령·문서 안내</li>
+  </ol>
+</div>
+
+<!-- ═══════════ 1 ═══════════ -->
+<h2>1. 이 도구는 무엇인가 — 목적과 핵심 원칙</h2>
+<p>이 시뮬레이터는 한국군 방공·미사일방어 지휘통제(C2) 구조의 <b>병목이 어디서, 왜
+생기는지</b>를 정량적으로 보여주고, 현행 분절형 체계(<b>As-Is</b>)와 K-JAMDS 통합형
+체계(<b>To-Be</b>)의 차이를 <b>같은 조건에서 나란히 비교</b>하는 정책연구용 도구입니다.</p>
+
+<h3>1.1 두 가지 체계 모드</h3>
+<table>
+  <tr><th style="width:18%">모드</th><th>구조</th><th>특징</th></tr>
+  <tr><td><b>As-Is 분절형</b></td><td>육·해·공 개별 C2 계통이 분리 운용</td>
+    <td>육↔공 협조가 음성(≥180초)에 의존, 항적 비융합(중복항적), 상위 제대 승인 필요</td></tr>
+  <tr><td><b>To-Be 통합형</b></td><td>JAMDC2(Track Fusion) 허브가 전 센서·C2를 연결</td>
+    <td>다중센서 융합 단일 항적, 데이터링크(~2초), 위협별 사전승인 자동교전, Best-Shooter 무기배정</td></tr>
+</table>
+
+<h3>1.2 핵심 원칙 — 병목은 "도출"된다</h3>
+<div class="box blue"><b class="t">이 도구의 정체성</b>
+어느 노드가 병목인지는 데이터 어디에도 미리 정해져 있지 않습니다. 병목은
+<b>[시나리오 위협 부하 λ] × [모드별 C2 연결 구조] × [노드 처리용량(M/M/c/K)]</b>이
+전개된 <b>관측 결과</b>(이용률 ρ≥0.9, 포화 드롭, 협조경로 부재 등)에서 도출됩니다.
+시나리오·강도·모드·seed를 바꾸면 병목의 위치와 정도가 함께 바뀝니다.</div>
+
+<h3>1.3 3대 시나리오 (KJADS 구축안의 3대 문제 상황을 1:1 재현)</h3>
+<table>
+  <tr><th style="width:14%">시나리오</th><th style="width:30%">상황</th><th>무엇을 관찰하는가</th></tr>
+  <tr><td><b>SC1</b><br>교전 중복·책임 공백</td><td>저속기·헬기·무인기·순항미사일이 서부·수도권·중부 책임구역 <b>경계</b>로 접근</td>
+    <td>서로 다른 통제계통(군단 AOC·수방사 JAOC·공군 MCRC)이 같은 위협을 두고 협조가 늦어 생기는 <b>중복교전 위험과 책임공백</b></td></tr>
+  <tr><td><b>SC2</b><br>무인기 대응 실패</td><td>소형 무인기 8대 동시 남파(2022.12.26 확대 재현) + 산발 침투</td>
+    <td>저고도·저피탐 표적의 <b>탐지 반복 실패</b>, 낮은 요격확률, 고가 요격수단 소모(<b>비용교환비</b>)</td></tr>
+  <tr><td><b>SC3</b><br>전략적 섞어쏘기</td><td>탄도탄·방사포·순항·무인기·전투기가 전 축선 동시 공격(복합 포화)</td>
+    <td>C2 처리용량 초과(ρ≥0.9) 구간에서 As-Is 누출률이 비선형 급증하는 <b>임계 전환점</b>과 To-Be 개선폭</td></tr>
+</table>
+
+<h3>1.4 위협은 어디서 오는가 — 4개 축선</h3>
+<p>위협은 4개 개념 축선을 따라 북측 개념 발사권역에서 남쪽 표적권역으로 이동합니다
+(전부 도시 수준 개념좌표 — 실제 발사원점·침투경로가 아님).</p>
+<table>
+  <tr><th>축선</th><th>진입점(개념)</th><th>표적권역(개념)</th><th>주요 위협</th></tr>
+  <tr><td>서부축(서해)</td><td>해주 인근</td><td>서울</td><td>무인기·저속기·순항·전투기</td></tr>
+  <tr><td>중부축(DMZ)</td><td>평강 인근(종심)</td><td>오산·평택 권역</td><td>탄도탄·방사포·순항·무인기·전투기</td></tr>
+  <tr><td>동부축(동해안)</td><td>원산 인근</td><td>강릉 권역</td><td>방사포</td></tr>
+  <tr><td>수도권 직접침투</td><td>개성 인근</td><td>서울 도심</td><td>무인기(2022.12.26 재현)·저속기·헬기</td></tr>
+</table>
+
+<!-- ═══════════ 2 ═══════════ -->
+<h2>2. 시작하기 — 실행과 5단계 기본 워크플로</h2>
+<h3>2.1 실행</h3>
+<pre>cd Air_Defense          # 저장소 폴더
+./scripts/serve.sh      # 로컬 서버 시작
+# 브라우저에서 http://localhost:8000 접속</pre>
+<p>정적 웹페이지라 설치·빌드가 필요 없습니다. 외부 의존성은 지도 라이브러리(Leaflet CDN)
+하나뿐이며, 인터넷이 차단된 환경에서는 지도가 자동으로 <b>내장 SVG 개념도</b>로 대체되고
+나머지 기능은 동일하게 동작합니다.</p>
+
+<h3>2.2 기본 워크플로 (5단계)</h3>
+<div class="step"><div class="n">1</div><div><b>시나리오 선택</b> — 상단의 시나리오 드롭다운에서 SC1~SC3 중 하나를 고릅니다.</div></div>
+<div class="step"><div class="n">2</div><div><b>모드·강도 설정</b> — 체계 모드 토글(As-Is↔To-Be)과 위협 강도 슬라이더(0.5×~3.0×)를 조정합니다. 먼저 As-Is로 실행해 보는 것을 권장합니다.</div></div>
+<div class="step"><div class="n">3</div><div><b>▶ 시뮬레이션 시작</b> — 지도 우측 패널의 버튼을 누르면 이산사건 시뮬레이션(DES)이 실행되고 위협 궤적이 지도에 재생됩니다.</div></div>
+<div class="step"><div class="n">4</div><div><b>결과창 확인</b> — 재생이 끝나면 결과창이 자동으로 뜹니다(📊 결과 보기로 즉시 열 수도 있음). As-Is↔To-Be 비교·병목·실패 원인을 읽습니다(§4.3).</div></div>
+<div class="step"><div class="n">5</div><div><b>심화 분석</b> — [분석] 탭에서 9단계 파이프라인 지표를, [Monte Carlo] 탭에서 통계적 유의성과 임계 전환점을 확인합니다(§5·§6).</div></div>
+
+<h3>2.3 딥링크로 상태 공유</h3>
+<p>주소창의 해시(<code>#tab=sim&amp;sc=sc3&amp;mode=asis&amp;x=1.5&amp;seed=12345</code>)에
+현재 설정이 항상 반영됩니다. 이 URL을 복사해 전달하면 받은 사람이 <b>완전히 동일한
+세팅과 결과</b>를 재현할 수 있습니다(§8 "seed·결정론" 참조).</p>
+
+<!-- ═══════════ 3 ═══════════ -->
+<h2>3. 상단 컨트롤 — 시나리오·모드·강도·seed·시간</h2>
+<table>
+  <tr><th style="width:22%">컨트롤</th><th>의미</th><th style="width:34%">사용 팁</th></tr>
+  <tr><td><b>시나리오</b></td><td>위협 구성(어떤 위협이 어느 축선으로 분당 몇 건 도착하는지)을 결정</td><td>목적에 맞는 시나리오 선택(§1.3)</td></tr>
+  <tr><td><b>체계 모드</b></td><td>As-Is 분절형 ↔ To-Be 통합형 토글</td><td>결과창·분석 탭은 두 모드를 자동으로 함께 계산해 비교해 주므로, 이 토글은 "지도에 어느 구조를 그릴지"에 가깝습니다</td></tr>
+  <tr><td><b>위협 강도 ×</b></td><td>모든 위협 도착률에 곱하는 배수(0.5~3.0)</td><td>×1.5~×2.0부터 병목이 잘 드러나고, SC3는 ×1.75 부근에서 임계 돌파(기본 seed 기준)</td></tr>
+  <tr><td><b>seed</b></td><td>난수 시드 — 같은 seed·설정이면 결과가 항상 동일(결정론)</td><td>보고서에 인용할 결과는 seed를 기록해 두세요</td></tr>
+  <tr><td><b>시간(초)</b></td><td>시뮬레이션 길이(기본 1800초=30분)</td><td>짧으면 표본이 적어 흔들립니다. 통계 주장은 MC 탭으로</td></tr>
+</table>
+<div class="box"><b class="t">⚠ seed·시간 변경 시 주의</b>
+seed·시간 입력을 바꾼 뒤에는 <b>[↺ 다시 실행]을 눌러야</b> 새 설정으로 재계산됩니다.
+값을 바꾸면 화면 하단 상태줄에 안내 문구가 표시됩니다. [분석] 탭의 파이프라인 지표는
+현재 seed·시간을 자동으로 따릅니다.</div>
+
+<!-- ═══════════ 4 ═══════════ -->
+<h2 class="pb">4. [시뮬레이션] 탭 — 지도, 애니메이션, 결과창 읽는 법</h2>
+
+<h3>4.1 지도 요소</h3>
+<table>
+  <tr><th style="width:26%">요소</th><th>표시</th><th>의미</th></tr>
+  <tr><td>지휘통제(C2) 노드</td><td>■ 주황 사각형</td><td>KAOC·MCRC·KAMDOC·군단 AOC·수방사 JAOC·(To-Be)JAMDC2 — 항적 처리·교전승인을 수행하는 대기행렬 서버</td></tr>
+  <tr><td>탐지 센서</td><td>● 파랑 원</td><td>레이더·조기경보기·이지스함 등. 파랑 점선 링 = 탐지범위(개념)</td></tr>
+  <tr><td>요격 무기</td><td>▲ 초록 삼각형</td><td>전투기·지대공·함대공. 초록 링 = 교전범위(개념)</td></tr>
+  <tr><td>데이터링크 / Link-16</td><td>파랑 실선/파선</td><td>합동·공군·해군 계열 자동 항적 전파(2~12초)</td></tr>
+  <tr><td>데이터링크 KVMF</td><td>청록 파선</td><td>육군 체계 간 데이터링크(~30초)</td></tr>
+  <tr><td>음성보고</td><td>빨강 점선</td><td>As-Is 육↔공 협조(≥180초) — 핵심 병목의 시각적 표현</td></tr>
+  <tr><td>병목/포화 노드</td><td>🔴 점멸 테두리</td><td><b>이번 실행에서 도출된</b> 병목(고정 아님)</td></tr>
+  <tr><td>위협</td><td>붉은 계열 ●</td><td>밝은 적색(무인기·저속기·헬기) → 진한 적색(탄도탄·방사포). 북측 개념 진입점에서 출발해 남하</td></tr>
+</table>
+<p>노드를 클릭하면 팝업으로 역할·부하(λ, ρ)·교전 제약(예: 신궁·천마 탄도탄 불가)을
+보여줍니다. 좌상단 <b>위협 항적 로그</b>에서 개별 위협을 클릭하면 그 위협의 9단계
+진행 상황(탐지→보고→처리→승인→교전→격추/실패)을 실시간으로 추적할 수 있습니다.</p>
+
+<h3>4.2 재생 조작</h3>
+<p>재생 속도(10×~120×), ⏸ 일시멈춤, 범위 링 표시 토글을 지도 위 패널에서 조작합니다.
+재생이 끝나면 결과창이 자동으로 열립니다.</p>
+
+<h3>4.3 결과창(시뮬레이션 결과 — 정량 분석) 읽는 법</h3>
+<img class="shot" src="screenshots/sc3-asis-x1.5-saturation__result-modal.png" alt="결과창 예시">
+<div class="caption">그림 1 — SC3(섞어쏘기) As-Is ×1.5 결과창 전체 (seed 12345)</div>
+
+<p>결과창은 위에서 아래로 다음 순서로 읽습니다:</p>
+<ol>
+  <li><b>결과 요약 카드</b> — 생성/탐지/격추/요격 실패 건수, 평균 격추시간, 결심 지연,
+    분권 전환, 도출 병목 수. 현재 실행한 모드의 한눈 요약입니다.</li>
+  <li><b>As-Is ↔ To-Be 정량 비교</b> — 같은 seed로 두 모드를 자동 실행해 9개 지표를
+    좌(As-Is, 적색)·우(To-Be, 초록) 막대로 대조합니다. 각 지표에는
+    <span class="tag mop">MoP</span><span class="tag moce">MoCE</span><span class="tag mofe">MoFE</span>
+    계층 태그(§8)와, 마우스를 올리면 정의·근거 툴팁이 붙어 있습니다. 상단 5개(결심 지연·
+    요격 실패율·격추율·중복교전 위험·비용교환비)가 우선 대조 지표입니다. 가운데
+    <span class="good">초록 판정</span>이 To-Be 개선, <span class="bad">빨강</span>이 악화입니다.</li>
+  <li><b>Monte Carlo 95% 신뢰구간</b> — 백그라운드에서 자동 수행한 다중복제 결과.
+    "두 95% CI 비중첩"이면 이 조건에서 To-Be 개선이 <b>통계적으로 유의</b>하다는 뜻입니다.</li>
+  <li><b>도출된 병목</b> — 이번 실행 관측 통계에서 도출된 병목 노드·링크·공백 목록(심각도순).</li>
+  <li><b>요격 실패 원인 분해(대조표)</b> — 실패 원인 코드별 As-Is/To-Be 건수·비율·Δ%p와
+    <b>발생 단계</b>. [구조] 배지가 붙은 원인(공백·포화·지연)은 C2 통합으로 줄어야 정상이며,
+    그 일부가 순수 "명중 실패"로 이동하는 것이 구조 개선의 정상 경로입니다.</li>
+  <li><b>실패 항적 타임라인</b> — 개별 실패 위협이 9단계 중 <b>어디서 왜 멈췄는지</b>.
+    항목을 펼치면 시각이 찍힌 전체 타임라인이 나옵니다.</li>
+  <li><b>단계별 흐름(funnel)</b> — 생성→①탐지→②~⑤C2→⑥~⑧교전→⑨격추 관문 통과 건수와 단계별 손실.</li>
+  <li><b>축선별 중복교전 위험</b> — 축선마다 As-Is(적)/To-Be(초록) 위험도 비교. To-Be는
+    JAMDC2 허브가 전 계통을 연결해 0으로 해소됩니다.</li>
+  <li><b>노드 관측 통계</b> — 노드별 도착/완료/드롭/관측 ρ/평균대기. ρ≥0.9 병목, 드롭&gt;0 포화.</li>
+</ol>
+
+<!-- ═══════════ 5 ═══════════ -->
+<h2 class="pb">5. [분석] 탭 — 9단계 파이프라인 병목·해결 지표</h2>
+<p>이 탭은 "<b>어느 단계에서 병목이 생기고, 무엇으로 관측하며, To-Be가 어떻게 해결하는가</b>"를
+엔진의 9단계 처리 파이프라인 순서 그대로 보여줍니다. 모든 지표는 현재 시나리오·강도·seed로
+As-Is/To-Be를 각 1회씩 결정론 실행해 나란히 비교한 값입니다.</p>
+<img class="shot" src="screenshots/sc3-analysis-pipeline.png" alt="분석 탭">
+<div class="caption">그림 2 — [분석] 탭: 9단계 파이프라인 카드 + taxonomy 표 + 정상상태 해석 상세</div>
+
+<h3>5.1 9단계와 단계별 지표</h3>
+<table>
+  <tr><th style="width:20%">단계</th><th style="width:33%">병목(무엇이 막히나)</th><th>관측 지표 / 실패코드</th></tr>
+  <tr><td>① 탐지</td><td>저고도·저피탐 탐지 실패, 센서 커버리지 공백</td><td>탐지율 / <code>not_detected</code>·<code>no_sensor</code></td></tr>
+  <tr><td>② 추적생성(보고)</td><td>항적 비융합, 보고경로 부재</td><td>통신지연 부하 / <code>no_report_path</code></td></tr>
+  <tr><td>③④⑤ C2 처리<br>(식별·평가·무기배정)</td><td>C2 대기행렬 포화</td><td>C2 최대 ρ·드롭·병목 수 / <code>overflow:&lt;C2노드&gt;</code></td></tr>
+  <tr><td><b>⑥⑦ 결심·교전협조</b> ★</td><td><b>한국군 이원화 C2의 최대 병목</b> — 음성 협조 지연·책임공백·중복교전</td><td>결심 지연·중복교전 위험·분권 전환 / <code>responsibility_gap</code></td></tr>
+  <tr><td>⑧ 교전명령</td><td>교전수단 제약(신궁·천마↔탄도탄), 교전채널 포화</td><td>무기 ρ·드롭 / <code>no_shooter</code>·<code>overflow:&lt;무기&gt;</code></td></tr>
+  <tr><td>⑨ BDA·재교전</td><td>명중 실패(낮은 요격확률), 체공창 소진</td><td>격추율·평균 격추시간·비용교환비 / <code>missed</code>·<code>timeout</code></td></tr>
+  <tr><td>결과 종합</td><td>전 단계의 귀결</td><td>요격 실패율(누출률)·구조적 실패 합</td></tr>
+</table>
+
+<h3>5.2 하단 상세(정상상태 해석)</h3>
+<p>파이프라인 아래에는 병목 taxonomy 8종 표(§8.2와 동일), 정책적 읽기(어느 단계에 투자할
+것인가), 그리고 수식 기반(M/M/c) 정상상태 근사로 계산한 노드 이용률 표·통신 링크 부하표·
+위협별 타임라인이 이어집니다. 링크 표에서는 유형(voice/kvmf/link16/datalink)별 지연과
+통신병목 판정을 볼 수 있습니다.</p>
+
+<!-- ═══════════ 6 ═══════════ -->
+<h2 class="pb">6. [Monte Carlo] 탭 — 통계적 검증</h2>
+<p>단일 실행은 난수의 우연에 좌우될 수 있습니다. 이 탭은 같은 설정을 <b>수십~수백 번
+반복(복제)</b>해 평균과 95% 신뢰구간(CI)을 추정하고, As-Is↔To-Be 차이가 우연이 아님을
+확인하는 곳입니다.</p>
+<img class="shot" src="screenshots/sc3-mc-transition-tornado.png" alt="Monte Carlo 탭">
+<div class="caption">그림 3 — [Monte Carlo] 탭: 수렴판정·유의성·민감도 토네이도·임계 전환점</div>
+<ul>
+  <li><b>수렴 판정</b> — 요격 실패율 CI 반폭이 허용오차(기본 1%p) 이하가 되면 자동 정지.
+    "수렴"이 떴다면 복제 수가 충분하다는 뜻입니다.</li>
+  <li><b>As-Is↔To-Be 통계적 유의성</b> — 지표별 평균±CI를 비교해 <b>"유의(95% CI 비중첩)"</b>
+    배지가 붙으면 그 차이는 표본 변동으로 설명되지 않습니다. 보고서에 개선 효과를 인용할 때
+    이 표를 근거로 쓰세요.</li>
+  <li><b>민감도 토네이도</b> — 각 입력 인자(처리시간·요격확률·강도·탐지확률·통신지연)를 ±20%
+    흔들었을 때 요격 실패율이 얼마나 변하는지. <b>막대가 긴 인자가 개선 투자 우선순위</b>입니다.</li>
+  <li><b>임계 전환점</b> — 강도 0.5×~3.0×를 스윕하며 As-Is(적)/To-Be(초록) 실패율 곡선을 그립니다.
+    As-Is C2 이용률이 ρ=0.9를 돌파하는 강도(수직 점선) 이후 두 곡선의 격차가 비선형으로
+    벌어지는 것이 <b>"포화 구간에서 통합 C2의 가치"</b> 핵심 논증입니다.</li>
+</ul>
+
+<!-- ═══════════ 7 ═══════════ -->
+<h2>7. [근거자료·제약검증] 탭</h2>
+<ul>
+  <li><b>제약조건 어서션</b> — 신궁·천마 탄도탄 불가, THAAD 미모델링, 디스클레이머 표출,
+    개념좌표 표기, KF-21 보라매 표기가 <b>상시 자동 검증</b>되어 ✅/❌로 표시됩니다.</li>
+  <li><b>모델링 대상 목록</b> — 전 자산(C2·센서·무기)의 범위·파라미터 근거 ID.</li>
+  <li><b>위협 유형 목록</b> — 위협별 고도대역·체공창·개념 사거리대·발사권역·개념 단가·
+    자동화 차등(As-Is→To-Be)과 근거 ID.</li>
+</ul>
+<p>모든 수치의 출처와 신뢰도 등급(A: 공식문서 / B: 언론·논문 2차 / C: 개념 추정)은
+<code>docs/params.md</code>에 파라미터 ID로 등재되어 있습니다.</p>
+
+<!-- ═══════════ 8 ═══════════ -->
+<h2 class="pb">8. 용어 사전</h2>
+
+<h3>8.1 핵심 용어</h3>
+<table>
+  <tr><th style="width:24%">용어</th><th>설명</th></tr>
+  <tr><td>DES (이산사건 시뮬레이션)</td><td>위협 하나하나를 개별 객체로 만들어 탐지→보고→처리→교전의 사건을 시간 순으로 전개하는 방식. 이 도구의 계산 엔진.</td></tr>
+  <tr><td>M/M/c/K 대기행렬</td><td>C2·무기 노드의 수학 모델. 도착(λ)과 처리시간이 확률적이고, 서버(결심 라인/교전채널) c개, 대기실 포함 최대 수용 K를 넘는 도착은 <b>드롭</b>(항적/교전기회 상실)됩니다.</td></tr>
+  <tr><td>λ (도착률)</td><td>분당 도착 위협/항적 건수. 시나리오와 강도 슬라이더가 결정.</td></tr>
+  <tr><td>ρ (이용률)</td><td>서버가 바쁜 시간 비율(0~1). <b>0.7 주의 / 0.9 병목 / 드롭 발생 시 포화</b>. 0.9 부근부터 대기시간이 비선형 폭증합니다.</td></tr>
+  <tr><td>Wq / Lq</td><td>평균 대기시간(초) / 평균 대기열 길이(건). 포화 진단의 보조 지표.</td></tr>
+  <tr><td>dwell (체공창)</td><td>위협이 요격 가능 공역에 머무는 시간(개념값). 이 안에 격추하지 못하면 누출. 탄도탄은 90초 내외로 짧아 <b>승인 지연 = 요격기회 상실</b>이 됩니다.</td></tr>
+  <tr><td>Pk (요격확률)</td><td>교전 1회의 명중 확률(개념 분포). 소형 무인기는 0.1~0.5로 낮게 설정(2022.12.26 격추 실패 반영).</td></tr>
+  <tr><td>seed · 결정론</td><td>모든 난수는 seed에서 파생됩니다. <b>같은 설정+같은 seed = 항상 같은 결과</b>. 재현·공유·디버깅의 기반.</td></tr>
+  <tr><td>burst</td><td>일회성 동시 다발 침투(예: SC2 무인기 8대 동시 남파). 연속 도착 스트림과 구분.</td></tr>
+  <tr><td>Track Fusion (JAMDC2)</td><td>To-Be의 핵심 — 여러 센서가 본 같은 위협을 단일 연속 항적으로 융합해 전 계통에 공유(Any Sensor).</td></tr>
+  <tr><td>WTA / Best-Shooter</td><td>무기-표적 할당. As-Is는 부하가 적은 무기 선택에 그치지만, To-Be는 위협 고도대역별 <b>적합도×잔여 용량</b> 점수로 최적 무기를 고릅니다(Best Shooter). 단, 신궁·천마의 탄도탄 교전 불가 같은 제약이 항상 우선.</td></tr>
+  <tr><td>분권 전환 (동적 권한위임)</td><td>승인권자 대기열이 임계를 넘으면 결심을 하위/자동으로 위임하는 동작. 부하의 함수라 저강도에서는 발생하지 않습니다.</td></tr>
+  <tr><td>자동화 차등</td><td>위협별 결심 방식 — 유인결심(human-in-loop) / 감독자동(human-on-loop) / 사전승인(auto-preauth). To-Be에서 무인기·탄도탄은 사전승인 자동교전.</td></tr>
+  <tr><td>F2T2EA / OODA / TEWA</td><td>표적처리 킬체인(Find-Fix-Track-Target-Engage-Assess) / 결심 루프(관측-판단-결심-행동) / 위협평가·무기할당. 엔진 9단계가 이들과 1:1 매핑됩니다([분석] 탭 카드에 표기).</td></tr>
+  <tr><td>MoP / MoCE / MoFE</td><td>NATO 지표 계층 — <span class="tag mop">MoP</span> 과정 성능(결심 지연·통신지연·격추시간) / <span class="tag moce">MoCE</span> C2 효과성(중복교전 위험·구조적 실패·병목 수) / <span class="tag mofe">MoFE</span> 전력 효과(누출률·격추율·비용교환비).</td></tr>
+  <tr><td>95% CI · 수렴</td><td>신뢰구간 — "참값이 이 범위에 있을 것"의 통계적 표현. 두 모드의 CI가 겹치지 않으면 차이가 유의합니다.</td></tr>
+  <tr><td>임계 전환점</td><td>As-Is C2 최대 ρ가 0.9를 처음 넘는 위협 강도. 이 이후 구간에서 To-Be 개선폭이 비선형으로 커집니다.</td></tr>
+  <tr><td>비용교환비</td><td>저가 포화위협(무인기·방사포) 대응에 소모한 요격탄 개념비용 ÷ 격추한 위협의 개념가치. &gt;1이면 아군이 더 비싼 자원을 소모. <b>주의: To-Be가 항상 개선되는 지표가 아닙니다</b>(시나리오·강도에 따라 반전 가능).</td></tr>
+  <tr><td>누출률(요격 실패율)</td><td>생성 위협 중 격추하지 못하고 공역을 통과한 비율 — 모든 단계 병목의 최종 귀결.</td></tr>
+  <tr><td>KVMF / Link-16 / SAWS</td><td>육군 계열 데이터링크(~30초) / 합동·공군·해군 전술데이터링크(~12초) / 일방향 위성 경보방송(교전용 항적으로 사용 불가).</td></tr>
+</table>
+
+<h3>8.2 실패코드 8종 (병목 taxonomy)</h3>
+<table>
+  <tr><th>코드</th><th>라벨</th><th>발생 단계</th><th>구조적?</th><th>해결 주체</th></tr>
+  <tr><td><code>not_detected</code></td><td>미탐지</td><td>① 탐지</td><td>✅</td><td>센서·융합</td></tr>
+  <tr><td><code>no_sensor</code></td><td>탐지 공백(센서 부재)</td><td>① 탐지</td><td>✅</td><td>센서 배치</td></tr>
+  <tr><td><code>no_report_path</code></td><td>보고경로 부재(항적 비융합)</td><td>② 추적생성</td><td>✅</td><td>To-Be 융합</td></tr>
+  <tr><td><code>responsibility_gap</code></td><td>책임공백(협조경로 부재)</td><td>⑥⑦ 결심·협조 ★</td><td>✅</td><td><b>To-Be 통합 C2</b></td></tr>
+  <tr><td><code>overflow:&lt;노드&gt;</code></td><td>포화손실</td><td>③④⑤ C2 / ⑧ 교전</td><td>✅</td><td>처리용량·자동화</td></tr>
+  <tr><td><code>no_shooter</code></td><td>교전수단 부재(제약)</td><td>⑧ 교전명령</td><td>❌</td><td>무기체계 능력</td></tr>
+  <tr><td><code>missed</code></td><td>명중 실패(기회소진)</td><td>⑨ BDA</td><td>❌</td><td>무기 Pk·재교전</td></tr>
+  <tr><td><code>timeout</code></td><td>처리지연 초과(공역이탈)</td><td>⑨ 종합</td><td>✅</td><td>전 단계 지연</td></tr>
+</table>
+<div class="box green"><b class="t">읽는 법</b>
+✅ <b>구조적</b> 원인은 C2 통합(To-Be)으로 감소가 기대되는 병목입니다. ❌ 비구조
+(<code>no_shooter</code>·<code>missed</code>)는 C2가 아니라 무기체계 능력·요격확률의 문제라
+통합해도 줄지 않는 것이 정상입니다. To-Be에서 구조적 원인이 줄고 그 일부가
+<code>missed</code>로 옮겨가는 것이 <b>구조 개선의 정상 경로</b>입니다.</div>
+
+<!-- ═══════════ 9 ═══════════ -->
+<h2 class="pb">9. 결과 해석 방법 — 목적별 분석 레시피</h2>
+
+<h3>레시피 A. "To-Be가 얼마나 나은가"를 주장하고 싶다</h3>
+<ol>
+  <li>결과창 <b>As-Is↔To-Be 비교 블록</b>에서 우선 대조 5지표(결심 지연·누출률·격추율·
+    중복교전 위험·비용교환비)의 방향과 크기를 확인합니다.</li>
+  <li>같은 결과창의 <b>MC 95% CI</b>가 "비중첩(유의)"인지 확인합니다 — 1회 실행의 우연이
+    아니라는 근거.</li>
+  <li>[Monte Carlo] 탭에서 <b>임계 전환점 스윕</b>을 실행합니다. "임계(ρ≥0.9) 이후 평균
+    개선폭이 이전보다 몇 배 커진다"가 투자정당화의 핵심 문장이 됩니다.</li>
+  <li>인용 시 시나리오·강도·seed·복제수를 함께 기록합니다(재현 가능성).</li>
+</ol>
+
+<h3>레시피 B. "병목이 어디인가"를 찾고 싶다</h3>
+<ol>
+  <li>결과창 <b>도출된 병목</b> 목록(또는 헤더의 병목 카운트)에서 후보를 봅니다.</li>
+  <li><b>노드 관측 통계</b>에서 ρ 상위 노드와 드롭 여부를 확인합니다(ρ≥0.9 병목·드롭=포화).</li>
+  <li>[분석] 탭 <b>9단계 파이프라인</b>에서 그 병목이 어느 단계의 문제인지 자리를 잡습니다 —
+    같은 "포화"라도 C2 처리(③④⑤)와 교전채널(⑧)은 처방이 다릅니다.</li>
+  <li>강도 슬라이더를 낮춰 보세요. 병목이 사라지면 <b>용량 문제</b>(부하의 함수),
+    저강도에서도 남아 있으면 <b>구조 문제</b>(공백·제약)입니다.</li>
+</ol>
+
+<h3>레시피 C. "위협이 왜 새어 나갔나"를 추적하고 싶다</h3>
+<ol>
+  <li>결과창 <b>요격 실패 원인 대조표</b>에서 가장 큰 원인 코드와 발생 단계를 봅니다.</li>
+  <li>[구조] 배지 원인이 To-Be 열에서 줄었는지(Δ%p가 초록인지) 확인합니다.</li>
+  <li><b>실패 항적 타임라인</b>에서 개별 위협을 펼쳐 어느 단계에서 몇 초에 멈췄는지 봅니다 —
+    예: "교전명령까지 갔지만 공역이탈" = 앞 단계 지연 누적이 원인.</li>
+  <li>지도 <b>위협 항적 로그</b>에서 해당 위협을 클릭하면 재생 중 궤적과 단계가 연동됩니다.</li>
+</ol>
+
+<h3>레시피 D. "어떤 입력이 결과를 지배하는가"</h3>
+<ol>
+  <li>[Monte Carlo] 탭 <b>민감도 토네이도</b>를 실행합니다.</li>
+  <li>막대가 가장 긴 인자(예: SC3 포화에서는 보통 "노드 처리시간")가 개선 투자 1순위입니다.</li>
+  <li>시나리오를 바꿔 다시 실행해 보세요 — 민감도 순위 자체가 시나리오의 함수임을 확인할 수
+    있습니다(탐지 제약 상황에서는 탐지확률이 위로 올라옵니다).</li>
+</ol>
+
+<h3>9.5 시나리오별 대표 판독 포인트</h3>
+<table>
+  <tr><th style="width:12%">시나리오</th><th>주목할 화면</th><th>기대되는 패턴</th></tr>
+  <tr><td><b>SC1</b></td><td>축선별 중복교전 위험, 링크 표의 voice 협조</td><td>As-Is에서 서부·수도권·중부 경계 위험&gt;0, To-Be에서 0으로 해소. 결심 지연 대폭 단축</td></tr>
+  <tr><td><b>SC2</b></td><td>실패 타임라인(명중 실패 다수), 비용교환비</td><td>구조 개선 후에도 <code>missed</code>가 남음(저Pk는 무기 문제) — 비용교환비 수십 배(고가 요격탄 소모 구조)</td></tr>
+  <tr><td><b>SC3</b></td><td>노드 ρ표(KAMDOC·KAOC·AOC), 임계 전환점</td><td>×1.75 부근 임계 돌파(기본 seed) 후 As-Is 급증 — 임계 이후 개선폭 확대가 핵심 논증</td></tr>
+</table>
+
+<h3>9.6 해석 시 주의사항</h3>
+<ul>
+  <li><b>절대값이 아니라 상대비교</b> — 파라미터 다수가 개념값(신뢰도 C)입니다. "누출률 52%"
+    자체가 아니라 "같은 조건에서 As-Is 대비 To-Be가 몇 %p 낮다"로 말하세요.</li>
+  <li><b>비용교환비는 비단조</b> — 시나리오·강도에 따라 To-Be가 악화로 나올 수 있습니다
+    (Best-Shooter 배정·재교전 횟수 차이의 자연스러운 결과). 단독 인용에 주의.</li>
+  <li><b>1복제 vs 통계</b> — 결과창·[분석] 탭은 결정론 1복제(그 seed의 사실), 보고서 주장은
+    MC CI(통계적 사실)로 뒷받침하세요.</li>
+  <li><b>trace 상한</b> — 항적 로그·실패 타임라인은 최대 300건 추적입니다(초과 시 표기).
+    통계 수치는 절삭과 무관하게 전체 기준입니다.</li>
+</ul>
+
+<!-- ═══════════ 10 ═══════════ -->
+<h2 class="pb">10. FAQ · 문제 해결</h2>
+<table>
+  <tr><th style="width:38%">증상/질문</th><th>답</th></tr>
+  <tr><td>터미널 링크(<code>http://[::]:8000/</code>)를 눌러도 안 열려요</td><td><code>./scripts/serve.sh</code>로 실행하세요 — 항상 바로 열리는 <code>http://127.0.0.1:8000</code> 링크가 뜹니다.</td></tr>
+  <tr><td>지도가 안 뜨고 "SVG 개념도로 표시 중"이 나와요</td><td>정상입니다 — 인터넷(지도 CDN)이 차단된 환경의 자동 대체 모드로, 시뮬레이션·분석 기능은 동일합니다.</td></tr>
+  <tr><td>seed를 바꿨는데 결과가 그대로예요</td><td>[↺ 다시 실행]을 눌러야 반영됩니다(상태줄 안내 참조). [분석] 탭은 자동 반영.</td></tr>
+  <tr><td>병목이 하나도 안 나와요</td><td>병목은 부하의 함수입니다 — 강도를 올리거나(SC3 ×2 권장) 시나리오를 바꿔 보세요.</td></tr>
+  <tr><td>분권 전환이 항상 0건이에요</td><td>승인권자 대기열이 임계를 넘어야 발생합니다. 기본 seed 기준 SC3 ×2.0 이상의 As-Is에서 관측됩니다.</td></tr>
+  <tr><td>같은 설정인데 결과창 숫자와 MC 평균이 달라요</td><td>결과창 상단은 1복제(해당 seed), MC는 다수 복제의 평균입니다. 서로 다른 것이 정상.</td></tr>
+  <tr><td>결과를 남에게 그대로 보여주고 싶어요</td><td>주소창 URL(해시 포함)을 복사해 전달하세요 — 동일 세팅·동일 결과가 재현됩니다.</td></tr>
+  <tr><td>이 수치를 실제 작전 판단에 써도 되나요</td><td><b>안 됩니다.</b> 전부 공개자료 기반 정책연구용 개념값입니다(표지 디스클레이머).</td></tr>
+</table>
+
+<!-- ═══════════ 11 ═══════════ -->
+<h2>11. 부록 — 재현 명령·문서 안내</h2>
+<pre># 회귀 테스트 전체 (구문 + 7개 스위트)
+node tests/run-all.js
+
+# 웹 UI
+./scripts/serve.sh              # → http://localhost:8000
+
+# 이 가이드 PDF 재생성
+node scripts/build-guide-pdf.mjs
+
+# 화면 스크린샷 재캡처
+./scripts/serve.sh &  &&  node scripts/capture-metrics.mjs http://localhost:8000</pre>
+<table>
+  <tr><th style="width:34%">문서</th><th>내용</th></tr>
+  <tr><td><code>README.md</code></td><td>개요·실행·구조</td></tr>
+  <tr><td><code>docs/params.md</code></td><td>모든 수치의 출처·신뢰도(A/B/C) 파라미터 근거표</td></tr>
+  <tr><td><code>docs/vv-report.md</code></td><td>검증(V&amp;V) 보고서 — 9단계↔표준 프레임워크 매핑, 한계</td></tr>
+  <tr><td><code>docs/metrics-verification.md</code></td><td>18개 지표 구현·시각화 감사 보고서</td></tr>
+  <tr><td><code>docs/분석가_가이드.md</code></td><td>1분 시작용 요약 가이드(본 문서의 축약판)</td></tr>
+</table>
+<p class="muted" style="margin-top:8mm">본 문서의 모든 수치·좌표·확률·범위는 공개자료 기반
+정책연구용 개념값이며 실제 작전자료가 아닙니다. — K-JAMDS C2 시뮬레이터 사용자 가이드</p>
+
+</body>
+</html>

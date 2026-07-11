@@ -188,6 +188,10 @@ li.tlog-future { color: #4a5666; }
 .vs-delta.vs-good { color: #7dd982; }
 .vs-delta.vs-bad { color: #ff9a8d; }
 .vs-delta.vs-flat { color: var(--muted); }
+/* 스코프 무관 판정 색 (분석 탭 파이프라인·taxonomy 표 공용) */
+.vs-good { color: #7dd982; }
+.vs-bad { color: #ff9a8d; }
+.vs-flat { color: var(--muted); }
 
 /* ── 표 열 정렬 ── */
 th.num { text-align: right; }
@@ -424,7 +428,9 @@ li.chk-fail { background: #43140f; }
   position: absolute; bottom: 20px; left: 12px; z-index: 1000;
   background: rgba(16, 20, 26, .94); border: 1px solid var(--border);
   border-radius: 8px; padding: 10px 12px; font-size: 11px; color: var(--text);
-  width: 250px; max-height: min(62vh, 420px); overflow-y: auto;
+  /* 폭을 넉넉히 잡아 각 항목(칩·행)이 줄바꿈 없이 한 줄에 들어오게 함 */
+  width: 400px; max-width: calc(100vw - 40px);
+  max-height: min(62vh, 460px); overflow-y: auto;
   word-break: keep-all; overflow-wrap: break-word;
 }
 .map-legend h4 { font-size: 12px; margin: 0 0 8px; color: #aecbeb; display: flex; align-items: baseline; gap: 6px; }
@@ -446,3 +452,61 @@ li.chk-fail { background: #43140f; }
 .lg-toggle { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; font-size: 10px; color: var(--muted); cursor: pointer; }
 
 .lg-line { display: inline-block; width: 16px; height: 0; border-top: 2px solid; justify-self: center; }
+
+
+/* ══ [분석] 탭 — 9단계 파이프라인 병목·해결 지표 ══ */
+.pl-headrow { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; margin: 8px 0 6px; }
+.pl-headrow .pl-side.asis { color: #ff9a8d; }
+.pl-headrow .pl-side.tobe { color: #7dd982; }
+.pl-headrow .pl-side-mid { color: var(--muted); font-weight: 400; }
+
+.pl-stage {
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--panel-2); padding: 10px 12px; margin: 0;
+}
+.pl-stage.pl-core { border-color: #b3541e; box-shadow: 0 0 0 1px #b3541e33, 0 0 14px #b3541e22; }
+.pl-arrow { text-align: center; color: var(--muted); font-size: 11px; line-height: 1.2; padding: 2px 0; }
+
+.pl-stage-head { font-size: 13px; margin-bottom: 4px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pl-no { color: #aecbeb; font-weight: 700; }
+.pl-fn { font-size: 10px; color: var(--muted); background: #0d1117; border-radius: 4px; padding: 1px 6px; }
+.pl-star { font-size: 10px; color: #ffcf70; background: #3a2a10; border: 1px solid #6b4a18; border-radius: 10px; padding: 1px 8px; }
+
+.pl-desc { font-size: 11px; color: var(--muted); margin-bottom: 8px; word-break: keep-all; }
+.pl-fix { color: #8fdc96; }
+
+.pl-metrics { display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
+.pl-m {
+  display: grid; align-items: center; gap: 8px; cursor: help;
+  grid-template-columns: 38px minmax(150px, 210px) 58px 1fr 1fr 58px 110px;
+}
+.pl-m-label { font-size: 11px; word-break: keep-all; }
+.pl-m-val { font-size: 11px; font-variant-numeric: tabular-nums; }
+.pl-m-val.asis { color: #ff9a8d; text-align: right; }
+.pl-m-val.tobe { color: #7dd982; }
+.pl-m-track { height: 10px; background: #0d1117; border-radius: 3px; overflow: hidden; display: flex; }
+.pl-m-track.l { justify-content: flex-end; }
+.pl-m-fill { height: 100%; }
+.pl-m-fill.asis { background: #e05545; }
+.pl-m-fill.tobe { background: #3d8b40; }
+.pl-m-delta { font-size: 10px; text-align: right; white-space: nowrap; }
+
+.pl-codes { font-size: 10px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 5px 8px; align-items: center; }
+.pl-code {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #0d1117; border: 1px solid var(--border); border-radius: 10px; padding: 2px 8px;
+}
+.pl-code code { color: #aecbeb; }
+.pl-code .asis { color: #ff9a8d; }
+.pl-code .tobe { color: #7dd982; }
+.pl-code-zero { opacity: 0.45; }
+.pl-code-good { border-color: #2e5c33; }
+.pl-code-bad { border-color: #6b2018; }
+
+.policy-list { margin: 4px 0 4px 18px; font-size: 12px; }
+.policy-list li { margin-bottom: 8px; word-break: keep-all; }
+
+@media (max-width: 900px) {
+  .pl-m { grid-template-columns: 34px 1fr 52px 52px 90px; }
+  .pl-m-track { display: none; }
+}

@@ -208,6 +208,19 @@
 
     setSpeed: function (v) { anim.speed = parseFloat(v) || 30; },
 
+    /**
+     * seed/시간 입력 변경 시 안내 — 실행은 [▶/↺] 버튼을 눌러야 시작되는 설계이므로,
+     * 이미 실행 결과가 떠 있는 상태에서 값을 바꾸면 "재실행 필요"를 명시해
+     * "바꿔도 반영이 안 된다"는 오해를 방지한다.
+     */
+    notePendingConfig: function () {
+      if (run) {
+        setStatus('⚙ seed/시간 변경됨 — [↺ 다시 실행]을 눌러야 새 설정이 반영됩니다.');
+      } else {
+        setStatus('설정 입력됨 — [▶ 시뮬레이션 시작]을 누르면 이 seed/시간으로 실행됩니다.');
+      }
+    },
+
     toggleRings: function (v) { KJ.mapView.setRingsVisible(v); },
 
     /** 탭 이탈·재실행 시 정리 (rAF 누수 방지) */
@@ -621,7 +634,7 @@
       '</tbody></table>';
 
     html += '<div class="note">모든 수치는 공개자료 기반 정책연구용 개념값이며 실제 작전자료가 아닙니다. ' +
-      '정밀 검토는 [병목 분석]·[Monte Carlo] 탭(민감도 토네이도·임계 전환점 포함)을 이용하세요.</div>';
+      '정밀 검토는 [분석]·[Monte Carlo] 탭(9단계 파이프라인 지표·민감도 토네이도·임계 전환점 포함)을 이용하세요.</div>';
 
     el('modal-body').innerHTML = html;
     if (KJ.tableSort) KJ.tableSort.attachAll(el('modal-body')); // 모달 표도 열 정렬 지원

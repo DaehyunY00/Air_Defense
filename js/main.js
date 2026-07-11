@@ -2,7 +2,7 @@
  * K-JAMDS 시뮬레이터 — 부트스트랩·상태 관리
  * 상태 단일원천: 딥링크 해시(#tab=&sc=&mode=&x=&seed=&dur=) ↔ UI 동기화.
  *
- * 탭 구조(개편): [시뮬레이션(지도·실행·결과창)] [병목 분석(해석)] [Monte Carlo] [근거자료].
+ * 탭 구조(개편): [시뮬레이션(지도·실행·결과창)] [분석(9단계 파이프라인+해석)] [Monte Carlo] [근거자료].
  * 체계 모드는 단일 토글 스위치(off=As-Is 분절형, on=To-Be 통합형)로 단순화.
  */
 (function () {
@@ -83,12 +83,14 @@
       setState({ x: parseFloat(e.target.value) });
     });
 
-    // 시뮬레이션 패널: seed/dur → 상태 반영, 실행·결과·속도·링 토글
+    // 시뮬레이션 패널: seed/dur → 상태 반영(+재실행 필요 안내), 실행·결과·속도·링 토글
     document.getElementById('sim-seed').addEventListener('change', function (e) {
       setState({ seed: Math.max(0, Math.floor(parseFloat(e.target.value) || 0)) });
+      KJ.simView.notePendingConfig();
     });
     document.getElementById('sim-dur').addEventListener('change', function (e) {
       setState({ dur: Math.min(7200, Math.max(60, Math.floor(parseFloat(e.target.value) || 1800))) });
+      KJ.simView.notePendingConfig();
     });
     document.getElementById('sim-run').addEventListener('click', function () {
       KJ.simView.start(state);

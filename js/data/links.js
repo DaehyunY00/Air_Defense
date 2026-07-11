@@ -2,7 +2,9 @@
  * K-JAMDS 시뮬레이터 — C2 연결(링크) 데이터 정의 (Phase 1)
  *
  * 각 링크는 모드별(asis/tobe) 통신 특성을 가짐:
- *  - type : 'datalink' | 'voice' | 'broadcast' | 'link16'
+ *  - type : 'datalink'(통합 데이터링크) | 'kvmf'(육군 계열 데이터링크) | 'link16' | 'voice' | 'broadcast'
+ *    ※ kvmf는 표시·집계 구분용 유형(육군 체계 간 데이터링크가 Link-16만 있는 것처럼
+ *      보이지 않도록 지도·범례에서 별도 표기). 엔진 로직은 delaySec만 사용.
  *  - delaySec : 항적/명령 1건 전달 지연(초). 근거는 docs/params.md 파라미터 ID 참조.
  *  - 모드에 해당 키가 없으면 그 모드에서는 링크가 존재하지 않음 (As-Is 미연동 표현).
  *
@@ -22,7 +24,7 @@
   var DL_FAST = { type: 'datalink', delaySec: 2, paramRef: 'C2-VOICE-DLY-01' };
   var L16 = { type: 'link16', delaySec: 12, paramRef: 'C2-L16-UPD-01' };
   var VOICE = { type: 'voice', delaySec: 180, paramRef: 'C2-VOICE-DLY-01' };
-  var KVMF = { type: 'datalink', delaySec: 30, paramRef: 'C2-VOICE-DLY-01' };
+  var KVMF = { type: 'kvmf', delaySec: 30, paramRef: 'C2-VOICE-DLY-01' };
 
   KJ.LINKS = [
     // ─── 센서 → C2 항적보고 (공군 계열: As-Is에서도 자동화) ───

@@ -14,6 +14,7 @@
   var CAT_SHAPE = { c2: 'shape-square', sensor: 'shape-circle', shooter: 'shape-triangle' };
   var COMM_STYLE = {
     datalink: { color: '#2e6fd8', dashArray: null, weight: 2 },
+    kvmf: { color: '#2eb8c9', dashArray: '8 3', weight: 2 }, // 육군 계열 데이터링크(KVMF/ADC2A)
     link16: { color: '#2e6fd8', dashArray: '6 4', weight: 2 },
     voice: { color: '#d32f2f', dashArray: '2 6', weight: 3 },
     broadcast: { color: '#ef6c00', dashArray: '1 5', weight: 1.5 }
@@ -153,8 +154,8 @@
 
     var W = 1000, H = 640;
     function px(coord) { return KJ.geo.project(coord, W, H); }
-    var LINK_COLOR = { datalink: '#2e6fd8', link16: '#2e6fd8', voice: '#d32f2f', broadcast: '#ef6c00' };
-    var LINK_DASH = { datalink: '', link16: '6 4', voice: '2 6', broadcast: '1 5' };
+    var LINK_COLOR = { datalink: '#2e6fd8', kvmf: '#2eb8c9', link16: '#2e6fd8', voice: '#d32f2f', broadcast: '#ef6c00' };
+    var LINK_DASH = { datalink: '', kvmf: '8 3', link16: '6 4', voice: '2 6', broadcast: '1 5' };
 
     var svg = '';
     KJ.linksInMode(mode).forEach(function (l) {

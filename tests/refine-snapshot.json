@@ -1,38 +1,38 @@
 {
   "sc1/asis": {
-    "spawned": 63,
-    "killed": 45,
+    "spawned": 64,
+    "killed": 43,
     "leaked": 12,
-    "bn": ""
+    "bn": "link:AOC-1C→MCRC"
   },
   "sc1/tobe": {
-    "spawned": 51,
-    "killed": 46,
-    "leaked": 4,
+    "spawned": 63,
+    "killed": 51,
+    "leaked": 6,
     "bn": ""
   },
   "sc2/asis": {
-    "spawned": 63,
+    "spawned": 59,
     "killed": 28,
-    "leaked": 16,
+    "leaked": 17,
     "bn": "link:AOC-1C→MCRC"
   },
   "sc2/tobe": {
-    "spawned": 56,
-    "killed": 34,
-    "leaked": 14,
+    "spawned": 55,
+    "killed": 30,
+    "leaked": 15,
     "bn": ""
   },
   "sc3/asis": {
-    "spawned": 315,
-    "killed": 138,
-    "leaked": 147,
-    "bn": "link:AOC-1C→MCRC"
+    "spawned": 312,
+    "killed": 126,
+    "leaked": 152,
+    "bn": "link:AOC-1C→MCRC,node:MDU-L"
   },
   "sc3/tobe": {
-    "spawned": 325,
-    "killed": 169,
-    "leaked": 135,
-    "bn": "node:MDU-L"
+    "spawned": 334,
+    "killed": 168,
+    "leaked": 139,
+    "bn": "node:MDU-L,node:MDU-M"
   }
 }

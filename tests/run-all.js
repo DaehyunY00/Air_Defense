@@ -41,6 +41,7 @@ var suites = [
   ['overlap.test.js', '중복교전 히트맵 (순수성·스케일링·융합허브)'],
   ['transition.test.js', '임계 전환점 (Rec.6 — ρ>0.9 구간 개선폭)'],
   ['constraints.test.js', '제약 어서션 (Rec.5 — a~e)'],
+  ['detect.test.js', '① 탐지 융합 (센서 Pd × 위협난이도 · 모드별 융합 · 단일센서 대조군)'],
   ['refine.test.js', '정밀화 (Phase A~D — 정합·WTA·권한위임·원인분포·신규지표)'],
   ['metrics-verification.test.js', '지표 검증 감사 (Lq·overlapRiskSum·분권전환·비용교환비 방향성)']
 ];

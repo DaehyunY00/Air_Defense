@@ -83,8 +83,11 @@ assert(SCENARIOS.every(function (id) {
   '(vsCompare에 이 지표 비교행이 없는 것과 별개로, 있었더라도 To-Be 열은 항상 "0건"만 표시됐을 것 — 감사 보고서 발견 2)');
 assert(deleg.sc3[2].asis > 0 && deleg.sc3[3].asis > 0,
   'SC3 As-Is는 x≥2.0에서 분권 전환 발생(x2:' + deleg.sc3[2].asis + '건, x3:' + deleg.sc3[3].asis + '건) — 유일한 실사용자 관측 가능 사례');
-assert(SCENARIOS.every(function (id) { return UI_X.every(function (x) { return deleg[id][x].asis === 0 || (id === 'sc3' && x >= 2); }); }),
-  'SC1·SC2는 전 강도에서, SC3는 x<2.0에서 As-Is도 분권 전환 0건 (부하의 함수 — 하드코딩 아님, 기존 회귀와 정합)');
+// feat/stage2-track-overhaul Phase 2: 음성 협조 지연 분포화(_linkDelay 삼각 샘플링)로 승인노드
+// 도착 타이밍이 재분포되며, SC3 중강도(x1.5)에서도 대기열이 임계를 넘어 전환이 발생하기 시작함
+// (부하 함수성 강화 — 하드코딩 아님). SC1·SC2는 여전히 전 강도 0건.
+assert(SCENARIOS.every(function (id) { return UI_X.every(function (x) { return deleg[id][x].asis === 0 || (id === 'sc3' && x >= 1.5); }); }),
+  'SC1·SC2는 전 강도에서, SC3는 x<1.5에서 As-Is 분권 전환 0건 (부하의 함수 — 음성 협조 분포화로 SC3 x≥1.5부터 전환)');
 
 console.log('# 감사 발견 3 — 비용교환비(exchangeSat): 방향이 시나리오·강도에 따라 반전됨 (버그 아님, 특성 기록)');
 // refine.test.js D-2는 SC2(x2)만 검증했고 그 방향은 항상 개선이다. 하지만 SC1·SC3에서는
@@ -103,9 +106,11 @@ SCENARIOS.forEach(function (id) {
 // 이동 → seed=12345 고정 exchangeSat의 반전 셀 위치가 바뀜(수치 이동일 뿐 계산·표시는 불변).
 // 발견 3의 본질("방향이 시나리오·강도에 따라 반전될 수 있음")은 오히려 강화됨: 이제 SC2조차
 // 저·중강도에서는 개선이나 고강도(2·3×)에서 반전이 관측된다. SC3의 반전은 x1.0·x2.5에 존재.
-assert([0.5, 1, 1.5].every(function (x) { return exch.sc2[x].tobe < exch.sc2[x].asis; }) &&
-       [2, 3].some(function (x) { return exch.sc2[x].tobe >= exch.sc2[x].asis; }),
-  'SC2(무인기 포화): 저·중강도(0.5~1.5×) To-Be 개선이나 고강도(2·3×)에서 반전 관측 (발견 3 강화)');
+// 단일 seed exchangeSat는 RNG 스트림 이동(①융합·②음성 분포화)에 민감해 반전 셀 위치가 옮겨간다.
+// 특정 셀을 핀하는 대신 "SC2가 강도에 따라 개선↔반전 양방향을 모두 보인다"는 발견 3의 본질을 고정.
+assert(UI_X.some(function (x) { return exch.sc2[x].tobe < exch.sc2[x].asis; }) &&
+       UI_X.some(function (x) { return exch.sc2[x].tobe >= exch.sc2[x].asis; }),
+  'SC2(무인기 포화): exchangeSat 방향이 강도에 따라 개선↔반전 양쪽 모두 관측 (발견 3: 방향은 시나리오·강도의 함수, 단일 seed 특성)');
 assert(exch.sc3[2.5].tobe > exch.sc3[2.5].asis,
   'SC3 x2.5: To-Be 비용교환비(' + exch.sc3[2.5].tobe.toFixed(2) + ') > As-Is(' + exch.sc3[2.5].asis.toFixed(2) +
   ') — 방향 반전 실재(감사 보고서 발견 3, seed=' + SEED + ' 고정 재현)');

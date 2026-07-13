@@ -94,5 +94,22 @@ assert(ftr && ftr.name.indexOf('KF-21') !== -1 && ftr.role.indexOf('보라매') 
 assert(ftr.role.indexOf('인도수출형') !== -1 || !/F-21[^0-9]/.test(ftr.name.replace('KF-21', '')),
   'F-21 인도수출형과의 구별 명시');
 
+// ── (f) 경로 총합 캘리브레이션 (C2-RESP-E2E-01, Phase 2 음성 지연 정박점) ──
+// 원 출처 "3분 이상 → 30초"는 end-to-end 작전반응시간이다. 링크 1홉 지연으로 오적용하던 것을
+// 용도별로 재배분한 뒤, As-Is 대표 경로(음성 계통) 총합이 원 출처 범위에 들어오는지 검증한다.
+console.log('# (f) 경로 총합 (C2-RESP-E2E-01 — 음성 지연 정박점)');
+function legDelay(from, to, mode) {
+  var l = KJ.LINKS.find(function (x) { return x.from === from && x.to === to && x.comm[mode]; });
+  return l ? l.comm[mode].delaySec : 0; // 대표값(delaySec) — 경로 총합 검증용
+}
+// As-Is 음성 계통 대표 경로: 음성보고 + 음성협조 + 교전명령(KVMF)
+var asisPath = legDelay('ADC2A-W', 'AOC-1C', 'asis') + legDelay('AOC-1C', 'MCRC', 'asis') + legDelay('AOC-1C', 'SHORAD-1C', 'asis');
+assert(asisPath >= 180 && asisPath <= 300,
+  'As-Is 대표 경로 총합 ' + asisPath + 's ∈ [180, 300] (C2-RESP-E2E-01 재해석 범위 — 홉당 오적용 이중계상 제거)');
+// To-Be 데이터링크 계통 대표 경로: report + coord + command 전부 데이터링크
+var tobePath = legDelay('LLR-1C', 'AOC-1C', 'tobe') + legDelay('AOC-1C', 'MCRC', 'tobe') + legDelay('AOC-1C', 'SHORAD-1C', 'tobe');
+assert(tobePath <= 30,
+  'To-Be 대표 경로 총합 ' + tobePath + 's ≤ 30 (원 출처 "30초 수준으로 단축")');
+
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

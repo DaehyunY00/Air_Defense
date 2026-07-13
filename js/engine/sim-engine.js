@@ -287,6 +287,22 @@
     }
   };
 
+  /**
+   * 링크 1건 전달 지연(초) — comm.dist가 있으면 분포 샘플링, 없으면 대표값(delaySec).
+   * mult.delay(민감도 배수)는 항상 곱한다. RNG는 dist가 있을 때만 소비(스캔당/홉당 1회).
+   * ※ 경로 "선택"(argmin·coordPath BFS)은 항상 대표값 delaySec으로 하고, 여기서는
+   *   실제 전달 "시각"만 샘플링한다 — 비결정론적 경로 선택을 피하기 위함(재현성).
+   */
+  Simulation.prototype._linkDelay = function (comm) {
+    var base = comm.delaySec;
+    if (comm.dist) {
+      if (comm.dist.kind === 'triangular') base = this.rng.triangular(comm.dist.min, comm.dist.mode, comm.dist.max);
+      else if (comm.dist.kind === 'lognormal') base = this.rng.lognormal(comm.dist.mean, comm.dist.stddev);
+      else if (comm.dist.kind === 'normal') base = this.rng.normal(comm.dist.mean, comm.dist.stddev);
+    }
+    return Math.max(0, base) * this.mult.delay;
+  };
+
   /** 2 추적생성: 최속 보고경로로 담당 C2에 항적 전달 */
   Simulation.prototype._onDetected = function (threat, t) {
     var self = this, best = null;
@@ -305,7 +321,7 @@
     });
     if (!best) { threat.leakReason = 'no_report_path'; return; }
     this._recordLink(best.from, best.c2, best.comm, 'report');
-    this.schedule(t + best.delay * this.mult.delay, PRI.LINK_ARRIVE, 'C2_ARRIVE', { threat: threat, c2: best.c2 });
+    this.schedule(t + this._linkDelay(best.comm), PRI.LINK_ARRIVE, 'C2_ARRIVE', { threat: threat, c2: best.c2 });
   };
 
   /** 3·4·5 식별·위협평가·WTA: C2(또는 To-Be JAMDC2) 서버 처리 */
@@ -326,10 +342,10 @@
     // To-Be: 다중센서 융합·AI 식별·무기배정을 JAMDC2에서 집중 수행
     if (this.mode === 'tobe' && KJ.nodeById('JAMDC2') && this.nodeState['JAMDC2'] && c2Id !== 'JAMDC2') {
       var comm = this._link(c2Id, 'JAMDC2', 'report') || this._link(c2Id, 'JAMDC2', null);
-      var delay = comm ? comm.delaySec : 0;
+      var delay = comm ? this._linkDelay(comm) : 0;
       if (comm) this._recordLink(c2Id, 'JAMDC2', comm, 'report');
       this._mark(threat, '융합경유', t);
-      this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'FUSION_ARRIVE', { threat: threat });
+      this.schedule(t + delay, PRI.LINK_ARRIVE, 'FUSION_ARRIVE', { threat: threat });
       return;
     }
     this._decision(threat, t, c2Id);
@@ -385,11 +401,11 @@
     if (!path) { threat.leakReason = 'responsibility_gap'; return; } // 책임공백(협조 경로 부재)
     var self = this, delay = 0;
     path.forEach(function (l) {
-      delay += l.comm[self.mode].delaySec;
+      delay += self._linkDelay(l.comm[self.mode]); // 홉별 실제 전달시각 샘플링(경로는 대표값으로 이미 선택됨)
       self._recordLink(l.from, l.to, l.comm[self.mode], 'coord');
     });
     this._mark(threat, '협조개시:' + controlC2 + '→' + approvalId, t);
-    this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'APPROVE_ARRIVE', { threat: threat, appr: approvalId });
+    this.schedule(t + delay, PRI.LINK_ARRIVE, 'APPROVE_ARRIVE', { threat: threat, appr: approvalId });
   };
 
   Simulation.prototype._onApproveArrive = function (t, d) {
@@ -438,7 +454,7 @@
     var shooter = best.sh;
     var controlC2 = shooter.controlledBy[mode][0];
     var comm = this._link(controlC2, shooter.id, 'command');
-    var delay = comm ? comm.delaySec : 0;
+    var delay = comm ? this._linkDelay(comm) : 0;
     if (comm) this._recordLink(controlC2, shooter.id, comm, 'command');
     this.global.engaged++;
     if (!threat._countedEngaged) {
@@ -451,7 +467,7 @@
       }
     }
     this._mark(threat, '교전명령#' + (threat.tries + 1) + ':' + shooter.id, t);
-    this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: threat, shooter: shooter.id });
+    this.schedule(t + delay, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: threat, shooter: shooter.id });
   };
 
   Simulation.prototype._onShooterArrive = function (t, d) {

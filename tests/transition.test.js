@@ -42,9 +42,15 @@ var rhoMono = r.points.every(function (p, i) {
 });
 assert(rhoMono, 'As-Is C2 최대 ρ 강도에 대해 약단조 증가');
 
-console.log('# 대조군: 저부하 시나리오(SC1 경계 침투)는 임계 미돌파');
+// 전환점은 시나리오의 함수 — SC1(경계 침투)은 SC3(포화)보다 '더 높은' 강도에서 임계를 돌파한다.
+// (feat/stage2-track-overhaul Phase 4: 중복항적 팬아웃 도입 전 SC1은 전 스윕 미돌파였으나,
+//  Track Fusion 부재의 dup 부하가 각 군 C2를 실제로 배가시켜 고강도에서 SC1도 돌파한다 — 실제
+//  물리이며 아티팩트 아님. 대조 방식을 "절대 미돌파"에서 "SC3보다 늦게 돌파"로 재프레임: 둘 다
+//  돌파하되 전환점 순서가 다름을 정량으로 보여 "전환점은 시나리오의 함수"를 더 강하게 증명한다.)
+console.log('# 전환점의 시나리오 의존성: SC1(경계 침투)은 SC3(포화)보다 높은 강도에서 돌파');
 var r5 = KJ.analyzeTransition(KJ.scenarioById('sc1'), { reps: 20, seed: 12345 });
-assert(r5.rho09CrossX === null, 'SC1: 전 스윕 구간에서 ρ<0.9 (전환점은 시나리오의 함수, 고정 아님)');
+assert(r5.rho09CrossX !== null && r.rho09CrossX !== null && r5.rho09CrossX > r.rho09CrossX,
+  'SC1 전환점(' + r5.rho09CrossX + ') > SC3 전환점(' + r.rho09CrossX + ') — 전환점은 시나리오의 함수(고정 아님)');
 
 console.log('# 성능');
 var t0 = Date.now();

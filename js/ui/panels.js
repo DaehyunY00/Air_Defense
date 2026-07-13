@@ -47,10 +47,15 @@
     return desCache.data;
   }
 
-  /** 링크 전달 1건당 평균 통신지연(초) — sim-view의 MoP 지표와 동일 정의 */
-  function commMeanDelay(res) {
+  /** 링크 전달 1건당 평균 통신지연(초) — sim-view의 MoP 지표와 동일 정의.
+   * kind 지정 시 그 종류(report/coord/command)만 집계 → 각 단계가 자기 단계 링크만 측정.
+   * kind 생략 시 전 링크(하위호환). */
+  function commMeanDelay(res, kind) {
     var num = 0, den = 0;
-    res.links.forEach(function (l) { num += l.delaySec * l.count; den += l.count; });
+    res.links.forEach(function (l) {
+      if (kind && l.kind !== kind) return;
+      num += l.delaySec * l.count; den += l.count;
+    });
     return den ? num / den : 0;
   }
   /** 구조적 실패(공백·포화·지연) 합 — KJ.LEAK_TAXONOMY.structural 기준 */
@@ -218,9 +223,11 @@
         fix: 'JAMDC2 융합 허브로 단일 연속 항적 생성',
         codes: ['no_report_path'],
         metrics: [
-          { label: '통신지연 부하 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
-            a: commMeanDelay(a), b: commMeanDelay(b),
-            tip: '실제 발생한 링크 전달의 평균 지연 — 음성(As-Is 180s)↔데이터링크(To-Be 2s) 구조 차이의 관측치 (C2-VOICE-DLY-01).' }
+          { label: 'report 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
+            a: commMeanDelay(a, 'report'), b: commMeanDelay(b, 'report'),
+            tip: '②단계 report(센서→담당 C2) 링크 전달의 평균 지연만 집계(coord·command 제외). ' +
+              'As-Is에서도 이 경로는 대부분 데이터링크/KVMF라 음성 180s는 여기서 발화하지 않는다 — ' +
+              '음성 협조 180s는 ⑥⑦(coord)단계의 지표다.' }
         ]
       },
       {
@@ -251,6 +258,9 @@
           { label: '결심 지연 (탐지→교전개시)', mom: 'MoP', kind: 'sec', lower: true,
             a: ga.meanDecisionDelaySec, b: gb.meanDecisionDelaySec,
             tip: 'F2T2EA Find→Engage 평균 소요. 협조·승인·권한위임 홉과 C2 대기(Wq)가 모두 포함 — As-Is 음성 협조 부담이 여기서 발생.' },
+          { label: 'coord 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
+            a: commMeanDelay(a, 'coord'), b: commMeanDelay(b, 'coord'),
+            tip: '⑥⑦단계 coord(교전협조) 링크 전달의 평균 지연만 집계 — As-Is 육↔공 음성 협조(≥180s)가 실제로 발화하는 곳.' },
           { label: '중복교전 위험 (축선 합)', mom: 'MoCE', kind: 'raw', lower: true,
             a: d.heatA, b: d.heatB,
             tip: '서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합 — 이원화의 공간적 문제.' },
@@ -272,6 +282,9 @@
           { label: '무기 최대 관측 ρ', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
             a: maxRho(a, 'shooter'), b: maxRho(b, 'shooter'),
             tip: '교전 무기 노드 중 최대 채널 이용률.' },
+          { label: 'command 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
+            a: commMeanDelay(a, 'command'), b: commMeanDelay(b, 'command'),
+            tip: '⑧단계 command(교전명령) 링크 전달의 평균 지연만 집계(C2→무기체계).' },
           { label: '교전채널 포화 드롭 합', mom: 'MoP', kind: 'cnt', lower: true,
             a: dropSum(a, 'shooter'), b: dropSum(b, 'shooter'),
             tip: '교전 대기실(K=채널×2) 초과로 상실된 교전 기회.' }

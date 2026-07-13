@@ -108,13 +108,12 @@ console.log('# B-2 부하 기반 동적 권한위임 (C2-DELEG-THRESH-01 — 부
 function runX(id, mode, x, seed) {
   return KJ.runDES({ scenario: KJ.scenarioById(id), mode: mode, intensity: x, seed: seed, endTimeSec: 1800 });
 }
-// 저강도(0.5·1.0×)에서는 전환 0건 — 전환은 하드코딩이 아니라 부하의 함수.
-// (feat/sensor-pd-fusion: 센서 Pd 융합으로 탐지 시점이 재타이밍되면서, 중강도 1.5×부터는
-//  도착 번칭이 승인노드 큐를 임계 위로 밀어 일부 seed에서 전환이 발생한다 — 부하 함수성의
-//  강화이지 회귀가 아님. 견고한 대조는 저강도로 좁힌다.)
-assert(runX('sc3', 'asis', 0.5, 42).global.delegation.count === 0 &&
-       runX('sc3', 'asis', 1.0, 42).global.delegation.count === 0,
-  'SC3 As-Is 저강도(0.5·1.0×): 전환 0건 (전환은 하드코딩이 아니라 부하의 함수)');
+// 저강도(0.5×)에서는 전환 0건 — 전환은 하드코딩이 아니라 부하의 함수.
+// (feat/stage2-track-overhaul Phase 4: 중복항적 팬아웃이 각 군 C2 부하를 배가시켜 SC3는 이제
+//  x1.0부터도 승인노드 큐가 임계를 넘어 전환이 발생한다 — 권한위임 기능의 실사용 구간 부활이지
+//  회귀가 아님. 견고한 "미발동" 대조는 최저강도 0.5×로 좁힌다.)
+assert(runX('sc3', 'asis', 0.5, 42).global.delegation.count === 0,
+  'SC3 As-Is 최저강도(0.5×): 전환 0건 (전환은 하드코딩이 아니라 부하의 함수)');
 var d3 = runX('sc3', 'asis', 3, 42).global.delegation;
 assert(d3.count > 0 && d3.byNode.KAOC > 0 && d3.firstT !== null,
   'SC3 As-Is 강도 3.0: 승인 포화 → 분권 전환 발생 (' + d3.count + '건, 최초 t=' + (d3.firstT || 0).toFixed(0) + 's)');
@@ -257,10 +256,20 @@ assert(dc.interceptSatM <= dc.interceptM && dc.killedThreatSatM <= dc.killedThre
 var dRun2 = runX('sc2', 'asis', 2, 42);
 assert(JSON.stringify(dRun.global.cost) === JSON.stringify(dRun2.global.cost),
   '비용 지표도 동일 seed → 완전 동일 (결정론)');
-var dTobe = runX('sc2', 'tobe', 2, 42);
-assert(dTobe.global.cost.exchangeSat < dc.exchangeSat,
-  'SC2(무인기 포화): To-Be 비용교환비 < As-Is (' +
-  dTobe.global.cost.exchangeSat.toFixed(1) + ' < ' + dc.exchangeSat.toFixed(1) + ')');
+// 단일 seed exchangeSat는 RNG 스트림 이동(②라우팅 변경 등)에 민감하다(감사 발견 3).
+// SC2 To-Be 비용교환비 개선은 seed 평균에서 견고하게 성립하므로 pooled로 검증한다.
+function poolExchSat(mode) {
+  var sum = 0, n = 0;
+  for (var i = 1; i <= 20; i++) {
+    var e = runX('sc2', mode, 2, i).global.cost.exchangeSat;
+    if (e != null) { sum += e; n++; }
+  }
+  return sum / n;
+}
+var exchAsis = poolExchSat('asis'), exchTobe = poolExchSat('tobe');
+assert(exchTobe < exchAsis,
+  'SC2(무인기 포화): To-Be 비용교환비 < As-Is [pooled seed1~20] (' +
+  exchTobe.toFixed(1) + ' < ' + exchAsis.toFixed(1) + ')');
 // 극한값: 교전 0이면 비용 0·exchange null (NaN 없음)
 var dEmpty = KJ.runDES({ scenario: { id: 'e', name: 'e', mix: [] }, mode: 'asis', intensity: 1, seed: 1, endTimeSec: 600 });
 assert(dEmpty.global.cost.interceptM === 0 && dEmpty.global.cost.exchange === null,
@@ -270,13 +279,18 @@ console.log('# D-3 결심 지연·통신지연 대비 (MoP)');
 var dA = runX('sc3', 'asis', 1.5, 42), dB = runX('sc3', 'tobe', 1.5, 42);
 assert(typeof dA.global.meanDecisionDelaySec === 'number' && dA.global.meanDecisionDelaySec >= 0,
   'meanDecisionDelaySec 제공 (trace 무관)');
-function commMean(res) {
+function commMean(res, kind) {
   var num = 0, den = 0;
-  res.links.forEach(function (l) { num += l.delaySec * l.count; den += l.count; });
+  res.links.forEach(function (l) { if (kind && l.kind !== kind) return; num += l.delaySec * l.count; den += l.count; });
   return den ? num / den : 0;
 }
-assert(commMean(dB) < commMean(dA),
-  'To-Be 링크 전달 평균지연 < As-Is (' + commMean(dB).toFixed(1) + 's < ' + commMean(dA).toFixed(1) + 's — 음성↔데이터링크)');
+// ②단계 지표는 report 링크만 집계한다(panels.js commMeanDelay(res,'report')와 동일 정본).
+// coord/command 지연을 섞으면 ②가 아닌 링크(⑥⑦ 협조 180s·⑧ 교전명령)가 값을 지배한다(Phase 1 사실 e).
+assert(commMean(dB, 'report') < commMean(dA, 'report'),
+  'To-Be report 전달지연 < As-Is (' + commMean(dB, 'report').toFixed(1) + 's < ' + commMean(dA, 'report').toFixed(1) + 's — ②단계 report 링크만)');
+// kind 필터가 실제로 작동함을 증명 — report만과 전 링크가 다르다(coord/command가 섞이면 값이 달라짐)
+assert(commMean(dA, 'report') !== commMean(dA),
+  'kind 필터 작동: report만(' + commMean(dA, 'report').toFixed(1) + 's) ≠ 전 링크(' + commMean(dA).toFixed(1) + 's) — coord/command 혼입 제거 확인');
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

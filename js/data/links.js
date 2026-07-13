@@ -14,17 +14,27 @@
  *  - command : C2 → 무기체계 교전명령
  *
  * As-Is 핵심 구조(2022.12.26 실증): 육군 ADC2A(군단 AOC·JAOC)와 공군 MCRC·KAMDOC이
- * 데이터링크 미연동 — 음성보고(≥180s, C2-VOICE-DLY-01)만 가능, SAWS는 일방향 경보방송.
+ * 데이터링크 미연동 — 음성보고(C2-VOICE-RPT-01)·음성협조(≥180s, C2-VOICE-COORD-01)만
+ *   가능, SAWS는 일방향 경보방송. 음성 지연은 삼각분포(dist) — 엔진 _linkDelay가 샘플링.
  * To-Be: JAMDC2(Track Fusion) 경유 전 노드 데이터링크 연동.
  */
 (function () {
   'use strict';
   window.KJ = window.KJ || {};
 
-  var DL_FAST = { type: 'datalink', delaySec: 2, paramRef: 'C2-VOICE-DLY-01' };
+  // delaySec = 대표값(통계 집계·M/M/c 해석·병목 판정·지도 UI가 의존 — 유지 필수).
+  // dist가 있으면 엔진 _linkDelay가 실제 전달시각을 샘플링한다(대표값은 그대로 남는다).
+  var DL_FAST = { type: 'datalink', delaySec: 2, paramRef: 'C2-DL-DLY-01' };
   var L16 = { type: 'link16', delaySec: 12, paramRef: 'C2-L16-UPD-01' };
-  var VOICE = { type: 'voice', delaySec: 180, paramRef: 'C2-VOICE-DLY-01' };
-  var KVMF = { type: 'kvmf', delaySec: 30, paramRef: 'C2-VOICE-DLY-01' };
+  var KVMF = { type: 'kvmf', delaySec: 30, paramRef: 'C2-KVMF-DLY-01' };
+  // 음성: 용도별 분리 + 대칭 삼각분포(확정). 대칭이라 실현 평균 = 대표값(delaySec) →
+  // 경로 총합 제약(C2-RESP-E2E-01)이 실현 평균을 정확히 반영한다(우편향 괴리 회피).
+  var VOICE_RPT = { type: 'voice', delaySec: 60,
+                    dist: { kind: 'triangular', min: 30, mode: 60, max: 90 },
+                    paramRef: 'C2-VOICE-RPT-01' };   // 음성 항적보고(일방향 짧은 전달)
+  var VOICE_COORD = { type: 'voice', delaySec: 180,
+                      dist: { kind: 'triangular', min: 90, mode: 180, max: 270 },
+                      paramRef: 'C2-VOICE-COORD-01' }; // 음성 교전협조(왕복 협의)
 
   KJ.LINKS = [
     // ─── 센서 → C2 항적보고 (공군 계열: As-Is에서도 자동화) ───
@@ -42,12 +52,12 @@
     // ─── 센서 → C2 항적보고 (육군 계열: ADC2A/KVMF, 음성) ───
     { from: 'LLR-1C', to: 'AOC-1C', kind: 'report', comm: { asis: KVMF, tobe: DL_FAST } },
     { from: 'LLR-CD', to: 'JAOC-CD', kind: 'report', comm: { asis: KVMF, tobe: DL_FAST } },
-    { from: 'ADC2A-W', to: 'AOC-1C', kind: 'report', comm: { asis: VOICE, tobe: KVMF } },
+    { from: 'ADC2A-W', to: 'AOC-1C', kind: 'report', comm: { asis: VOICE_RPT, tobe: KVMF } },
 
     // ─── C2 ↔ C2 협조 (As-Is 병목의 핵심: 육↔공 음성 협조) ───
-    { from: 'AOC-1C', to: 'MCRC', kind: 'coord', comm: { asis: VOICE, tobe: DL_FAST },
+    { from: 'AOC-1C', to: 'MCRC', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
       note: 'As-Is: 데이터링크 미연동, 음성/VTC 협조만 가능 (2022.12.26 실증 병목)' },
-    { from: 'JAOC-CD', to: 'MCRC', kind: 'coord', comm: { asis: VOICE, tobe: DL_FAST },
+    { from: 'JAOC-CD', to: 'MCRC', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
       note: 'As-Is: 수방사↔공군 음성 협조' },
     { from: 'MCRC', to: 'AOC-1C', kind: 'broadcast', comm: { asis: { type: 'broadcast', delaySec: 60, paramRef: 'C2-SAWS-DLY-01' } },
       note: 'SAWS 위성전군방공경보(일방향 방송, 교전활용 불가)' },
@@ -55,8 +65,16 @@
       note: 'SAWS 위성전군방공경보(일방향 방송, 교전활용 불가)' },
     { from: 'MCRC', to: 'KAOC', kind: 'coord', comm: { asis: DL_FAST, tobe: DL_FAST } },
     { from: 'KAMDOC', to: 'KAOC', kind: 'coord', comm: { asis: DL_FAST, tobe: DL_FAST } },
-    { from: 'MCRC', to: 'KAMDOC', kind: 'coord', comm: { asis: VOICE, tobe: DL_FAST },
+    { from: 'MCRC', to: 'KAMDOC', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
       note: 'As-Is: 공중위협·탄도탄 이원화 체계 간 협조 지연' },
+
+    // ─── To-Be: 다출처 Plug-in 직결 (센서 → JAMDC2) — KJADS "P→F 전환" 근거 ───
+    // 육군 계열 센서(As-Is에서 국가방공체계 미통합·담당 C2 사각지대)만 직결한다. 담당 C2를
+    // 건너뛰어 JAMDC2가 신규 융합항적(F)을 직접 생성 → 담당 C2 포화가 융합을 막지 못한다.
+    // 이미 2s 데이터링크로 통합된 공/해군 광역센서(ACR/LAR/GPR/E737/AEGIS)는 직결 제외.
+    { from: 'ADC2A-W', to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST } },
+    { from: 'LLR-1C', to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST } },
+    { from: 'LLR-CD', to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST } },
 
     // ─── To-Be: JAMDC2 (Track Fusion) 연동 — 전 센서·C2 융합 ───
     { from: 'MCRC', to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST } },

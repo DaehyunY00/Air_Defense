@@ -723,10 +723,14 @@
   }
   function signed(n) { return (n > 0 ? '+' : '') + n; }
 
-  /** 링크 전달 1건당 평균 통신지연(초) — 음성(As-Is)↔데이터링크(To-Be) 대비 (MoP) */
-  function commMeanDelay(res) {
+  /** 링크 전달 1건당 평균 통신지연(초) — panels.js의 MoP 지표와 동일 정의.
+   * kind 지정 시 그 종류(report/coord/command)만 집계. 생략 시 전 링크(하위호환). */
+  function commMeanDelay(res, kind) {
     var num = 0, den = 0;
-    res.links.forEach(function (l) { num += l.delaySec * l.count; den += l.count; });
+    res.links.forEach(function (l) {
+      if (kind && l.kind !== kind) return;
+      num += l.delaySec * l.count; den += l.count;
+    });
     return den ? num / den : 0;
   }
   /** 구조적 실패(공백·포화·지연) 건수 — taxonomy structural 합 (MoCE) */
@@ -773,8 +777,8 @@
       // ── 보조 지표 ──
       { label: '평균 격추시간', mom: 'MoP', a: asisG.meanTimeToKillSec, b: tobeG.meanTimeToKillSec, kind: 'sec', lower: true,
         tip: '격추 성공 항적의 생성→격추 평균 소요.' },
-      { label: '통신지연 부하 (전달 1건 평균)', mom: 'MoP', a: commMeanDelay(asisRes), b: commMeanDelay(tobeRes), kind: 'sec', lower: true,
-        tip: '실제 발생한 링크 전달의 평균 지연 — 음성(As-Is 180s)↔데이터링크(To-Be 2s) 구조 차이의 관측치 (C2-VOICE-DLY-01).' },
+      { label: 'report 링크 전달지연 (전달 1건 평균)', mom: 'MoP', a: commMeanDelay(asisRes, 'report'), b: commMeanDelay(tobeRes, 'report'), kind: 'sec', lower: true,
+        tip: 'report(센서→담당 C2) 링크 전달의 평균 지연만 집계(coord·command 제외). As-Is도 이 경로는 대부분 데이터링크/KVMF라 음성 180s는 여기서 발화하지 않음 — 음성 협조 180s는 ⑥⑦(coord)단계다.' },
       { label: '구조적 실패 (공백·포화·지연)', mom: 'MoCE', a: structuralLeaks(asisG), b: structuralLeaks(tobeG), kind: 'cnt', lower: true,
         tip: '실패 원인 중 구조적 원인(탐지공백·보고경로·책임공백·포화·처리지연) 합 — 원인 대조표의 요약 지표.' },
       { label: '도출 병목 수', mom: 'MoCE', a: asisRes.bottlenecks.length, b: tobeRes.bottlenecks.length, kind: 'cnt', lower: true,

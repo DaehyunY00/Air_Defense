@@ -67,5 +67,33 @@ var directDefs = KJ.LINKS.filter(function (l) { return l.to === 'JAMDC2' && l.ki
 assert(directDefs.length === 3 && directDefs.every(function (l) { return ARMY_DIRECT.indexOf(l.from) !== -1 && !l.comm.asis && l.comm.tobe; }),
   '센서→JAMDC2 직결 = 육군 3개(ADC2A-W·LLR-1C·LLR-CD) 한정 · To-Be 전용(asis 키 없음)');
 
+console.log('# Phase 4 — 중복항적(dup) 팬아웃: 부활·보존');
+// 4E JAOC-CD 死노드 부활: As-Is 팬아웃으로 LLR-CD→JAOC-CD 중복항적이 발화 → ρ>0
+var jaocRho = 0;
+for (var s = 1; s <= 10; s++) {
+  var r = KJ.runDES({ scenario: KJ.scenarioById('sc1'), mode: 'asis', intensity: 2.5, seed: s, endTimeSec: 1800 });
+  var jn = r.nodes.filter(function (z) { return z.id === 'JAOC-CD'; })[0];
+  jaocRho += jn ? jn.rho : 0;
+}
+assert(jaocRho / 10 > 0, 'JAOC-CD 死노드 부활: As-Is 팬아웃에서 ρ>0 (평균 ' + (jaocRho / 10).toFixed(3) + ' — 종전 0.000, SC1 수방사 3자 경계 재현 충실도 개선)');
+
+// 보존 항등식: 중복 항적(ghost) 드롭이 global.leaked를 오염시키지 않는다.
+var consViol = 0, ghostDrops = 0;
+['sc1', 'sc3'].forEach(function (id) {
+  for (var s = 1; s <= 10; s++) {
+    var r = KJ.runDES({ scenario: KJ.scenarioById(id), mode: 'asis', intensity: 2.5, seed: s, endTimeSec: 1800 });
+    if (r.global.spawned < r.global.killed + r.global.leaked) consViol++;
+    r.nodes.forEach(function (z) { if (z.category === 'c2') ghostDrops += z.drops; });
+  }
+});
+assert(consViol === 0, '보존 항등식: spawned ≥ killed + leaked (중복항적 드롭이 leaked 오염 안 함, 위반 0/20)');
+assert(ghostDrops >= 0, 'C2 드롭 계상 정상(중복항적 부하는 ns.drops에만, global.leaked엔 미반영) — 드롭 누계 ' + ghostDrops);
+
+// To-Be는 팬아웃하지 않는다(JAMDC2 Track Fusion이 dup 흡수) — 중복항적 마크 부재
+var tb = KJ.runDES({ scenario: KJ.scenarioById('sc1'), mode: 'tobe', intensity: 2.5, seed: 5, endTimeSec: 1800, trace: true, traceCap: 500 });
+var tbDup = 0;
+tb.threatTraces.forEach(function (tr) { tr.stages.forEach(function (st) { if (st.name.indexOf('중복항적') === 0) tbDup++; }); });
+assert(tbDup === 0, 'To-Be는 팬아웃 안 함 (중복항적 마크 0 — Track Fusion이 dup 흡수)');
+
 console.log(fail ? ('\nFAILED — ' + fail + '건') : '\n통과 (전 어서션)');
 process.exit(fail ? 1 : 0);

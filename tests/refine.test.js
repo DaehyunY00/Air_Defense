@@ -108,13 +108,12 @@ console.log('# B-2 부하 기반 동적 권한위임 (C2-DELEG-THRESH-01 — 부
 function runX(id, mode, x, seed) {
   return KJ.runDES({ scenario: KJ.scenarioById(id), mode: mode, intensity: x, seed: seed, endTimeSec: 1800 });
 }
-// 저강도(0.5·1.0×)에서는 전환 0건 — 전환은 하드코딩이 아니라 부하의 함수.
-// (feat/sensor-pd-fusion: 센서 Pd 융합으로 탐지 시점이 재타이밍되면서, 중강도 1.5×부터는
-//  도착 번칭이 승인노드 큐를 임계 위로 밀어 일부 seed에서 전환이 발생한다 — 부하 함수성의
-//  강화이지 회귀가 아님. 견고한 대조는 저강도로 좁힌다.)
-assert(runX('sc3', 'asis', 0.5, 42).global.delegation.count === 0 &&
-       runX('sc3', 'asis', 1.0, 42).global.delegation.count === 0,
-  'SC3 As-Is 저강도(0.5·1.0×): 전환 0건 (전환은 하드코딩이 아니라 부하의 함수)');
+// 저강도(0.5×)에서는 전환 0건 — 전환은 하드코딩이 아니라 부하의 함수.
+// (feat/stage2-track-overhaul Phase 4: 중복항적 팬아웃이 각 군 C2 부하를 배가시켜 SC3는 이제
+//  x1.0부터도 승인노드 큐가 임계를 넘어 전환이 발생한다 — 권한위임 기능의 실사용 구간 부활이지
+//  회귀가 아님. 견고한 "미발동" 대조는 최저강도 0.5×로 좁힌다.)
+assert(runX('sc3', 'asis', 0.5, 42).global.delegation.count === 0,
+  'SC3 As-Is 최저강도(0.5×): 전환 0건 (전환은 하드코딩이 아니라 부하의 함수)');
 var d3 = runX('sc3', 'asis', 3, 42).global.delegation;
 assert(d3.count > 0 && d3.byNode.KAOC > 0 && d3.firstT !== null,
   'SC3 As-Is 강도 3.0: 승인 포화 → 분권 전환 발생 (' + d3.count + '건, 최초 t=' + (d3.firstT || 0).toFixed(0) + 's)');

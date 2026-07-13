@@ -92,6 +92,9 @@
 
     // ── Phase 4 재생용 trace (옵트인, 기본 false — 기존 동작·통계에 영향 없음) ──
     // 항적별 9단계 타임스탬프(Gantt)와 노드별 재고 시계열(대기열 애니메이션)을 기록한다.
+    // Phase 4-B: 재획득 dup(항적소실→재획득 시 새 항적 재생성). 기본 off. 근거 없는 배수(1/detectFactor)
+    // 이중계상 위험이라 기본 경로에서 켜지 않는다 — 켜려면 배수가 아닌 이벤트로 구현해야 함(범위 밖·미구현).
+    this.dupReacquire = !!cfg.dupReacquire;
     this.trace = !!cfg.trace;
     this.traceCap = cfg.traceCap || 300;       // 추적할 위협 수 상한(메모리 보호)
     this.nodeSeriesCap = cfg.nodeSeriesCap || 20000; // 전 노드 합산 샘플 수 상한
@@ -303,6 +306,20 @@
     return Math.max(0, base) * this.mult.delay;
   };
 
+  /**
+   * 중복 항적(dup) 프록시(ghost) — C2 서버 부하만 소비하는 유령 작업. 실제 위협을 참조만 한다.
+   * alive를 getter로 두어 실제 위협이 격추/누수되면 ghost도 alive=false → 큐에서 자동 reneging
+   * (_onServiceEnd의 죽은 작업 스킵 재사용). ghost 드롭은 ns.drops에 계상되나 EXIT 이벤트가
+   * 없어 global.leaked에는 절대 반영되지 않는다(보존 항등식 유지).
+   */
+  function makeGhost(real) {
+    return {
+      type: real.type, _dup: true, _real: real,
+      pipelineDead: false, leakReason: null,
+      get alive() { return real.alive; }
+    };
+  }
+
   /** 2 추적생성: 최속 보고경로로 담당 C2에 항적 전달 (To-Be는 직결 센서면 JAMDC2 직행) */
   Simulation.prototype._onDetected = function (threat, t) {
     var self = this;
@@ -330,24 +347,46 @@
         return;
       }
     }
-    // 기존: 담당 C2 argmin 경유 (직결 링크 to==='JAMDC2'는 위에서 처리했으므로 제외)
-    var best = null;
+    // 담당 C2 후보 수집 (C2별 최속 report 링크, 동점 시 센서 id 사전순 — 데이터 순서 의존성 제거).
+    var targets = {}; // c2Id -> { delay, comm, from }
     threat._sensors.forEach(function (s) {
       KJ.LINKS.forEach(function (l) {
         if (l.from === s.id && l.to !== 'JAMDC2' && l.kind === 'report' && l.comm[self.mode]) {
           var d = l.comm[self.mode].delaySec;
-          // 동점 시 C2 id 사전순 tiebreak — ⑧단계 WTA 관례와 일치, 데이터(노드/링크 배열) 순서
-          // 의존성 제거. 주의: 이것만으로 JAOC-CD 사장은 안 풀린다(AOC-1C < JAOC-CD) — 근본
-          // 해결은 팬아웃(Phase 4). 여기서는 "데이터 순서 의존성 제거"만이 목적이다.
-          if (!best || d < best.delay || (d === best.delay && l.to < best.c2)) {
-            best = { c2: l.to, delay: d, comm: l.comm[self.mode], from: s.id };
+          var cur = targets[l.to];
+          if (!cur || d < cur.delay || (d === cur.delay && l.from < cur.from)) {
+            targets[l.to] = { delay: d, comm: l.comm[self.mode], from: l.from };
           }
         }
       });
     });
-    if (!best) { threat.leakReason = 'no_report_path'; return; }
-    this._recordLink(best.from, best.c2, best.comm, 'report');
-    this.schedule(t + this._linkDelay(best.comm), PRI.LINK_ARRIVE, 'C2_ARRIVE', { threat: threat, c2: best.c2 });
+    var ids = Object.keys(targets);
+    if (!ids.length) { threat.leakReason = 'no_report_path'; return; }
+    ids.sort(function (a, b) { return targets[a].delay - targets[b].delay || (a < b ? -1 : 1); });
+    // 주 항적: 최속 C2 — 하위 단계(⑥⑦⑧)를 구동한다.
+    var main = targets[ids[0]];
+    this._recordLink(main.from, ids[0], main.comm, 'report');
+    this.schedule(t + this._linkDelay(main.comm), PRI.LINK_ARRIVE, 'C2_ARRIVE', { threat: threat, c2: ids[0] });
+    // 중복 항적(Phase 4, As-Is 전용): 나머지 커버 C2 전부에 팬아웃. Track Fusion 부재로 같은 표적이
+    // 각 군 C2에 별개 항적으로 생성되는 KJADS GAP 1을 모사한다. 이들은 C2 서버 부하만 소비하고
+    // 하위 단계는 구동하지 않는다(프록시 ghost). To-Be는 팬아웃하지 않는다 — JAMDC2 Track Fusion이
+    // dup을 흡수(직결 없는 위협도 주 항적 1건만). 재획득 dup(config.dupReacquire)은 기본 off·별개 과제.
+    if (this.mode === 'asis') {
+      for (var i = 1; i < ids.length; i++) {
+        var dup = targets[ids[i]];
+        this._recordLink(dup.from, ids[i], dup.comm, 'report');
+        this._mark(threat, '중복항적→' + ids[i], t);
+        this.schedule(t + this._linkDelay(dup.comm), PRI.LINK_ARRIVE, 'C2_ARRIVE_DUP',
+          { threat: makeGhost(threat), c2: ids[i] });
+      }
+    }
+  };
+
+  /** 중복 항적 C2 도착(As-Is): C2 서버 부하만 소비, 하위 단계(⑥⑦⑧) 미구동 */
+  Simulation.prototype._onC2ArriveDup = function (t, d) {
+    var threat = d.threat; // ghost
+    if (!threat.alive || threat.pipelineDead) return;
+    this._nodeArrive(d.c2, t, { threat: threat }, function () { /* 부하만 소비 — onDone 무연산 */ });
   };
 
   /** 3·4·5 식별·위협평가·WTA: C2(또는 To-Be JAMDC2) 서버 처리 */
@@ -632,6 +671,7 @@
       case 'SPAWN': this._spawn(ev.t, ev.data); break;
       case 'DETECT': this._onDetect(ev.t, ev.data); break;
       case 'C2_ARRIVE': this._onC2Arrive(ev.t, ev.data); break;
+      case 'C2_ARRIVE_DUP': this._onC2ArriveDup(ev.t, ev.data); break;
       case 'FUSION_ARRIVE': this._onFusionArrive(ev.t, ev.data); break;
       case 'APPROVE_ARRIVE': this._onApproveArrive(ev.t, ev.data); break;
       case 'SHOOTER_ARRIVE': this._onShooterArrive(ev.t, ev.data); break;

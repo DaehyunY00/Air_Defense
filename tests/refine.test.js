@@ -270,13 +270,18 @@ console.log('# D-3 결심 지연·통신지연 대비 (MoP)');
 var dA = runX('sc3', 'asis', 1.5, 42), dB = runX('sc3', 'tobe', 1.5, 42);
 assert(typeof dA.global.meanDecisionDelaySec === 'number' && dA.global.meanDecisionDelaySec >= 0,
   'meanDecisionDelaySec 제공 (trace 무관)');
-function commMean(res) {
+function commMean(res, kind) {
   var num = 0, den = 0;
-  res.links.forEach(function (l) { num += l.delaySec * l.count; den += l.count; });
+  res.links.forEach(function (l) { if (kind && l.kind !== kind) return; num += l.delaySec * l.count; den += l.count; });
   return den ? num / den : 0;
 }
-assert(commMean(dB) < commMean(dA),
-  'To-Be 링크 전달 평균지연 < As-Is (' + commMean(dB).toFixed(1) + 's < ' + commMean(dA).toFixed(1) + 's — 음성↔데이터링크)');
+// ②단계 지표는 report 링크만 집계한다(panels.js commMeanDelay(res,'report')와 동일 정본).
+// coord/command 지연을 섞으면 ②가 아닌 링크(⑥⑦ 협조 180s·⑧ 교전명령)가 값을 지배한다(Phase 1 사실 e).
+assert(commMean(dB, 'report') < commMean(dA, 'report'),
+  'To-Be report 전달지연 < As-Is (' + commMean(dB, 'report').toFixed(1) + 's < ' + commMean(dA, 'report').toFixed(1) + 's — ②단계 report 링크만)');
+// kind 필터가 실제로 작동함을 증명 — report만과 전 링크가 다르다(coord/command가 섞이면 값이 달라짐)
+assert(commMean(dA, 'report') !== commMean(dA),
+  'kind 필터 작동: report만(' + commMean(dA, 'report').toFixed(1) + 's) ≠ 전 링크(' + commMean(dA).toFixed(1) + 's) — coord/command 혼입 제거 확인');
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

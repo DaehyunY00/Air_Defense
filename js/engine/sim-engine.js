@@ -294,7 +294,12 @@
       KJ.LINKS.forEach(function (l) {
         if (l.from === s.id && l.kind === 'report' && l.comm[self.mode]) {
           var d = l.comm[self.mode].delaySec;
-          if (!best || d < best.delay) best = { c2: l.to, delay: d, comm: l.comm[self.mode], from: s.id };
+          // 동점 시 C2 id 사전순 tiebreak — ⑧단계 WTA 관례와 일치, 데이터(노드/링크 배열) 순서
+          // 의존성 제거. 주의: 이것만으로 JAOC-CD 사장은 안 풀린다(AOC-1C < JAOC-CD) — 근본
+          // 해결은 팬아웃(Phase 4). 여기서는 "데이터 순서 의존성 제거"만이 목적이다.
+          if (!best || d < best.delay || (d === best.delay && l.to < best.c2)) {
+            best = { c2: l.to, delay: d, comm: l.comm[self.mode], from: s.id };
+          }
         }
       });
     });

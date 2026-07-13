@@ -257,10 +257,20 @@ assert(dc.interceptSatM <= dc.interceptM && dc.killedThreatSatM <= dc.killedThre
 var dRun2 = runX('sc2', 'asis', 2, 42);
 assert(JSON.stringify(dRun.global.cost) === JSON.stringify(dRun2.global.cost),
   '비용 지표도 동일 seed → 완전 동일 (결정론)');
-var dTobe = runX('sc2', 'tobe', 2, 42);
-assert(dTobe.global.cost.exchangeSat < dc.exchangeSat,
-  'SC2(무인기 포화): To-Be 비용교환비 < As-Is (' +
-  dTobe.global.cost.exchangeSat.toFixed(1) + ' < ' + dc.exchangeSat.toFixed(1) + ')');
+// 단일 seed exchangeSat는 RNG 스트림 이동(②라우팅 변경 등)에 민감하다(감사 발견 3).
+// SC2 To-Be 비용교환비 개선은 seed 평균에서 견고하게 성립하므로 pooled로 검증한다.
+function poolExchSat(mode) {
+  var sum = 0, n = 0;
+  for (var i = 1; i <= 20; i++) {
+    var e = runX('sc2', mode, 2, i).global.cost.exchangeSat;
+    if (e != null) { sum += e; n++; }
+  }
+  return sum / n;
+}
+var exchAsis = poolExchSat('asis'), exchTobe = poolExchSat('tobe');
+assert(exchTobe < exchAsis,
+  'SC2(무인기 포화): To-Be 비용교환비 < As-Is [pooled seed1~20] (' +
+  exchTobe.toFixed(1) + ' < ' + exchAsis.toFixed(1) + ')');
 // 극한값: 교전 0이면 비용 0·exchange null (NaN 없음)
 var dEmpty = KJ.runDES({ scenario: { id: 'e', name: 'e', mix: [] }, mode: 'asis', intensity: 1, seed: 1, endTimeSec: 600 });
 assert(dEmpty.global.cost.interceptM === 0 && dEmpty.global.cost.exchange === null,

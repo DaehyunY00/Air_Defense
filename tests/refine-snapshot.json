@@ -6,9 +6,9 @@
     "bn": "link:AOC-1C→MCRC"
   },
   "sc1/tobe": {
-    "spawned": 61,
-    "killed": 48,
-    "leaked": 5,
+    "spawned": 63,
+    "killed": 51,
+    "leaked": 3,
     "bn": ""
   },
   "sc2/asis": {
@@ -18,8 +18,8 @@
     "bn": "link:AOC-1C→MCRC"
   },
   "sc2/tobe": {
-    "spawned": 55,
-    "killed": 30,
+    "spawned": 59,
+    "killed": 28,
     "leaked": 15,
     "bn": ""
   },
@@ -30,9 +30,9 @@
     "bn": "link:AOC-1C→MCRC,node:KAMDOC"
   },
   "sc3/tobe": {
-    "spawned": 334,
-    "killed": 168,
-    "leaked": 139,
-    "bn": "node:MDU-L,node:MDU-M"
+    "spawned": 361,
+    "killed": 196,
+    "leaked": 134,
+    "bn": "node:MDU-L"
   }
 }

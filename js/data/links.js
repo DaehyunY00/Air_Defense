@@ -68,6 +68,14 @@
     { from: 'MCRC', to: 'KAMDOC', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
       note: 'As-Is: 공중위협·탄도탄 이원화 체계 간 협조 지연' },
 
+    // ─── To-Be: 다출처 Plug-in 직결 (센서 → JAMDC2) — KJADS "P→F 전환" 근거 ───
+    // 육군 계열 센서(As-Is에서 국가방공체계 미통합·담당 C2 사각지대)만 직결한다. 담당 C2를
+    // 건너뛰어 JAMDC2가 신규 융합항적(F)을 직접 생성 → 담당 C2 포화가 융합을 막지 못한다.
+    // 이미 2s 데이터링크로 통합된 공/해군 광역센서(ACR/LAR/GPR/E737/AEGIS)는 직결 제외.
+    { from: 'ADC2A-W', to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST } },
+    { from: 'LLR-1C', to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST } },
+    { from: 'LLR-CD', to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST } },
+
     // ─── To-Be: JAMDC2 (Track Fusion) 연동 — 전 센서·C2 융합 ───
     { from: 'MCRC', to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST } },
     { from: 'KAMDOC', to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST } },

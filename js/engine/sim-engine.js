@@ -303,12 +303,38 @@
     return Math.max(0, base) * this.mult.delay;
   };
 
-  /** 2 추적생성: 최속 보고경로로 담당 C2에 항적 전달 */
+  /** 2 추적생성: 최속 보고경로로 담당 C2에 항적 전달 (To-Be는 직결 센서면 JAMDC2 직행) */
   Simulation.prototype._onDetected = function (threat, t) {
-    var self = this, best = null;
+    var self = this;
+    // To-Be 다출처 Plug-in 직결(Phase 3): 센서→JAMDC2 직결 링크를 가진 센서가 하나라도 있으면
+    // 담당 C2를 건너뛰고 JAMDC2로 직행한다(FUSION_ARRIVE). argmin에 섞지 않는 명시적 우선 규칙 —
+    // 직결/담당C2 모두 2s라 tiebreak가 자의적으로 갈리는 것을 피한다. 근거: KJADS "P→F 전환"
+    // (다출처 plot 수신·융합 → 기존 체계 사각지대의 신규 항적 F 생성). 담당 C2 포화가 융합을
+    // 막지 못하게 한다. detects/커버리지·탐지 확률(①)은 불변 — 여기는 "탐지 후 어디로"의 문제.
+    if (this.mode === 'tobe' && this.nodeState['JAMDC2']) {
+      var dbest = null;
+      threat._sensors.forEach(function (s) {
+        KJ.LINKS.forEach(function (l) {
+          if (l.from === s.id && l.to === 'JAMDC2' && l.kind === 'report' && l.comm.tobe) {
+            var dd = l.comm.tobe.delaySec;
+            if (!dbest || dd < dbest.delay || (dd === dbest.delay && l.from < dbest.from)) {
+              dbest = { delay: dd, comm: l.comm.tobe, from: l.from };
+            }
+          }
+        });
+      });
+      if (dbest) {
+        this._recordLink(dbest.from, 'JAMDC2', dbest.comm, 'report');
+        this._mark(threat, '직결→JAMDC2', t);
+        this.schedule(t + this._linkDelay(dbest.comm), PRI.LINK_ARRIVE, 'FUSION_ARRIVE', { threat: threat });
+        return;
+      }
+    }
+    // 기존: 담당 C2 argmin 경유 (직결 링크 to==='JAMDC2'는 위에서 처리했으므로 제외)
+    var best = null;
     threat._sensors.forEach(function (s) {
       KJ.LINKS.forEach(function (l) {
-        if (l.from === s.id && l.kind === 'report' && l.comm[self.mode]) {
+        if (l.from === s.id && l.to !== 'JAMDC2' && l.kind === 'report' && l.comm[self.mode]) {
           var d = l.comm[self.mode].delaySec;
           // 동점 시 C2 id 사전순 tiebreak — ⑧단계 WTA 관례와 일치, 데이터(노드/링크 배열) 순서
           // 의존성 제거. 주의: 이것만으로 JAOC-CD 사장은 안 풀린다(AOC-1C < JAOC-CD) — 근본

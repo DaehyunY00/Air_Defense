@@ -200,13 +200,16 @@
       {
         no: '①', name: '탐지 (Detect)', fn: '_beginDetect · _onDetect',
         bottleneck: '저고도·저RCS 탐지 실패, 센서 커버리지 공백 — 격추율 하락의 근원',
-        fix: '다센서 융합으로 저피탐 항적 연속성 향상',
+        fix: '다센서 병렬 결합(Any Sensor)으로 per-scan 획득확률·탐지 시점 향상 (항적 연속성은 미구현)',
         codes: ['not_detected', 'no_sensor'],
         metrics: [
           { label: '탐지율', mom: 'MoP', kind: 'rate', lower: false, max: 1,
             a: ga.spawned ? ga.detected / ga.spawned : null,
             b: gb.spawned ? gb.detected / gb.spawned : null,
-            tip: '생성 위협 중 스캔 반복 끝에 탐지에 성공한 비율. 저탐지 위협(무인기 detectFactor 0.4)의 항적소실→재획득 반복을 반영.' }
+            tip: 'per-scan 탐지확률 pᵢ = 센서Pd × 위협난이도(detectFactor) × 민감도배수. ' +
+              'As-Is = maxᵢ(pᵢ)(비융합·최선 단일센서) / To-Be = 1−Πᵢ(1−pᵢ)(다센서 병렬 결합). ' +
+              '체공 위협은 시행횟수 N=dwell/스캔이 커 누적 탐지"율"은 두 모드 모두 ~1.0으로 포화되므로, ' +
+              '융합 효과는 율이 아니라 탐지 "시점" 단축으로 나타남(단일센서만 커버하는 위협은 개선 없음).' }
         ]
       },
       {

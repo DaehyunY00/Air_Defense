@@ -241,11 +241,40 @@
     this.schedule(t + SCAN_SEC, PRI.DETECT, 'DETECT', { threat: threat });
   };
 
+  /**
+   * 스캔 1회당 탐지확률 — [센서 고유 Pd] × [위협 고유 탐지난이도] × [민감도 배수]를
+   * per-sensor로 계산한 뒤 모드별 융합 규칙으로 결합한다 (SEN-FUSION-01).
+   *   pᵢ = clamp(sensorPd_i × threat.detectFactor × mult.detect, 0, 1)
+   *   As-Is (비융합) : p = maxᵢ(pᵢ)          — 자군 최선의 단일 센서 성능이 곧 체계 성능
+   *   To-Be (융합)   : p = 1 − Πᵢ(1 − pᵢ)     — 다출처 센서 병렬 결합(Any Sensor)
+   * 의미론: nodes[].detectProb.value = 센서 고유 스캔당 탐지확률(표준 표적 기준),
+   *         threats[].detectFactor = 위협 고유 탐지난이도 계수(저RCS·저고도 등, 0~1).
+   * 민감도 배수(mult.detect)는 결합 *전*(per-sensor)에 곱한다 — 결합 후 곱하면 스윕 의미가 달라짐.
+   * value 누락 센서는 폴백 Pd=1.0 (데이터 누락이 조용한 0 탐지가 되지 않도록). 발동 시 STEP5 보고.
+   * RNG는 소비하지 않는다(호출부가 단일 draw로 판정 — 스캔당 정확히 1회 유지).
+   */
+  Simulation.prototype._scanProb = function (threat) {
+    var tt = KJ.threatType(threat.type);
+    var md = this.mult.detect;
+    var sensors = threat._sensors || [];
+    var ps = sensors.map(function (s) {
+      var pd = (s.detectProb && typeof s.detectProb.value === 'number')
+        ? s.detectProb.value : 1.0;                       // value 누락 시 안전 폴백
+      return Math.max(0, Math.min(1, pd * tt.detectFactor * md));
+    });
+    if (!ps.length) return 0;
+    if (this.mode === 'tobe') {
+      // 다출처 융합(Any Sensor): 센서 병렬 결합
+      return 1 - ps.reduce(function (acc, p) { return acc * (1 - p); }, 1);
+    }
+    // 비융합(As-Is): 최선의 단일 센서만
+    return Math.max.apply(null, ps);
+  };
+
   Simulation.prototype._onDetect = function (t, d) {
     var threat = d.threat;
     if (!threat.alive || threat.detected || threat.pipelineDead) return;
-    var tt = KJ.threatType(threat.type);
-    var p = Math.min(1, tt.detectFactor * this.mult.detect); // per-scan 탐지확률(민감도 배수 적용)
+    var p = this._scanProb(threat); // per-scan 탐지확률: 센서 Pd × 위협 난이도, 모드별 융합
     if (this.rng.raw() < p) {
       threat.detected = true;
       threat._detectT = t; // 결심 지연(MoP) 기준 시각

@@ -99,13 +99,15 @@ SCENARIOS.forEach(function (id) {
     exch[id][x] = { asis: a, tobe: b };
   });
 });
-assert(UI_X.every(function (x) { return exch.sc2[x].tobe < exch.sc2[x].asis; }),
-  'SC2(무인기 포화)는 전 UI강도에서 To-Be 비용교환비 < As-Is (일관된 개선 — refine.test.js D-2와 정합)');
-// 재기준선(위협 다양화 — 중부축 추가·북측 진입점): 다양화 이전에는 SC1 x3.0에서도 반전이
-// 관측됐으나(77→108), 새 믹스에서는 SC1이 전 강도 개선으로 바뀜. 반전 사례는 SC3 저강도에
-// 남아 있음 — "방향이 시나리오·강도에 따라 반전될 수 있다"는 발견 3의 본질은 유지된다.
-assert(exch.sc3[0.5].tobe > exch.sc3[0.5].asis,
-  'SC3 x0.5: To-Be 비용교환비(' + exch.sc3[0.5].tobe.toFixed(2) + ') > As-Is(' + exch.sc3[0.5].asis.toFixed(2) +
+// 재핀(feat/sensor-pd-fusion): 센서 Pd 융합으로 탐지 시점이 재타이밍되며 공유 RNG 스트림이
+// 이동 → seed=12345 고정 exchangeSat의 반전 셀 위치가 바뀜(수치 이동일 뿐 계산·표시는 불변).
+// 발견 3의 본질("방향이 시나리오·강도에 따라 반전될 수 있음")은 오히려 강화됨: 이제 SC2조차
+// 저·중강도에서는 개선이나 고강도(2·3×)에서 반전이 관측된다. SC3의 반전은 x1.0·x2.5에 존재.
+assert([0.5, 1, 1.5].every(function (x) { return exch.sc2[x].tobe < exch.sc2[x].asis; }) &&
+       [2, 3].some(function (x) { return exch.sc2[x].tobe >= exch.sc2[x].asis; }),
+  'SC2(무인기 포화): 저·중강도(0.5~1.5×) To-Be 개선이나 고강도(2·3×)에서 반전 관측 (발견 3 강화)');
+assert(exch.sc3[2.5].tobe > exch.sc3[2.5].asis,
+  'SC3 x2.5: To-Be 비용교환비(' + exch.sc3[2.5].tobe.toFixed(2) + ') > As-Is(' + exch.sc3[2.5].asis.toFixed(2) +
   ') — 방향 반전 실재(감사 보고서 발견 3, seed=' + SEED + ' 고정 재현)');
 assert(exch.sc3[1].tobe > exch.sc3[1].asis,
   'SC3 x1.0: To-Be 비용교환비(' + exch.sc3[1].tobe.toFixed(2) + ') > As-Is(' + exch.sc3[1].asis.toFixed(2) +

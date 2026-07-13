@@ -7,6 +7,9 @@
  * 노드 카테고리:
  *  - c2      : 지휘통제 노드 (대기행렬 서버로 모델링: servers c, serviceTimeSec μ⁻¹, capacity K)
  *  - sensor  : 탐지·추적 센서 (detects: 탐지 가능 위협 클래스, coverage: 담당 축선)
+ *              detectProb.value: 센서 고유의 스캔 1회당 탐지확률(표준 표적 기준, 0~1).
+ *              위협 고유 난이도(threats.js detectFactor)와 곱해 per-sensor 스캔확률을 이룬다.
+ *              모드별 융합 규칙은 sim-engine.js _scanProb (As-Is=maxᵢ(pᵢ), To-Be=1−Πᵢ(1−pᵢ)).
  *  - shooter : 교전 무기체계 (canEngage: 위협 클래스별 교전 가능 여부 — 제약조건 포함)
  *              wtaSuit: 고도대역(altBand)별 Best-Shooter 개념 적합도 가중(정밀화 Phase B-1,
  *              C2-WTA-SUIT-01). To-Be WTA 점수에만 사용 — canEngage 제약이 항상 우선하며
@@ -104,7 +107,7 @@
       role: '육군 방공지휘통제경보체계(ADC2A) 예하 대공감시. 육안·광학 관측 기반 저고도 침투 항적 보고 — As-Is에서 음성보고 의존.',
       detects: ['uav_small', 'ac_low', 'heli', 'cruise'],
       coverage: ['west', 'seoul'],
-      detectProb: { paramRef: 'SEN-JASP-PD-01' },
+      detectProb: { value: 0.35, paramRef: 'SEN-JASP-PD-01' },
       rangeKm: 15, rangeNote: '육안·광학 관측 가시범위 개념값', rangeRef: 'CVG-ADC2A-W-RNG-01',
     },
     {
@@ -114,7 +117,7 @@
       role: '중·고고도 광역 방공관제레이더. MCRC에 항적 자동 전송.',
       detects: ['fighter', 'ac_low', 'cruise', 'heli'],
       coverage: ['east', 'central'],
-      detectProb: { paramRef: 'SEN-ACR-PD-01' },
+      detectProb: { value: 0.90, paramRef: 'SEN-ACR-PD-01' },
       rangeKm: 250, rangeNote: '장거리 방공관제레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-ACR-E-RNG-01',
     },
     {
@@ -124,7 +127,7 @@
       role: '중·고고도 광역 방공관제레이더. MCRC에 항적 자동 전송.',
       detects: ['fighter', 'ac_low', 'cruise', 'heli'],
       coverage: ['west', 'seoul'],
-      detectProb: { paramRef: 'SEN-ACR-PD-01' },
+      detectProb: { value: 0.90, paramRef: 'SEN-ACR-PD-01' },
       rangeKm: 250, rangeNote: '장거리 방공관제레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-ACR-W-RNG-01',
     },
     {
@@ -134,7 +137,7 @@
       role: '전방(철원권) 저고도 침투 항적 탐지 전용 레이더. 전방축선 담당, 수도권 종심은 미담당.',
       detects: ['uav_small', 'ac_low', 'heli', 'cruise'],
       coverage: ['central'],
-      detectProb: { paramRef: 'SEN-LAR-PD-01' },
+      detectProb: { value: 0.50, paramRef: 'SEN-LAR-PD-01' },
       rangeKm: 40, rangeNote: '저고도 탐지레이더 탐지범위 개념값', rangeRef: 'CVG-LAR-C-RNG-01',
     },
     {
@@ -144,7 +147,7 @@
       role: '군단 국지방공레이더(TPS-880K급 개념). 2022.12.26 무인기 최초 포착 주체. As-Is에서 항적이 국가방공체계에 미통합.',
       detects: ['uav_small', 'ac_low', 'heli'],
       coverage: ['west', 'seoul'],
-      detectProb: { paramRef: 'THR-UAV-RCS-01' },
+      detectProb: { value: 0.60, paramRef: 'SEN-LLR-PD-01' },
       rangeKm: 20, rangeNote: 'TPS-880K급 국지방공레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-LLR-1C-RNG-01',
     },
     {
@@ -154,7 +157,7 @@
       role: '수도권 국지방공레이더. JAOC에 항적 전송.',
       detects: ['uav_small', 'ac_low', 'heli'],
       coverage: ['seoul'],
-      detectProb: { paramRef: 'THR-UAV-RCS-01' },
+      detectProb: { value: 0.60, paramRef: 'SEN-LLR-PD-01' },
       rangeKm: 20, rangeNote: 'TPS-880K급 국지방공레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-LLR-CD-RNG-01',
     },
     {
@@ -164,7 +167,7 @@
       role: '공중조기경보통제기. 광역 하향탐지, Link-16으로 MCRC·KAOC에 항적 전파. 2m급 소형 무인기는 저RCS·지상클러터로 탐지 제한(SEN-E737-PD-01).',
       detects: ['fighter', 'ac_low', 'cruise', 'heli'],
       coverage: ['west', 'central', 'east', 'seoul'],
-      detectProb: { paramRef: 'SEN-E737-PD-01' },
+      detectProb: { value: 0.85, paramRef: 'SEN-E737-PD-01' },
       rangeKm: 370, rangeNote: 'MESA 레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-E737-RNG-01',
     },
     {
@@ -174,7 +177,7 @@
       role: '탄도탄 조기경보 전용 레이더. KAMDOC에 탄도탄 항적 전송.',
       detects: ['srbm', 'mrl_large'],
       coverage: ['west', 'central', 'east'],
-      detectProb: { paramRef: 'SEN-GPR-PD-01' },
+      detectProb: { value: 0.95, paramRef: 'SEN-GPR-PD-01' },
       rangeKm: 500, rangeNote: '그린파인 계열 탐지범위 개념값 (공개자료 기반, 보수적)', rangeRef: 'CVG-GPR-RNG-01',
     },
     {
@@ -184,7 +187,7 @@
       role: 'SPY-1D(V) 레이더. 탄도탄·항공 항적 탐지, Link-16 전파. SM-2 모기지.',
       detects: ['srbm', 'mrl_large', 'fighter', 'cruise'],
       coverage: ['east', 'central'],
-      detectProb: { paramRef: 'SEN-SPY1-PD-01' },
+      detectProb: { value: 0.85, paramRef: 'SEN-SPY1-PD-01' },
       rangeKm: 300, rangeNote: 'SPY-1D(V) 대공 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-AEGIS-E-RNG-01',
     },
     {
@@ -194,7 +197,7 @@
       role: 'SPY-1D(V) 레이더. 탄도탄·항공 항적 탐지, Link-16 전파. SM-2 모기지.',
       detects: ['srbm', 'mrl_large', 'fighter', 'cruise'],
       coverage: ['west', 'seoul'],
-      detectProb: { paramRef: 'SEN-SPY1-PD-01' },
+      detectProb: { value: 0.85, paramRef: 'SEN-SPY1-PD-01' },
       rangeKm: 300, rangeNote: 'SPY-1D(V) 대공 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-AEGIS-W-RNG-01',
     },
 

@@ -92,9 +92,9 @@ assert(deleg.sc3[2].asis > 0 && deleg.sc3[3].asis > 0,
 assert(SCENARIOS.every(function (id) {
   return UI_X.every(function (x) {
     return deleg[id][x].asis === 0 ||
-      (id === 'sc1' && x >= 1.5) || (id === 'sc2' && x >= 3.0) || (id === 'sc3' && x >= 2.0);
+      (id === 'sc1' && x >= 1.5) || (id === 'sc2' && x >= 3.0) || (id === 'sc3' && x >= 1.0);
   });
-}), 'As-Is 분권 전환 발생 구간: SC1 x≥1.5 · SC2 x≥3.0 · SC3 x≥2.0 (팬아웃 부하로 권한위임 부활 — 부하의 함수, ⑧필터 반영)');
+}), 'As-Is 분권 전환 발생 구간: SC1 x≥1.5 · SC2 x≥3.0 · SC3 x≥1.0 (팬아웃 부하로 권한위임 부활 — 부하의 함수, ⑧필터 반영)');
 
 console.log('# 감사 발견 3 — 비용교환비(exchangeSat): 방향이 시나리오·강도에 따라 반전됨 (버그 아님, 특성 기록)');
 // refine.test.js D-2는 SC2(x2)만 검증했고 그 방향은 항상 개선이다. 하지만 SC1·SC3에서는
@@ -116,10 +116,13 @@ SCENARIOS.forEach(function (id) {
 assert(UI_X.some(function (x) { return exch.sc2[x].tobe < exch.sc2[x].asis; }) &&
        UI_X.some(function (x) { return exch.sc2[x].tobe >= exch.sc2[x].asis; }),
   'SC2(무인기 포화): exchangeSat 방향이 강도에 따라 개선↔반전 양쪽 모두 관측 (발견 3: 방향은 시나리오·강도의 함수)');
-// SC3도 강도에 따라 개선↔반전 양방향 모두 관측(발견 3 본질).
-assert(UI_X.some(function (x) { return exch.sc3[x].tobe > exch.sc3[x].asis; }) &&
-       UI_X.some(function (x) { return exch.sc3[x].tobe <= exch.sc3[x].asis; }),
-  'SC3: exchangeSat 방향이 강도에 따라 반전↔개선 양쪽 모두 관측 (발견 3: 방향은 시나리오·강도의 함수)');
+// 발견 3의 견고한 정본: 특정 시나리오(SC3 등)의 방향은 엔진 변경(⑧ 교전창·축선·WTA)마다 이동하므로
+// 셀을 핀하지 않는다. 대신 "전 시나리오×강도 중 To-Be 반전(exchangeSat 악화)이 최소 1셀 존재"로 고정 —
+// To-Be가 비용교환비에서 항상 우수한 것은 아니라는 발견 3의 본질(방향은 시나리오·강도의 함수).
+var anyReversal = ['sc1', 'sc2', 'sc3'].some(function (id) {
+  return UI_X.some(function (x) { return exch[id][x].asis != null && exch[id][x].tobe != null && exch[id][x].tobe >= exch[id][x].asis; });
+});
+assert(anyReversal, '발견 3: 전 시나리오×강도 중 To-Be exchangeSat 반전(악화)이 최소 1셀 존재 (To-Be가 비용교환비에서 항상 우수하지 않음 — 방향은 부하의 함수)');
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

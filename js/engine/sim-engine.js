@@ -666,11 +666,35 @@
             (score === best.score && sh.id < best.sh.id)) best = { sh: sh, score: score };
       });
     } else {
-      shooters.forEach(function (sh) {
-        var ns = self.nodeState[sh.id];
-        var load = ns ? (ns.busy + ns.queue.length) : 0;
-        if (!best || load < best.load) best = { sh: sh, load: load };
-      });
+      // ── As-Is WTA (Phase 3): 전역 부하 조회 제거 안(KJ.ASIS_WTA). 3C: 동점은 id 사전순(To-Be와 통일). ──
+      //  D 'global' (기본·현행): 전군 무기 실시간 부하(COP 부재 전제와 모순 — 결함)
+      //  A 'ownchain': 자기 계통(서비스) 무기만 부하 가시, 계통 밖은 0(가용 가정)
+      //  B 'priority': 부하 무시, 자기 서비스 우선 + 노드 선언 순서(고정 서열)
+      //  C 'stale'   : 60초 계단형 낡은 부하(정보 지연)
+      var wtaMode = KJ.ASIS_WTA || 'global';
+      var decidSvc = threat._mainC2 ? ((KJ.nodeById(threat._mainC2) || {}).service) : null;
+      if (wtaMode === 'priority') {
+        var ordered = shooters.slice().sort(function (x, y) { // 안정 정렬(Node): 동급이면 선언순 유지
+          return ((decidSvc && x.service === decidSvc) ? 0 : 1) - ((decidSvc && y.service === decidSvc) ? 0 : 1);
+        });
+        best = { sh: ordered[0], load: 0 };
+      } else {
+        shooters.forEach(function (sh) {
+          var ns = self.nodeState[sh.id];
+          var realLoad = ns ? (ns.busy + ns.queue.length) : 0;
+          var load;
+          if (wtaMode === 'ownchain') {
+            var svc = sh.controlledBy[mode][0] ? ((KJ.nodeById(sh.controlledBy[mode][0]) || {}).service) : sh.service;
+            load = (decidSvc && svc === decidSvc) ? realLoad : 0; // 계통 밖 부하 불가시 → 0(가용 가정)
+          } else if (wtaMode === 'stale') {
+            if (ns && (!ns._loadStamp || t - ns._loadStamp.t >= 60)) ns._loadStamp = { t: t, load: realLoad };
+            load = ns ? ns._loadStamp.load : 0;
+          } else {
+            load = realLoad; // D: 전역 실시간(현행)
+          }
+          if (!best || load < best.load || (load === best.load && sh.id < best.sh.id)) best = { sh: sh, load: load };
+        });
+      }
     }
     var shooter = best.sh;
     var controlC2 = shooter.controlledBy[mode][0];
@@ -1045,6 +1069,9 @@
   KJ.Simulation = Simulation;
   KJ._coordPath = coordPath;   // 테스트/검증용 노출 (다익스트라 coord 최단지연 경로)
   KJ.DELEG_QUEUE_MULT = DELEG_QUEUE_MULT;  // 감사/스윕용 노출 (속성 변경 시 엔진이 즉시 참조 — 기본 asis4/tobe1)
+  // Phase 3(⑧): As-Is WTA 안 스위치. 기본 'global'(현행 D). 'ownchain'(A)·'priority'(B)·'stale'(C).
+  // 안 선택은 STOP 판단 대상 — 감사/측정용 노출. 기본값은 거동을 바꾸지 않는다(3C 동점통일만 적용).
+  KJ.ASIS_WTA = 'global';
 
   // ── 정밀화 Phase C: 요격 실패(누수) 원인 코드 → 병목 분류(taxonomy) ──
   // 엔진이 태깅하는 leakReason 코드의 정본 분류. UI(대조표·타임라인·분석 탭 파이프라인)와

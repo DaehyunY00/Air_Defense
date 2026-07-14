@@ -127,7 +127,7 @@
     });
     return out;
   }
-  // 단계 귀속용 확장 코드(overflow 분리)의 라벨·구조성 — 기본 8종은 KJ.LEAK_TAXONOMY 참조
+  // 단계 귀속용 확장 코드(overflow 분리)의 라벨·구조성 — 기본 코드는 KJ.LEAK_TAXONOMY 참조
   var CODE_META = {
     overflow_c2: { label: '포화손실(C2 처리)', structural: true },
     // Phase 4(⑨) 재분류: 교전채널 포화는 유도탄·발사대 수 문제(no_shooter 계열) → 비구조.
@@ -375,10 +375,11 @@
             tip: '격추 성공 항적의 생성→격추 평균 소요(n=As-Is ' + (ga.meanTimeToKillN || 0) + ' · To-Be ' + (gb.meanTimeToKillN || 0) + '). ' +
               '⚠️ 생존자 편향: "격추한 것"에만 조건화된 평균이라 As-Is↔To-Be 단순비교는 오도할 수 있다. To-Be가 As-Is가 놓치던 ' +
               '어려운(느린) 표적까지 격추하면 meanTTK가 오히려 커져 "느려 보이는" 선택효과가 생긴다 — 반드시 격추율(n)과 함께 읽어라.' },
-          { label: '교전당 발사수', mom: 'MoP', kind: 'raw2', lower: true,
+          { label: '교전당 발사수', mom: 'MoP', kind: 'raw2', lower: null,
             a: ga.shotsPerEngagement, b: gb.shotsPerEngagement,
-            tip: '요격탄 총 발사수 ÷ 최초교전 표적수. 1.0=교전당 1발(shoot-look-shoot 이상적), >1=재교전·연발(salvo)로 발사 부담 증가. ' +
-              '종전엔 교전=1발 암묵 가정이라 이 부담이 안 보였다 — 비용교환비와 함께 요격탄 소모 강도를 표현.' },
+            tip: '요격탄 총 발사수 ÷ 최초교전 표적수. 1.0=교전당 1발(shoot-look-shoot), >1=재교전·연발(salvo) 발사 부담↑, ' +
+              '<1=일부 명령표적이 발사 전 이탈(체공창 소진). 방향(개선/악화) 판정 없는 참고 지표 — 높/낮음이 곧 좋/나쁨이 아니다. ' +
+              '비용교환비·격추율과 함께 요격탄 소모 강도를 읽는다.' },
           { label: '방어효율 (방어한 위협가치 비율)', mom: 'MoFE', kind: 'rate', lower: false, max: 1,
             a: ga.cost.defenseEfficiency, b: gb.cost.defenseEfficiency,
             tip: '격추 위협가치 ÷ (격추 + 누수 위협가치) — 전체 위협가치 중 실제로 방어(격추)한 비율. ' +
@@ -401,7 +402,7 @@
             tip: '생성 위협 중 격추하지 못하고 공역을 통과(누수)한 비율.' },
           { label: '구조적 실패 합 ([구조] 원인)', mom: 'MoCE', kind: 'cnt', lower: true,
             a: structuralLeaks(ga), b: structuralLeaks(gb),
-            tip: '8종 원인 중 structural=true(탐지공백·비융합·책임공백·포화·지연) 합 — To-Be에서 감소해야 정상.' }
+            tip: '전 원인 코드 중 structural=true(탐지공백·비융합·책임공백·포화·지연) 합 — To-Be에서 감소해야 정상.' }
         ]
       }
     ];
@@ -422,11 +423,13 @@
     renderTaxonomyTable(ca, cb);
   }
 
-  /** 병목 taxonomy 8종 ↔ 발생 단계 요약표 (+ 이번 설정의 관측 건수) */
+  /** 병목 taxonomy ↔ 발생 단계 요약표 (+ 이번 설정의 관측 건수) */
   function renderTaxonomyTable(ca, cb) {
     var body = el('taxonomy-body');
     if (!body) return;
     // 발생 단계(stage)는 엔진 정본 KJ.LEAK_TAXONOMY에서 읽는다 — 결과 모달 대조표와 동일 출처
+    // 엔진이 실제 방출하는 코드와 1:1 정합(⑧ no_engage_window · ⑨ timeout 분해 반영).
+    // overflow는 노드 카테고리로 C2/교전 분리, timeout은 tries로 c2(구조)/engage(비구조) 분리.
     var rows = [
       { code: 'not_detected', fixer: '센서·융합' },
       { code: 'no_sensor', fixer: '센서 배치' },
@@ -435,8 +438,11 @@
       { code: 'overflow', fixer: '처리용량·자동화',
         count: function (c) { return (c.overflow_c2 || 0) + (c.overflow_shooter || 0); } },
       { code: 'no_shooter', fixer: '무기체계 능력' },
+      { code: 'no_engage_window', fixer: '무기 교전창·체공(⑧)' },
       { code: 'missed', fixer: '무기 Pk·재교전' },
-      { code: 'timeout', fixer: '전 단계 지연' }
+      { code: 'timeout:c2', fixer: '전 단계 지연(교전 미개시)',
+        count: function (c) { return (c['timeout:c2'] || 0) + (c['timeout'] || 0); } }, // legacy timeout 흡수(구조)
+      { code: 'timeout:engage', fixer: '무기 체공·교전(⑨)' }
     ];
     body.innerHTML = rows.map(function (r, i) {
       var meta = KJ.leakTaxonomy(r.code);

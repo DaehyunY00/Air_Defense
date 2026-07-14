@@ -773,10 +773,13 @@
         tip: '서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합.' },
       { label: '비용교환비 (저가 포화위협)', mom: 'MoFE', a: asisG.cost.exchangeSat, b: tobeG.cost.exchangeSat, kind: 'ratio', lower: true,
         tip: '무인기·장사정포 대응에 소모한 개념 요격탄 비용 ÷ 격추 위협가치 (WPN/THR-*-COST-01, 타 전역 공개수치 기반 개념값 — 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모. ' +
-          '주의: 다른 지표와 달리 To-Be가 항상 개선되는 지표가 아님 — Best-Shooter 배정·재교전 횟수 차이로 시나리오·강도에 따라 악화되는 경우도 실재함(docs/metrics-verification.md 참조).' },
+          '⚠️ 함정: 분모에 "격추한" 위협만 들어가 아무것도 안 쏘면 0으로 "최적"이 된다(패배가 경제성으로 계상) — 반드시 아래 "방어효율"·격추율과 함께 읽어라. To-Be가 항상 개선되는 지표가 아님(docs/metrics-verification.md).' },
+      { label: '방어효율 (방어한 위협가치 비율)', mom: 'MoFE', a: asisG.cost.defenseEfficiency, b: tobeG.cost.defenseEfficiency, kind: 'rate', lower: false, max: 1,
+        tip: '격추 위협가치 ÷ (격추 + 누수 위협가치) — 전체 위협가치 중 실제로 방어(격추)한 비율. 비용교환비의 "안 쏘면 최적" 함정을 반전한다(안 쏘면 방어효율 0=최악). exchange가 누수를 경제성으로 보상하던 결함(⑨ 사실 c)의 보완 지표 — exchange는 회귀 안전을 위해 그대로 유지.' },
       // ── 보조 지표 ──
-      { label: '평균 격추시간', mom: 'MoP', a: asisG.meanTimeToKillSec, b: tobeG.meanTimeToKillSec, kind: 'sec', lower: true,
-        tip: '격추 성공 항적의 생성→격추 평균 소요.' },
+      { label: '평균 격추시간 (조건부·생존자편향 주의)', mom: 'MoP', a: asisG.meanTimeToKillSec, b: tobeG.meanTimeToKillSec, kind: 'sec', lower: true,
+        tip: '격추 성공 항적의 생성→격추 평균 소요(n=As-Is ' + (asisG.meanTimeToKillN || 0) + ' · To-Be ' + (tobeG.meanTimeToKillN || 0) + '). ' +
+          '⚠️ 생존자 편향: "격추한 것"에만 조건화된 평균이라 To-Be가 As-Is가 놓치던 어려운(느린) 표적까지 격추하면 오히려 커질 수 있다 — 격추율(n)과 함께 읽어라.' },
       { label: 'report 링크 전달지연 (전달 1건 평균)', mom: 'MoP', a: commMeanDelay(asisRes, 'report'), b: commMeanDelay(tobeRes, 'report'), kind: 'sec', lower: true,
         tip: 'report(센서→담당 C2) 링크 전달의 평균 지연만 집계(coord·command 제외). As-Is도 이 경로는 대부분 데이터링크/KVMF라 음성 180s는 여기서 발화하지 않음 — 음성 협조 180s는 ⑥⑦(coord)단계다.' },
       { label: '구조적 실패 (공백·포화·지연)', mom: 'MoCE', a: structuralLeaks(asisG), b: structuralLeaks(tobeG), kind: 'cnt', lower: true,

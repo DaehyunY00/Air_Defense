@@ -321,6 +321,14 @@
 - **MC 적용방식**: 민감도스윕 대상
 - **⚠️ 비고 (FTR 300초 단위 모호성 — Phase 1C 감사)**: FTR 300초는 다른 무기(45~90초)의 **5~7배**이고, **채널 점유시간이 아니라 스크램블→요격 소요시간(항공기 출격 리드타임 포함)으로 보인다** — `[C2-VOICE-RPT-01]` 비고가 지적한 "end-to-end 값을 링크 1홉에 전용"한 것과 **동일 유형의 단위 오류** 가능성. **값은 이 감사에서 변경하지 않았다(판단 보류).** 대신 Phase 1 교전창 필터가 이 모호성을 방어한다: FTR lead(300+12=312s) > fighter 체공창(180s)이라 FTR은 fighter 후보에서 자동 제외되고 MSAM/SM2가 대체하므로, **engageTimeSec ∈ {60,120,180,300} 스윕에서 전체 격추율이 43~45%로 평탄**(FTR 도착만 54→15로 변함). 즉 300초가 옳든 그르든 outcome은 견고하다
 
+### [WPN-*-COV-01] 무기별 담당 축선 (Phase 2 ⑧, `js/data/nodes.js` coverage)
+- **값/분포**: FTR `west·central·east·seoul`(전 축선) · SHORAD-1C `west·seoul` · SHORAD-CD `seoul` · MSAM-1C `west·seoul·central` · MDU-M `west·central·seoul` · MDU-L `west·central·east·seoul`(전 축선) · SM2-E `east·central` · SM2-W `west·seoul`
+- **출처**: 개념 설정 — **`rangeKm`을 1차 근거로**, 노드 이름·배치 좌표·담당 센서 커버리지와 정합. 사거리 7km 점방어 무기(SHORAD)는 인접 1~2축선, 150km 이상 광역(SM2·MDU-L·FTR)은 넓게. SM2-E/W는 각각 AEGIS-E/W 센서 커버리지 승계. **임의 배치가 아니라 데이터 기반**(등급 C — 좌표·사거리는 개념값)
+- **적용범위**: DES `_doEngage` 후보 필터(coverage가 위협 axis 미포함이면 제외). 센서와 동일 스키마. coverage 미지정 노드는 전축선 폴백(현재 전 무기 지정됨). **canEngage 제약과 독립**(canEngage는 능력, coverage는 지리)
+- **신뢰도 등급**: C
+- **MC 적용방식**: 고정
+- **비고 (방공 공백/취약 지도 — Phase 2 실측)**: 이 coverage로 시나리오 (위협@축선) 조합을 검사하면 **절대 공백(no_shooter)은 없다**(FTR이 기동 전축선 공중 backstop, MDU-L이 전축선 탄도탄 backstop). 단 **단일무기 취약** 2건: `mrl_large@east → MDU-L 단독`(병목 이동 신호와 일치, MDU-L ρ≈0.93), `uav_small@central → FTR 단독`(중부축엔 무인기용 단거리 방공 부재 → 전투기 스크램블뿐, 실제적 정책 취약점). 축선 필터 도입으로 FTR이 중부축 저가위협 backstop이 되며 **FTR이 새 병목으로 출현**(스냅샷 node:FTR)
+
 ### [WPN-*-CHAN-01] 무기별 교전채널 수 (`js/data/nodes.js` engage.channels)
 - **값/분포**: FTR 4 · SHORAD-1C 6 · SHORAD-CD 4 · MSAM-1C 2 · MDU-M 4 · MDU-L 3 · SM2 2 (동시 교전 가능 표적 수 = M/M/c의 c). 대기실 K = c×2 (`[ENV-DES-SHOOTERK-01]`)
 - **출처**: 개념 설정 — 무기별 발사대·유도채널 규모의 상식적 서열화(종전 paramRef 부재를 명시화, 등급 C)

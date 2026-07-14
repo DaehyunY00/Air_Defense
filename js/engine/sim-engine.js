@@ -629,12 +629,16 @@
   Simulation.prototype._doEngage = function (threat, t) {
     if (!threat.alive || threat.pipelineDead) return;
     var self = this, mode = this.mode, type = threat.type;
-    // (1) 능력 후보: canEngage 제약(신궁·천마 탄도탄 배제 등) + 통제계통 존재. 0이면 능력 공백.
+    // (1) 능력 후보: canEngage 제약(신궁·천마 탄도탄 배제 등) + 통제계통 존재 + 축선 담당.
+    //     coverage(Phase 2, WPN-*-COV-01)가 위협 축선을 포함해야 교전 가능 — 사거리 7km 무기가
+    //     전 축선을 맡던 결함(SM2-E가 서부 순항 요격 등) 차단. coverage 미지정 노드는 전축선 폴백.
     var capable = KJ.nodesInMode(mode).filter(function (n) {
-      return n.category === 'shooter' && n.canEngage[type] &&
-        n.controlledBy && (n.controlledBy[mode] || []).length > 0;
+      if (n.category !== 'shooter' || !n.canEngage[type]) return false;
+      if (!n.controlledBy || !(n.controlledBy[mode] || []).length) return false;
+      if (n.coverage && n.coverage.indexOf(threat.axis) === -1) return false; // 축선 미담당
+      return true;
     });
-    if (capable.length === 0) { threat.leakReason = 'no_shooter'; return; } // 능력 제약(비구조)
+    if (capable.length === 0) { threat.leakReason = 'no_shooter'; return; } // 능력·축선 공백(방공 공백)
     // (2) 교전창 실현가능성(Phase 1): 명령링크 지연 + 교전 소요시간(engageTimeSec 평균)이 잔여
     //     체공창을 넘으면 물리적으로 교전 완료 불가 → 후보에서 제외. FTR(300s)이 fighter(dwell
     //     180s)를 "최적"이라 고르고 EXIT 전에 못 끝내던 확정 실패를 원천 차단한다(KJADS 원칙 3-2).

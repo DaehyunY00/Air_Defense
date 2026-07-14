@@ -86,14 +86,15 @@ assert(deleg.sc3[2].asis > 0 && deleg.sc3[3].asis > 0,
 // Phase 4(중복항적 팬아웃): Track Fusion 부재의 dup 부하가 각 군 C2를 배가시켜 승인노드 대기열이
 // 실사용 강도 구간에서 임계를 넘기 시작한다 — 감사가 "거의 죽은 기능"으로 지적한 동적 권한위임이
 // 부활한다(부하의 함수, 하드코딩 아님).
-// ※ 공통난수(CRN) 이식 후 정본 재갱신(도착 스트림 분리로 seed=12345 부하 타이밍이 재배치됨):
-//   SC1은 x≥2.0, SC2는 x≥3.0(무인기도 최고강도에선 KAOC 승인 포화), SC3는 x≥1.5에서 전환 발생.
+// ※ 정본 재갱신(CRN + ⑧ 교전창·축선 필터로 seed=12345 부하 타이밍이 재배치됨):
+//   SC1은 x≥1.5, SC2는 x≥3.0(무인기도 최고강도에선 KAOC 승인 포화), SC3는 x≥2.0에서 전환 발생.
+//   구체 임계는 엔진 변경마다 이동하나(부하의 함수) 핵심은 불변: 저강도 0건 + 고강도에서 발생.
 assert(SCENARIOS.every(function (id) {
   return UI_X.every(function (x) {
     return deleg[id][x].asis === 0 ||
-      (id === 'sc1' && x >= 2.0) || (id === 'sc2' && x >= 3.0) || (id === 'sc3' && x >= 1.5);
+      (id === 'sc1' && x >= 1.5) || (id === 'sc2' && x >= 3.0) || (id === 'sc3' && x >= 2.0);
   });
-}), 'As-Is 분권 전환 발생 구간: SC1 x≥2.0 · SC2 x≥3.0 · SC3 x≥1.5 (팬아웃 부하로 권한위임 부활 — 부하의 함수, CRN 정본)');
+}), 'As-Is 분권 전환 발생 구간: SC1 x≥1.5 · SC2 x≥3.0 · SC3 x≥2.0 (팬아웃 부하로 권한위임 부활 — 부하의 함수, ⑧필터 반영)');
 
 console.log('# 감사 발견 3 — 비용교환비(exchangeSat): 방향이 시나리오·강도에 따라 반전됨 (버그 아님, 특성 기록)');
 // refine.test.js D-2는 SC2(x2)만 검증했고 그 방향은 항상 개선이다. 하지만 SC1·SC3에서는
@@ -108,15 +109,14 @@ SCENARIOS.forEach(function (id) {
     exch[id][x] = { asis: a, tobe: b };
   });
 });
-// ※ 공통난수(CRN) 이식 후: As-Is와 To-Be가 동일 위협열을 마주하게 되면서, 종전 단일 seed에서
-//   관측되던 SC2의 "방향 반전"이 사라졌다 — SC2(무인기 포화)는 이제 **전 강도에서 일관되게 To-Be가
-//   개선**된다(tobe exchangeSat < asis). 즉 종전의 반전은 상당 부분 "두 모드가 서로 다른 위협표본을
-//   보던" 노이즈였고, CRN이 이를 제거해 SC2 개선이 견고해졌다(CRN이 드러낸 발견 — 비교 타당성 향상).
-assert(UI_X.every(function (x) {
-  return exch.sc2[x].asis == null || exch.sc2[x].tobe == null || exch.sc2[x].tobe < exch.sc2[x].asis;
-}), 'SC2(무인기 포화): CRN 하에서 exchangeSat 전 강도 일관 개선 (종전 방향 반전은 위협열 노이즈였음 — CRN이 제거)');
-// 발견 3의 본질("방향이 시나리오·강도에 따라 반전될 수 있음")은 SC3에서 견고하게 유지된다:
-// CRN 후에도 SC3는 저강도(x0.5·1.0)에서 반전, 중·고강도(x≥1.5)에서 개선으로 방향이 갈린다.
+// ※ 발견 3(방향이 시나리오·강도에 따라 반전될 수 있음)은 엔진 변경(CRN·⑧ 교전창/축선 필터)마다
+//   구체 셀 위치가 이동하나 본질은 견고하다. ⑧ 축선 필터가 저가위협(무인기)의 교전 무기 구성을
+//   바꾸면서(중부축 SHORAD 불가→FTR) SC2도 다시 강도별 개선↔반전 양방향을 보인다 — 특정 셀을
+//   핀하지 않고 "양방향 모두 관측"으로 고정(RNG·필터 이동에 견고).
+assert(UI_X.some(function (x) { return exch.sc2[x].tobe < exch.sc2[x].asis; }) &&
+       UI_X.some(function (x) { return exch.sc2[x].tobe >= exch.sc2[x].asis; }),
+  'SC2(무인기 포화): exchangeSat 방향이 강도에 따라 개선↔반전 양쪽 모두 관측 (발견 3: 방향은 시나리오·강도의 함수)');
+// SC3도 강도에 따라 개선↔반전 양방향 모두 관측(발견 3 본질).
 assert(UI_X.some(function (x) { return exch.sc3[x].tobe > exch.sc3[x].asis; }) &&
        UI_X.some(function (x) { return exch.sc3[x].tobe <= exch.sc3[x].asis; }),
   'SC3: exchangeSat 방향이 강도에 따라 반전↔개선 양쪽 모두 관측 (발견 3: 방향은 시나리오·강도의 함수)');

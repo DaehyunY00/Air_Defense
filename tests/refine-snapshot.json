@@ -1,38 +1,38 @@
 {
   "sc1/asis": {
     "spawned": 60,
-    "killed": 40,
-    "leaked": 9,
+    "killed": 41,
+    "leaked": 10,
     "bn": "gap:responsibility_gap,link:AOC-1C→MCRC"
   },
   "sc1/tobe": {
     "spawned": 60,
-    "killed": 50,
-    "leaked": 6,
+    "killed": 53,
+    "leaked": 5,
     "bn": ""
   },
   "sc2/asis": {
     "spawned": 58,
-    "killed": 20,
-    "leaked": 23,
-    "bn": "link:AOC-1C→MCRC"
+    "killed": 21,
+    "leaked": 20,
+    "bn": "link:AOC-1C→MCRC,node:FTR"
   },
   "sc2/tobe": {
     "spawned": 58,
-    "killed": 34,
-    "leaked": 16,
-    "bn": ""
+    "killed": 35,
+    "leaked": 12,
+    "bn": "node:FTR"
   },
   "sc3/asis": {
     "spawned": 307,
-    "killed": 67,
-    "leaked": 195,
-    "bn": "gap:responsibility_gap,link:AOC-1C→MCRC,node:KAMDOC"
+    "killed": 51,
+    "leaked": 212,
+    "bn": "gap:responsibility_gap,link:AOC-1C→MCRC,node:FTR,node:KAMDOC"
   },
   "sc3/tobe": {
     "spawned": 307,
-    "killed": 154,
-    "leaked": 128,
-    "bn": ""
+    "killed": 142,
+    "leaked": 133,
+    "bn": "node:FTR"
   }
 }

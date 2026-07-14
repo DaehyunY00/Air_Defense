@@ -207,6 +207,7 @@
       category: 'shooter', service: 'af', echelon: 'operational',
       coord: [36.99, 127.88], coordNote: '중부 공군기지권 도시 수준 개념좌표',
       role: '요격기 긴급출격(스크램블)·초계. 공중 위협 교전. KF-21은 국산 4.5세대 보라매(인도수출형 F-21 아님).',
+      coverage: ['west', 'central', 'east', 'seoul'], covRef: 'WPN-FTR-COV-01', // 기동 자산(rangeKm 350) — 전 축선
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.7, medium: 1.2, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
@@ -217,6 +218,7 @@
       category: 'shooter', service: 'army', echelon: 'tactical',
       coord: [37.72, 126.80], coordNote: '고양·파주권 도시 수준 개념좌표',
       role: '군단 저고도 방공. 제약: KP-SAM(신궁)·천마(K-31)는 탄도탄 요격 불가. 벌컨 유효고도 2km 한계.',
+      coverage: ['west', 'seoul'], covRef: 'WPN-SHORAD1C-COV-01', // 1군단 고양·파주(rangeKm 7 점방어) — 서부·수도권 접근로
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
       wtaSuit: { low: 1.3, medium: 0.5, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
@@ -228,6 +230,7 @@
       category: 'shooter', service: 'army', echelon: 'tactical',
       coord: [37.58, 126.95], coordNote: '서울 도시 수준 개념좌표',
       role: '수도권 저고도 방공(신궁·벌컨·드론건 개념). 탄도탄 요격 불가 제약 동일.',
+      coverage: ['seoul'], covRef: 'WPN-SHORADCD-COV-01', // 수방사 서울(rangeKm 7 점방어) — 수도 핵심시설
       controlledBy: { asis: ['JAOC-CD'], tobe: ['JAOC-CD'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
       wtaSuit: { low: 1.3, medium: 0.5, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
@@ -239,6 +242,7 @@
       category: 'shooter', service: 'army', echelon: 'tactical',
       coord: [37.60, 126.78], coordNote: '군단권역 도시 수준 개념좌표',
       role: '군단 AOC 통제 중거리 방공(개념). 항공기·순항미사일 대응.',
+      coverage: ['west', 'seoul', 'central'], covRef: 'WPN-MSAM1C-COV-01', // 군단권역(rangeKm 40) — 서부·수도권+중부 일부
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.8, medium: 1.1, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
@@ -249,6 +253,7 @@
       category: 'shooter', service: 'af', echelon: 'operational',
       coord: [37.15, 127.07], coordNote: '수도권 남부 도시 수준 개념좌표',
       role: '하층 탄도탄 요격(요격고도 15–20km급) 및 항공 위협 대응.',
+      coverage: ['west', 'central', 'seoul'], covRef: 'WPN-MDUM-COV-01', // 수도권 남부 하층 MD(rangeKm 40) — 수도 접근 축선
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: true, ac_low: false, heli: false, cruise: true, uav_small: false, srbm: true, mrl_large: true },
       wtaSuit: { low: 0.7, medium: 0.9, ballistic: 1.2, paramRef: 'C2-WTA-SUIT-01' },
@@ -259,6 +264,7 @@
       category: 'shooter', service: 'af', echelon: 'operational',
       coord: [36.80, 127.15], coordNote: '중부권 도시 수준 개념좌표',
       role: '상층 탄도탄 요격(요격고도 40–70km 개념값).',
+      coverage: ['west', 'central', 'east', 'seoul'], covRef: 'WPN-MDUL-COV-01', // 상층 광역 MD(rangeKm 150) — 전 축선 탄도탄
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: false, ac_low: false, heli: false, cruise: false, uav_small: false, srbm: true, mrl_large: true },
       wtaSuit: { low: 0, medium: 0, ballistic: 1.3, paramRef: 'C2-WTA-SUIT-01' },
@@ -269,6 +275,7 @@
       category: 'shooter', service: 'navy', echelon: 'operational',
       coord: [37.75, 129.55], coordNote: '동해상 개념 초계구역 (도시 수준)',
       role: '함대공 요격. 항공기·순항미사일 대응(대탄도탄 요격은 모델링 제외).',
+      coverage: ['east', 'central'], covRef: 'WPN-SM2E-COV-01', // 동해 이지스(rangeKm 150) — AEGIS-E 커버(동부·중부)
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.8, medium: 1.0, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
@@ -279,6 +286,7 @@
       category: 'shooter', service: 'navy', echelon: 'operational',
       coord: [36.75, 125.85], coordNote: '서해상 개념 초계구역 (도시 수준)',
       role: '함대공 요격. 항공기·순항미사일 대응(대탄도탄 요격은 모델링 제외).',
+      coverage: ['west', 'seoul'], covRef: 'WPN-SM2W-COV-01', // 서해 이지스(rangeKm 150) — AEGIS-W 커버(서부·수도권)
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.8, medium: 1.0, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },

@@ -566,6 +566,14 @@ launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한
 - **MC 적용방식**: 옵션. 트레이드오프(To-Be): OFF 격추율 50.0%·교환비 0.94 / k=2 61.2%·1.54 / k=3 65.1%·2.21. `missed` 급감(3352→1121→445), `no_engage_window` 불변(⑧과 직교)
 - **비고**: k=2에서 격추율 +11.2p(상대 +22%, 임계 초과) → doctrine 변경이므로 기본 결론 미반영. 누적 pk는 k발 독립 가정(salvo 내부 상관 미모형). 상세 ADR-006
 
+### [ENV-DES-REVERT-01] sensorPdFusion 되돌리기 플래그 (통합 Gate 2, `js/engine/sim-engine.js`)
+- **값/분포**: `features.sensorPdFusion`(기본 ON). OFF → 통합 이전(0468f10) 탐지식 `p=min(1, detectFactor×mult.detect)`(센서 Pd·모드별 융합 무시)로 복귀
+- **출처**: 통합 검증 Gate 2(되돌리기 가능성) — W6 센서 Pd 융합 개편의 런타임 토글
+- **적용범위**: `_scanProb`. 탐지 계층 그리기 수 동일(스캔당 raw 1회)이라 이 계층 bit-clean 되돌리기
+- **신뢰도 등급**: B(방법론)
+- **MC 적용방식**: 고정. ON↔OFF 집계 영향 미미(탐지율 Δ0.16pp·교전지연 Δ1.1s — 재스캔 포화) → W6은 집계 결론을 거의 안 움직임(대조는 축선별)
+- **비고**: ⚠️ 전체 bit-exact 기준선(0468f10) 복원은 CRN(arrRng 분리)이 도착 스트림을 재배치해 **불가**. 되돌리기는 ⑨ 런타임 플래그(36/36)+이 플래그+git 층위로 제공. 상세 docs/integration-audit.md G2
+
 ### [ENV-DES-TTKBIAS-01] meanTTK 생존자 편향 노출 + 교전당 발사수 (Phase 7 ⑨, `js/engine/sim-engine.js`)
 - **값/분포**: `meanTimeToKillN`(=killed, meanTTK가 평균 낸 표본 수) · `shotsFired`(총 요격탄) · `shotsPerEngagement`(=shotsFired/everEngaged). 모두 순수 보고(동역학 불변)
 - **출처**: meanTTK는 "격추 성공분에만" 조건화된 평균 → 생존자 편향(To-Be가 놓치던 느린 표적까지 격추하면 meanTTK↑=느려 보이는 선택효과). 교전당 발사수는 salvo·재교전으로 교전=1발 가정이 깨짐을 노출

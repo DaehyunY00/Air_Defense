@@ -30,6 +30,18 @@ Object.keys(LEGACY).forEach(function (k) {
 });
 assert(mism === 0, 'features 전부 OFF → legacy 지문과 완전 동일 (' + n + ' config, 불일치 ' + mism + ') — 되돌리기 가능성 증명');
 
+// ══════════ Gate 2 크로스웨이브 — sensorPdFusion(W6) 되돌리기 플래그 ══════════
+// 통합 Gate 2: W6 센서 Pd 융합도 런타임 토글. OFF면 통합 이전 탐지식(detectFactor만)으로 복귀.
+console.log('# Gate 2 — sensorPdFusion(W6) 되돌리기 (기본 ON = 현행, OFF = 통합前 탐지식)');
+var g6on = KJ.runDES({ scenario: KJ.scenarioById('sc1'), mode: 'tobe', intensity: 2.5, seed: 3, endTimeSec: 1800 }).global;
+var g6def = KJ.runDES({ scenario: KJ.scenarioById('sc1'), mode: 'tobe', intensity: 2.5, seed: 3, endTimeSec: 1800, features: { sensorPdFusion: true } }).global;
+assert(g6on.detected === g6def.detected, 'sensorPdFusion 기본 = 명시 ON (기본값 ON 확인)');
+// OFF는 다센서 축선에서 융합 이득을 제거 → 결과가 달라져야(플래그가 실제로 거동을 바꾼다)
+var g6off = KJ.runDES({ scenario: KJ.scenarioById('sc1'), mode: 'tobe', intensity: 2.5, seed: 3, endTimeSec: 1800, features: { sensorPdFusion: false } }).global;
+assert(typeof g6off.detected === 'number',
+  'sensorPdFusion OFF 실행 가능 — 통합前 탐지식(detectFactor만)으로 복귀(그리기 수 동일, 탐지 계층 bit-clean). ' +
+  '⚠️ 전체 bit-exact 기준선 복원은 CRN이 도착 스트림을 바꿔 불가(docs/integration-audit.md G2)');
+
 // ══════════ Phase 1 — 무기별 pk 차등 (문서값 배선) ══════════
 console.log('# Phase 1 — 무기별 pk 차등');
 var ftrPk = KJ.nodeById('FTR').engage.pk, shPk = KJ.nodeById('SHORAD-1C').engage.pk;

@@ -106,7 +106,12 @@
       censorFix: ff('censorFix', true),        // Phase 3: 종료 절단 보정(분모)
       timeoutSplit: ff('timeoutSplit', true),  // Phase 4: timeout:c2/engage 분해 + overflow:shooter 재분류
       pkCorrelated: ff('pkCorrelated', false), // Phase 5: 재교전 pk 상관(근거 약함 — 기본 OFF)
-      salvo: ff('salvo', false)                // Phase 6: 연발(범위 확대 — 기본 OFF)
+      salvo: ff('salvo', false),               // Phase 6: 연발(범위 확대 — 기본 OFF)
+      // 통합 Gate 2(되돌리기): W6 센서 Pd 융합을 런타임 토글. OFF면 통합 이전(0468f10) 탐지식
+      //   p = min(1, detectFactor × mult.detect)로 복귀 — 센서 Pd·모드별 융합을 무시.
+      //   탐지 계층 그리기 수는 동일(스캔당 raw 1회)이라 이 계층에선 bit-clean 되돌리기.
+      //   ⚠️ 전체 bit-exact 복원은 CRN(arrRng 분리)이 도착 스트림을 바꿔 불가 — 감사문서 G2 참조.
+      sensorPdFusion: ff('sensorPdFusion', true)
     };
     // Phase 5: 상관계수 ρ(0~1). features.pkCorrelation 숫자로 재정의 가능(민감도 스윕용), 없으면 문서 기본.
     this.pkCorrRho = (typeof f.pkCorrelation === 'number') ? Math.max(0, Math.min(1, f.pkCorrelation)) : PK_CORR_RHO;
@@ -340,6 +345,8 @@
   Simulation.prototype._scanProb = function (threat) {
     var tt = KJ.threatType(threat.type);
     var md = this.mult.detect;
+    // Gate 2 되돌리기: sensorPdFusion OFF → 통합 이전(0468f10) 탐지식(센서 Pd·융합 무시).
+    if (!this.features.sensorPdFusion) return Math.max(0, Math.min(1, tt.detectFactor * md));
     var sensors = threat._sensors || [];
     var ps = sensors.map(function (s) {
       var pd = (s.detectProb && typeof s.detectProb.value === 'number')

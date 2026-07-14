@@ -370,9 +370,15 @@
         metrics: [
           { label: '격추율', mom: 'MoFE', kind: 'rate', lower: false, max: 1,
             a: ga.killRate, b: gb.killRate, tip: '생성 위협 중 격추 비율 — 최종 요격 성과.' },
-          { label: '평균 격추시간', mom: 'MoP', kind: 'sec', lower: true,
+          { label: '평균 격추시간 (조건부·생존자편향 주의)', mom: 'MoP', kind: 'sec', lower: true,
             a: ga.meanTimeToKillSec, b: gb.meanTimeToKillSec,
-            tip: '격추 성공 항적의 생성→격추 평균 소요.' },
+            tip: '격추 성공 항적의 생성→격추 평균 소요(n=As-Is ' + (ga.meanTimeToKillN || 0) + ' · To-Be ' + (gb.meanTimeToKillN || 0) + '). ' +
+              '⚠️ 생존자 편향: "격추한 것"에만 조건화된 평균이라 As-Is↔To-Be 단순비교는 오도할 수 있다. To-Be가 As-Is가 놓치던 ' +
+              '어려운(느린) 표적까지 격추하면 meanTTK가 오히려 커져 "느려 보이는" 선택효과가 생긴다 — 반드시 격추율(n)과 함께 읽어라.' },
+          { label: '교전당 발사수', mom: 'MoP', kind: 'raw2', lower: true,
+            a: ga.shotsPerEngagement, b: gb.shotsPerEngagement,
+            tip: '요격탄 총 발사수 ÷ 최초교전 표적수. 1.0=교전당 1발(shoot-look-shoot 이상적), >1=재교전·연발(salvo)로 발사 부담 증가. ' +
+              '종전엔 교전=1발 암묵 가정이라 이 부담이 안 보였다 — 비용교환비와 함께 요격탄 소모 강도를 표현.' },
           { label: '방어효율 (방어한 위협가치 비율)', mom: 'MoFE', kind: 'rate', lower: false, max: 1,
             a: ga.cost.defenseEfficiency, b: gb.cost.defenseEfficiency,
             tip: '격추 위협가치 ÷ (격추 + 누수 위협가치) — 전체 위협가치 중 실제로 방어(격추)한 비율. ' +

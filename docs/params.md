@@ -566,6 +566,14 @@ launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한
 - **MC 적용방식**: 옵션. 트레이드오프(To-Be): OFF 격추율 50.0%·교환비 0.94 / k=2 61.2%·1.54 / k=3 65.1%·2.21. `missed` 급감(3352→1121→445), `no_engage_window` 불변(⑧과 직교)
 - **비고**: k=2에서 격추율 +11.2p(상대 +22%, 임계 초과) → doctrine 변경이므로 기본 결론 미반영. 누적 pk는 k발 독립 가정(salvo 내부 상관 미모형). 상세 ADR-006
 
+### [ENV-DES-TTKBIAS-01] meanTTK 생존자 편향 노출 + 교전당 발사수 (Phase 7 ⑨, `js/engine/sim-engine.js`)
+- **값/분포**: `meanTimeToKillN`(=killed, meanTTK가 평균 낸 표본 수) · `shotsFired`(총 요격탄) · `shotsPerEngagement`(=shotsFired/everEngaged). 모두 순수 보고(동역학 불변)
+- **출처**: meanTTK는 "격추 성공분에만" 조건화된 평균 → 생존자 편향(To-Be가 놓치던 느린 표적까지 격추하면 meanTTK↑=느려 보이는 선택효과). 교전당 발사수는 salvo·재교전으로 교전=1발 가정이 깨짐을 노출
+- **적용범위**: `_results` 노출, ⑨ 카드 표시(meanTTK 라벨에 조건 n·편향 경고, 신규 "교전당 발사수" 지표)
+- **신뢰도 등급**: B(방법론)
+- **MC 적용방식**: 고정. 시행별 격추분포는 MC 패널이 이미 killRate {mean, std, ci}로 계측(Welford) — 별도 히스토그램 대신 분산 노출로 대리
+- **비고**: 기본(salvo OFF, k=1)에서도 shotsPerEngagement>1(재교전분). To-Be↔As-Is meanTTK 단순비교 금지 — 격추율(n)과 병독 필수
+
 ### [ENV-DES-CRN-01] 공통난수(CRN) — As-Is↔To-Be 짝지은 비교 (`js/engine/sim-engine.js`)
 - **값/분포**: 난수 스트림 2분리 — `arrRng`(위협 도착간격 전용, seed에서 황금비 해시로 독립 파생) / `rng`(처리 무작위성: 탐지·서비스시간·요격확률·링크지연 분포·중복교전). 도착은 `arrRng`에서만 소비
 - **출처**: 분산감소 표준기법(Common Random Numbers) — `claude/c2-simulation-review` 검토에서 이식. 근거: 동일 seed에서 두 형상이 같은 위협열을 마주해야 차이가 위협표본이 아니라 C2 구조에서만 비롯됨(짝지은 비교의 타당성)

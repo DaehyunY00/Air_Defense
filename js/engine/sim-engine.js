@@ -136,7 +136,10 @@
       // duplicateEngagements: 협조 실패로 두 계통이 각각 교전한 건수(요격탄 이중 소모)
       coordAttempts: 0, deconflicted: 0, coordGaps: 0, duplicateEngagements: 0,
       // Phase 1(⑨): 문서화된 pk가 없어 legacy 폴백이 발동한 (무기×위협) 조합 기록
-      pkFallback: {}, censored: 0
+      pkFallback: {}, censored: 0,
+      // Phase 7(⑨): 요격탄 발사 수(교전당 발사수 = shotsFired/everEngaged). salvo·재교전으로 교전당
+      // 1발을 넘을 수 있음을 드러낸다(종전엔 교전=1발 암묵 가정이라 발사 부담이 안 보였다).
+      shotsFired: 0
     };
     // Phase B-2: 동적 권한위임(분권 전환) 관측 상태 — 전환 시점·횟수·노드별 분포
     this.deleg = { count: 0, firstT: null, byNode: {} };
@@ -750,6 +753,7 @@
     // Phase D: 교전 시도 1회 = 요격탄 1발 소모(개념) — 비용교환비(MoFE) 집계.
     // Phase 6(salvo): ON이면 교전당 k발 동시 발사 → 비용 k배, 누적 pk=1−(1−pk)^k. OFF면 k=1(legacy).
     var shots = this.features.salvo ? this.salvoSize : 1;
+    this.global.shotsFired += shots; // Phase 7: 교전당 발사수 계측(salvo·재교전 발사 부담 가시화)
     var shot = ((shooter.engage && shooter.engage.costPerShotM) || 0) * shots;
     this.cost.interceptM += shot;
     if (SAT_THREATS[threat.type]) this.cost.interceptSatM += shot;
@@ -1045,6 +1049,13 @@
         leakRate: denom ? this.global.leaked / denom : 0,
         censored: censored, censoredRaw: censoredRaw, // 절단 위협 수(보정 적용분 · 원시 관측분)
         meanTimeToKillSec: meanTTK,
+        // Phase 7(⑨): meanTTK는 "격추 성공분에만" 조건화된 평균 → 생존자 편향(survivor bias). To-Be가
+        // As-Is가 놓치던 어려운(느린) 표적까지 격추하면 meanTTK가 오히려 커져 "느려 보이는" 선택효과가
+        // 생긴다. 조건 분모(killed 수)를 함께 노출해 조건부 평균임을 드러낸다(As-Is↔To-Be 단순비교 경고).
+        meanTimeToKillN: ttk.length, // meanTTK가 평균 낸 표본 수(=격추 성공 수) — 생존자 편향 가시화
+        // Phase 7(⑨): 교전당 발사수 = 총 발사수/최초교전 표적수. salvo·재교전으로 1발을 넘는 발사 부담을 노출.
+        shotsFired: this.global.shotsFired,
+        shotsPerEngagement: this.global.everEngaged ? this.global.shotsFired / this.global.everEngaged : 0,
         // 교전지연(MoP): 생성→최초 교전명령 평균(초) — 탐지 잠복+결심 포함 end-to-end (CRN 검토 이식)
         meanTimeToEngageSec: meanTTE,
         // 결심 지연(MoP): 탐지→최초 교전명령 평균(초) — 협조/승인/위임 지연 포함

@@ -161,6 +161,18 @@ assert(s2.kr > s1.kr && s2.iM > s1.iM, '연발 k=2: 격추율↑(' + (s1.kr * 10
 assert(s2.missed < s1.missed, 'salvo → missed(터미널 실패) 급감 (' + s1.missed + '→' + s2.missed + ') — 겨냥한 누수모드 해소');
 assert(Math.abs(s2.few - s1.few) <= s1.few * 0.05, 'salvo → no_engage_window 거의 불변(' + s1.few + '→' + s2.few + ') — 교전창 부족은 doctrine 무관(⑧과 직교)');
 
+// ══════════ Phase 7 — 부수 정정(생존자 편향·교전당 발사수) ══════════
+console.log('# Phase 7 — meanTTK 생존자편향 노출 + 교전당 발사수');
+var g7 = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: 4, endTimeSec: 1800 }).global;
+assert(g7.meanTimeToKillN === g7.killed,
+  'meanTTK 조건 분모 노출: meanTimeToKillN(' + g7.meanTimeToKillN + ') = killed(' + g7.killed + ') — 조건부 평균(생존자 편향)임을 드러냄');
+// 교전당 발사수: 기본(k=1) ≥ 1(재교전으로 1 초과 가능), salvo k=2면 최소 2배 증가
+assert(g7.shotsPerEngagement >= 1 && g7.shotsFired >= g7.everEngaged,
+  '교전당 발사수 ≥ 1 (재교전 포함, ' + g7.shotsPerEngagement.toFixed(2) + ' — shotsFired ' + g7.shotsFired + ' / everEngaged ' + g7.everEngaged + ')');
+var g7s = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: 4, endTimeSec: 1800, features: { salvo: true, salvoSize: 2 } }).global;
+assert(g7s.shotsPerEngagement > g7.shotsPerEngagement * 1.5,
+  'salvo k=2 → 교전당 발사수 급증 (' + g7.shotsPerEngagement.toFixed(2) + '→' + g7s.shotsPerEngagement.toFixed(2) + ') — 연발 발사 부담 가시화(발사=시도×k, 일부 명령표적은 발사 전 이탈로 k배 미만)');
+
 // ══════════ 결정론 ══════════
 console.log('# 결정론');
 function sig(feat) { var g = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: 7, endTimeSec: 1800, features: feat }).global; return [g.killed, g.leaked, +g.cost.interceptM.toFixed(4)].join(','); }

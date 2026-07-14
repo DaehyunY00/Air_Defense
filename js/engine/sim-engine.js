@@ -85,6 +85,20 @@
       service: m.service || 1, delay: m.delay || 1,
       detect: m.detect || 1, pk: m.pk || 1
     };
+    // ⑨ 기능 플래그(feat/stage9-bda) — 모든 신규 거동은 켜고 끌 수 있어야 한다(되돌리기 가능성).
+    // 전부 false로 주면 stage9 이전(legacy)과 완전히 동일한 결과를 낸다(tests/reengage 되돌리기 어서션).
+    // 기본값: 문서화된 값 배선(pkByShooter)·회귀안전 지표(leakCost)·절단보정(censorFix)·taxonomy
+    // 정합(timeoutSplit)은 ON. 근거 약하고 결론을 움직이는 것(pkCorrelated·salvo)은 기본 OFF(ADR).
+    var f = cfg.features || {};
+    function ff(k, dflt) { return f[k] !== undefined ? !!f[k] : dflt; }
+    this.features = {
+      pkByShooter: ff('pkByShooter', true),   // Phase 1: 무기별 요격확률 배선(문서값)
+      leakCost: ff('leakCost', true),          // Phase 2: 누수 피해 보상 지표(별도 신설, exchange 불변)
+      censorFix: ff('censorFix', true),        // Phase 3: 종료 절단 보정(분모)
+      timeoutSplit: ff('timeoutSplit', true),  // Phase 4: timeout:c2/engage 분해 + overflow:shooter 재분류
+      pkCorrelated: ff('pkCorrelated', false), // Phase 5: 재교전 pk 상관(근거 약함 — 기본 OFF)
+      salvo: ff('salvo', false)                // Phase 6: 연발(범위 확대 — 기본 OFF)
+    };
     // 공통난수(CRN, `claude/c2-simulation-review` 검토 이식): 난수 스트림을 도착·처리로 분리한다.
     //  · rng    — 처리 무작위성(탐지 판정·서비스시간·요격확률·링크지연 분포·중복교전 등)
     //  · arrRng — 위협 도착간격(시나리오 그 자체) 전용. seed에서 독립 파생(황금비 해시)해
@@ -107,7 +121,9 @@
       // coordAttempts: 중복항적 계통이 교전 가능해 협조 판정이 일어난 횟수
       // deconflicted: 잔여 체공창 내 협조 성립(중복 회피) / coordGaps: 협조 실패(책임공백)
       // duplicateEngagements: 협조 실패로 두 계통이 각각 교전한 건수(요격탄 이중 소모)
-      coordAttempts: 0, deconflicted: 0, coordGaps: 0, duplicateEngagements: 0
+      coordAttempts: 0, deconflicted: 0, coordGaps: 0, duplicateEngagements: 0,
+      // Phase 1(⑨): 문서화된 pk가 없어 legacy 폴백이 발동한 (무기×위협) 조합 기록
+      pkFallback: {}, censored: 0
     };
     // Phase B-2: 동적 권한위임(분권 전환) 관측 상태 — 전환 시점·횟수·노드별 분포
     this.deleg = { count: 0, firstT: null, byNode: {} };
@@ -740,8 +756,27 @@
     }
   };
 
-  /** 요격확률(개념값). 소형 무인기는 저효율(2022.12.26 격추실패 반영). */
+  /**
+   * 요격확률(개념값). Phase 1(⑨): 무기별 pk를 nodes.js engage.pk(params.md 문서값)에서 읽는다.
+   * 종전엔 shooter 인자가 항상-참 조건 체크에만 쓰여 무기를 바꿔도 pk가 안 바뀌었다(사실 b) —
+   * ⑧ Best-Shooter가 격추율에 영향을 주지 못하는 근본 원인. pkByShooter 플래그로 켠다(기본 ON).
+   * RNG는 스캔당 정확히 1회(triangular 1회) — 문서값·폴백·legacy 모두 동일해 정렬이 유지된다.
+   */
   Simulation.prototype._pk = function (shooter, threat) {
+    if (!this.features.pkByShooter) return this._pkLegacy(shooter, threat);
+    var spec = shooter.engage && shooter.engage.pk;
+    var dist = (spec && spec.byThreat && spec.byThreat[threat.type]) || (spec && spec.default);
+    if (!dist) {
+      // params.md에 문서화된 pk 없음 → legacy 폴백(현행 위협별 값) + 조합 기록(값 지어내지 않음).
+      this.global.pkFallback[shooter.id + '×' + threat.type] = (this.global.pkFallback[shooter.id + '×' + threat.type] || 0) + 1;
+      return this._pkLegacy(shooter, threat);
+    }
+    var pk = this.rng.triangular(dist.min, dist.mode, dist.max);
+    return Math.max(0, Math.min(1, pk * this.mult.pk));
+  };
+
+  /** legacy 요격확률(stage9 이전 동작). pkByShooter=false 또는 문서값 부재 시 사용 — 되돌리기 경로. */
+  Simulation.prototype._pkLegacy = function (shooter, threat) {
     var pk;
     if (threat.type === 'uav_small') pk = this.rng.triangular(0.1, 0.3, 0.5);
     else if (shooter.category === 'shooter' && (threat.type === 'srbm' || threat.type === 'mrl_large'))
@@ -977,6 +1012,9 @@
           attempts: this.global.coordAttempts, deconflicted: this.global.deconflicted,
           gaps: this.global.coordGaps, duplicates: this.global.duplicateEngagements
         },
+        // Phase 1(⑨): 문서 pk 폴백 발동 조합(무기×위협) · Phase 3: 종료 절단 위협 수
+        pkFallback: this.global.pkFallback, censored: this.global.censored,
+        features: this.features,
         // 비용교환비(MoFE, 백만 USD 개념): exchange = 소모 요격탄 비용 / 격추 위협가치
         // (>1이면 아군이 더 비싼 자원을 소모). sat*는 저가 포화위협(무인기·방사포) 부분집합
         cost: {

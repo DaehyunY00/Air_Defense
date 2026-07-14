@@ -211,7 +211,7 @@
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.7, medium: 1.2, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 350, channels: 4, engageTimeSec: 300, pk: { paramRef: 'WPN-FTR-PK-01' }, costPerShotM: 0.5, costRef: 'WPN-FTR-COST-01' }
+      engage: { rangeKm: 350, channels: 4, engageTimeSec: 300, pk: { byThreat: { uav_small: { kind: 'triangular', min: 0.1, mode: 0.25, max: 0.4 } }, default: { kind: 'triangular', min: 0.8, mode: 0.8, max: 0.8 }, paramRef: 'WPN-FTR-PK-01' }, costPerShotM: 0.5, costRef: 'WPN-FTR-COST-01' }
     },
     {
       id: 'SHORAD-1C', name: '단거리방공무기 (1군단: 신궁·천마·비호·벌컨)',
@@ -222,7 +222,7 @@
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
       wtaSuit: { low: 1.3, medium: 0.5, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 7, channels: 6, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' }, costPerShotM: 0.2, costRef: 'WPN-SHORAD-COST-01' },
+      engage: { rangeKm: 7, channels: 6, engageTimeSec: 60, pk: { byThreat: { uav_small: { kind: 'triangular', min: 0.1, mode: 0.3, max: 0.5 } }, paramRef: 'WPN-SHORAD-PK-01' }, costPerShotM: 0.2, costRef: 'WPN-SHORAD-COST-01' },
       constraintRefs: ['WPN-SHIN-CON-01', 'C2-VULCAN-CEIL-01']
     },
     {
@@ -234,7 +234,7 @@
       controlledBy: { asis: ['JAOC-CD'], tobe: ['JAOC-CD'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
       wtaSuit: { low: 1.3, medium: 0.5, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 7, channels: 4, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' }, costPerShotM: 0.2, costRef: 'WPN-SHORAD-COST-01' },
+      engage: { rangeKm: 7, channels: 4, engageTimeSec: 60, pk: { byThreat: { uav_small: { kind: 'triangular', min: 0.1, mode: 0.3, max: 0.5 } }, paramRef: 'WPN-SHORAD-PK-01' }, costPerShotM: 0.2, costRef: 'WPN-SHORAD-COST-01' },
       constraintRefs: ['WPN-SHIN-CON-01']
     },
     {
@@ -246,7 +246,7 @@
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.8, medium: 1.1, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 40, channels: 2, engageTimeSec: 90, pk: { paramRef: 'WPN-MSAM2-PK-01' }, costPerShotM: 1.5, costRef: 'WPN-MSAM-COST-01' }
+      engage: { rangeKm: 40, channels: 2, engageTimeSec: 90, pk: { default: { kind: 'triangular', min: 0.6, mode: 0.8, max: 0.9 }, paramRef: 'WPN-MSAM2-PK-01' }, costPerShotM: 1.5, costRef: 'WPN-MSAM-COST-01' }
     },
     {
       id: 'MDU-M', name: '미사일방어부대 (중거리: 천궁-II·PAC-3)',
@@ -257,7 +257,7 @@
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: true, ac_low: false, heli: false, cruise: true, uav_small: false, srbm: true, mrl_large: true },
       wtaSuit: { low: 0.7, medium: 0.9, ballistic: 1.2, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 40, channels: 4, engageTimeSec: 45, pk: { paramRef: 'WPN-MSAM2-PK-01' }, costPerShotM: 3, costRef: 'WPN-MDUM-COST-01' }
+      engage: { rangeKm: 40, channels: 4, engageTimeSec: 45, pk: { default: { kind: 'triangular', min: 0.6, mode: 0.8, max: 0.9 }, paramRef: 'WPN-MSAM2-PK-01' }, costPerShotM: 3, costRef: 'WPN-MDUM-COST-01' }
     },
     {
       id: 'MDU-L', name: '미사일방어부대 (장거리: L-SAM)',
@@ -268,7 +268,7 @@
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: false, ac_low: false, heli: false, cruise: false, uav_small: false, srbm: true, mrl_large: true },
       wtaSuit: { low: 0, medium: 0, ballistic: 1.3, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 150, channels: 3, engageTimeSec: 40, pk: { paramRef: 'WPN-LSAM-PK-01' }, costPerShotM: 8, costRef: 'WPN-LSAM-COST-01' }
+      engage: { rangeKm: 150, channels: 3, engageTimeSec: 40, pk: { default: { kind: 'triangular', min: 0.6, mode: 0.75, max: 0.9 }, paramRef: 'WPN-LSAM-PK-01' }, costPerShotM: 8, costRef: 'WPN-LSAM-COST-01' }
     },
     {
       id: 'SM2-E', name: 'SM-2 (동해 이지스함)',
@@ -279,7 +279,7 @@
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.8, medium: 1.0, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' }, costPerShotM: 2.1, costRef: 'WPN-SM2-COST-01' }
+      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { default: { kind: 'triangular', min: 0.6, mode: 0.75, max: 0.85 }, paramRef: 'WPN-SM2-PK-01' }, costPerShotM: 2.1, costRef: 'WPN-SM2-COST-01' }
     },
     {
       id: 'SM2-W', name: 'SM-2 (서해 이지스함)',
@@ -290,7 +290,7 @@
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.8, medium: 1.0, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' }, costPerShotM: 2.1, costRef: 'WPN-SM2-COST-01' }
+      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { default: { kind: 'triangular', min: 0.6, mode: 0.75, max: 0.85 }, paramRef: 'WPN-SM2-PK-01' }, costPerShotM: 2.1, costRef: 'WPN-SM2-COST-01' }
     }
   ];
 

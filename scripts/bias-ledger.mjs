@@ -26,22 +26,31 @@ function structuralLeaks(g) {
   return n;
 }
 
+// ⑨: 기능 플래그 config를 argv[3](JSON)로 받아 Phase별 누적 측정. 없으면 기본(전부 default) 사용.
+const FEAT = process.argv[3] ? JSON.parse(process.argv[3]) : undefined;
+
 function ledgerFor(mode) {
-  let spawned = 0, killed = 0, leaked = 0, struct = 0, iSat = 0, kSat = 0;
+  let spawned = 0, killed = 0, leaked = 0, struct = 0, iSat = 0, kSat = 0, iM = 0, kM = 0, denomAdj = 0;
   const leakCodes = {};
   SCEN.forEach(id => XS.forEach(x => SEEDS.forEach(sd => {
-    const r = KJ.runDES({ scenario: KJ.scenarioById(id), mode, intensity: x, seed: sd, endTimeSec: 1800 });
+    const cfg = { scenario: KJ.scenarioById(id), mode, intensity: x, seed: sd, endTimeSec: 1800 };
+    if (FEAT) cfg.features = FEAT;
+    const r = KJ.runDES(cfg);
     const g = r.global;
     spawned += g.spawned; killed += g.killed; leaked += g.leaked; struct += structuralLeaks(g);
     iSat += g.cost.interceptSatM; kSat += g.cost.killedThreatSatM;
+    iM += g.cost.interceptM; kM += g.cost.killedThreatM;
+    denomAdj += (g.censored || 0); // Phase 3: 종료 절단분(분모 보정 대상)
     Object.keys(g.leakReasons).forEach(c => {
       const key = c.indexOf('overflow:') === 0 ? 'overflow' : (c.indexOf('timeout') === 0 ? 'timeout' : c);
       leakCodes[key] = (leakCodes[key] || 0) + g.leakReasons[c];
     });
   })));
+  const denom = spawned - denomAdj; // censorFix ON이면 g.censored>0 → 분모에서 절단분 제외
   return {
-    killRate: killed / spawned, leakRate: leaked / spawned, structRate: struct / spawned,
-    exchangeSat: kSat > 0 ? iSat / kSat : null, leakCodes, spawned
+    killRate: killed / denom, leakRate: leaked / denom, structRate: struct / denom,
+    exchange: kM > 0 ? iM / kM : null,
+    exchangeSat: kSat > 0 ? iSat / kSat : null, leakCodes, spawned, censored: denomAdj
   };
 }
 
@@ -54,6 +63,8 @@ console.log('지표            | As-Is    | To-Be    | To-Be 개선(Δ)');
 console.log('격추율          | ' + pp(a.killRate).padEnd(8) + ' | ' + pp(b.killRate).padEnd(8) + ' | ' + pp(b.killRate - a.killRate) + 'p');
 console.log('누수율          | ' + pp(a.leakRate).padEnd(8) + ' | ' + pp(b.leakRate).padEnd(8) + ' | ' + pp(a.leakRate - b.leakRate) + 'p 감소');
 console.log('구조적실패율    | ' + pp(a.structRate).padEnd(8) + ' | ' + pp(b.structRate).padEnd(8) + ' | ' + pp(a.structRate - b.structRate) + 'p 감소');
+console.log('exchange        | ' + ex(a.exchange).padEnd(8) + ' | ' + ex(b.exchange).padEnd(8) + ' | ' + (a.exchange != null && b.exchange != null ? (a.exchange - b.exchange).toFixed(2) : '—'));
 console.log('exchangeSat     | ' + ex(a.exchangeSat).padEnd(8) + ' | ' + ex(b.exchangeSat).padEnd(8) + ' | ' + (a.exchangeSat && b.exchangeSat ? (a.exchangeSat - b.exchangeSat).toFixed(2) + ' 감소' : '—'));
+if (a.censored || b.censored) console.log('절단(censored)  | As-Is ' + a.censored + ' · To-Be ' + b.censored + ' (분모에서 제외됨)');
 console.log('\n누수 사유 분포 As-Is:', JSON.stringify(a.leakCodes));
 console.log('누수 사유 분포 To-Be:', JSON.stringify(b.leakCodes));

@@ -1702,6 +1702,7 @@ li.chk-fail { background: #43140f; }
       category: 'shooter', service: 'af', echelon: 'operational',
       coord: [36.99, 127.88], coordNote: '중부 공군기지권 도시 수준 개념좌표',
       role: '요격기 긴급출격(스크램블)·초계. 공중 위협 교전. KF-21은 국산 4.5세대 보라매(인도수출형 F-21 아님).',
+      coverage: ['west', 'central', 'east', 'seoul'], covRef: 'WPN-FTR-COV-01', // 기동 자산(rangeKm 350) — 전 축선
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.7, medium: 1.2, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
@@ -1712,6 +1713,7 @@ li.chk-fail { background: #43140f; }
       category: 'shooter', service: 'army', echelon: 'tactical',
       coord: [37.72, 126.80], coordNote: '고양·파주권 도시 수준 개념좌표',
       role: '군단 저고도 방공. 제약: KP-SAM(신궁)·천마(K-31)는 탄도탄 요격 불가. 벌컨 유효고도 2km 한계.',
+      coverage: ['west', 'seoul'], covRef: 'WPN-SHORAD1C-COV-01', // 1군단 고양·파주(rangeKm 7 점방어) — 서부·수도권 접근로
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
       wtaSuit: { low: 1.3, medium: 0.5, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
@@ -1723,6 +1725,7 @@ li.chk-fail { background: #43140f; }
       category: 'shooter', service: 'army', echelon: 'tactical',
       coord: [37.58, 126.95], coordNote: '서울 도시 수준 개념좌표',
       role: '수도권 저고도 방공(신궁·벌컨·드론건 개념). 탄도탄 요격 불가 제약 동일.',
+      coverage: ['seoul'], covRef: 'WPN-SHORADCD-COV-01', // 수방사 서울(rangeKm 7 점방어) — 수도 핵심시설
       controlledBy: { asis: ['JAOC-CD'], tobe: ['JAOC-CD'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
       wtaSuit: { low: 1.3, medium: 0.5, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
@@ -1734,6 +1737,7 @@ li.chk-fail { background: #43140f; }
       category: 'shooter', service: 'army', echelon: 'tactical',
       coord: [37.60, 126.78], coordNote: '군단권역 도시 수준 개념좌표',
       role: '군단 AOC 통제 중거리 방공(개념). 항공기·순항미사일 대응.',
+      coverage: ['west', 'seoul', 'central'], covRef: 'WPN-MSAM1C-COV-01', // 군단권역(rangeKm 40) — 서부·수도권+중부 일부
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.8, medium: 1.1, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
@@ -1744,6 +1748,7 @@ li.chk-fail { background: #43140f; }
       category: 'shooter', service: 'af', echelon: 'operational',
       coord: [37.15, 127.07], coordNote: '수도권 남부 도시 수준 개념좌표',
       role: '하층 탄도탄 요격(요격고도 15–20km급) 및 항공 위협 대응.',
+      coverage: ['west', 'central', 'seoul'], covRef: 'WPN-MDUM-COV-01', // 수도권 남부 하층 MD(rangeKm 40) — 수도 접근 축선
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: true, ac_low: false, heli: false, cruise: true, uav_small: false, srbm: true, mrl_large: true },
       wtaSuit: { low: 0.7, medium: 0.9, ballistic: 1.2, paramRef: 'C2-WTA-SUIT-01' },
@@ -1754,6 +1759,7 @@ li.chk-fail { background: #43140f; }
       category: 'shooter', service: 'af', echelon: 'operational',
       coord: [36.80, 127.15], coordNote: '중부권 도시 수준 개념좌표',
       role: '상층 탄도탄 요격(요격고도 40–70km 개념값).',
+      coverage: ['west', 'central', 'east', 'seoul'], covRef: 'WPN-MDUL-COV-01', // 상층 광역 MD(rangeKm 150) — 전 축선 탄도탄
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: false, ac_low: false, heli: false, cruise: false, uav_small: false, srbm: true, mrl_large: true },
       wtaSuit: { low: 0, medium: 0, ballistic: 1.3, paramRef: 'C2-WTA-SUIT-01' },
@@ -1764,6 +1770,7 @@ li.chk-fail { background: #43140f; }
       category: 'shooter', service: 'navy', echelon: 'operational',
       coord: [37.75, 129.55], coordNote: '동해상 개념 초계구역 (도시 수준)',
       role: '함대공 요격. 항공기·순항미사일 대응(대탄도탄 요격은 모델링 제외).',
+      coverage: ['east', 'central'], covRef: 'WPN-SM2E-COV-01', // 동해 이지스(rangeKm 150) — AEGIS-E 커버(동부·중부)
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.8, medium: 1.0, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
@@ -1774,6 +1781,7 @@ li.chk-fail { background: #43140f; }
       category: 'shooter', service: 'navy', echelon: 'operational',
       coord: [36.75, 125.85], coordNote: '서해상 개념 초계구역 (도시 수준)',
       role: '함대공 요격. 항공기·순항미사일 대응(대탄도탄 요격은 모델링 제외).',
+      coverage: ['west', 'seoul'], covRef: 'WPN-SM2W-COV-01', // 서해 이지스(rangeKm 150) — AEGIS-W 커버(서부·수도권)
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.8, medium: 1.0, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
@@ -2932,6 +2940,10 @@ li.chk-fail { background: #43140f; }
   var SCAN_SEC = 10;        // 센서 스캔 주기(개념값) — 탐지 재시도 간격
   var MAX_ENGAGE_TRIES = 3; // BDA 실패 시 재교전 상한(무한 폐루프 방지)
   var SHOOTER_QUEUE_MULT = 2; // 무기 대기실 = 교전채널 × 배수 (M/M/c/K, K=c*mult)
+  // ⑧ 교전창 실현가능성 여유계수 — 명령링크지연+교전소요(engageTimeSec 평균)이 잔여 체공창의
+  // 이 비율 이하일 때만 후보로 인정. 1.0 = 결정론(평균 ≤ 잔여). 교전시간은 지수분포라 평균이
+  // 창 안에 들어와도 실현의 절반은 초과하므로, 확률적 여유(<1.0)를 둘지는 STOP 판단 대상(기본 1.0).
+  var ENGAGE_WINDOW_MARGIN = 1.0;
 
   // 병목 판정 임계값 (Phase 1과 동일 기준: 계획서 ENV-RHO-THRESH-01)
   var RHO_WARN = 0.7, RHO_BOTTLENECK = 0.9;
@@ -3517,13 +3529,33 @@ li.chk-fail { background: #43140f; }
    */
   Simulation.prototype._doEngage = function (threat, t) {
     if (!threat.alive || threat.pipelineDead) return;
-    var mode = this.mode, type = threat.type;
-    var shooters = KJ.nodesInMode(mode).filter(function (n) {
-      return n.category === 'shooter' && n.canEngage[type] &&
-        n.controlledBy && (n.controlledBy[mode] || []).length > 0;
+    var self = this, mode = this.mode, type = threat.type;
+    // (1) 능력 후보: canEngage 제약(신궁·천마 탄도탄 배제 등) + 통제계통 존재 + 축선 담당.
+    //     coverage(Phase 2, WPN-*-COV-01)가 위협 축선을 포함해야 교전 가능 — 사거리 7km 무기가
+    //     전 축선을 맡던 결함(SM2-E가 서부 순항 요격 등) 차단. coverage 미지정 노드는 전축선 폴백.
+    var capable = KJ.nodesInMode(mode).filter(function (n) {
+      if (n.category !== 'shooter' || !n.canEngage[type]) return false;
+      if (!n.controlledBy || !(n.controlledBy[mode] || []).length) return false;
+      if (n.coverage && n.coverage.indexOf(threat.axis) === -1) return false; // 축선 미담당
+      return true;
     });
-    if (shooters.length === 0) { threat.leakReason = 'no_shooter'; return; } // 교전 불가(제약)
-    var self = this, best = null;
+    if (capable.length === 0) { threat.leakReason = 'no_shooter'; return; } // 능력·축선 공백(방공 공백)
+    // (2) 교전창 실현가능성(Phase 1): 명령링크 지연 + 교전 소요시간(engageTimeSec 평균)이 잔여
+    //     체공창을 넘으면 물리적으로 교전 완료 불가 → 후보에서 제외. FTR(300s)이 fighter(dwell
+    //     180s)를 "최적"이라 고르고 EXIT 전에 못 끝내던 확정 실패를 원천 차단한다(KJADS 원칙 3-2).
+    var remainDwell = (threat.spawnT + threat.dwellSec) - t;
+    var shooters = capable.filter(function (n) {
+      var cmd = self._link(n.controlledBy[mode][0], n.id, 'command');
+      var lead = (cmd ? cmd.delaySec * self.mult.delay : 0) + n.engage.engageTimeSec;
+      return lead <= remainDwell * ENGAGE_WINDOW_MARGIN;
+    });
+    if (shooters.length === 0) {
+      // 능력 있는 무기는 있으나 잔여 체공창 내 교전 완료 불가. 이미 한 번이라도 교전했으면(tries>0)
+      // 기회 소진(missed), 한 번도 못 쐈으면 교전창 부족(no_engage_window). 구조성은 STOP 판단 대상.
+      threat.leakReason = threat.tries > 0 ? 'missed' : 'no_engage_window';
+      return;
+    }
+    var best = null;
     if (mode === 'tobe') {
       var altBand = KJ.threatType(type).altBand;
       shooters.forEach(function (sh) {
@@ -3535,10 +3567,15 @@ li.chk-fail { background: #43140f; }
             (score === best.score && sh.id < best.sh.id)) best = { sh: sh, score: score };
       });
     } else {
+      // As-Is WTA (Phase 3 결정: 안 D 유지 — 변경 없음, 한계 문서화). 관측 가능한 최소부하 선택.
+      // ⚠️ 한계: 전군 무기의 실시간 부하를 완벽 조회하는 것은 "COP 부재" 전제(KJADS GAP 5, 자산
+      // 미통합)와 모순된다. 대안(A 자기계통·C 낡은부하 등)의 편향 원장 영향은 측정해 docs/vv-report.md
+      // §4-5에 기록했고, 결론에 유리한 방향(To-Be 개선폭 확대)이라 근거 없이 채택하지 않는다.
+      // 3C: 동점은 id 사전순(To-Be와 통일 — 종전 strict< 배열순 의존 제거).
       shooters.forEach(function (sh) {
         var ns = self.nodeState[sh.id];
         var load = ns ? (ns.busy + ns.queue.length) : 0;
-        if (!best || load < best.load) best = { sh: sh, load: load };
+        if (!best || load < best.load || (load === best.load && sh.id < best.sh.id)) best = { sh: sh, load: load };
       });
     }
     var shooter = best.sh;
@@ -3927,6 +3964,10 @@ li.chk-fail { background: #43140f; }
     responsibility_gap: { label: '책임공백(협조경로 부재)', group: '책임 공백', structural: true, stage: '⑥⑦ 결심·협조' },
     overflow: { label: '포화손실', group: '처리 포화', structural: true, stage: '③④⑤ C2 / ⑧ 교전' }, // 'overflow:<노드>' 접두 코드
     no_shooter: { label: '교전수단 부재(제약)', group: '교전수단 제약', structural: false, stage: '⑧ 교전명령' },
+    // Phase 1(⑧): 능력 있는 무기는 있으나 잔여 체공창 내 교전 완료 불가(명령링크+engageTimeSec > 잔여 dwell).
+    // structural은 STOP 판단 대상 — 잠정 false(무기 교전소요가 애초에 체공창보다 길면 C2와 무관하다는
+    // 보수적 가정). true로 볼 여지: 앞 단계 C2 지연이 창을 소진시킨 경우(C2 통합으로 개선 가능).
+    no_engage_window: { label: '교전창 부족(체공창 내 교전 완료 불가)', group: '교전창 제약', structural: false, stage: '⑧ 교전명령' },
     missed: { label: '명중 실패(기회소진)', group: '명중 실패', structural: false, stage: '⑨ BDA' },
     timeout: { label: '처리지연 초과(공역이탈)', group: '처리지연 초과', structural: true, stage: '⑨ 종합' }
   };
@@ -5058,9 +5099,9 @@ li.chk-fail { background: #43140f; }
       {
         no: '⑧', name: '교전/요격명령 — 명령 링크 + 교전채널',
         fn: '_doEngage · _onShooterArrive',
-        bottleneck: '교전수단 부재(제약: 신궁·천마↔탄도탄), 교전채널 포화',
-        fix: '(제약은 C2 통합으로 해결 불가 — 무기체계 능력 문제로 분리)',
-        codes: ['no_shooter', 'overflow_shooter'],
+        bottleneck: '교전수단 부재(제약: 신궁·천마↔탄도탄), 교전창 부족(체공창 내 교전 완료 불가), 교전채널 포화',
+        fix: '(능력·교전창 제약은 C2 통합으로 해결 불가 — 무기체계 능력·물리 문제로 분리)',
+        codes: ['no_shooter', 'no_engage_window', 'overflow_shooter'],
         metrics: [
           { label: '무기 최대 관측 ρ', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
             a: maxRho(a, 'shooter'), b: maxRho(b, 'shooter'),

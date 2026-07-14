@@ -343,9 +343,9 @@
       {
         no: '⑧', name: '교전/요격명령 — 명령 링크 + 교전채널',
         fn: '_doEngage · _onShooterArrive',
-        bottleneck: '교전수단 부재(제약: 신궁·천마↔탄도탄), 교전채널 포화',
-        fix: '(제약은 C2 통합으로 해결 불가 — 무기체계 능력 문제로 분리)',
-        codes: ['no_shooter', 'overflow_shooter'],
+        bottleneck: '교전수단 부재(제약: 신궁·천마↔탄도탄), 교전창 부족(체공창 내 교전 완료 불가), 교전채널 포화',
+        fix: '(능력·교전창 제약은 C2 통합으로 해결 불가 — 무기체계 능력·물리 문제로 분리)',
+        codes: ['no_shooter', 'no_engage_window', 'overflow_shooter'],
         metrics: [
           { label: '무기 최대 관측 ρ', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
             a: maxRho(a, 'shooter'), b: maxRho(b, 'shooter'),

@@ -72,6 +72,15 @@
     res.nodes.forEach(function (n) { if (n.category === cat && n.rho > m) m = n.rho; });
     return m;
   }
+  /** 카테고리별 최대 관측 Wq(평균 대기시간, 초). idle 노드(waitCount=0)는 _results가 Wq=0으로
+   * 산출하므로 정상 참여하나, 방어적으로 isFinite 가드를 둔다(NaN/Infinity가 카드에 새지 않도록). */
+  function maxWq(res, cat) {
+    var m = 0;
+    res.nodes.forEach(function (n) {
+      if (n.category === cat && isFinite(n.Wq) && n.Wq > m) m = n.Wq;
+    });
+    return m;
+  }
   function dropSum(res, cat) {
     var s = 0;
     res.nodes.forEach(function (n) { if (n.category === cat) s += n.drops; });
@@ -232,14 +241,21 @@
       },
       {
         no: '③④⑤', name: '식별·위협평가·WTA — C2 서버 처리',
-        fn: '_onC2Arrive · _afterC2 · _doEngage (To-Be: _onFusionArrive)',
-        bottleneck: 'C2 처리 포화(대기행렬), Best-Shooter 배정 실패',
+        fn: '_onC2Arrive · _afterC2 (To-Be: _onFusionArrive)',
+        bottleneck: 'C2 처리 포화(대기행렬), Best-Shooter 배정 실패 — ⑤ WTA(_doEngage)는 ' +
+          '실제로는 ⑥⑦ 결심(_decision) 이후 ⑧ 단계에서 실행됨(엔진 실행 순서 ≠ 교리 F2T2EA 순서)',
         fix: 'JAMDC2 집중 처리·AI 식별로 서비스시간 단축(서버 풀링 효과)',
         codes: ['overflow_c2'],
         metrics: [
           { label: 'C2 최대 관측 ρ', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
             a: maxRho(a, 'c2'), b: maxRho(b, 'c2'),
-            tip: 'C2 노드 중 최대 이용률(busyTime/(c·T)). ρ≥0.7 주의 · ≥0.9 병목 · 드롭=포화 (ENV-RHO-THRESH-01).' },
+            tip: 'C2 노드 중 최대 이용률(busyTime/(c·T)). ρ≥0.7 주의 · ≥0.9 병목 · 드롭=포화 (ENV-RHO-THRESH-01). ' +
+              '관측 ρ는 시간가중 적분값이며 드롭·reneging으로 버려진 부하는 분자에 포함되지 않으므로, ' +
+              '포화 구간에서 실제 수요를 과소표현한다(이론 ρ가 1을 넘어도 관측 ρ는 <1). ρ는 반드시 드롭 수·Wq와 함께 읽어야 한다.' },
+          { label: 'C2 최대 평균대기 (Wq)', mom: 'MoP', kind: 'sec', lower: true,
+            a: maxWq(a, 'c2'), b: maxWq(b, 'c2'),
+            tip: '대기행렬에서 서버를 기다린 평균 시간(초). ρ와 달리 포화의 체감 비용을 직접 표현한다. ' +
+              '관측 ρ는 버린 일을 분자에 포함하지 않으므로(드롭·reneging), ρ만으로는 포화를 과소평가한다.' },
           { label: 'C2 포화 드롭 합', mom: 'MoP', kind: 'cnt', lower: true,
             a: dropSum(a, 'c2'), b: dropSum(b, 'c2'),
             tip: 'M/M/c/K 대기실 용량(K) 초과로 상실된 항적 수 → overflow:<노드> 실패코드.' },
@@ -282,6 +298,9 @@
           { label: '무기 최대 관측 ρ', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
             a: maxRho(a, 'shooter'), b: maxRho(b, 'shooter'),
             tip: '교전 무기 노드 중 최대 채널 이용률.' },
+          { label: '무기 최대 평균대기 (Wq)', mom: 'MoP', kind: 'sec', lower: true,
+            a: maxWq(a, 'shooter'), b: maxWq(b, 'shooter'),
+            tip: '교전 대기실에서 채널을 기다린 평균 시간(초). ρ와 달리 포화의 체감 비용을 직접 표현한다.' },
           { label: 'command 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
             a: commMeanDelay(a, 'command'), b: commMeanDelay(b, 'command'),
             tip: '⑧단계 command(교전명령) 링크 전달의 평균 지연만 집계(C2→무기체계).' },

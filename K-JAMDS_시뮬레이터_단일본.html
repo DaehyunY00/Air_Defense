@@ -1706,7 +1706,7 @@ li.chk-fail { background: #43140f; }
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.7, medium: 1.2, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 350, channels: 4, engageTimeSec: 300, pk: { paramRef: 'WPN-FTR-PK-01' }, costPerShotM: 0.5, costRef: 'WPN-FTR-COST-01' }
+      engage: { rangeKm: 350, channels: 4, engageTimeSec: 300, pk: { byThreat: { uav_small: { kind: 'triangular', min: 0.1, mode: 0.25, max: 0.4 } }, default: { kind: 'triangular', min: 0.8, mode: 0.8, max: 0.8 }, paramRef: 'WPN-FTR-PK-01' }, costPerShotM: 0.5, costRef: 'WPN-FTR-COST-01' }
     },
     {
       id: 'SHORAD-1C', name: '단거리방공무기 (1군단: 신궁·천마·비호·벌컨)',
@@ -1717,7 +1717,7 @@ li.chk-fail { background: #43140f; }
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
       wtaSuit: { low: 1.3, medium: 0.5, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 7, channels: 6, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' }, costPerShotM: 0.2, costRef: 'WPN-SHORAD-COST-01' },
+      engage: { rangeKm: 7, channels: 6, engageTimeSec: 60, pk: { byThreat: { uav_small: { kind: 'triangular', min: 0.1, mode: 0.3, max: 0.5 } }, paramRef: 'WPN-SHORAD-PK-01' }, costPerShotM: 0.2, costRef: 'WPN-SHORAD-COST-01' },
       constraintRefs: ['WPN-SHIN-CON-01', 'C2-VULCAN-CEIL-01']
     },
     {
@@ -1729,7 +1729,7 @@ li.chk-fail { background: #43140f; }
       controlledBy: { asis: ['JAOC-CD'], tobe: ['JAOC-CD'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
       wtaSuit: { low: 1.3, medium: 0.5, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 7, channels: 4, engageTimeSec: 60, pk: { paramRef: 'WPN-SHORAD-PK-01' }, costPerShotM: 0.2, costRef: 'WPN-SHORAD-COST-01' },
+      engage: { rangeKm: 7, channels: 4, engageTimeSec: 60, pk: { byThreat: { uav_small: { kind: 'triangular', min: 0.1, mode: 0.3, max: 0.5 } }, paramRef: 'WPN-SHORAD-PK-01' }, costPerShotM: 0.2, costRef: 'WPN-SHORAD-COST-01' },
       constraintRefs: ['WPN-SHIN-CON-01']
     },
     {
@@ -1741,7 +1741,7 @@ li.chk-fail { background: #43140f; }
       controlledBy: { asis: ['AOC-1C'], tobe: ['AOC-1C'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.8, medium: 1.1, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 40, channels: 2, engageTimeSec: 90, pk: { paramRef: 'WPN-MSAM2-PK-01' }, costPerShotM: 1.5, costRef: 'WPN-MSAM-COST-01' }
+      engage: { rangeKm: 40, channels: 2, engageTimeSec: 90, pk: { default: { kind: 'triangular', min: 0.6, mode: 0.8, max: 0.9 }, paramRef: 'WPN-MSAM2-PK-01' }, costPerShotM: 1.5, costRef: 'WPN-MSAM-COST-01' }
     },
     {
       id: 'MDU-M', name: '미사일방어부대 (중거리: 천궁-II·PAC-3)',
@@ -1752,7 +1752,7 @@ li.chk-fail { background: #43140f; }
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: true, ac_low: false, heli: false, cruise: true, uav_small: false, srbm: true, mrl_large: true },
       wtaSuit: { low: 0.7, medium: 0.9, ballistic: 1.2, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 40, channels: 4, engageTimeSec: 45, pk: { paramRef: 'WPN-MSAM2-PK-01' }, costPerShotM: 3, costRef: 'WPN-MDUM-COST-01' }
+      engage: { rangeKm: 40, channels: 4, engageTimeSec: 45, pk: { default: { kind: 'triangular', min: 0.6, mode: 0.8, max: 0.9 }, paramRef: 'WPN-MSAM2-PK-01' }, costPerShotM: 3, costRef: 'WPN-MDUM-COST-01' }
     },
     {
       id: 'MDU-L', name: '미사일방어부대 (장거리: L-SAM)',
@@ -1763,7 +1763,7 @@ li.chk-fail { background: #43140f; }
       controlledBy: { asis: ['KAMDOC'], tobe: ['KAMDOC'] },
       canEngage: { fighter: false, ac_low: false, heli: false, cruise: false, uav_small: false, srbm: true, mrl_large: true },
       wtaSuit: { low: 0, medium: 0, ballistic: 1.3, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 150, channels: 3, engageTimeSec: 40, pk: { paramRef: 'WPN-LSAM-PK-01' }, costPerShotM: 8, costRef: 'WPN-LSAM-COST-01' }
+      engage: { rangeKm: 150, channels: 3, engageTimeSec: 40, pk: { default: { kind: 'triangular', min: 0.6, mode: 0.75, max: 0.9 }, paramRef: 'WPN-LSAM-PK-01' }, costPerShotM: 8, costRef: 'WPN-LSAM-COST-01' }
     },
     {
       id: 'SM2-E', name: 'SM-2 (동해 이지스함)',
@@ -1774,7 +1774,7 @@ li.chk-fail { background: #43140f; }
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.8, medium: 1.0, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' }, costPerShotM: 2.1, costRef: 'WPN-SM2-COST-01' }
+      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { default: { kind: 'triangular', min: 0.6, mode: 0.75, max: 0.85 }, paramRef: 'WPN-SM2-PK-01' }, costPerShotM: 2.1, costRef: 'WPN-SM2-COST-01' }
     },
     {
       id: 'SM2-W', name: 'SM-2 (서해 이지스함)',
@@ -1785,7 +1785,7 @@ li.chk-fail { background: #43140f; }
       controlledBy: { asis: ['MCRC'], tobe: ['MCRC'] },
       canEngage: { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: false, mrl_large: false },
       wtaSuit: { low: 0.8, medium: 1.0, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
-      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { paramRef: 'WPN-SM2-PK-01' }, costPerShotM: 2.1, costRef: 'WPN-SM2-COST-01' }
+      engage: { rangeKm: 150, channels: 2, engageTimeSec: 50, pk: { default: { kind: 'triangular', min: 0.6, mode: 0.75, max: 0.85 }, paramRef: 'WPN-SM2-PK-01' }, costPerShotM: 2.1, costRef: 'WPN-SM2-COST-01' }
     }
   ];
 
@@ -2986,6 +2986,20 @@ li.chk-fail { background: #43140f; }
       service: m.service || 1, delay: m.delay || 1,
       detect: m.detect || 1, pk: m.pk || 1
     };
+    // ⑨ 기능 플래그(feat/stage9-bda) — 모든 신규 거동은 켜고 끌 수 있어야 한다(되돌리기 가능성).
+    // 전부 false로 주면 stage9 이전(legacy)과 완전히 동일한 결과를 낸다(tests/reengage 되돌리기 어서션).
+    // 기본값: 문서화된 값 배선(pkByShooter)·회귀안전 지표(leakCost)·절단보정(censorFix)·taxonomy
+    // 정합(timeoutSplit)은 ON. 근거 약하고 결론을 움직이는 것(pkCorrelated·salvo)은 기본 OFF(ADR).
+    var f = cfg.features || {};
+    function ff(k, dflt) { return f[k] !== undefined ? !!f[k] : dflt; }
+    this.features = {
+      pkByShooter: ff('pkByShooter', true),   // Phase 1: 무기별 요격확률 배선(문서값)
+      leakCost: ff('leakCost', true),          // Phase 2: 누수 피해 보상 지표(별도 신설, exchange 불변)
+      censorFix: ff('censorFix', true),        // Phase 3: 종료 절단 보정(분모)
+      timeoutSplit: ff('timeoutSplit', true),  // Phase 4: timeout:c2/engage 분해 + overflow:shooter 재분류
+      pkCorrelated: ff('pkCorrelated', false), // Phase 5: 재교전 pk 상관(근거 약함 — 기본 OFF)
+      salvo: ff('salvo', false)                // Phase 6: 연발(범위 확대 — 기본 OFF)
+    };
     // 공통난수(CRN, `claude/c2-simulation-review` 검토 이식): 난수 스트림을 도착·처리로 분리한다.
     //  · rng    — 처리 무작위성(탐지 판정·서비스시간·요격확률·링크지연 분포·중복교전 등)
     //  · arrRng — 위협 도착간격(시나리오 그 자체) 전용. seed에서 독립 파생(황금비 해시)해
@@ -3008,7 +3022,9 @@ li.chk-fail { background: #43140f; }
       // coordAttempts: 중복항적 계통이 교전 가능해 협조 판정이 일어난 횟수
       // deconflicted: 잔여 체공창 내 협조 성립(중복 회피) / coordGaps: 협조 실패(책임공백)
       // duplicateEngagements: 협조 실패로 두 계통이 각각 교전한 건수(요격탄 이중 소모)
-      coordAttempts: 0, deconflicted: 0, coordGaps: 0, duplicateEngagements: 0
+      coordAttempts: 0, deconflicted: 0, coordGaps: 0, duplicateEngagements: 0,
+      // Phase 1(⑨): 문서화된 pk가 없어 legacy 폴백이 발동한 (무기×위협) 조합 기록
+      pkFallback: {}, censored: 0
     };
     // Phase B-2: 동적 권한위임(분권 전환) 관측 상태 — 전환 시점·횟수·노드별 분포
     this.deleg = { count: 0, firstT: null, byNode: {} };
@@ -3019,7 +3035,8 @@ li.chk-fail { background: #43140f; }
     // Phase D: 비용교환비(MoFE) — 개념 요격탄 소모비용 / 격추 위협가치 (백만 USD 개념)
     // sat*는 저가 포화위협(장사정포·소형무인기) 부분집합. 전부 개념값(WPN/THR-*-COST-01).
     this.cost = { interceptM: 0, killedThreatM: 0, interceptSatM: 0, killedThreatSatM: 0,
-      duplicateInterceptM: 0 };  // Phase 2: 중복교전으로 이중 소모된 요격탄 비용(As-Is 책임공백 비용)
+      duplicateInterceptM: 0,  // Phase 2(⑥⑦): 중복교전 이중 소모 요격탄 비용
+      leakedThreatM: 0, leakedThreatSatM: 0 };  // Phase 2(⑨): 누수 위협 가치(defenseEfficiency 분모, leakCost)
     this.eventCount = 0;
     this.log = [];        // 표본 이벤트 로그(앞부분만 보존)
 
@@ -3641,8 +3658,27 @@ li.chk-fail { background: #43140f; }
     }
   };
 
-  /** 요격확률(개념값). 소형 무인기는 저효율(2022.12.26 격추실패 반영). */
+  /**
+   * 요격확률(개념값). Phase 1(⑨): 무기별 pk를 nodes.js engage.pk(params.md 문서값)에서 읽는다.
+   * 종전엔 shooter 인자가 항상-참 조건 체크에만 쓰여 무기를 바꿔도 pk가 안 바뀌었다(사실 b) —
+   * ⑧ Best-Shooter가 격추율에 영향을 주지 못하는 근본 원인. pkByShooter 플래그로 켠다(기본 ON).
+   * RNG는 스캔당 정확히 1회(triangular 1회) — 문서값·폴백·legacy 모두 동일해 정렬이 유지된다.
+   */
   Simulation.prototype._pk = function (shooter, threat) {
+    if (!this.features.pkByShooter) return this._pkLegacy(shooter, threat);
+    var spec = shooter.engage && shooter.engage.pk;
+    var dist = (spec && spec.byThreat && spec.byThreat[threat.type]) || (spec && spec.default);
+    if (!dist) {
+      // params.md에 문서화된 pk 없음 → legacy 폴백(현행 위협별 값) + 조합 기록(값 지어내지 않음).
+      this.global.pkFallback[shooter.id + '×' + threat.type] = (this.global.pkFallback[shooter.id + '×' + threat.type] || 0) + 1;
+      return this._pkLegacy(shooter, threat);
+    }
+    var pk = this.rng.triangular(dist.min, dist.mode, dist.max);
+    return Math.max(0, Math.min(1, pk * this.mult.pk));
+  };
+
+  /** legacy 요격확률(stage9 이전 동작). pkByShooter=false 또는 문서값 부재 시 사용 — 되돌리기 경로. */
+  Simulation.prototype._pkLegacy = function (shooter, threat) {
     var pk;
     if (threat.type === 'uav_small') pk = this.rng.triangular(0.1, 0.3, 0.5);
     else if (shooter.category === 'shooter' && (threat.type === 'srbm' || threat.type === 'mrl_large'))
@@ -3694,6 +3730,13 @@ li.chk-fail { background: #43140f; }
     // 구조적 원인(responsibility_gap)이 근본 원인이다 → 사유 승격(死 코드 부활, taxonomy 정합).
     if (threat._hadCoordGap && (reason === 'missed' || reason === 'timeout')) reason = 'responsibility_gap';
     this.global.leakReasons[reason] = (this.global.leakReasons[reason] || 0) + 1;
+    // Phase 2(⑨, leakCost): 누수 위협의 가치를 계상 → defenseEfficiency 분모. 순수 관측(rng·이벤트 불변).
+    // "안 쏘면 exchange=0 최적"의 함정을 반전: 누수가 많으면 방어효율이 낮아진다.
+    if (this.features.leakCost) {
+      var lv = KJ.threatType(threat.type).unitCostM || 0;
+      this.cost.leakedThreatM += lv;
+      if (SAT_THREATS[threat.type]) this.cost.leakedThreatSatM += lv;
+    }
     if (threat._trace) {
       threat._trace.exitT = t;
       threat._trace.outcome = 'leaked:' + reason;
@@ -3878,6 +3921,9 @@ li.chk-fail { background: #43140f; }
           attempts: this.global.coordAttempts, deconflicted: this.global.deconflicted,
           gaps: this.global.coordGaps, duplicates: this.global.duplicateEngagements
         },
+        // Phase 1(⑨): 문서 pk 폴백 발동 조합(무기×위협) · Phase 3: 종료 절단 위협 수
+        pkFallback: this.global.pkFallback, censored: this.global.censored,
+        features: this.features,
         // 비용교환비(MoFE, 백만 USD 개념): exchange = 소모 요격탄 비용 / 격추 위협가치
         // (>1이면 아군이 더 비싼 자원을 소모). sat*는 저가 포화위협(무인기·방사포) 부분집합
         cost: {
@@ -3887,8 +3933,15 @@ li.chk-fail { background: #43140f; }
           interceptSatM: this.cost.interceptSatM,
           killedThreatSatM: this.cost.killedThreatSatM,
           exchangeSat: this.cost.killedThreatSatM > 0 ? this.cost.interceptSatM / this.cost.killedThreatSatM : null,
-          // Phase 2: 중복교전으로 이중 소모된 요격탄 비용(책임공백의 MoFE 비용). interceptM에 이미 포함됨.
-          duplicateInterceptM: this.cost.duplicateInterceptM
+          // Phase 2(⑥⑦): 중복교전으로 이중 소모된 요격탄 비용(책임공백의 MoFE 비용). interceptM에 이미 포함됨.
+          duplicateInterceptM: this.cost.duplicateInterceptM,
+          // Phase 2(⑨, leakCost): 방어효율 = 격추 위협가치 / (격추 + 누수 위협가치) — "방어한 가치 비율".
+          // exchange의 "안 쏘면 최적" 함정을 반전(안 쏘면 격추 0 → 0=최악). exchange는 불변(회귀 안전).
+          leakedThreatM: this.cost.leakedThreatM,
+          defenseEfficiency: this.features.leakCost && (this.cost.killedThreatM + this.cost.leakedThreatM) > 0
+            ? this.cost.killedThreatM / (this.cost.killedThreatM + this.cost.leakedThreatM) : null,
+          defenseEfficiencySat: this.features.leakCost && (this.cost.killedThreatSatM + this.cost.leakedThreatSatM) > 0
+            ? this.cost.killedThreatSatM / (this.cost.killedThreatSatM + this.cost.leakedThreatSatM) : null
         }
       },
       // 단계별 흐름 카운트 (Sankey/funnel용) — trace 없이도 항상 제공(집계 카운터라 저비용)
@@ -5128,9 +5181,15 @@ li.chk-fail { background: #43140f; }
           { label: '평균 격추시간', mom: 'MoP', kind: 'sec', lower: true,
             a: ga.meanTimeToKillSec, b: gb.meanTimeToKillSec,
             tip: '격추 성공 항적의 생성→격추 평균 소요.' },
+          { label: '방어효율 (방어한 위협가치 비율)', mom: 'MoFE', kind: 'rate', lower: false, max: 1,
+            a: ga.cost.defenseEfficiency, b: gb.cost.defenseEfficiency,
+            tip: '격추 위협가치 ÷ (격추 + 누수 위협가치) — 전체 위협가치 중 실제로 방어(격추)한 비율. ' +
+              '비용교환비(exchange)의 함정("아무것도 안 쏘면 exchange=0으로 최적")을 반전한다: 안 쏘면 격추 0 → 방어효율 0=최악. ' +
+              'exchange가 누수(패배)를 경제성으로 보상하던 결함(⑨ 사실 c)의 보완 지표 — exchange는 회귀 안전을 위해 그대로 유지.' },
           { label: '비용교환비 (저가 포화위협)', mom: 'MoFE', kind: 'ratio', lower: true,
             a: ga.cost.exchangeSat, b: gb.cost.exchangeSat,
-            tip: '무인기·장사정포 대응 소모 요격탄 비용 ÷ 격추 위협가치 (개념 단가, 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모. 주의: To-Be가 항상 개선되는 지표가 아님(docs/metrics-verification.md).' }
+            tip: '무인기·장사정포 대응 소모 요격탄 비용 ÷ 격추 위협가치 (개념 단가, 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모. ' +
+              '⚠️ 함정: 분모에 "격추한" 위협만 들어가 **아무것도 안 쏘면 0으로 "최적"이 된다**(패배가 경제성으로 계상) — 반드시 "방어효율"·격추율과 함께 읽어라. To-Be가 항상 개선되는 지표가 아님(docs/metrics-verification.md).' }
         ]
       },
       {

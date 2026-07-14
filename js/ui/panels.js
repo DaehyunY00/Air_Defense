@@ -372,9 +372,15 @@
           { label: '평균 격추시간', mom: 'MoP', kind: 'sec', lower: true,
             a: ga.meanTimeToKillSec, b: gb.meanTimeToKillSec,
             tip: '격추 성공 항적의 생성→격추 평균 소요.' },
+          { label: '방어효율 (방어한 위협가치 비율)', mom: 'MoFE', kind: 'rate', lower: false, max: 1,
+            a: ga.cost.defenseEfficiency, b: gb.cost.defenseEfficiency,
+            tip: '격추 위협가치 ÷ (격추 + 누수 위협가치) — 전체 위협가치 중 실제로 방어(격추)한 비율. ' +
+              '비용교환비(exchange)의 함정("아무것도 안 쏘면 exchange=0으로 최적")을 반전한다: 안 쏘면 격추 0 → 방어효율 0=최악. ' +
+              'exchange가 누수(패배)를 경제성으로 보상하던 결함(⑨ 사실 c)의 보완 지표 — exchange는 회귀 안전을 위해 그대로 유지.' },
           { label: '비용교환비 (저가 포화위협)', mom: 'MoFE', kind: 'ratio', lower: true,
             a: ga.cost.exchangeSat, b: gb.cost.exchangeSat,
-            tip: '무인기·장사정포 대응 소모 요격탄 비용 ÷ 격추 위협가치 (개념 단가, 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모. 주의: To-Be가 항상 개선되는 지표가 아님(docs/metrics-verification.md).' }
+            tip: '무인기·장사정포 대응 소모 요격탄 비용 ÷ 격추 위협가치 (개념 단가, 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모. ' +
+              '⚠️ 함정: 분모에 "격추한" 위협만 들어가 **아무것도 안 쏘면 0으로 "최적"이 된다**(패배가 경제성으로 계상) — 반드시 "방어효율"·격추율과 함께 읽어라. To-Be가 항상 개선되는 지표가 아님(docs/metrics-verification.md).' }
         ]
       },
       {

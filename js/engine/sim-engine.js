@@ -134,7 +134,8 @@
     // Phase D: 비용교환비(MoFE) — 개념 요격탄 소모비용 / 격추 위협가치 (백만 USD 개념)
     // sat*는 저가 포화위협(장사정포·소형무인기) 부분집합. 전부 개념값(WPN/THR-*-COST-01).
     this.cost = { interceptM: 0, killedThreatM: 0, interceptSatM: 0, killedThreatSatM: 0,
-      duplicateInterceptM: 0 };  // Phase 2: 중복교전으로 이중 소모된 요격탄 비용(As-Is 책임공백 비용)
+      duplicateInterceptM: 0,  // Phase 2(⑥⑦): 중복교전 이중 소모 요격탄 비용
+      leakedThreatM: 0, leakedThreatSatM: 0 };  // Phase 2(⑨): 누수 위협 가치(defenseEfficiency 분모, leakCost)
     this.eventCount = 0;
     this.log = [];        // 표본 이벤트 로그(앞부분만 보존)
 
@@ -828,6 +829,13 @@
     // 구조적 원인(responsibility_gap)이 근본 원인이다 → 사유 승격(死 코드 부활, taxonomy 정합).
     if (threat._hadCoordGap && (reason === 'missed' || reason === 'timeout')) reason = 'responsibility_gap';
     this.global.leakReasons[reason] = (this.global.leakReasons[reason] || 0) + 1;
+    // Phase 2(⑨, leakCost): 누수 위협의 가치를 계상 → defenseEfficiency 분모. 순수 관측(rng·이벤트 불변).
+    // "안 쏘면 exchange=0 최적"의 함정을 반전: 누수가 많으면 방어효율이 낮아진다.
+    if (this.features.leakCost) {
+      var lv = KJ.threatType(threat.type).unitCostM || 0;
+      this.cost.leakedThreatM += lv;
+      if (SAT_THREATS[threat.type]) this.cost.leakedThreatSatM += lv;
+    }
     if (threat._trace) {
       threat._trace.exitT = t;
       threat._trace.outcome = 'leaked:' + reason;
@@ -1024,8 +1032,15 @@
           interceptSatM: this.cost.interceptSatM,
           killedThreatSatM: this.cost.killedThreatSatM,
           exchangeSat: this.cost.killedThreatSatM > 0 ? this.cost.interceptSatM / this.cost.killedThreatSatM : null,
-          // Phase 2: 중복교전으로 이중 소모된 요격탄 비용(책임공백의 MoFE 비용). interceptM에 이미 포함됨.
-          duplicateInterceptM: this.cost.duplicateInterceptM
+          // Phase 2(⑥⑦): 중복교전으로 이중 소모된 요격탄 비용(책임공백의 MoFE 비용). interceptM에 이미 포함됨.
+          duplicateInterceptM: this.cost.duplicateInterceptM,
+          // Phase 2(⑨, leakCost): 방어효율 = 격추 위협가치 / (격추 + 누수 위협가치) — "방어한 가치 비율".
+          // exchange의 "안 쏘면 최적" 함정을 반전(안 쏘면 격추 0 → 0=최악). exchange는 불변(회귀 안전).
+          leakedThreatM: this.cost.leakedThreatM,
+          defenseEfficiency: this.features.leakCost && (this.cost.killedThreatM + this.cost.leakedThreatM) > 0
+            ? this.cost.killedThreatM / (this.cost.killedThreatM + this.cost.leakedThreatM) : null,
+          defenseEfficiencySat: this.features.leakCost && (this.cost.killedThreatSatM + this.cost.leakedThreatSatM) > 0
+            ? this.cost.killedThreatSatM / (this.cost.killedThreatSatM + this.cost.leakedThreatSatM) : null
         }
       },
       // 단계별 흐름 카운트 (Sankey/funnel용) — trace 없이도 항상 제공(집계 카운터라 저비용)

@@ -542,6 +542,14 @@ launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한
 - **MC 적용방식**: 고정. flow 보존(spawned ≥ killed+leaked) 자동 유지(censored ≥ 0)
 - **비고**: 실측 절단율 SC3 x2.5 As-Is 15.3% · To-Be 10.0%. 보정 시 격추율 As-Is 9.3→11.0%·To-Be 42.0→46.7%(개선폭 +9.2% 상대, 에스컬레이션 미달)
 
+### [ENV-DES-TIMEOUT-01] timeout 분해 + overflow:shooter 재분류 (Phase 4 ⑨, `js/engine/sim-engine.js`)
+- **값/분포**: 누수 사유 `timeout`을 `tries` 기준 분해 — `tries===0`(교전 미개시)=`timeout:c2`(구조, ②~⑦ 파이프라인 시간 소진) · `tries>0`(교전했으나 체공창 소진)=`timeout:engage`(비구조, ⑧⑨ 물리 한계). `features.timeoutSplit`(기본 ON). 별도로 `leakTaxonomy`가 `overflow:<노드>`를 노드 category로 재분류 — shooter=비구조(유도탄·발사대 수 한계), C2=구조(처리 포화)
+- **출처**: 사실 (e)(동일 물리현상 구조/비구조 혼재) 해소. 분해 기준은 ⑧ `no_engage_window`와 동일(`threat.tries > 0 → 비구조`) — 두 단계 판정 일관성(ADR-004). 재분류 근거: 무기 교전채널 = 유도탄·발사대 수 = [WPN-*-CHAN-01]
+- **적용범위**: `_onExit`(코드 방출, timeoutSplit 게이트) · `KJ.leakTaxonomy`(overflow 재분류, 무조건 — UI·테스트·원장 공유 단일 분류원). 동역학·rng·이벤트·지문(sp/k/l/iM/ex) **완전 불변**(순수 보고/분류)
+- **신뢰도 등급**: B(방법론·문서 채널 수)
+- **MC 적용방식**: 고정. timeoutSplit OFF → 단일 timeout(구조) = legacy 코드 분포
+- **비고**: ⚠️ 과제 예측(구조적 −97%)과 불일치. 실측 To-Be 개선폭 25.09p→26.85p(**+7.0%**, 20% 미달, 🔴 아님). 이유: ⑧ 교전창 필터가 tries===0 위협을 교전 전 `no_engage_window`로 선점 → To-Be 잔여 timeout은 대부분 `timeout:c2`(구조 유지). 상세 ADR-004
+
 ### [ENV-DES-CRN-01] 공통난수(CRN) — As-Is↔To-Be 짝지은 비교 (`js/engine/sim-engine.js`)
 - **값/분포**: 난수 스트림 2분리 — `arrRng`(위협 도착간격 전용, seed에서 황금비 해시로 독립 파생) / `rng`(처리 무작위성: 탐지·서비스시간·요격확률·링크지연 분포·중복교전). 도착은 `arrRng`에서만 소비
 - **출처**: 분산감소 표준기법(Common Random Numbers) — `claude/c2-simulation-review` 검토에서 이식. 근거: 동일 seed에서 두 형상이 같은 위협열을 마주해야 차이가 위협표본이 아니라 C2 구조에서만 비롯됨(짝지은 비교의 타당성)

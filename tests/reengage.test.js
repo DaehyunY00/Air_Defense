@@ -88,6 +88,32 @@ var gOff2 = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensit
 assert(gOn.killRate > gOff2.killRate && gOff2.censored === 0,
   'censorFix ON → 격추율 상승(분모 제외), OFF → censored=0·legacy 분모 (' + (gOff2.killRate * 100).toFixed(1) + '%→' + (gOn.killRate * 100).toFixed(1) + '%)');
 
+// ══════════ Phase 4 — timeout 분해 + overflow:shooter 재분류 ══════════
+console.log('# Phase 4 — timeout 분해(tries 기준) + overflow:shooter 재분류');
+// (1) 합 보존: timeout:c2 + timeout:engage (분해 ON) = timeout (분해 OFF) — 같은 위협 집합
+var sumSplit = 0, sumLegacy = 0;
+for (var s4 = 1; s4 <= 5; s4++) {
+  var gOnT = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 1.5, seed: s4, endTimeSec: 1800, features: { timeoutSplit: true } }).global;
+  var gOffT = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 1.5, seed: s4, endTimeSec: 1800, features: { timeoutSplit: false } }).global;
+  sumSplit += (gOnT.leakReasons['timeout:c2'] || 0) + (gOnT.leakReasons['timeout:engage'] || 0);
+  sumLegacy += (gOffT.leakReasons['timeout'] || 0);
+}
+assert(sumSplit === sumLegacy && sumSplit > 0,
+  'timeout:c2 + timeout:engage (분해 ON, ' + sumSplit + ') = timeout (분해 OFF, ' + sumLegacy + ') — 분해는 재라벨링일 뿐 합 보존(되돌리기)');
+// timeoutSplit OFF → timeout:c2/engage 코드가 없어야(legacy 단일 코드)
+var gOffT2 = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: 3, endTimeSec: 1800, features: { timeoutSplit: false } }).global;
+assert(!gOffT2.leakReasons['timeout:c2'] && !gOffT2.leakReasons['timeout:engage'],
+  'timeoutSplit OFF → timeout:c2/engage 미방출(단일 timeout 코드) — 코드 방출 되돌리기');
+// (2) ⑧ no_engage_window와 동일 기준: tries>0 → 비구조. 두 코드 모두 structural:false로 일관
+assert(KJ.leakTaxonomy('timeout:engage').structural === false && KJ.leakTaxonomy('no_engage_window').structural === false,
+  'timeout:engage·no_engage_window 모두 비구조 — ⑧⑨가 동일 판정(tries>0→비구조) 사용(ADR-004)');
+assert(KJ.leakTaxonomy('timeout:c2').structural === true,
+  'timeout:c2(tries===0, 교전 미개시) = 구조적 — 앞단 C2·협조 시간 소진');
+// (3) overflow:shooter 재분류: 교전채널(shooter) 노드 = 비구조, C2 노드 = 구조
+var shooterOv = KJ.leakTaxonomy('overflow:MDU-L'), c2Ov = KJ.leakTaxonomy('overflow:MCRC');
+assert(shooterOv.structural === false && c2Ov.structural === true,
+  'overflow:MDU-L(교전채널)=비구조 · overflow:MCRC(C2)=구조 — 노드 category 기반 재분류(종전 둘 다 구조 오분류 정정)');
+
 // ══════════ 결정론 ══════════
 console.log('# 결정론');
 function sig(feat) { var g = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: 7, endTimeSec: 1800, features: feat }).global; return [g.killed, g.leaked, +g.cost.interceptM.toFixed(4)].join(','); }

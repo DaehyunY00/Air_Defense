@@ -130,7 +130,8 @@
   // 단계 귀속용 확장 코드(overflow 분리)의 라벨·구조성 — 기본 8종은 KJ.LEAK_TAXONOMY 참조
   var CODE_META = {
     overflow_c2: { label: '포화손실(C2 처리)', structural: true },
-    overflow_shooter: { label: '포화손실(교전채널)', structural: true }
+    // Phase 4(⑨) 재분류: 교전채널 포화는 유도탄·발사대 수 문제(no_shooter 계열) → 비구조.
+    overflow_shooter: { label: '포화손실(교전채널)', structural: false }
   };
   function codeMeta(code) { return CODE_META[code] || KJ.leakTaxonomy(code); }
 
@@ -363,9 +364,9 @@
       },
       {
         no: '⑨', name: 'BDA → 재교전 (폐루프)', fn: '_onEngageEnd',
-        bottleneck: '명중 실패(저Pk, 예: 무인기 0.1~0.5), 체공창 소진, 재교전 상한(3회)',
+        bottleneck: '명중 실패(저Pk, 예: 무인기 0.1~0.5), 체공창 소진(교전 중), 재교전 상한(3회)',
         fix: '재교전 폐루프는 dwell 창 내에서만 — 앞 단계 지연 단축이 곧 재교전 기회 확보',
-        codes: ['missed', 'timeout'],
+        codes: ['missed', 'timeout:engage', 'timeout:c2'],
         metrics: [
           { label: '격추율', mom: 'MoFE', kind: 'rate', lower: false, max: 1,
             a: ga.killRate, b: gb.killRate, tip: '생성 위협 중 격추 비율 — 최종 요격 성과.' },

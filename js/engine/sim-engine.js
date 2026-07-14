@@ -824,10 +824,15 @@
     if (!threat.alive) return; // 이미 격추
     threat.alive = false;
     this.global.leaked++;
-    var reason = threat.leakReason || (threat.detected ? 'timeout' : 'not_detected');
+    // Phase 4(⑨, timeoutSplit): timeout을 tries로 분해. tries===0(한 번도 교전 못 함)=timeout:c2
+    // (앞단 C2·협조가 시간을 소진 → 구조적), tries>0(교전했으나 체공창 소진)=timeout:engage(교전·BDA
+    // 단계 물리 한계 → 비구조). 동일 물리 현상이 구조/비구조로 뭉뚱그려지던 결함(사실 e) 해소.
+    var reason = threat.leakReason ||
+      (!threat.detected ? 'not_detected'
+        : (this.features.timeoutSplit ? (threat.tries > 0 ? 'timeout:engage' : 'timeout:c2') : 'timeout'));
     // Phase 2: 협조 실패(책임공백)를 겪은 항적이 결국 누수하면, 일반 사유(명중실패·처리지연)보다
     // 구조적 원인(responsibility_gap)이 근본 원인이다 → 사유 승격(死 코드 부활, taxonomy 정합).
-    if (threat._hadCoordGap && (reason === 'missed' || reason === 'timeout')) reason = 'responsibility_gap';
+    if (threat._hadCoordGap && (reason === 'missed' || reason.indexOf('timeout') === 0)) reason = 'responsibility_gap';
     this.global.leakReasons[reason] = (this.global.leakReasons[reason] || 0) + 1;
     // Phase 2(⑨, leakCost): 누수 위협의 가치를 계상 → defenseEfficiency 분모. 순수 관측(rng·이벤트 불변).
     // "안 쏘면 exchange=0 최적"의 함정을 반전: 누수가 많으면 방어효율이 낮아진다.
@@ -1131,7 +1136,11 @@
     // 보수적 가정). true로 볼 여지: 앞 단계 C2 지연이 창을 소진시킨 경우(C2 통합으로 개선 가능).
     no_engage_window: { label: '교전창 부족(체공창 내 교전 완료 불가)', group: '교전창 제약', structural: false, stage: '⑧ 교전명령' },
     missed: { label: '명중 실패(기회소진)', group: '명중 실패', structural: false, stage: '⑨ BDA' },
-    timeout: { label: '처리지연 초과(공역이탈)', group: '처리지연 초과', structural: true, stage: '⑨ 종합' }
+    timeout: { label: '처리지연 초과(공역이탈)', group: '처리지연 초과', structural: true, stage: '⑨ 종합' },
+    // Phase 4(⑨): timeout 분해. c2=교전 미개시(앞단 지연 → 구조적) / engage=교전 중 체공창 소진
+    // (교전·BDA 물리 한계 → 비구조, ⑧ no_engage_window와 동일 기준: 이미 교전 시도했나).
+    'timeout:c2': { label: '처리지연 초과(교전 미개시)', group: '처리지연 초과', structural: true, stage: '②~⑦ 파이프라인' },
+    'timeout:engage': { label: '체공창 소진(교전 중)', group: '체공창 소진', structural: false, stage: '⑧⑨ 교전·BDA' }
   };
 
   /**
@@ -1144,8 +1153,12 @@
     if (code && code.indexOf('overflow:') === 0) {
       var base = KJ.LEAK_TAXONOMY.overflow;
       var node = KJ.nodeById(code.slice(9));
-      var stage = node && node.category === 'shooter' ? '⑧ 교전명령' : '③④⑤ C2 처리';
-      return { label: base.label + '(' + code.slice(9) + ')', group: base.group, structural: base.structural, stage: stage };
+      var isShooter = node && node.category === 'shooter';
+      // Phase 4(⑨) 재분류: C2 대기실 초과(overflow:MCRC 등)는 처리 포화=구조적. 교전채널 초과
+      // (overflow:MDU-L 등)는 유도탄·발사대 수 문제 = no_shooter 계열 → 비구조(종전 둘 다 구조로 오분류).
+      var stage = isShooter ? '⑧ 교전명령' : '③④⑤ C2 처리';
+      return { label: base.label + '(' + code.slice(9) + ')', group: isShooter ? '교전채널 포화' : base.group,
+        structural: isShooter ? false : base.structural, stage: stage };
     }
     return { label: String(code), group: '기타', structural: false, stage: '—' };
   };

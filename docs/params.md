@@ -137,6 +137,22 @@
 - **MC 적용방식**: W 민감도스윕 대상. 채택 W=0.5: SC3 고가유도탄 보존율 33.4→40.6%·격추율 44.3% 불변·MDU-L ρ0.936(死노드 아님)
 - **비고**: 🔴 반증실험(ADR-007) — As-Is+비용WTA는 66.5% 보존(To-Be 40.6%보다 우수) → **자원 절약은 C2 통합이 아니라 비용 인식 로직의 효과**. "통합하면 절약된다"고 쓰면 안 됨
 
+### [WPN-*-MAG-01] 무기별 유도탄 재고 (자원최적화 Step 2, `js/data/nodes.js` engage.magazine) — 기본 OFF
+- **값/분포**: 시나리오 기간(1800s) 가용 요격탄 수(재장전 없음) — FTR 120·SHORAD 200/150·MSAM 48·MDU-M 48·MDU-L 24·SM2 32. `features.magazine` 기본 OFF(ON이면 재고 유한). `features.magazineSize`로 균일 override(스윕)
+- **출처**: KJADS 원칙 5-2(잔여량·소진). **값 근거 없음 — 지어내지 않고 소진 경계를 스윕으로 발견**
+- **적용범위**: `_doEngage`(ammo≤0 제외 → no_ammo) + `_onEngageEnd`(ammo 차감, As-Is·To-Be 공통). OFF → ammo=∞(현행)
+- **신뢰도 등급**: **C**(재고값 근거 부재) → 기본 OFF, 민감도스윕 대상
+- **MC 적용방식**: magazineSize 스윕. 발견: SC3 x2.5 균일 48발 미만서 소진 유의미(48→9.9%·24→27.3%·12→39.5% no_ammo). 노드기본(MDU-L 24) → MDU-L 첫소진 T+462s·격추율 44→35.7%(비대칭 소진전술 정량화)
+- **비고**: 재장전 미모사(총량). no_ammo=비구조
+
+### [C2-RESERVE-01] 고위협 대응 보존 최소수량 (자원최적화 Step 2, `engage.reserveFloor`) — To-Be 전용·기본 OFF
+- **값/분포**: MDU-L `reserveFloor: { srbm: 6 }` — mrl_large 등 비(非)srbm 위협 교전 시 잔여가 6발 이하면 후보 제외(srbm용 보존). `features.reserveFloor` 기본 OFF(magazine 의존)
+- **출처**: KJADS 원칙 5-2("고위협 대응 보존 최소 수량 설정")
+- **적용범위**: `_doEngage` 후보 필터 **To-Be 전용** — GAP 5(잔여 실시간 미통합)로 As-Is는 보존 판단 불가(측정: As-Is 보존발동 0)
+- **신뢰도 등급**: C(보존수량 근거 부재)
+- **MC 적용방식**: 옵션. To-Be 보존발동 다수 발생·As-Is 0(비대칭). mrl_large 일부를 no_ammo로 돌려 srbm 재고 보존(doctrine 트레이드오프)
+- **비고**: 이 As-Is/To-Be 비대칭이 원칙 5-2가 통합 C2 기능(개별 무기 아님)임을 보이는 정직한 증거(ADR-008)
+
 ### [C2-DELEG-THRESH-01] 부하 기반 중앙↔분권 동적 전환 임계 (정밀화 Phase B-2)
 - **값/분포**: 승인권자 노드 관측 상태가 [전 결심서버 점유(busy≥c) AND 대기열 ≥ c×배수]일 때 해당 결심을 하위/자동으로 위임(분권 전환). 배수: **As-Is 4 / To-Be 1**
 - **출처**: 개념 설정 — 임무형 지휘(권한위임) 원칙의 부하 트리거화. To-Be는 COP 공유·자동화로 조기 전환, As-Is는 수동 절차로 포화가 누적되어야 전환(느림/준부재)

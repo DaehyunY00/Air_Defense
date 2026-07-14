@@ -70,6 +70,30 @@ var iS = 0, kS = 0;
 [1.0, 1.5, 2.5].forEach(function (x) { for (var sd = 1; sd <= 20; sd++) { var g = run('sc2', 'tobe', x, sd, { costAwareWta: true, costWtaWeight: 0.5 }); iS += g.cost.interceptSatM; kS += g.cost.killedThreatSatM; } });
 assert(iS / kS > 1, 'SC2 exchangeSat = ' + (iS / kS).toFixed(2) + ' > 1 유지 — 무인기 비용 비대칭 C2로 미해소(G6-3 불변)');
 
+// ══════════ Step 2 — 재고(magazine) + 보존(reserveFloor) ══════════
+console.log('# Step 2 되돌리기 — magazine OFF = 현행(ammo=∞, no_ammo 0)');
+var naOff = 0;
+for (var sd3 = 1; sd3 <= 10; sd3++) { naOff += run('sc3', 'tobe', 2.5, sd3, { magazine: false }).leakReasons['no_ammo'] || 0; }
+assert(naOff === 0, 'magazine OFF → no_ammo 0 (' + naOff + ') — 재고 무제한(현행)');
+// magazine ON → 소진 발생(no_ammo>0)
+var naOn = 0;
+for (var sd4 = 1; sd4 <= 10; sd4++) { naOn += run('sc3', 'tobe', 2.5, sd4, { magazine: true, magazineSize: 24 }).leakReasons['no_ammo'] || 0; }
+assert(naOn > 0, 'magazine ON(24) → no_ammo ' + naOn + '건 발생 — 유한 재고 소진 재현');
+assert(KJ.leakTaxonomy('no_ammo').structural === false, 'no_ammo = 비구조 (C2로 유도탄 수량 안 늘어남 — no_shooter 계열)');
+// reserveFloor: To-Be 전용 (As-Is 보존발동 0 — GAP 5)
+console.log('# Step 2 ★ reserveFloor는 To-Be 전용 (GAP 5 — As-Is 보존 불가)');
+var asisTrig = 0, tobeTrig = 0;
+[1.0, 1.5, 2.5].forEach(function (x) {
+  for (var sd = 1; sd <= 10; sd++) {
+    var ra = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: x, seed: sd, endTimeSec: 1800, features: { magazine: true, reserveFloor: true } });
+    var rb = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: x, seed: sd, endTimeSec: 1800, features: { magazine: true, reserveFloor: true } });
+    (ra.nodes || []).forEach(function (n) { if (n.id === 'MDU-L') asisTrig += n.reserveTriggers || 0; });
+    (rb.nodes || []).forEach(function (n) { if (n.id === 'MDU-L') tobeTrig += n.reserveTriggers || 0; });
+  }
+});
+assert(asisTrig === 0, 'As-Is 보존발동 = ' + asisTrig + ' (0 — reserveFloor는 To-Be 전용, 잔여 실시간통합 부재)');
+assert(tobeTrig > 0, 'To-Be 보존발동 = ' + tobeTrig + ' > 0 — MDU-L이 srbm용 재고를 지킴(mrl_large 배정 차단)');
+
 // ══════════ 결정론 ══════════
 console.log('# 결정론');
 function sig(feat) { var g = run('sc3', 'tobe', 2.5, 7, feat); return [g.killed, g.leaked, +g.cost.interceptM.toFixed(4), +g.highValueInterceptM.toFixed(4)].join(','); }

@@ -126,6 +126,8 @@
     };
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
+    // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
+    this.magazineSize = (typeof f.magazineSize === 'number') ? f.magazineSize : null;
     // Phase 5: 상관계수 ρ(0~1). features.pkCorrelation 숫자로 재정의 가능(민감도 스윕용), 없으면 문서 기본.
     this.pkCorrRho = (typeof f.pkCorrelation === 'number') ? Math.max(0, Math.min(1, f.pkCorrelation)) : PK_CORR_RHO;
     // Phase 6: 연발 발수 k(≥1 정수). features.salvoSize로 재정의, 없으면 문서 기본. salvo OFF면 미사용(k=1).
@@ -216,7 +218,14 @@
         waitAccum: 0, waitCount: 0, maxInSystem: 0,
         // Phase: kind별 부하 분리 관측 — busyByKind는 현재 서비스 중인 서버의 kind별 개수
         // (Σ busyByKind === busy 불변). byKind는 kind별 누적 통계(bucket() 지연 생성).
-        busyByKind: {}, byKind: {}
+        busyByKind: {}, byKind: {},
+        // 자원최적화 Step 2(magazine): 유도탄 재고. OFF면 Infinity(소모 무제한=현행). ON이면 노드
+        // magazine(또는 features.magazineSize 균일 override). ammoDepletedT=첫 소진 시각, reserveTriggers=보존 발동수.
+        ammo: (n.category === 'shooter' && self.features.magazine)
+          ? (typeof self.magazineSize === 'number' ? self.magazineSize : ((n.engage && n.engage.magazine) || Infinity))
+          : Infinity,
+        magazine0: (n.category === 'shooter') ? (typeof self.magazineSize === 'number' ? self.magazineSize : ((n.engage && n.engage.magazine) || Infinity)) : Infinity,
+        ammoDepletedT: null, reserveTriggers: 0
       };
       if (self.trace) self.nodeSeries[n.id] = [];
     });
@@ -676,6 +685,19 @@
   };
 
   /**
+   * 자원최적화 Step 2: 무기 n을 위협 type에 교전할 때 지켜야 할 보존 최소수량.
+   * engage.reserveFloor = {srbm: 6} → srbm 아닌 위협 교전 시 6발 보존(srbm 교전 시엔 0). 여러 보존
+   * 위협이 있으면 "현재 위협이 아닌" 보존위협들의 합을 지킨다(KJADS 5-2 고위협 대응 보존).
+   */
+  function reserveFloorFor(node, type) {
+    var rf = node.engage && node.engage.reserveFloor;
+    if (!rf) return 0;
+    var floor = 0;
+    Object.keys(rf).forEach(function (rt) { if (rt !== type) floor += rf[rt]; });
+    return floor;
+  }
+
+  /**
    * 8 교전명령: WTA로 무기 선택 → 명령 링크 → 교전채널 투입.
    * 정밀화 Phase B-1 — 모드별 WTA 차등:
    *  - As-Is : COP 부재로 무기별 적합도 비교가 불가 — 관측 가능한 최소부하 선택(기존 동작).
@@ -710,6 +732,22 @@
       // 기회 소진(missed), 한 번도 못 쐈으면 교전창 부족(no_engage_window). 구조성은 STOP 판단 대상.
       threat.leakReason = threat.tries > 0 ? 'missed' : 'no_engage_window';
       return;
+    }
+    // (3) 자원최적화 Step 2(magazine·reserveFloor): 재고 소진·보존 필터.
+    //   · ammo≤0 → 후보 제외(소진). · reserveFloor(To-Be 전용, GAP 5): 비(非)보존위협 교전 시 잔여가
+    //     보존수량 이하면 제외(고위협용 유도탄 지킴). 후보 0이면 no_ammo(비구조 — C2로 유도탄 안 늘어남).
+    if (this.features.magazine) {
+      var withAmmo = shooters.filter(function (n) {
+        var ns = self.nodeState[n.id];
+        if (ns.ammo <= 0) return false; // 소진
+        if (mode === 'tobe' && self.features.reserveFloor) {
+          var floor = reserveFloorFor(n, type);
+          if (floor > 0 && ns.ammo <= floor) { ns.reserveTriggers++; return false; } // 보존 발동(To-Be)
+        }
+        return true;
+      });
+      if (withAmmo.length === 0) { threat.leakReason = 'no_ammo'; return; }
+      shooters = withAmmo;
     }
     var best = null;
     // 자원최적화 Step 1(costAwareWta): 비용 인식 점수. score = suit·(0.25+0.75·remain)·((1−W)+W·costFit),
@@ -805,6 +843,12 @@
     if (SAT_THREATS[threat.type]) this.cost.interceptSatM += shot;
     // 자원최적화 Step 1: 고가 유도탄(≥$5M = L-SAM 계열) 소모액 — 고가유도탄 보존율 분자.
     if (cps >= HIGH_VALUE_COST_M) this.global.highValueInterceptM += shot;
+    // 자원최적화 Step 2(magazine): 재고 차감(As-Is·To-Be 공통 — 물리). 첫 소진 시각 기록(비대칭 소진 지표).
+    var sns = this.nodeState[shooterId];
+    if (this.features.magazine && sns && isFinite(sns.ammo)) {
+      sns.ammo -= shots;
+      if (sns.ammo <= 0 && sns.ammoDepletedT === null) sns.ammoDepletedT = t;
+    }
     var pk = this._pk(shooter, threat);
     if (shots > 1) pk = 1 - Math.pow(1 - pk, shots); // 연발 누적 요격확률 (그리기 수 불변 — pk 값만 상향)
     // Phase 5(pkCorrelated): 재교전 상관. OFF면 독립 추출(legacy: raw() < pk). ON이면 표적별 공유
@@ -1018,7 +1062,11 @@
         arrivals: ns.arrivals, completions: ns.completions, drops: ns.drops,
         rho: rho, Lq: Lq, Wq: Wq, maxInSystem: ns.maxInSystem, level: level,
         rhoByKind: rhoByKind, arrivalsByKind: arrivalsByKind,
-        dropsByKind: dropsByKind, WqByKind: WqByKind
+        dropsByKind: dropsByKind, WqByKind: WqByKind,
+        // 자원최적화 Step 2: 잔여 유도탄 비율·첫 소진 시각·보존 발동 횟수(magazine ON일 때만 유의).
+        ammo: isFinite(ns.ammo) ? ns.ammo : null,
+        ammoRatio: (isFinite(ns.ammo) && isFinite(ns.magazine0) && ns.magazine0 > 0) ? ns.ammo / ns.magazine0 : null,
+        ammoDepletedT: ns.ammoDepletedT, reserveTriggers: ns.reserveTriggers
       };
     });
 
@@ -1231,6 +1279,9 @@
     // structural은 STOP 판단 대상 — 잠정 false(무기 교전소요가 애초에 체공창보다 길면 C2와 무관하다는
     // 보수적 가정). true로 볼 여지: 앞 단계 C2 지연이 창을 소진시킨 경우(C2 통합으로 개선 가능).
     no_engage_window: { label: '교전창 부족(체공창 내 교전 완료 불가)', group: '교전창 제약', structural: false, stage: '⑧ 교전명령' },
+    // 자원최적화 Step 2(magazine): 요격탄 소진. no_shooter(능력)·no_engage_window(시간)와 같은 계열
+    // = 비구조(C2 통합으로 유도탄 수량이 늘어나지는 않는다 — 재장전·재고는 별개 물류 과제).
+    no_ammo: { label: '요격탄 소진', group: '교전수단 제약', structural: false, stage: '⑧ 교전명령' },
     missed: { label: '명중 실패(기회소진)', group: '명중 실패', structural: false, stage: '⑨ BDA' },
     timeout: { label: '처리지연 초과(공역이탈)', group: '처리지연 초과', structural: true, stage: '⑨ 종합' },
     // Phase 4(⑨): timeout 분해. c2=교전 미개시(앞단 지연 → 구조적) / engage=교전 중 체공창 소진

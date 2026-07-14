@@ -16,7 +16,8 @@ var LEGACY = require('./legacy-snapshot.json');
 
 var fail = 0;
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
-var ALL_OFF = { pkByShooter: false, leakCost: false, censorFix: false, timeoutSplit: false, pkCorrelated: false, salvo: false };
+var ALL_OFF = { pkByShooter: false, leakCost: false, censorFix: false, timeoutSplit: false, pkCorrelated: false, salvo: false,
+  costAwareWta: false, costAwareWtaAsis: false, magazine: false, reserveFloor: false, thresholdReweight: false };
 
 // ══════════ 되돌리기 가능성 — 플래그 전부 OFF = stage9 이전(legacy)과 완전 동일 ══════════
 // 가장 중요한 어서션. 어떤 Phase를 더해도 이 불변이 깨지면 되돌리기 가능성이 무너진 것이다.

@@ -50,7 +50,8 @@ var suites = [
   ['coord2.test.js', '⑥⑦ 수평 교전협조·중복교전 (책임공백 부활·중복교전·보존·결정론)'],
   ['wta.test.js', '⑧ 교전/요격명령 (교전창·축선 필터·canEngage·결정론·병목이동)'],
   ['reengage.test.js', '⑨ BDA·재교전 (되돌리기 플래그·무기별 pk 차등·폴백 경계·결정론)'],
-  ['deadcode.test.js', '死 코드 레지스트리 (Gate 3 — 부활/영구死 정본·정직한 미부활)']
+  ['deadcode.test.js', '死 코드 레지스트리 (Gate 3 — 부활/영구死 정본·정직한 미부활)'],
+  ['resource.test.js', '자원 최적화 (원칙 5 — As-Is불변·MDU-L생존·제약유지·SC2보호·되돌리기)']
 ];
 suites.forEach(function (s) {
   console.log('\n== ' + s[1] + ' ==');

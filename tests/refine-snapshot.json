@@ -31,8 +31,8 @@
   },
   "sc3/tobe": {
     "spawned": 307,
-    "killed": 132,
-    "leaked": 142,
+    "killed": 149,
+    "leaked": 129,
     "bn": "node:FTR"
   }
 }

@@ -47,6 +47,11 @@
   // — 체공창이 짧으면 재교전 시간이 없어 놓친다(누수 사유 missed·no_engage_window). 연발은 단일 패스에서
   // 누적 pk=1−(1−pk)^k로 격추율↑, 대신 요격탄 k발 소모로 비용교환비↓. 교리 선택(결함 아님) → 기본 OFF.
   var SALVO_SIZE = 2;
+  // 자원최적화 Step 1(costAwareWta): 비용 인식 WTA 가중치 W. score에 비용항 ((1−W)+W·costFit) 곱.
+  // costFit = min(1, 위협가치/요격탄가) — 위협보다 비싼 요격탄일수록 낮음. W=0이면 현행과 동일(되돌리기).
+  // KJADS 원칙 5-1(대응수단 계층화·고가유도탄 보존) 구현. W는 스윕으로 결정(ADR-007).
+  var COST_WTA_WEIGHT = 0.5;
+  var HIGH_VALUE_COST_M = 5; // 고가 유도탄 임계($M) — L-SAM($8M)만 해당. 보존율 지표 분자 기준.
   var SHOOTER_QUEUE_MULT = 2; // 무기 대기실 = 교전채널 × 배수 (M/M/c/K, K=c*mult)
   // ⑧ 교전창 실현가능성 여유계수 — 명령링크지연+교전소요(engageTimeSec 평균)이 잔여 체공창의
   // 이 비율 이하일 때만 후보로 인정. 1.0 = 결정론(평균 ≤ 잔여). 교전시간은 지수분포라 평균이
@@ -111,8 +116,16 @@
       //   p = min(1, detectFactor × mult.detect)로 복귀 — 센서 Pd·모드별 융합을 무시.
       //   탐지 계층 그리기 수는 동일(스캔당 raw 1회)이라 이 계층에선 bit-clean 되돌리기.
       //   ⚠️ 전체 bit-exact 복원은 CRN(arrRng 분리)이 도착 스트림을 바꿔 불가 — 감사문서 G2 참조.
-      sensorPdFusion: ff('sensorPdFusion', true)
+      sensorPdFusion: ff('sensorPdFusion', true),
+      // ── 자원 최적화(KJADS 원칙 5) — 정의상 To-Be만 개선. 반증실험(costAwareWtaAsis) 필수 ──
+      costAwareWta: ff('costAwareWta', true),       // Step 1: 비용 인식 WTA(To-Be) — 스윕 후 기본 ON(등급 B)
+      costAwareWtaAsis: ff('costAwareWtaAsis', false), // 반증 실험 전용(As-Is에도 적용) — 항상 기본 OFF
+      magazine: ff('magazine', false),               // Step 2: 유도탄 재고 — 근거 C, 기본 OFF
+      reserveFloor: ff('reserveFloor', false),        // Step 2: 보존 최소수량(magazine 의존) — 기본 OFF
+      thresholdReweight: ff('thresholdReweight', false) // Step 3: 임계 재가중 — 기본 OFF
     };
+    // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
+    this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Phase 5: 상관계수 ρ(0~1). features.pkCorrelation 숫자로 재정의 가능(민감도 스윕용), 없으면 문서 기본.
     this.pkCorrRho = (typeof f.pkCorrelation === 'number') ? Math.max(0, Math.min(1, f.pkCorrelation)) : PK_CORR_RHO;
     // Phase 6: 연발 발수 k(≥1 정수). features.salvoSize로 재정의, 없으면 문서 기본. salvo OFF면 미사용(k=1).
@@ -144,7 +157,11 @@
       pkFallback: {}, censored: 0,
       // Phase 7(⑨): 요격탄 발사 수(교전당 발사수 = shotsFired/everEngaged). salvo·재교전으로 교전당
       // 1발을 넘을 수 있음을 드러낸다(종전엔 교전=1발 암묵 가정이라 발사 부담이 안 보였다).
-      shotsFired: 0
+      shotsFired: 0,
+      // 자원최적화 Step 1: 고가 유도탄(MDU-L 계열) 소모액 · 교전한 위협가치 합(격추 무관).
+      //  · 고가유도탄 보존율 = 1 − highValueInterceptM/interceptM (KJADS 5-1 직접 지표)
+      //  · 위협등급 대비 요격탄 단가 비율 = interceptM/engagedThreatValueM (쏜 것 전부, 격추 여부 무관)
+      highValueInterceptM: 0, engagedThreatValueM: 0
     };
     // Phase B-2: 동적 권한위임(분권 전환) 관측 상태 — 전환 시점·횟수·노드별 분포
     this.deleg = { count: 0, firstT: null, byNode: {} };
@@ -695,13 +712,32 @@
       return;
     }
     var best = null;
-    if (mode === 'tobe') {
-      var altBand = KJ.threatType(type).altBand;
+    // 자원최적화 Step 1(costAwareWta): 비용 인식 점수. score = suit·(0.25+0.75·remain)·((1−W)+W·costFit),
+    // costFit=min(1, 위협가치/요격탄가). W=0 또는 플래그 OFF → 현행과 완전 동일(RNG 미소비, bit-clean 되돌리기).
+    // ⚠️ canEngage·coverage·교전창 3중 필터가 항상 선행(§6 금지: SHORAD가 싸다고 방사포에 배정 불가).
+    var altBand = KJ.threatType(type).altBand;
+    var threatVal = KJ.threatType(type).unitCostM || 0;
+    var W = this.costWtaWeight;
+    function costScore(sh, useCost) {
+      var ns = self.nodeState[sh.id];
+      var remain = ns ? Math.max(0, 1 - (ns.busy + ns.queue.length) / ns.K) : 1;
+      var suit = sh.wtaSuit ? (sh.wtaSuit[altBand] || 0) : 1;
+      var score = suit * (0.25 + 0.75 * remain);
+      // KJADS 5-1 문언("탄도탄용 고가 유도탄 보존")에 충실 — 비용항은 탄도(ballistic) 위협에만 적용한다.
+      // 저·중고도 위협 선택에 비용항을 걸면 anti-pattern(고가 낭비)이 없는 곳까지 재배정해 격추율에
+      // 부작용을 준다(실측: SC1 −1.1pp). 고가 낭비는 오직 탄도(MDU-M vs MDU-L)에서 발생하므로 국한한다.
+      if (useCost && altBand === 'ballistic') {
+        var cps = (sh.engage && sh.engage.costPerShotM) || 0;
+        var costFit = cps > 0 ? Math.min(1, threatVal / cps) : 1; // 위협가치/요격탄가 (1 상한)
+        score *= ((1 - W) + W * costFit);
+      }
+      return score;
+    }
+    var asisCost = mode === 'asis' && this.features.costAwareWtaAsis; // 반증 실험(3E) 전용
+    if (mode === 'tobe' || asisCost) {
+      var useCost = mode === 'tobe' ? this.features.costAwareWta : true; // 반증: As-Is에도 비용항
       shooters.forEach(function (sh) {
-        var ns = self.nodeState[sh.id];
-        var remain = ns ? Math.max(0, 1 - (ns.busy + ns.queue.length) / ns.K) : 1;
-        var suit = sh.wtaSuit ? (sh.wtaSuit[altBand] || 0) : 1;
-        var score = suit * (0.25 + 0.75 * remain);
+        var score = costScore(sh, useCost);
         if (!best || score > best.score ||
             (score === best.score && sh.id < best.sh.id)) best = { sh: sh, score: score };
       });
@@ -726,6 +762,8 @@
     if (!threat._countedEngaged) {
       threat._countedEngaged = true;
       this.global.everEngaged++;
+      // 자원최적화 Step 1: 교전한 위협의 가치 합(격추 여부 무관) — 위협등급 대비 요격탄 단가 비율 분모.
+      this.global.engagedThreatValueM += KJ.threatType(threat.type).unitCostM || 0;
       // 교전지연(생성→최초 교전명령, CRN 검토 이식): 탐지 잠복 + 결심을 포함한 end-to-end C2 지연.
       // As-Is 음성협조 vs To-Be 자동교전 차이를 MC 비교·토네이도에서 직접 포착(meanDecisionDelaySec는
       // 탐지→교전이라 탐지 잠복 제외 — 두 지표는 상보적).
@@ -761,9 +799,12 @@
     // Phase 6(salvo): ON이면 교전당 k발 동시 발사 → 비용 k배, 누적 pk=1−(1−pk)^k. OFF면 k=1(legacy).
     var shots = this.features.salvo ? this.salvoSize : 1;
     this.global.shotsFired += shots; // Phase 7: 교전당 발사수 계측(salvo·재교전 발사 부담 가시화)
-    var shot = ((shooter.engage && shooter.engage.costPerShotM) || 0) * shots;
+    var cps = (shooter.engage && shooter.engage.costPerShotM) || 0;
+    var shot = cps * shots;
     this.cost.interceptM += shot;
     if (SAT_THREATS[threat.type]) this.cost.interceptSatM += shot;
+    // 자원최적화 Step 1: 고가 유도탄(≥$5M = L-SAM 계열) 소모액 — 고가유도탄 보존율 분자.
+    if (cps >= HIGH_VALUE_COST_M) this.global.highValueInterceptM += shot;
     var pk = this._pk(shooter, threat);
     if (shots > 1) pk = 1 - Math.pow(1 - pk, shots); // 연발 누적 요격확률 (그리기 수 불변 — pk 값만 상향)
     // Phase 5(pkCorrelated): 재교전 상관. OFF면 독립 추출(legacy: raw() < pk). ON이면 표적별 공유
@@ -1063,6 +1104,14 @@
         // Phase 7(⑨): 교전당 발사수 = 총 발사수/최초교전 표적수. salvo·재교전으로 1발을 넘는 발사 부담을 노출.
         shotsFired: this.global.shotsFired,
         shotsPerEngagement: this.global.everEngaged ? this.global.shotsFired / this.global.everEngaged : 0,
+        // 자원최적화 Step 1: 고가유도탄 보존율(MoFE, KJADS 5-1 직접지표) = 1 − 고가($≥5M)소모/전체소모.
+        // 높을수록 고가 자산 보존. · 위협등급 대비 요격탄 단가 비율 = 총요격탄가/교전위협가치(격추 무관).
+        highValuePreservation: this.cost.interceptM > 0
+          ? 1 - this.global.highValueInterceptM / this.cost.interceptM : 1,
+        interceptPerThreatValue: this.global.engagedThreatValueM > 0
+          ? this.cost.interceptM / this.global.engagedThreatValueM : null,
+        highValueInterceptM: this.global.highValueInterceptM,
+        engagedThreatValueM: this.global.engagedThreatValueM,
         // 교전지연(MoP): 생성→최초 교전명령 평균(초) — 탐지 잠복+결심 포함 end-to-end (CRN 검토 이식)
         meanTimeToEngageSec: meanTTE,
         // 결심 지연(MoP): 탐지→최초 교전명령 평균(초) — 협조/승인/위임 지연 포함

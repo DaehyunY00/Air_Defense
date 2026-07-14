@@ -137,6 +137,30 @@ var kr0 = killRateRho(0), kr7 = killRateRho(0.7), kr10 = killRateRho(1.0);
 assert(kr0 >= kr7 && kr7 >= kr10, '격추율 단조 감소: ρ0 ' + (kr0 * 100).toFixed(1) + '% ≥ ρ0.7 ' + (kr7 * 100).toFixed(1) + '% ≥ ρ1 ' + (kr10 * 100).toFixed(1) + '% (재교전 상관 → 이득 축소)');
 assert(kr10 < kr0, '완전상관(ρ=1) 격추율 < 독립(ρ=0) — 재교전이 실패를 구제하지 못함(2022.12.26 방향)');
 
+// ══════════ Phase 6 — 연발(salvo, 기본 OFF) ══════════
+console.log('# Phase 6 — 연발 salvo (기본 OFF = 되돌리기)');
+var p6mism = 0;
+for (var s6 = 1; s6 <= 6; s6++) {
+  var gd6 = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: s6, endTimeSec: 1800 }).global;
+  var go6 = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: s6, endTimeSec: 1800, features: { salvo: false } }).global;
+  if (gd6.killed !== go6.killed || Math.abs(gd6.cost.interceptM - go6.cost.interceptM) > 1e-9) p6mism++;
+}
+assert(p6mism === 0, 'salvo 기본 = 명시 OFF (기본 OFF·doctrine 옵션 — 조건 2, ' + p6mism + '/6 불일치)');
+// 격추율 상승·비용 상승 트레이드오프 + missed 감소, no_engage_window 불변(직교)
+function salvoAgg(k) {
+  var sp = 0, kl = 0, iM = 0, missed = 0, few = 0;
+  for (var s = 1; s <= 12; s++) {
+    var g = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: s, endTimeSec: 1800, features: { salvo: k > 1, salvoSize: k } }).global;
+    sp += g.spawned; kl += g.killed; iM += g.cost.interceptM;
+    missed += g.leakReasons['missed'] || 0; few += g.leakReasons['no_engage_window'] || 0;
+  }
+  return { kr: kl / sp, iM: iM, missed: missed, few: few };
+}
+var s1 = salvoAgg(1), s2 = salvoAgg(2);
+assert(s2.kr > s1.kr && s2.iM > s1.iM, '연발 k=2: 격추율↑(' + (s1.kr * 100).toFixed(1) + '→' + (s2.kr * 100).toFixed(1) + '%) & 요격탄비용↑ — doctrine 트레이드오프');
+assert(s2.missed < s1.missed, 'salvo → missed(터미널 실패) 급감 (' + s1.missed + '→' + s2.missed + ') — 겨냥한 누수모드 해소');
+assert(Math.abs(s2.few - s1.few) <= s1.few * 0.05, 'salvo → no_engage_window 거의 불변(' + s1.few + '→' + s2.few + ') — 교전창 부족은 doctrine 무관(⑧과 직교)');
+
 // ══════════ 결정론 ══════════
 console.log('# 결정론');
 function sig(feat) { var g = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: 7, endTimeSec: 1800, features: feat }).global; return [g.killed, g.leaked, +g.cost.interceptM.toFixed(4)].join(','); }

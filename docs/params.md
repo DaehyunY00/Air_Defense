@@ -558,6 +558,14 @@ launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한
 - **MC 적용방식**: 옵션. ON 시 표적당 frailty 1회 추가 추출. 스윕 결과(전체 격추율 To-Be): 독립 50.0% / ρ0.7 44.3% / ρ1.0 40.2%
 - **비고**: 혼합 모형의 주변분포는 엄밀 균일 아님(평균 0.5·단조) — 효과는 주로 재교전 이득 축소로 발현. 위협유형별 격추율 분리 계측은 Phase 7 신규지표 예정. 상세 ADR-005
 
+### [ENV-DES-SALVO-01] 연발(salvo) 교전 doctrine (Phase 6 ⑨, `js/engine/sim-engine.js`) — **기본 OFF**
+- **값/분포**: 교전당 k발 동시 발사 → 비용 `costPerShot×k`, 누적 pk = `1−(1−pk)^k`. `SALVO_SIZE=2`(기본), `features.salvoSize`로 재정의. `features.salvo` 기본 **false**
+- **출처**: shoot-look-shoot의 한계(짧은 체공창서 재교전 시간 부재 → missed 누수) 대응 doctrine 옵션. 필요성은 편향 원장의 `missed`(To-Be 3352건, 비구조) 규모로 판정
+- **적용범위**: `_onEngageEnd` 비용·pk. OFF → k=1(legacy, 비용·pk·그리기 수 불변). ON도 그리기 수 불변(pk 값만 상향)
+- **신뢰도 등급**: C(교리 파라미터 — 결함 아님) → 기본 OFF
+- **MC 적용방식**: 옵션. 트레이드오프(To-Be): OFF 격추율 50.0%·교환비 0.94 / k=2 61.2%·1.54 / k=3 65.1%·2.21. `missed` 급감(3352→1121→445), `no_engage_window` 불변(⑧과 직교)
+- **비고**: k=2에서 격추율 +11.2p(상대 +22%, 임계 초과) → doctrine 변경이므로 기본 결론 미반영. 누적 pk는 k발 독립 가정(salvo 내부 상관 미모형). 상세 ADR-006
+
 ### [ENV-DES-CRN-01] 공통난수(CRN) — As-Is↔To-Be 짝지은 비교 (`js/engine/sim-engine.js`)
 - **값/분포**: 난수 스트림 2분리 — `arrRng`(위협 도착간격 전용, seed에서 황금비 해시로 독립 파생) / `rng`(처리 무작위성: 탐지·서비스시간·요격확률·링크지연 분포·중복교전). 도착은 `arrRng`에서만 소비
 - **출처**: 분산감소 표준기법(Common Random Numbers) — `claude/c2-simulation-review` 검토에서 이식. 근거: 동일 seed에서 두 형상이 같은 위협열을 마주해야 차이가 위협표본이 아니라 C2 구조에서만 비롯됨(짝지은 비교의 타당성)

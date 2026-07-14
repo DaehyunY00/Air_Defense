@@ -2944,6 +2944,10 @@ li.chk-fail { background: #43140f; }
   // "체계적 실패(기하·ECM·표적특성이 발사 간 공유)"를 재현 못 한다. ρ=공유잠재(frailty) 가중.
   // ρ=0 → 독립(legacy와 동일 평균), ρ=1 → 완전상관(재교전 무의미). 근거 등급 C → 기본 OFF.
   var PK_CORR_RHO = 0.7;
+  // Phase 6(⑨, salvo): 연발(동시 다발 발사) 교전당 요격탄 수. 종전은 교전당 1발 후 BDA(shoot-look-shoot)
+  // — 체공창이 짧으면 재교전 시간이 없어 놓친다(누수 사유 missed·no_engage_window). 연발은 단일 패스에서
+  // 누적 pk=1−(1−pk)^k로 격추율↑, 대신 요격탄 k발 소모로 비용교환비↓. 교리 선택(결함 아님) → 기본 OFF.
+  var SALVO_SIZE = 2;
   var SHOOTER_QUEUE_MULT = 2; // 무기 대기실 = 교전채널 × 배수 (M/M/c/K, K=c*mult)
   // ⑧ 교전창 실현가능성 여유계수 — 명령링크지연+교전소요(engageTimeSec 평균)이 잔여 체공창의
   // 이 비율 이하일 때만 후보로 인정. 1.0 = 결정론(평균 ≤ 잔여). 교전시간은 지수분포라 평균이
@@ -3007,6 +3011,8 @@ li.chk-fail { background: #43140f; }
     };
     // Phase 5: 상관계수 ρ(0~1). features.pkCorrelation 숫자로 재정의 가능(민감도 스윕용), 없으면 문서 기본.
     this.pkCorrRho = (typeof f.pkCorrelation === 'number') ? Math.max(0, Math.min(1, f.pkCorrelation)) : PK_CORR_RHO;
+    // Phase 6: 연발 발수 k(≥1 정수). features.salvoSize로 재정의, 없으면 문서 기본. salvo OFF면 미사용(k=1).
+    this.salvoSize = (typeof f.salvoSize === 'number' && f.salvoSize >= 1) ? Math.round(f.salvoSize) : SALVO_SIZE;
     // 공통난수(CRN, `claude/c2-simulation-review` 검토 이식): 난수 스트림을 도착·처리로 분리한다.
     //  · rng    — 처리 무작위성(탐지 판정·서비스시간·요격확률·링크지연 분포·중복교전 등)
     //  · arrRng — 위협 도착간격(시나리오 그 자체) 전용. seed에서 독립 파생(황금비 해시)해
@@ -3642,11 +3648,14 @@ li.chk-fail { background: #43140f; }
     if (!threat.alive) return;
     var shooter = KJ.nodeById(shooterId);
     threat.tries++;
-    // Phase D: 교전 시도 1회 = 요격탄 1발 소모(개념) — 비용교환비(MoFE) 집계
-    var shot = (shooter.engage && shooter.engage.costPerShotM) || 0;
+    // Phase D: 교전 시도 1회 = 요격탄 1발 소모(개념) — 비용교환비(MoFE) 집계.
+    // Phase 6(salvo): ON이면 교전당 k발 동시 발사 → 비용 k배, 누적 pk=1−(1−pk)^k. OFF면 k=1(legacy).
+    var shots = this.features.salvo ? this.salvoSize : 1;
+    var shot = ((shooter.engage && shooter.engage.costPerShotM) || 0) * shots;
     this.cost.interceptM += shot;
     if (SAT_THREATS[threat.type]) this.cost.interceptSatM += shot;
     var pk = this._pk(shooter, threat);
+    if (shots > 1) pk = 1 - Math.pow(1 - pk, shots); // 연발 누적 요격확률 (그리기 수 불변 — pk 값만 상향)
     // Phase 5(pkCorrelated): 재교전 상관. OFF면 독립 추출(legacy: raw() < pk). ON이면 표적별 공유
     // 잠재 frailty(최초 교전서 1회 추출)와 발사별 신규 추출을 ρ로 혼합 → 같은 표적 발사들이 양의
     // 상관을 가져 재교전의 누적 격추 이득이 줄어든다(체계적 실패 재현). 그리기 수: OFF=발사당 raw 1회

@@ -94,6 +94,20 @@ var asisTrig = 0, tobeTrig = 0;
 assert(asisTrig === 0, 'As-Is 보존발동 = ' + asisTrig + ' (0 — reserveFloor는 To-Be 전용, 잔여 실시간통합 부재)');
 assert(tobeTrig > 0, 'To-Be 보존발동 = ' + tobeTrig + ' > 0 — MDU-L이 srbm용 재고를 지킴(mrl_large 배정 차단)');
 
+// ══════════ Step 3 — 임계 재가중(thresholdReweight, 기본 OFF) ══════════
+console.log('# Step 3 되돌리기 — thresholdReweight 기본 OFF = 현행');
+var s3mism = 0;
+for (var sd5 = 1; sd5 <= 8; sd5++) {
+  var def3 = run('sc3', 'tobe', 2.5, sd5, {});
+  var off3 = run('sc3', 'tobe', 2.5, sd5, { thresholdReweight: false });
+  if (def3.killed !== off3.killed) s3mism++;
+}
+assert(s3mism === 0, 'thresholdReweight 기본 = 명시 OFF (' + s3mism + '/8) — 기본 OFF·한계효용 소(ADR-009)');
+// magazine OFF면 이중 무효(ammo=∞) — ON이어도 재고 무한이라 감쇠 발동 안 함
+var rw1 = run('sc3', 'tobe', 2.5, 4, { thresholdReweight: true, magazine: false });
+var rw0 = run('sc3', 'tobe', 2.5, 4, { thresholdReweight: false, magazine: false });
+assert(rw1.killed === rw0.killed, 'magazine OFF → thresholdReweight 무효(ammo=∞) — 이중 게이트');
+
 // ══════════ 결정론 ══════════
 console.log('# 결정론');
 function sig(feat) { var g = run('sc3', 'tobe', 2.5, 7, feat); return [g.killed, g.leaked, +g.cost.interceptM.toFixed(4), +g.highValueInterceptM.toFixed(4)].join(','); }

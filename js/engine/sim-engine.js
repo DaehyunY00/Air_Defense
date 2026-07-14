@@ -52,6 +52,7 @@
   // KJADS 원칙 5-1(대응수단 계층화·고가유도탄 보존) 구현. W는 스윕으로 결정(ADR-007).
   var COST_WTA_WEIGHT = 0.5;
   var HIGH_VALUE_COST_M = 5; // 고가 유도탄 임계($M) — L-SAM($8M)만 해당. 보존율 지표 분자 기준.
+  var SCARCITY_THRESH = 0.3; // Step 3(thresholdReweight): 재고비율이 이 값 미만이면 WTA 점수 감쇠 시작.
   var SHOOTER_QUEUE_MULT = 2; // 무기 대기실 = 교전채널 × 배수 (M/M/c/K, K=c*mult)
   // ⑧ 교전창 실현가능성 여유계수 — 명령링크지연+교전소요(engageTimeSec 평균)이 잔여 체공창의
   // 이 비율 이하일 때만 후보로 인정. 1.0 = 결정론(평균 ≤ 잔여). 교전시간은 지수분포라 평균이
@@ -768,6 +769,13 @@
         var cps = (sh.engage && sh.engage.costPerShotM) || 0;
         var costFit = cps > 0 ? Math.min(1, threatVal / cps) : 1; // 위협가치/요격탄가 (1 상한)
         score *= ((1 - W) + W * costFit);
+      }
+      // 자원최적화 Step 3(thresholdReweight, To-Be 전용): 재고가 임계 이하로 떨어지면 점수 감쇠 —
+      // KJADS 5-2 "임계 도달 시 자동 경보→상위 환수"의 최소 구현(soft, Step 2 reserveFloor의 연속판).
+      if (mode === 'tobe' && self.features.thresholdReweight && isFinite(ns.ammo) && isFinite(ns.magazine0) && ns.magazine0 > 0) {
+        var ammoRatio = ns.ammo / ns.magazine0;
+        var scarcity = ammoRatio < SCARCITY_THRESH ? (ammoRatio / SCARCITY_THRESH) : 1;
+        score *= (0.3 + 0.7 * scarcity);
       }
       return score;
     }

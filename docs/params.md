@@ -153,6 +153,14 @@
 - **MC 적용방식**: 옵션. To-Be 보존발동 다수 발생·As-Is 0(비대칭). mrl_large 일부를 no_ammo로 돌려 srbm 재고 보존(doctrine 트레이드오프)
 - **비고**: 이 As-Is/To-Be 비대칭이 원칙 5-2가 통합 C2 기능(개별 무기 아님)임을 보이는 정직한 증거(ADR-008)
 
+### [C2-SCARCITY-RW-01] 임계 도달 시 동적 재가중 (자원최적화 Step 3, `js/engine/sim-engine.js`) — To-Be 전용·기본 OFF
+- **값/분포**: 재고비율 < `SCARCITY_THRESH=0.3`이면 WTA 점수 `×= 0.3 + 0.7·(재고비율/0.3)`(연성 감쇠). `features.thresholdReweight` 기본 OFF(magazine 의존, To-Be 전용)
+- **출처**: KJADS 원칙 5-2("임계 도달 시 자동 경보→상위 환수") 최소 구현. reserveFloor(경성)의 연속판
+- **적용범위**: `_doEngage` WTA 점수 To-Be 전용. OFF 또는 magazine OFF(ammo=∞) → 무효(이중 게이트)
+- **신뢰도 등급**: C(임계·감쇠계수 근거 부재)
+- **MC 적용방식**: 옵션. 한계효용 소 — Step1+2 대비 격추율 +0.5pp·MDU-L 소진 ~160s 지연. reserveFloor가 이미 보존 대부분 수행 → 기본 OFF(ADR-009)
+- **비고**: 원칙 4(IDD·ROE 자동화)의 초입 — 원칙 4는 미구현
+
 ### [C2-DELEG-THRESH-01] 부하 기반 중앙↔분권 동적 전환 임계 (정밀화 Phase B-2)
 - **값/분포**: 승인권자 노드 관측 상태가 [전 결심서버 점유(busy≥c) AND 대기열 ≥ c×배수]일 때 해당 결심을 하위/자동으로 위임(분권 전환). 배수: **As-Is 4 / To-Be 1**
 - **출처**: 개념 설정 — 임무형 지휘(권한위임) 원칙의 부하 트리거화. To-Be는 COP 공유·자동화로 조기 전환, As-Is는 수동 절차로 포화가 누적되어야 전환(느림/준부재)

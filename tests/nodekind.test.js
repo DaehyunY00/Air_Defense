@@ -86,10 +86,16 @@ var trackMax = maxRhoByKind(s1, 'c2', 'track');
 var apprMax = maxRhoByKind(s1, 'c2', 'approval');
 assert(trackMax !== apprMax,
   'SC1 x2.5 As-Is: maxRho track(' + trackMax.toFixed(3) + ') ≠ approval(' + apprMax.toFixed(3) + ') — 분리 실효');
-// ③④⑤ 카드 값이 실제로 바뀐다: track 최대(신규 표시값) ≠ 전체 최대(구 표시값), 그리고 track ≤ 전체
 assert(trackMax <= maxRhoTotal(s1, 'c2') + 1e-12, 'track 최대 ≤ C2 전체 최대 (부분집합 관계)');
-assert(Math.abs(trackMax - maxRhoTotal(s1, 'c2')) > 1e-6,
-  'SC1: ③④⑤ 신규값(track 최대 ' + trackMax.toFixed(3) + ') ≠ 구값(C2 전체 최대 ' + maxRhoTotal(s1, 'c2').toFixed(3) + ') — 표시값 변경 확인');
+// 분리가 표시값을 실제로 바꾼다는 견고한 증거: KAOC가 track·approval을 동시에 지님(혼합 부하).
+// 구 ③④⑤ 카드는 KAOC 전체 ρ(track+approval 혼합)를 표시했으나, 신규 카드는 track만 표시한다 →
+// KAOC에 대해 신규값(track) < 구값(전체)이 항상 성립. (어느 노드가 "최대"인지는 seed마다 다르나,
+//  KAOC의 혼합 자체는 전 seed에서 성립 — 이것이 분리가 필요한 이유의 정본.)
+var kaoc1 = s1.nodes.filter(function (n) { return n.id === 'KAOC'; })[0];
+assert(kaoc1 && kaoc1.rhoByKind.track > 0 && kaoc1.rhoByKind.approval > 0,
+  'SC1 As-Is KAOC 혼합 부하: track(' + kaoc1.rhoByKind.track.toFixed(3) + ')>0 & approval(' + kaoc1.rhoByKind.approval.toFixed(3) + ')>0 — 구 ③④⑤ 카드가 승인 부하를 항적처리로 오표시했음');
+assert(kaoc1.rhoByKind.track < kaoc1.rho - 1e-9,
+  'KAOC: 신규 ③④⑤ 표시값(track ' + kaoc1.rhoByKind.track.toFixed(3) + ') < 구 표시값(전체 ' + kaoc1.rho.toFixed(3) + ') — 표시값 변경 확인');
 
 // ══════════ 5. 결정론 — 동일 seed → 동일 byKind ══════════
 console.log('# 5 결정론 (동일 seed → 동일 kind별 통계)');

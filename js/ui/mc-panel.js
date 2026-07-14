@@ -31,6 +31,7 @@
     killRate: { label: '격추율', mom: 'MoFE', fmt: pct, kind: 'rate' },
     leakRate: { label: '요격 실패율', mom: 'MoFE', fmt: pct, kind: 'rate' },
     detectRate: { label: '탐지율', mom: 'MoP', fmt: pct, kind: 'rate' },
+    meanTimeToEngageSec: { label: '평균 교전지연(생성→교전)', mom: 'MoP', fmt: function (x) { return x.toFixed(0) + '초'; }, kind: 'sec' },
     meanTimeToKillSec: { label: '평균 격추시간', mom: 'MoP', fmt: function (x) { return x.toFixed(0) + '초'; }, kind: 'sec' },
     bottleneckCount: { label: '도출 병목 수', mom: 'MoCE', fmt: function (x) { return x.toFixed(2) + '개'; }, kind: 'count' }
   };
@@ -117,7 +118,7 @@
         var a = cur.metrics[key], b = oth.metrics[key];
         var overlap = a.lo <= b.hi && b.lo <= a.hi;
         var better;
-        if (key === 'leakRate' || key === 'meanTimeToKillSec' || key === 'bottleneckCount') better = cur.metrics[key].mean < oth.metrics[key].mean;
+        if (key === 'leakRate' || key === 'meanTimeToEngageSec' || key === 'meanTimeToKillSec' || key === 'bottleneckCount') better = cur.metrics[key].mean < oth.metrics[key].mean;
         else better = cur.metrics[key].mean > oth.metrics[key].mean;
         var sig = overlap ? '<span class="badge badge-idle">유의차 없음</span>'
           : '<span class="badge badge-ok">유의(95% CI 비중첩)</span>';
@@ -128,7 +129,7 @@
       }
       return '<table><thead><tr><th>지표</th><th>' + curName + ' (현재)</th><th>' + othName +
         '</th><th>통계적 유의성</th></tr></thead><tbody>' +
-        ['killRate', 'leakRate', 'detectRate', 'meanTimeToKillSec', 'bottleneckCount'].map(row).join('') +
+        ['killRate', 'leakRate', 'detectRate', 'meanTimeToEngageSec', 'meanTimeToKillSec', 'bottleneckCount'].map(row).join('') +
         '</tbody></table>' +
         '<div class="note">동일 시나리오·강도·baseSeed에서 체계 모드만 교체해 각각 독립 복제. 95% 신뢰구간이 ' +
         '겹치지 않으면 두 체계의 차이가 표본변동으로 설명되지 않는(통계적으로 유의한) 개선임을 뜻한다.</div>';

@@ -117,19 +117,28 @@ assert(runX('sc3', 'asis', 0.5, 42).global.delegation.count === 0,
 var d3 = runX('sc3', 'asis', 3, 42).global.delegation;
 assert(d3.count > 0 && d3.byNode.KAOC > 0 && d3.firstT !== null,
   'SC3 As-Is 강도 3.0: 승인 포화 → 분권 전환 발생 (' + d3.count + '건, 최초 t=' + (d3.firstT || 0).toFixed(0) + 's)');
-// 동일 포화 구성·시드에서 To-Be가 더 이르고 더 많이 전환 (COP 기반 조기 분권)
+// 동일 포화 구성에서 To-Be가 더 자주 전환 (COP 기반 임계 차등: 대기 c×1 vs c×4)
+// ※ 공통난수(CRN) 이식 후: As-Is와 To-Be가 "동일 위협열"을 마주하게 되면서, 종전 단일 seed(5)로
+//   검증하던 "To-Be 최초 전환이 더 이름" 주장이 seed별로 흔들린다(5/10). 이는 두 상반된 효과가
+//   경쟁하기 때문이다 — 낮은 임계(c×1)는 전환을 늘리나, To-Be의 빠른 처리(덜 혼잡)는 승인 대기를
+//   줄여 전환을 늦춘다. 따라서 단일 seed "더 이름"은 CRN 하에서 견고하지 않다(CRN이 드러낸 발견).
+//   견고하게 성립하는 것은 "임계 차등 → To-Be 전환 총량 ≥ As-Is"이며, seed 풀로 검증한다.
 var ftrScn = {
   id: 'test-ftr', name: '전투기 포화(검증용)',
   mix: [{ type: 'fighter', axis: 'west', ratePerMin: 6 },
         { type: 'fighter', axis: 'east', ratePerMin: 6 }]
 };
-var fA = KJ.runDES({ scenario: ftrScn, mode: 'asis', intensity: 1, seed: 5, endTimeSec: 1800 }).global.delegation;
-var fB = KJ.runDES({ scenario: ftrScn, mode: 'tobe', intensity: 1, seed: 5, endTimeSec: 1800 }).global.delegation;
-assert(fA.count > 0 && fB.count > 0, '포화 구성: 양 모드 전환 발생 (As-Is ' + fA.count + ' · To-Be ' + fB.count + ')');
-assert(fB.firstT < fA.firstT, 'To-Be 최초 전환이 더 이름 (' + fB.firstT.toFixed(0) + 's < ' + fA.firstT.toFixed(0) + 's)');
-assert(fB.count > fA.count, 'To-Be 전환 빈도 > As-Is (임계 차등: 대기 c×1 vs c×4)');
+var fA5 = KJ.runDES({ scenario: ftrScn, mode: 'asis', intensity: 1, seed: 5, endTimeSec: 1800 }).global.delegation;
+var fB5 = KJ.runDES({ scenario: ftrScn, mode: 'tobe', intensity: 1, seed: 5, endTimeSec: 1800 }).global.delegation;
+assert(fA5.count > 0 && fB5.count > 0, '포화 구성: 양 모드 전환 발생 (As-Is ' + fA5.count + ' · To-Be ' + fB5.count + ')');
+var poolA = 0, poolB = 0;
+for (var fsd = 1; fsd <= 10; fsd++) {
+  poolA += KJ.runDES({ scenario: ftrScn, mode: 'asis', intensity: 1, seed: fsd, endTimeSec: 1800 }).global.delegation.count;
+  poolB += KJ.runDES({ scenario: ftrScn, mode: 'tobe', intensity: 1, seed: fsd, endTimeSec: 1800 }).global.delegation.count;
+}
+assert(poolB > poolA, 'To-Be 전환 총량 > As-Is [pooled seed1~10] (임계 차등 c×1 vs c×4 — ' + poolB + ' > ' + poolA + ')');
 var fB2 = KJ.runDES({ scenario: ftrScn, mode: 'tobe', intensity: 1, seed: 5, endTimeSec: 1800 }).global.delegation;
-assert(JSON.stringify(fB) === JSON.stringify(fB2), '전환 기록도 동일 seed → 완전 동일 (결정론)');
+assert(JSON.stringify(fB5) === JSON.stringify(fB2), '전환 기록도 동일 seed → 완전 동일 (결정론)');
 
 console.log('# B-3 위협별 자동화 차등 플래그 (C2-AUTO-LEVEL-01)');
 var AUTO_LEVELS = ['human-in-loop', 'human-on-loop', 'auto-preauth'];

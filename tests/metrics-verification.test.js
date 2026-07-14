@@ -85,13 +85,15 @@ assert(deleg.sc3[2].asis > 0 && deleg.sc3[3].asis > 0,
   'SC3 As-Is는 x≥2.0에서 분권 전환 발생(x2:' + deleg.sc3[2].asis + '건, x3:' + deleg.sc3[3].asis + '건) — 유일한 실사용자 관측 가능 사례');
 // Phase 4(중복항적 팬아웃): Track Fusion 부재의 dup 부하가 각 군 C2를 배가시켜 승인노드 대기열이
 // 실사용 강도 구간에서 임계를 넘기 시작한다 — 감사가 "거의 죽은 기능"으로 지적한 동적 권한위임이
-// 부활한다(부하의 함수, 하드코딩 아님). 정본 갱신: SC2는 여전히 전 강도 0건(무인기 단일 C2 계통),
-// SC1은 고강도(x≥2.5, KAOC 포화)에서, SC3는 x≥1.5에서 전환 발생.
+// 부활한다(부하의 함수, 하드코딩 아님).
+// ※ 공통난수(CRN) 이식 후 정본 재갱신(도착 스트림 분리로 seed=12345 부하 타이밍이 재배치됨):
+//   SC1은 x≥2.0, SC2는 x≥3.0(무인기도 최고강도에선 KAOC 승인 포화), SC3는 x≥1.5에서 전환 발생.
 assert(SCENARIOS.every(function (id) {
   return UI_X.every(function (x) {
-    return deleg[id][x].asis === 0 || (id === 'sc1' && x >= 2.5) || (id === 'sc3' && x >= 1.5);
+    return deleg[id][x].asis === 0 ||
+      (id === 'sc1' && x >= 2.0) || (id === 'sc2' && x >= 3.0) || (id === 'sc3' && x >= 1.5);
   });
-}), 'SC2는 전 강도 0건 · SC1은 x≥2.5 · SC3는 x≥1.5에서 As-Is 분권 전환 발생 (팬아웃 부하로 권한위임 부활 — 부하의 함수)');
+}), 'As-Is 분권 전환 발생 구간: SC1 x≥2.0 · SC2 x≥3.0 · SC3 x≥1.5 (팬아웃 부하로 권한위임 부활 — 부하의 함수, CRN 정본)');
 
 console.log('# 감사 발견 3 — 비용교환비(exchangeSat): 방향이 시나리오·강도에 따라 반전됨 (버그 아님, 특성 기록)');
 // refine.test.js D-2는 SC2(x2)만 검증했고 그 방향은 항상 개선이다. 하지만 SC1·SC3에서는
@@ -106,17 +108,15 @@ SCENARIOS.forEach(function (id) {
     exch[id][x] = { asis: a, tobe: b };
   });
 });
-// 재핀(feat/sensor-pd-fusion): 센서 Pd 융합으로 탐지 시점이 재타이밍되며 공유 RNG 스트림이
-// 이동 → seed=12345 고정 exchangeSat의 반전 셀 위치가 바뀜(수치 이동일 뿐 계산·표시는 불변).
-// 발견 3의 본질("방향이 시나리오·강도에 따라 반전될 수 있음")은 오히려 강화됨: 이제 SC2조차
-// 저·중강도에서는 개선이나 고강도(2·3×)에서 반전이 관측된다. SC3의 반전은 x1.0·x2.5에 존재.
-// 단일 seed exchangeSat는 RNG 스트림 이동(①융합·②음성 분포화)에 민감해 반전 셀 위치가 옮겨간다.
-// 특정 셀을 핀하는 대신 "SC2가 강도에 따라 개선↔반전 양방향을 모두 보인다"는 발견 3의 본질을 고정.
-assert(UI_X.some(function (x) { return exch.sc2[x].tobe < exch.sc2[x].asis; }) &&
-       UI_X.some(function (x) { return exch.sc2[x].tobe >= exch.sc2[x].asis; }),
-  'SC2(무인기 포화): exchangeSat 방향이 강도에 따라 개선↔반전 양쪽 모두 관측 (발견 3: 방향은 시나리오·강도의 함수, 단일 seed 특성)');
-// SC3도 특정 셀 핀 대신 "강도에 따라 개선↔반전 양방향 모두 관측"으로 고정(발견 3 본질, RNG 이동에
-// 견고). 현재 관측: 저강도(x0.5~1.5)는 반전, 고강도(x2~3)는 개선 — 팬아웃 부하로 셀 위치가 이동함.
+// ※ 공통난수(CRN) 이식 후: As-Is와 To-Be가 동일 위협열을 마주하게 되면서, 종전 단일 seed에서
+//   관측되던 SC2의 "방향 반전"이 사라졌다 — SC2(무인기 포화)는 이제 **전 강도에서 일관되게 To-Be가
+//   개선**된다(tobe exchangeSat < asis). 즉 종전의 반전은 상당 부분 "두 모드가 서로 다른 위협표본을
+//   보던" 노이즈였고, CRN이 이를 제거해 SC2 개선이 견고해졌다(CRN이 드러낸 발견 — 비교 타당성 향상).
+assert(UI_X.every(function (x) {
+  return exch.sc2[x].asis == null || exch.sc2[x].tobe == null || exch.sc2[x].tobe < exch.sc2[x].asis;
+}), 'SC2(무인기 포화): CRN 하에서 exchangeSat 전 강도 일관 개선 (종전 방향 반전은 위협열 노이즈였음 — CRN이 제거)');
+// 발견 3의 본질("방향이 시나리오·강도에 따라 반전될 수 있음")은 SC3에서 견고하게 유지된다:
+// CRN 후에도 SC3는 저강도(x0.5·1.0)에서 반전, 중·고강도(x≥1.5)에서 개선으로 방향이 갈린다.
 assert(UI_X.some(function (x) { return exch.sc3[x].tobe > exch.sc3[x].asis; }) &&
        UI_X.some(function (x) { return exch.sc3[x].tobe <= exch.sc3[x].asis; }),
   'SC3: exchangeSat 방향이 강도에 따라 반전↔개선 양쪽 모두 관측 (발견 3: 방향은 시나리오·강도의 함수)');

@@ -505,6 +505,13 @@ launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한
 - **신뢰도 등급**: B
 - **MC 적용방식**: 고정(재현성 보장). 대규모 배치 통계 엄밀성은 장주기 생성기 병행 검토
 
+### [ENV-DES-CRN-01] 공통난수(CRN) — As-Is↔To-Be 짝지은 비교 (`js/engine/sim-engine.js`)
+- **값/분포**: 난수 스트림 2분리 — `arrRng`(위협 도착간격 전용, seed에서 황금비 해시로 독립 파생) / `rng`(처리 무작위성: 탐지·서비스시간·요격확률·링크지연 분포·중복교전). 도착은 `arrRng`에서만 소비
+- **출처**: 분산감소 표준기법(Common Random Numbers) — `claude/c2-simulation-review` 검토에서 이식. 근거: 동일 seed에서 두 형상이 같은 위협열을 마주해야 차이가 위협표본이 아니라 C2 구조에서만 비롯됨(짝지은 비교의 타당성)
+- **적용범위**: DES 전 실행. 효과: 동일 seed·강도에서 As-Is와 To-Be의 **spawned(위협 수)가 완전 일치**(도입 전에는 단일 스트림이 도착·처리를 교대 소비해 모드마다 도착열이 어긋났다 — 예: 종전 sc3 asis 367 vs tobe 361 → 이식 후 307==307)
+- **신뢰도 등급**: B(방법론)
+- **MC 적용방식**: 복제별 baseSeed로 As-Is/To-Be가 동일 도착열을 마주(MC 패널 비교표·토네이도에 반영). 비고: 이식으로 seed별 수치가 재배치되어 회귀 스냅샷·일부 seed 고정 어서션을 정본 갱신함(분권 전환 임계·exchangeSat 방향 등 — 오히려 비교 타당성 향상이 드러냄)
+
 ---
 
 ## Monte Carlo·통계 파라미터 (Phase 3, `js/analysis/mc-runner.js`)

@@ -2974,7 +2974,14 @@ li.chk-fail { background: #43140f; }
       service: m.service || 1, delay: m.delay || 1,
       detect: m.detect || 1, pk: m.pk || 1
     };
+    // 공통난수(CRN, `claude/c2-simulation-review` 검토 이식): 난수 스트림을 도착·처리로 분리한다.
+    //  · rng    — 처리 무작위성(탐지 판정·서비스시간·요격확률·링크지연 분포·중복교전 등)
+    //  · arrRng — 위협 도착간격(시나리오 그 자체) 전용. seed에서 독립 파생(황금비 해시)해
+    //             모드(asis/tobe)와 무관하게 동일 도착 스케줄(시각·유형·축선·수)을 생성한다.
+    // 덕분에 동일 seed에서 As-Is와 To-Be가 "같은 위협"을 마주하고, 두 형상 차이가 서로 다른
+    // 위협표본이 아니라 오직 C2 구조 차이에서만 비롯됨을 보장한다(공통난수 분산감소·짝지은 비교).
     this.rng = KJ.makeRng(this.seed);
+    this.arrRng = KJ.makeRng((Math.imul(this.seed ^ 0x9E3779B9, 0x85EBCA6B) >>> 0));
     this.heap = new KJ.MinHeap();
     this.now = 0;
     this.seq = 0;
@@ -2984,7 +2991,7 @@ li.chk-fail { background: #43140f; }
     this.global = {
       spawned: 0, detected: 0, engaged: 0, killed: 0, leaked: 0,
       reachedC2: 0, everEngaged: 0,
-      leakReasons: {}, timeToKill: [],
+      leakReasons: {}, timeToKill: [], timeToEngage: [],
       // Phase 2(⑥⑦): 수평 교전협조·중복교전 관측 (As-Is 팬아웃 계통 간 조율)
       // coordAttempts: 중복항적 계통이 교전 가능해 협조 판정이 일어난 횟수
       // deconflicted: 잔여 체공창 내 협조 성립(중복 회피) / coordGaps: 협조 실패(책임공백)
@@ -3543,6 +3550,10 @@ li.chk-fail { background: #43140f; }
     if (!threat._countedEngaged) {
       threat._countedEngaged = true;
       this.global.everEngaged++;
+      // 교전지연(생성→최초 교전명령, CRN 검토 이식): 탐지 잠복 + 결심을 포함한 end-to-end C2 지연.
+      // As-Is 음성협조 vs To-Be 자동교전 차이를 MC 비교·토네이도에서 직접 포착(meanDecisionDelaySec는
+      // 탐지→교전이라 탐지 잠복 제외 — 두 지표는 상보적).
+      this.global.timeToEngage.push(t - threat.spawnT);
       // 결심 지연(MoP): 탐지→최초 교전명령 (협조/승인/위임 지연이 모두 포함됨)
       if (threat._detectT != null) {
         this.decisionDelaySum += (t - threat._detectT);
@@ -3631,7 +3642,7 @@ li.chk-fail { background: #43140f; }
     // 다음 도착 (포아송: 지수 도착간격) — burst 전용 항목(ratePerMin 부재)은 후속 도착 없음
     var ratePerSec = ((entry.ratePerMin || 0) * this.intensity) / 60;
     if (ratePerSec > 0) {
-      var next = t + this.rng.exponential(1 / ratePerSec);
+      var next = t + this.arrRng.exponential(1 / ratePerSec); // 도착 전용 스트림(CRN) — 모드 불변
       if (next <= this.endTime) this.schedule(next, PRI.SPAWN, 'SPAWN', { entry: entry });
     }
   };
@@ -3669,7 +3680,7 @@ li.chk-fail { background: #43140f; }
       }
       var ratePerSec = ((entry.ratePerMin || 0) * self.intensity) / 60;
       if (ratePerSec <= 0) return;
-      var first = self.rng.exponential(1 / ratePerSec);
+      var first = self.arrRng.exponential(1 / ratePerSec); // 도착 전용 스트림(CRN) — 모드 불변
       if (first <= self.endTime) self.schedule(first, PRI.SPAWN, 'SPAWN', { entry: entry });
     });
 
@@ -3685,6 +3696,13 @@ li.chk-fail { background: #43140f; }
     Object.keys(this.nodeState).forEach(function (id) {
       self._advance(self.nodeState[id], self.endTime);
     });
+    // trace 마감(CRN 검토 이식): 관측창 종료 시점에도 결말(격추/누수)이 미확정인 항적은
+    // "진행중" 마커로 종결한다. exitT는 설정하지 않아(=null 유지) 누수로 오분류되지 않는다.
+    if (this.trace) {
+      this.threatTraces.forEach(function (tr) {
+        if (tr.exitT === null) tr.stages.push({ name: '관측종료(진행중)', t: self.endTime });
+      });
+    }
     return this._results();
   };
 
@@ -3786,6 +3804,8 @@ li.chk-fail { background: #43140f; }
 
     var ttk = this.global.timeToKill;
     var meanTTK = ttk.length ? ttk.reduce(function (s, x) { return s + x; }, 0) / ttk.length : 0;
+    var tte = this.global.timeToEngage;
+    var meanTTE = tte.length ? tte.reduce(function (s, x) { return s + x; }, 0) / tte.length : 0;
 
     var result = {
       config: {
@@ -3802,6 +3822,8 @@ li.chk-fail { background: #43140f; }
         killRate: this.global.spawned ? this.global.killed / this.global.spawned : 0,
         leakRate: this.global.spawned ? this.global.leaked / this.global.spawned : 0,
         meanTimeToKillSec: meanTTK,
+        // 교전지연(MoP): 생성→최초 교전명령 평균(초) — 탐지 잠복+결심 포함 end-to-end (CRN 검토 이식)
+        meanTimeToEngageSec: meanTTE,
         // 결심 지연(MoP): 탐지→최초 교전명령 평균(초) — 협조/승인/위임 지연 포함
         meanDecisionDelaySec: this.decisionDelayCount
           ? this.decisionDelaySum / this.decisionDelayCount : 0,
@@ -3973,11 +3995,12 @@ li.chk-fail { background: #43140f; }
       killRate: r.global.killRate,
       leakRate: r.global.leakRate,
       detectRate: r.global.spawned ? r.global.detected / r.global.spawned : 0,
+      meanTimeToEngageSec: r.global.meanTimeToEngageSec,
       meanTimeToKillSec: r.global.meanTimeToKillSec,
       bottleneckCount: r.bottlenecks.length
     };
   }
-  var METRIC_KEYS = ['killRate', 'leakRate', 'detectRate', 'meanTimeToKillSec', 'bottleneckCount'];
+  var METRIC_KEYS = ['killRate', 'leakRate', 'detectRate', 'meanTimeToEngageSec', 'meanTimeToKillSec', 'bottleneckCount'];
 
   /**
    * Monte Carlo 실행.
@@ -6160,6 +6183,7 @@ li.chk-fail { background: #43140f; }
     killRate: { label: '격추율', mom: 'MoFE', fmt: pct, kind: 'rate' },
     leakRate: { label: '요격 실패율', mom: 'MoFE', fmt: pct, kind: 'rate' },
     detectRate: { label: '탐지율', mom: 'MoP', fmt: pct, kind: 'rate' },
+    meanTimeToEngageSec: { label: '평균 교전지연(생성→교전)', mom: 'MoP', fmt: function (x) { return x.toFixed(0) + '초'; }, kind: 'sec' },
     meanTimeToKillSec: { label: '평균 격추시간', mom: 'MoP', fmt: function (x) { return x.toFixed(0) + '초'; }, kind: 'sec' },
     bottleneckCount: { label: '도출 병목 수', mom: 'MoCE', fmt: function (x) { return x.toFixed(2) + '개'; }, kind: 'count' }
   };
@@ -6246,7 +6270,7 @@ li.chk-fail { background: #43140f; }
         var a = cur.metrics[key], b = oth.metrics[key];
         var overlap = a.lo <= b.hi && b.lo <= a.hi;
         var better;
-        if (key === 'leakRate' || key === 'meanTimeToKillSec' || key === 'bottleneckCount') better = cur.metrics[key].mean < oth.metrics[key].mean;
+        if (key === 'leakRate' || key === 'meanTimeToEngageSec' || key === 'meanTimeToKillSec' || key === 'bottleneckCount') better = cur.metrics[key].mean < oth.metrics[key].mean;
         else better = cur.metrics[key].mean > oth.metrics[key].mean;
         var sig = overlap ? '<span class="badge badge-idle">유의차 없음</span>'
           : '<span class="badge badge-ok">유의(95% CI 비중첩)</span>';
@@ -6257,7 +6281,7 @@ li.chk-fail { background: #43140f; }
       }
       return '<table><thead><tr><th>지표</th><th>' + curName + ' (현재)</th><th>' + othName +
         '</th><th>통계적 유의성</th></tr></thead><tbody>' +
-        ['killRate', 'leakRate', 'detectRate', 'meanTimeToKillSec', 'bottleneckCount'].map(row).join('') +
+        ['killRate', 'leakRate', 'detectRate', 'meanTimeToEngageSec', 'meanTimeToKillSec', 'bottleneckCount'].map(row).join('') +
         '</tbody></table>' +
         '<div class="note">동일 시나리오·강도·baseSeed에서 체계 모드만 교체해 각각 독립 복제. 95% 신뢰구간이 ' +
         '겹치지 않으면 두 체계의 차이가 표본변동으로 설명되지 않는(통계적으로 유의한) 개선임을 뜻한다.</div>';

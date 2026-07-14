@@ -81,7 +81,14 @@
       service: m.service || 1, delay: m.delay || 1,
       detect: m.detect || 1, pk: m.pk || 1
     };
+    // 공통난수(CRN, `claude/c2-simulation-review` 검토 이식): 난수 스트림을 도착·처리로 분리한다.
+    //  · rng    — 처리 무작위성(탐지 판정·서비스시간·요격확률·링크지연 분포·중복교전 등)
+    //  · arrRng — 위협 도착간격(시나리오 그 자체) 전용. seed에서 독립 파생(황금비 해시)해
+    //             모드(asis/tobe)와 무관하게 동일 도착 스케줄(시각·유형·축선·수)을 생성한다.
+    // 덕분에 동일 seed에서 As-Is와 To-Be가 "같은 위협"을 마주하고, 두 형상 차이가 서로 다른
+    // 위협표본이 아니라 오직 C2 구조 차이에서만 비롯됨을 보장한다(공통난수 분산감소·짝지은 비교).
     this.rng = KJ.makeRng(this.seed);
+    this.arrRng = KJ.makeRng((Math.imul(this.seed ^ 0x9E3779B9, 0x85EBCA6B) >>> 0));
     this.heap = new KJ.MinHeap();
     this.now = 0;
     this.seq = 0;
@@ -91,7 +98,7 @@
     this.global = {
       spawned: 0, detected: 0, engaged: 0, killed: 0, leaked: 0,
       reachedC2: 0, everEngaged: 0,
-      leakReasons: {}, timeToKill: [],
+      leakReasons: {}, timeToKill: [], timeToEngage: [],
       // Phase 2(⑥⑦): 수평 교전협조·중복교전 관측 (As-Is 팬아웃 계통 간 조율)
       // coordAttempts: 중복항적 계통이 교전 가능해 협조 판정이 일어난 횟수
       // deconflicted: 잔여 체공창 내 협조 성립(중복 회피) / coordGaps: 협조 실패(책임공백)
@@ -650,6 +657,10 @@
     if (!threat._countedEngaged) {
       threat._countedEngaged = true;
       this.global.everEngaged++;
+      // 교전지연(생성→최초 교전명령, CRN 검토 이식): 탐지 잠복 + 결심을 포함한 end-to-end C2 지연.
+      // As-Is 음성협조 vs To-Be 자동교전 차이를 MC 비교·토네이도에서 직접 포착(meanDecisionDelaySec는
+      // 탐지→교전이라 탐지 잠복 제외 — 두 지표는 상보적).
+      this.global.timeToEngage.push(t - threat.spawnT);
       // 결심 지연(MoP): 탐지→최초 교전명령 (협조/승인/위임 지연이 모두 포함됨)
       if (threat._detectT != null) {
         this.decisionDelaySum += (t - threat._detectT);
@@ -738,7 +749,7 @@
     // 다음 도착 (포아송: 지수 도착간격) — burst 전용 항목(ratePerMin 부재)은 후속 도착 없음
     var ratePerSec = ((entry.ratePerMin || 0) * this.intensity) / 60;
     if (ratePerSec > 0) {
-      var next = t + this.rng.exponential(1 / ratePerSec);
+      var next = t + this.arrRng.exponential(1 / ratePerSec); // 도착 전용 스트림(CRN) — 모드 불변
       if (next <= this.endTime) this.schedule(next, PRI.SPAWN, 'SPAWN', { entry: entry });
     }
   };
@@ -776,7 +787,7 @@
       }
       var ratePerSec = ((entry.ratePerMin || 0) * self.intensity) / 60;
       if (ratePerSec <= 0) return;
-      var first = self.rng.exponential(1 / ratePerSec);
+      var first = self.arrRng.exponential(1 / ratePerSec); // 도착 전용 스트림(CRN) — 모드 불변
       if (first <= self.endTime) self.schedule(first, PRI.SPAWN, 'SPAWN', { entry: entry });
     });
 
@@ -792,6 +803,13 @@
     Object.keys(this.nodeState).forEach(function (id) {
       self._advance(self.nodeState[id], self.endTime);
     });
+    // trace 마감(CRN 검토 이식): 관측창 종료 시점에도 결말(격추/누수)이 미확정인 항적은
+    // "진행중" 마커로 종결한다. exitT는 설정하지 않아(=null 유지) 누수로 오분류되지 않는다.
+    if (this.trace) {
+      this.threatTraces.forEach(function (tr) {
+        if (tr.exitT === null) tr.stages.push({ name: '관측종료(진행중)', t: self.endTime });
+      });
+    }
     return this._results();
   };
 
@@ -893,6 +911,8 @@
 
     var ttk = this.global.timeToKill;
     var meanTTK = ttk.length ? ttk.reduce(function (s, x) { return s + x; }, 0) / ttk.length : 0;
+    var tte = this.global.timeToEngage;
+    var meanTTE = tte.length ? tte.reduce(function (s, x) { return s + x; }, 0) / tte.length : 0;
 
     var result = {
       config: {
@@ -909,6 +929,8 @@
         killRate: this.global.spawned ? this.global.killed / this.global.spawned : 0,
         leakRate: this.global.spawned ? this.global.leaked / this.global.spawned : 0,
         meanTimeToKillSec: meanTTK,
+        // 교전지연(MoP): 생성→최초 교전명령 평균(초) — 탐지 잠복+결심 포함 end-to-end (CRN 검토 이식)
+        meanTimeToEngageSec: meanTTE,
         // 결심 지연(MoP): 탐지→최초 교전명령 평균(초) — 협조/승인/위임 지연 포함
         meanDecisionDelaySec: this.decisionDelayCount
           ? this.decisionDelaySum / this.decisionDelayCount : 0,

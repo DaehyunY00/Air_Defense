@@ -39,6 +39,10 @@
   var SCAN_SEC = 10;        // 센서 스캔 주기(개념값) — 탐지 재시도 간격
   var MAX_ENGAGE_TRIES = 3; // BDA 실패 시 재교전 상한(무한 폐루프 방지)
   var SHOOTER_QUEUE_MULT = 2; // 무기 대기실 = 교전채널 × 배수 (M/M/c/K, K=c*mult)
+  // ⑧ 교전창 실현가능성 여유계수 — 명령링크지연+교전소요(engageTimeSec 평균)이 잔여 체공창의
+  // 이 비율 이하일 때만 후보로 인정. 1.0 = 결정론(평균 ≤ 잔여). 교전시간은 지수분포라 평균이
+  // 창 안에 들어와도 실현의 절반은 초과하므로, 확률적 여유(<1.0)를 둘지는 STOP 판단 대상(기본 1.0).
+  var ENGAGE_WINDOW_MARGIN = 1.0;
 
   // 병목 판정 임계값 (Phase 1과 동일 기준: 계획서 ENV-RHO-THRESH-01)
   var RHO_WARN = 0.7, RHO_BOTTLENECK = 0.9;
@@ -624,13 +628,29 @@
    */
   Simulation.prototype._doEngage = function (threat, t) {
     if (!threat.alive || threat.pipelineDead) return;
-    var mode = this.mode, type = threat.type;
-    var shooters = KJ.nodesInMode(mode).filter(function (n) {
+    var self = this, mode = this.mode, type = threat.type;
+    // (1) 능력 후보: canEngage 제약(신궁·천마 탄도탄 배제 등) + 통제계통 존재. 0이면 능력 공백.
+    var capable = KJ.nodesInMode(mode).filter(function (n) {
       return n.category === 'shooter' && n.canEngage[type] &&
         n.controlledBy && (n.controlledBy[mode] || []).length > 0;
     });
-    if (shooters.length === 0) { threat.leakReason = 'no_shooter'; return; } // 교전 불가(제약)
-    var self = this, best = null;
+    if (capable.length === 0) { threat.leakReason = 'no_shooter'; return; } // 능력 제약(비구조)
+    // (2) 교전창 실현가능성(Phase 1): 명령링크 지연 + 교전 소요시간(engageTimeSec 평균)이 잔여
+    //     체공창을 넘으면 물리적으로 교전 완료 불가 → 후보에서 제외. FTR(300s)이 fighter(dwell
+    //     180s)를 "최적"이라 고르고 EXIT 전에 못 끝내던 확정 실패를 원천 차단한다(KJADS 원칙 3-2).
+    var remainDwell = (threat.spawnT + threat.dwellSec) - t;
+    var shooters = capable.filter(function (n) {
+      var cmd = self._link(n.controlledBy[mode][0], n.id, 'command');
+      var lead = (cmd ? cmd.delaySec * self.mult.delay : 0) + n.engage.engageTimeSec;
+      return lead <= remainDwell * ENGAGE_WINDOW_MARGIN;
+    });
+    if (shooters.length === 0) {
+      // 능력 있는 무기는 있으나 잔여 체공창 내 교전 완료 불가. 이미 한 번이라도 교전했으면(tries>0)
+      // 기회 소진(missed), 한 번도 못 쐈으면 교전창 부족(no_engage_window). 구조성은 STOP 판단 대상.
+      threat.leakReason = threat.tries > 0 ? 'missed' : 'no_engage_window';
+      return;
+    }
+    var best = null;
     if (mode === 'tobe') {
       var altBand = KJ.threatType(type).altBand;
       shooters.forEach(function (sh) {
@@ -1034,6 +1054,10 @@
     responsibility_gap: { label: '책임공백(협조경로 부재)', group: '책임 공백', structural: true, stage: '⑥⑦ 결심·협조' },
     overflow: { label: '포화손실', group: '처리 포화', structural: true, stage: '③④⑤ C2 / ⑧ 교전' }, // 'overflow:<노드>' 접두 코드
     no_shooter: { label: '교전수단 부재(제약)', group: '교전수단 제약', structural: false, stage: '⑧ 교전명령' },
+    // Phase 1(⑧): 능력 있는 무기는 있으나 잔여 체공창 내 교전 완료 불가(명령링크+engageTimeSec > 잔여 dwell).
+    // structural은 STOP 판단 대상 — 잠정 false(무기 교전소요가 애초에 체공창보다 길면 C2와 무관하다는
+    // 보수적 가정). true로 볼 여지: 앞 단계 C2 지연이 창을 소진시킨 경우(C2 통합으로 개선 가능).
+    no_engage_window: { label: '교전창 부족(체공창 내 교전 완료 불가)', group: '교전창 제약', structural: false, stage: '⑧ 교전명령' },
     missed: { label: '명중 실패(기회소진)', group: '명중 실패', structural: false, stage: '⑨ BDA' },
     timeout: { label: '처리지연 초과(공역이탈)', group: '처리지연 초과', structural: true, stage: '⑨ 종합' }
   };

@@ -302,6 +302,11 @@
           { label: '결심 지연 (탐지→교전개시)', mom: 'MoP', kind: 'sec', lower: true,
             a: ga.meanDecisionDelaySec, b: gb.meanDecisionDelaySec,
             tip: 'F2T2EA Find→Engage 평균 소요. 협조·승인·권한위임 홉과 C2 대기(Wq)가 모두 포함 — As-Is 음성 협조 부담이 여기서 발생.' },
+          { label: '그중 협조 홉 지연', mom: 'MoP', kind: 'sec', lower: true,
+            a: ga.meanCoordDelaySec, b: gb.meanCoordDelaySec,
+            tip: '결심 지연 중 coord 협조 경로(육↔공 음성 등) 홉 지연 몫. **잔여(결심지연−협조)는 C2 처리·승인권자 대기(큐)·승인 서비스**다. ' +
+              '실측: As-Is 결심지연의 협조 홉은 17~38%뿐이고 나머지 62~83%가 승인 대기다 — ' +
+              '"데이터링크만 깔면 해결된다"는 함의는 절반만 맞다(승인권자 처리용량도 함께 봐야 한다). To-Be는 협조 홉이 대부분 생략되어 0에 가깝다.' },
           { label: '승인 노드 최대 ρ (approval)', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
             a: maxRhoByKind(a, 'c2', 'approval'), b: maxRhoByKind(b, 'c2', 'approval'),
             tip: '교전승인권자 노드가 승인 처리(⑥⑦)로 점유된 이용률 — C2 서버풀 공유 부하 중 approval만 분리. ' +

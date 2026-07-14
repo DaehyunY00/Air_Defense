@@ -98,6 +98,7 @@
     // Phase B/D: 결심 지연(MoP) — 탐지→최초 교전명령 소요의 집계 (trace 무관 항상 수집)
     this.decisionDelaySum = 0;
     this.decisionDelayCount = 0;
+    this.coordDelaySum = 0;   // 1B: 결심지연 중 coord 협조 홉 지연 몫(잔여=C2 처리·승인 대기)
     // Phase D: 비용교환비(MoFE) — 개념 요격탄 소모비용 / 격추 위협가치 (백만 USD 개념)
     // sat*는 저가 포화위협(장사정포·소형무인기) 부분집합. 전부 개념값(WPN/THR-*-COST-01).
     this.cost = { interceptM: 0, killedThreatM: 0, interceptSatM: 0, killedThreatSatM: 0 };
@@ -499,6 +500,10 @@
       delay += self._linkDelay(l.comm[self.mode]); // 홉별 실제 전달시각 샘플링(경로는 대표값으로 이미 선택됨)
       self._recordLink(l.from, l.to, l.comm[self.mode], 'coord');
     });
+    // 결심지연 분해(1B): 이 항적이 겪은 coord 협조 홉 지연을 누적한다(순수 관측 — delay는
+    // 이미 스케줄에 반영된 값, 재계산·추가 RNG 소비 없음). 잔여(=결심지연−협조)가 곧 C2 처리·
+    // 승인 대기(큐)·승인 서비스 몫이다. "As-Is 지연=음성 협조 탓"이 절반만 맞음을 화면에 드러낸다.
+    threat._coordDelay = (threat._coordDelay || 0) + delay;
     this._mark(threat, '협조개시:' + controlC2 + '→' + approvalId, t);
     this.schedule(t + delay, PRI.LINK_ARRIVE, 'APPROVE_ARRIVE', { threat: threat, appr: approvalId });
   };
@@ -559,6 +564,7 @@
       if (threat._detectT != null) {
         this.decisionDelaySum += (t - threat._detectT);
         this.decisionDelayCount++;
+        this.coordDelaySum += (threat._coordDelay || 0); // 1B: 같은 분모로 협조 홉 몫 집계
       }
     }
     this._mark(threat, '교전명령#' + (threat.tries + 1) + ':' + shooter.id, t);
@@ -624,7 +630,7 @@
       id: entry.type + '#' + this.threatSeq, type: entry.type, axis: entry.axis,
       spawnT: t, dwellSec: tt.dwellSec, alive: true, killed: false,
       detected: false, pipelineDead: false, tries: 0, leakReason: null,
-      _trace: null, _countedC2: false, _countedEngaged: false, _detectT: null
+      _trace: null, _countedC2: false, _countedEngaged: false, _detectT: null, _coordDelay: 0
     };
     if (this.trace) {
       if (this.threatTraces.length < this.traceCap) {
@@ -812,6 +818,10 @@
         // 결심 지연(MoP): 탐지→최초 교전명령 평균(초) — 협조/승인/위임 지연 포함
         meanDecisionDelaySec: this.decisionDelayCount
           ? this.decisionDelaySum / this.decisionDelayCount : 0,
+        // 1B: 결심지연 중 coord 협조 홉 지연 평균(동일 분모). 잔여(결심지연−협조)=C2 처리·승인 대기·서비스.
+        // "As-Is 지연=음성 협조 탓"이 절반만 맞고 나머지는 승인권자 대기행렬임을 분해해 보여준다(사실 g).
+        meanCoordDelaySec: this.decisionDelayCount
+          ? this.coordDelaySum / this.decisionDelayCount : 0,
         // 동적 권한위임(분권 전환) 관측: 전환 횟수·최초 전환 시각·승인노드별 분포 (B-2)
         delegation: {
           count: this.deleg.count, firstT: this.deleg.firstT, byNode: this.deleg.byNode
@@ -845,32 +855,47 @@
     return result;
   };
 
-  /** srcId → targetId coord 링크 최단경로(BFS, 방향성 존중). 도달 불가면 null */
-  function coordPath(srcId, targetId, mode) {
+  /**
+   * srcId → targetId coord 최단'지연'경로 (다익스트라, 방향성 존중). 도달 불가면 null.
+   * 1C: 구 BFS는 홉수 최소화라 "느린 1홉"을 "빠른 3홉"보다 우선했다 — ②단계 _onDetected의
+   * 지연 argmin과 기준이 어긋난다. 링크 지연(delaySec 대표값)으로 경로를 고르도록 통일한다.
+   * (링크 지연 분포는 여기서 샘플링하지 않는다 — 경로 선택은 대표값, 실제 전달 시각만 _decision이
+   *  _linkDelay로 샘플링. 재현성·기준 통일.) 동점은 노드 id 사전순 tiebreak(결정론).
+   */
+  function coordPath(srcId, targetId, mode, links) {
     if (srcId === targetId) return null;
-    var queue = [srcId], cameBy = {};
-    cameBy[srcId] = null;
-    while (queue.length) {
-      var cur = queue.shift();
-      var outs = KJ.LINKS.filter(function (l) {
-        return l.from === cur && l.kind === 'coord' && l.comm[mode];
+    links = links || KJ.LINKS;   // 기본 전역 그래프. 테스트는 인위적 그래프를 주입할 수 있다.
+    var dist = {}, prev = {}, visited = {};
+    dist[srcId] = 0; prev[srcId] = null;
+    while (true) {
+      // 미방문 중 최소 누적지연 노드 선택 (동점은 노드 id 사전순 — 결정론)
+      var cur = null, best = Infinity;
+      Object.keys(dist).forEach(function (n) {
+        if (visited[n]) return;
+        if (dist[n] < best || (dist[n] === best && (cur === null || n < cur))) { best = dist[n]; cur = n; }
       });
-      for (var i = 0; i < outs.length; i++) {
-        var l = outs[i];
-        if (l.to in cameBy) continue;
-        cameBy[l.to] = l;
-        if (l.to === targetId) {
-          var path = [], at = targetId;
-          while (cameBy[at]) { path.unshift(cameBy[at]); at = cameBy[at].from; }
-          return path;
-        }
-        queue.push(l.to);
+      if (cur === null) break;
+      if (cur === targetId) {
+        var path = [], at = targetId;
+        while (prev[at]) { path.unshift(prev[at]); at = prev[at].from; }
+        return path.length ? path : null;
       }
+      visited[cur] = true;
+      links.forEach(function (l) {
+        if (l.from !== cur || l.kind !== 'coord' || !l.comm[mode]) return;
+        var nd = dist[cur] + l.comm[mode].delaySec;
+        // 갱신: 더 짧거나, 동점이면 이전 링크의 from이 사전순으로 뒤일 때 앞선 것으로 교체(결정론)
+        if (!(l.to in dist) || nd < dist[l.to] ||
+            (nd === dist[l.to] && prev[l.to] && l.from < prev[l.to].from)) {
+          dist[l.to] = nd; prev[l.to] = l;
+        }
+      });
     }
     return null;
   }
 
   KJ.Simulation = Simulation;
+  KJ._coordPath = coordPath;   // 테스트/검증용 노출 (다익스트라 coord 최단지연 경로)
 
   // ── 정밀화 Phase C: 요격 실패(누수) 원인 코드 → 병목 분류(taxonomy) ──
   // 엔진이 태깅하는 leakReason 코드의 정본 분류. UI(대조표·타임라인·분석 탭 파이프라인)와

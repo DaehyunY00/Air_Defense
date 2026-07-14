@@ -985,6 +985,14 @@
     var meanTTK = ttk.length ? ttk.reduce(function (s, x) { return s + x; }, 0) / ttk.length : 0;
     var tte = this.global.timeToEngage;
     var meanTTE = tte.length ? tte.reduce(function (s, x) { return s + x; }, 0) / tte.length : 0;
+    // Phase 3(⑨, censorFix): 종료 절단 보정. censoredRaw = 종료시각까지 미해결(격추·누수 아님)한
+    // 위협 = spawned − killed − leaked(잔존). 이들은 관측창에 잘려 EXIT가 안 뜬 것인데 spawned(분모)에
+    // 남아 격추율·누수율을 체계적으로 왜곡한다(①단계 탐지율 절단과 같은 뿌리). 순수 보고 변경 —
+    // 시뮬레이션 동역학·rng·이벤트 불변. flow 보존(spawned ≥ killed+leaked)은 그대로 유지된다.
+    var censoredRaw = Math.max(0, this.global.spawned - this.global.killed - this.global.leaked);
+    var censored = this.features.censorFix ? censoredRaw : 0;
+    this.global.censored = censored;
+    var denom = this.global.spawned - censored; // censorFix ON → killed+leaked(해결분), OFF → spawned(legacy)
 
     var result = {
       config: {
@@ -998,8 +1006,10 @@
         engaged: this.global.engaged, killed: this.global.killed, leaked: this.global.leaked,
         reachedC2: this.global.reachedC2, everEngaged: this.global.everEngaged,
         leakReasons: this.global.leakReasons,
-        killRate: this.global.spawned ? this.global.killed / this.global.spawned : 0,
-        leakRate: this.global.spawned ? this.global.leaked / this.global.spawned : 0,
+        // 절단 보정(censorFix): 분모 = spawned − censored. OFF면 censored=0 → 종전과 동일(killed/spawned).
+        killRate: denom ? this.global.killed / denom : 0,
+        leakRate: denom ? this.global.leaked / denom : 0,
+        censored: censored, censoredRaw: censoredRaw, // 절단 위협 수(보정 적용분 · 원시 관측분)
         meanTimeToKillSec: meanTTK,
         // 교전지연(MoP): 생성→최초 교전명령 평균(초) — 탐지 잠복+결심 포함 end-to-end (CRN 검토 이식)
         meanTimeToEngageSec: meanTTE,

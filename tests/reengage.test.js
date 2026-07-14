@@ -57,6 +57,37 @@ assert(badFb.length === 0, '문서 pk 있는 무기(FTR·MSAM·MDU·SM2)는 폴�
 assert(Object.keys(fb).every(function (c) { return c.indexOf('SHORAD') === 0; }),
   '폴백은 SHORAD 비무인기 조합에만 국한 (params.md에 SHORAD non-uav pk 미문서 — 정직 보고): ' + Object.keys(fb).join(','));
 
+// ══════════ Phase 2 — 방어효율(defenseEfficiency): "안 쏘면 최적" 함정 반전 ══════════
+console.log('# Phase 2 — 방어효율(누수 보상)');
+var deAsis = 0, deTobe = 0, exUnchanged = true;
+for (var s2 = 1; s2 <= 10; s2++) {
+  var ga = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 2.5, seed: s2, endTimeSec: 1800 }).global;
+  var gb = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: s2, endTimeSec: 1800 }).global;
+  deAsis += ga.cost.defenseEfficiency; deTobe += gb.cost.defenseEfficiency;
+  // exchange는 leakCost와 무관하게 불변이어야 함(회귀 안전)
+  var gOff = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 2.5, seed: s2, endTimeSec: 1800, features: { leakCost: false } }).global;
+  if (Math.abs((ga.cost.exchange || 0) - (gOff.cost.exchange || 0)) > 1e-9) exUnchanged = false;
+}
+assert(deTobe > deAsis, 'defenseEfficiency: To-Be > As-Is (실제 방어 성과 보상 — SC3 x2.5 ' + (deTobe / 10 * 100).toFixed(0) + '% > ' + (deAsis / 10 * 100).toFixed(0) + '%)');
+assert(exUnchanged, 'leakCost ON/OFF과 무관하게 exchange 불변 (옵션 B — 회귀 안전)');
+
+// ══════════ Phase 3 — 절단 보정: flow 보존 + 분모 제외 ══════════
+console.log('# Phase 3 — 절단 보정');
+var flowBad = 0, censOk = 0, cn = 0;
+[['sc1', 'asis'], ['sc3', 'asis'], ['sc3', 'tobe']].forEach(function (p) {
+  for (var s3 = 1; s3 <= 5; s3++) {
+    var g = KJ.runDES({ scenario: KJ.scenarioById(p[0]), mode: p[1], intensity: 2.5, seed: s3, endTimeSec: 1800 }).global; cn++;
+    if (g.spawned < g.killed + g.leaked) flowBad++;              // flow 보존
+    if (g.censored === g.spawned - g.killed - g.leaked) censOk++; // censored 항등식
+  }
+});
+assert(flowBad === 0, 'flow 보존: spawned ≥ killed + leaked (절단 보정 후에도, ' + cn + ' config)');
+assert(censOk === cn, 'censored = spawned − killed − leaked (항등식) — 전 config');
+var gOn = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 2.5, seed: 3, endTimeSec: 1800, features: { censorFix: true } }).global;
+var gOff2 = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 2.5, seed: 3, endTimeSec: 1800, features: { censorFix: false } }).global;
+assert(gOn.killRate > gOff2.killRate && gOff2.censored === 0,
+  'censorFix ON → 격추율 상승(분모 제외), OFF → censored=0·legacy 분모 (' + (gOff2.killRate * 100).toFixed(1) + '%→' + (gOn.killRate * 100).toFixed(1) + '%)');
+
 // ══════════ 결정론 ══════════
 console.log('# 결정론');
 function sig(feat) { var g = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: 7, endTimeSec: 1800, features: feat }).global; return [g.killed, g.leaked, +g.cost.interceptM.toFixed(4)].join(','); }

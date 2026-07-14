@@ -534,6 +534,14 @@ launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한
 - **신뢰도 등급**: B
 - **MC 적용방식**: 고정(재현성 보장). 대규모 배치 통계 엄밀성은 장주기 생성기 병행 검토
 
+### [ENV-DES-CENSOR-01] 종료 절단(censoring) 보정 (Phase 3 ⑨, `js/engine/sim-engine.js`)
+- **값/분포**: `censored = max(0, spawned − killed − leaked)` — 관측창 종료(endTimeSec)까지 격추·누수 어느 쪽으로도 미해결한 위협. `features.censorFix`(기본 ON)이면 격추율·누수율 분모에서 제외(denom = spawned − censored)
+- **출처**: 이산사건 시뮬레이션 종료 절단(right-censoring) 표준 처리 — 개념 적용
+- **적용범위**: `_results` 격추율·누수율 분모(순수 보고 변경 — spawned·killed·leaked·rng·이벤트 불변). `censored`·`censoredRaw` 노출. **공용 유틸**: ①단계 탐지율도 `detected/(spawned−censored)`로 동일 보정 가능(동일 필드 재사용)
+- **신뢰도 등급**: B(방법론)
+- **MC 적용방식**: 고정. flow 보존(spawned ≥ killed+leaked) 자동 유지(censored ≥ 0)
+- **비고**: 실측 절단율 SC3 x2.5 As-Is 15.3% · To-Be 10.0%. 보정 시 격추율 As-Is 9.3→11.0%·To-Be 42.0→46.7%(개선폭 +9.2% 상대, 에스컬레이션 미달)
+
 ### [ENV-DES-CRN-01] 공통난수(CRN) — As-Is↔To-Be 짝지은 비교 (`js/engine/sim-engine.js`)
 - **값/분포**: 난수 스트림 2분리 — `arrRng`(위협 도착간격 전용, seed에서 황금비 해시로 독립 파생) / `rng`(처리 무작위성: 탐지·서비스시간·요격확률·링크지연 분포·중복교전). 도착은 `arrRng`에서만 소비
 - **출처**: 분산감소 표준기법(Common Random Numbers) — `claude/c2-simulation-review` 검토에서 이식. 근거: 동일 seed에서 두 형상이 같은 위협열을 마주해야 차이가 위협표본이 아니라 C2 구조에서만 비롯됨(짝지은 비교의 타당성)

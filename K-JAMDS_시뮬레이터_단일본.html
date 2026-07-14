@@ -1502,6 +1502,9 @@ li.chk-fail { background: #43140f; }
  * 노드 카테고리:
  *  - c2      : 지휘통제 노드 (대기행렬 서버로 모델링: servers c, serviceTimeSec μ⁻¹, capacity K)
  *  - sensor  : 탐지·추적 센서 (detects: 탐지 가능 위협 클래스, coverage: 담당 축선)
+ *              detectProb.value: 센서 고유의 스캔 1회당 탐지확률(표준 표적 기준, 0~1).
+ *              위협 고유 난이도(threats.js detectFactor)와 곱해 per-sensor 스캔확률을 이룬다.
+ *              모드별 융합 규칙은 sim-engine.js _scanProb (As-Is=maxᵢ(pᵢ), To-Be=1−Πᵢ(1−pᵢ)).
  *  - shooter : 교전 무기체계 (canEngage: 위협 클래스별 교전 가능 여부 — 제약조건 포함)
  *              wtaSuit: 고도대역(altBand)별 Best-Shooter 개념 적합도 가중(정밀화 Phase B-1,
  *              C2-WTA-SUIT-01). To-Be WTA 점수에만 사용 — canEngage 제약이 항상 우선하며
@@ -1599,7 +1602,7 @@ li.chk-fail { background: #43140f; }
       role: '육군 방공지휘통제경보체계(ADC2A) 예하 대공감시. 육안·광학 관측 기반 저고도 침투 항적 보고 — As-Is에서 음성보고 의존.',
       detects: ['uav_small', 'ac_low', 'heli', 'cruise'],
       coverage: ['west', 'seoul'],
-      detectProb: { paramRef: 'SEN-JASP-PD-01' },
+      detectProb: { value: 0.35, paramRef: 'SEN-JASP-PD-01' },
       rangeKm: 15, rangeNote: '육안·광학 관측 가시범위 개념값', rangeRef: 'CVG-ADC2A-W-RNG-01',
     },
     {
@@ -1609,7 +1612,7 @@ li.chk-fail { background: #43140f; }
       role: '중·고고도 광역 방공관제레이더. MCRC에 항적 자동 전송.',
       detects: ['fighter', 'ac_low', 'cruise', 'heli'],
       coverage: ['east', 'central'],
-      detectProb: { paramRef: 'SEN-ACR-PD-01' },
+      detectProb: { value: 0.90, paramRef: 'SEN-ACR-PD-01' },
       rangeKm: 250, rangeNote: '장거리 방공관제레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-ACR-E-RNG-01',
     },
     {
@@ -1619,7 +1622,7 @@ li.chk-fail { background: #43140f; }
       role: '중·고고도 광역 방공관제레이더. MCRC에 항적 자동 전송.',
       detects: ['fighter', 'ac_low', 'cruise', 'heli'],
       coverage: ['west', 'seoul'],
-      detectProb: { paramRef: 'SEN-ACR-PD-01' },
+      detectProb: { value: 0.90, paramRef: 'SEN-ACR-PD-01' },
       rangeKm: 250, rangeNote: '장거리 방공관제레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-ACR-W-RNG-01',
     },
     {
@@ -1629,7 +1632,7 @@ li.chk-fail { background: #43140f; }
       role: '전방(철원권) 저고도 침투 항적 탐지 전용 레이더. 전방축선 담당, 수도권 종심은 미담당.',
       detects: ['uav_small', 'ac_low', 'heli', 'cruise'],
       coverage: ['central'],
-      detectProb: { paramRef: 'SEN-LAR-PD-01' },
+      detectProb: { value: 0.50, paramRef: 'SEN-LAR-PD-01' },
       rangeKm: 40, rangeNote: '저고도 탐지레이더 탐지범위 개념값', rangeRef: 'CVG-LAR-C-RNG-01',
     },
     {
@@ -1639,7 +1642,7 @@ li.chk-fail { background: #43140f; }
       role: '군단 국지방공레이더(TPS-880K급 개념). 2022.12.26 무인기 최초 포착 주체. As-Is에서 항적이 국가방공체계에 미통합.',
       detects: ['uav_small', 'ac_low', 'heli'],
       coverage: ['west', 'seoul'],
-      detectProb: { paramRef: 'THR-UAV-RCS-01' },
+      detectProb: { value: 0.60, paramRef: 'SEN-LLR-PD-01' },
       rangeKm: 20, rangeNote: 'TPS-880K급 국지방공레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-LLR-1C-RNG-01',
     },
     {
@@ -1649,7 +1652,7 @@ li.chk-fail { background: #43140f; }
       role: '수도권 국지방공레이더. JAOC에 항적 전송.',
       detects: ['uav_small', 'ac_low', 'heli'],
       coverage: ['seoul'],
-      detectProb: { paramRef: 'THR-UAV-RCS-01' },
+      detectProb: { value: 0.60, paramRef: 'SEN-LLR-PD-01' },
       rangeKm: 20, rangeNote: 'TPS-880K급 국지방공레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-LLR-CD-RNG-01',
     },
     {
@@ -1659,7 +1662,7 @@ li.chk-fail { background: #43140f; }
       role: '공중조기경보통제기. 광역 하향탐지, Link-16으로 MCRC·KAOC에 항적 전파. 2m급 소형 무인기는 저RCS·지상클러터로 탐지 제한(SEN-E737-PD-01).',
       detects: ['fighter', 'ac_low', 'cruise', 'heli'],
       coverage: ['west', 'central', 'east', 'seoul'],
-      detectProb: { paramRef: 'SEN-E737-PD-01' },
+      detectProb: { value: 0.85, paramRef: 'SEN-E737-PD-01' },
       rangeKm: 370, rangeNote: 'MESA 레이더 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-E737-RNG-01',
     },
     {
@@ -1669,7 +1672,7 @@ li.chk-fail { background: #43140f; }
       role: '탄도탄 조기경보 전용 레이더. KAMDOC에 탄도탄 항적 전송.',
       detects: ['srbm', 'mrl_large'],
       coverage: ['west', 'central', 'east'],
-      detectProb: { paramRef: 'SEN-GPR-PD-01' },
+      detectProb: { value: 0.95, paramRef: 'SEN-GPR-PD-01' },
       rangeKm: 500, rangeNote: '그린파인 계열 탐지범위 개념값 (공개자료 기반, 보수적)', rangeRef: 'CVG-GPR-RNG-01',
     },
     {
@@ -1679,7 +1682,7 @@ li.chk-fail { background: #43140f; }
       role: 'SPY-1D(V) 레이더. 탄도탄·항공 항적 탐지, Link-16 전파. SM-2 모기지.',
       detects: ['srbm', 'mrl_large', 'fighter', 'cruise'],
       coverage: ['east', 'central'],
-      detectProb: { paramRef: 'SEN-SPY1-PD-01' },
+      detectProb: { value: 0.85, paramRef: 'SEN-SPY1-PD-01' },
       rangeKm: 300, rangeNote: 'SPY-1D(V) 대공 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-AEGIS-E-RNG-01',
     },
     {
@@ -1689,7 +1692,7 @@ li.chk-fail { background: #43140f; }
       role: 'SPY-1D(V) 레이더. 탄도탄·항공 항적 탐지, Link-16 전파. SM-2 모기지.',
       detects: ['srbm', 'mrl_large', 'fighter', 'cruise'],
       coverage: ['west', 'seoul'],
-      detectProb: { paramRef: 'SEN-SPY1-PD-01' },
+      detectProb: { value: 0.85, paramRef: 'SEN-SPY1-PD-01' },
       rangeKm: 300, rangeNote: 'SPY-1D(V) 대공 탐지범위 개념값 (공개자료 기반)', rangeRef: 'CVG-AEGIS-W-RNG-01',
     },
 
@@ -1806,17 +1809,27 @@ li.chk-fail { background: #43140f; }
  *  - command : C2 → 무기체계 교전명령
  *
  * As-Is 핵심 구조(2022.12.26 실증): 육군 ADC2A(군단 AOC·JAOC)와 공군 MCRC·KAMDOC이
- * 데이터링크 미연동 — 음성보고(≥180s, C2-VOICE-DLY-01)만 가능, SAWS는 일방향 경보방송.
+ * 데이터링크 미연동 — 음성보고(C2-VOICE-RPT-01)·음성협조(≥180s, C2-VOICE-COORD-01)만
+ *   가능, SAWS는 일방향 경보방송. 음성 지연은 삼각분포(dist) — 엔진 _linkDelay가 샘플링.
  * To-Be: JAMDC2(Track Fusion) 경유 전 노드 데이터링크 연동.
  */
 (function () {
   'use strict';
   window.KJ = window.KJ || {};
 
-  var DL_FAST = { type: 'datalink', delaySec: 2, paramRef: 'C2-VOICE-DLY-01' };
+  // delaySec = 대표값(통계 집계·M/M/c 해석·병목 판정·지도 UI가 의존 — 유지 필수).
+  // dist가 있으면 엔진 _linkDelay가 실제 전달시각을 샘플링한다(대표값은 그대로 남는다).
+  var DL_FAST = { type: 'datalink', delaySec: 2, paramRef: 'C2-DL-DLY-01' };
   var L16 = { type: 'link16', delaySec: 12, paramRef: 'C2-L16-UPD-01' };
-  var VOICE = { type: 'voice', delaySec: 180, paramRef: 'C2-VOICE-DLY-01' };
-  var KVMF = { type: 'kvmf', delaySec: 30, paramRef: 'C2-VOICE-DLY-01' };
+  var KVMF = { type: 'kvmf', delaySec: 30, paramRef: 'C2-KVMF-DLY-01' };
+  // 음성: 용도별 분리 + 대칭 삼각분포(확정). 대칭이라 실현 평균 = 대표값(delaySec) →
+  // 경로 총합 제약(C2-RESP-E2E-01)이 실현 평균을 정확히 반영한다(우편향 괴리 회피).
+  var VOICE_RPT = { type: 'voice', delaySec: 60,
+                    dist: { kind: 'triangular', min: 30, mode: 60, max: 90 },
+                    paramRef: 'C2-VOICE-RPT-01' };   // 음성 항적보고(일방향 짧은 전달)
+  var VOICE_COORD = { type: 'voice', delaySec: 180,
+                      dist: { kind: 'triangular', min: 90, mode: 180, max: 270 },
+                      paramRef: 'C2-VOICE-COORD-01' }; // 음성 교전협조(왕복 협의)
 
   KJ.LINKS = [
     // ─── 센서 → C2 항적보고 (공군 계열: As-Is에서도 자동화) ───
@@ -1834,12 +1847,12 @@ li.chk-fail { background: #43140f; }
     // ─── 센서 → C2 항적보고 (육군 계열: ADC2A/KVMF, 음성) ───
     { from: 'LLR-1C', to: 'AOC-1C', kind: 'report', comm: { asis: KVMF, tobe: DL_FAST } },
     { from: 'LLR-CD', to: 'JAOC-CD', kind: 'report', comm: { asis: KVMF, tobe: DL_FAST } },
-    { from: 'ADC2A-W', to: 'AOC-1C', kind: 'report', comm: { asis: VOICE, tobe: KVMF } },
+    { from: 'ADC2A-W', to: 'AOC-1C', kind: 'report', comm: { asis: VOICE_RPT, tobe: KVMF } },
 
     // ─── C2 ↔ C2 협조 (As-Is 병목의 핵심: 육↔공 음성 협조) ───
-    { from: 'AOC-1C', to: 'MCRC', kind: 'coord', comm: { asis: VOICE, tobe: DL_FAST },
+    { from: 'AOC-1C', to: 'MCRC', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
       note: 'As-Is: 데이터링크 미연동, 음성/VTC 협조만 가능 (2022.12.26 실증 병목)' },
-    { from: 'JAOC-CD', to: 'MCRC', kind: 'coord', comm: { asis: VOICE, tobe: DL_FAST },
+    { from: 'JAOC-CD', to: 'MCRC', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
       note: 'As-Is: 수방사↔공군 음성 협조' },
     { from: 'MCRC', to: 'AOC-1C', kind: 'broadcast', comm: { asis: { type: 'broadcast', delaySec: 60, paramRef: 'C2-SAWS-DLY-01' } },
       note: 'SAWS 위성전군방공경보(일방향 방송, 교전활용 불가)' },
@@ -1847,8 +1860,16 @@ li.chk-fail { background: #43140f; }
       note: 'SAWS 위성전군방공경보(일방향 방송, 교전활용 불가)' },
     { from: 'MCRC', to: 'KAOC', kind: 'coord', comm: { asis: DL_FAST, tobe: DL_FAST } },
     { from: 'KAMDOC', to: 'KAOC', kind: 'coord', comm: { asis: DL_FAST, tobe: DL_FAST } },
-    { from: 'MCRC', to: 'KAMDOC', kind: 'coord', comm: { asis: VOICE, tobe: DL_FAST },
+    { from: 'MCRC', to: 'KAMDOC', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
       note: 'As-Is: 공중위협·탄도탄 이원화 체계 간 협조 지연' },
+
+    // ─── To-Be: 다출처 Plug-in 직결 (센서 → JAMDC2) — KJADS "P→F 전환" 근거 ───
+    // 육군 계열 센서(As-Is에서 국가방공체계 미통합·담당 C2 사각지대)만 직결한다. 담당 C2를
+    // 건너뛰어 JAMDC2가 신규 융합항적(F)을 직접 생성 → 담당 C2 포화가 융합을 막지 못한다.
+    // 이미 2s 데이터링크로 통합된 공/해군 광역센서(ACR/LAR/GPR/E737/AEGIS)는 직결 제외.
+    { from: 'ADC2A-W', to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST } },
+    { from: 'LLR-1C', to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST } },
+    { from: 'LLR-CD', to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST } },
 
     // ─── To-Be: JAMDC2 (Track Fusion) 연동 — 전 센서·C2 융합 ───
     { from: 'MCRC', to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST } },
@@ -2910,6 +2931,20 @@ li.chk-fail { background: #43140f; }
   var DELEG_QUEUE_MULT = { asis: 4, tobe: 1 };
 
   /**
+   * 작업 종류(kind)별 통계 버킷을 지연 생성해 반환. (Phase: track/approval 부하 분리)
+   * C2 서버풀은 ③④⑤ 항적처리(track: _onC2Arrive/_onFusionArrive)와 ⑥⑦ 승인처리
+   * (approval: _onApproveArrive)에 공유되므로 노드 단위 통계만으로는 두 부하가 섞여
+   * "승인 노드의 ρ가 ③④⑤ 카드에 표시"되는 결함이 생긴다. kind 태그로 분해해 각 카드가
+   * 자기 단계만 측정하게 한다. shooter는 engage 한 종류뿐이다. 순수 관측 — rng 소비·이벤트
+   * 순서·기존 노드 통계(ns.arrivals/busyTime/drops/Wq)에 영향을 주지 않는다(추가만).
+   */
+  function bucket(ns, kind) {
+    var b = ns.byKind[kind];
+    if (!b) b = ns.byKind[kind] = { arrivals: 0, completions: 0, drops: 0, busyTime: 0, waitAccum: 0, waitCount: 0 };
+    return b;
+  }
+
+  /**
    * @param {object} cfg { scenario, mode, intensity, seed, endTimeSec }
    */
   function Simulation(cfg) {
@@ -2950,6 +2985,9 @@ li.chk-fail { background: #43140f; }
 
     // ── Phase 4 재생용 trace (옵트인, 기본 false — 기존 동작·통계에 영향 없음) ──
     // 항적별 9단계 타임스탬프(Gantt)와 노드별 재고 시계열(대기열 애니메이션)을 기록한다.
+    // Phase 4-B: 재획득 dup(항적소실→재획득 시 새 항적 재생성). 기본 off. 근거 없는 배수(1/detectFactor)
+    // 이중계상 위험이라 기본 경로에서 켜지 않는다 — 켜려면 배수가 아닌 이벤트로 구현해야 함(범위 밖·미구현).
+    this.dupReacquire = !!cfg.dupReacquire;
     this.trace = !!cfg.trace;
     this.traceCap = cfg.traceCap || 300;       // 추적할 위협 수 상한(메모리 보호)
     this.nodeSeriesCap = cfg.nodeSeriesCap || 20000; // 전 노드 합산 샘플 수 상한
@@ -2981,7 +3019,10 @@ li.chk-fail { background: #43140f; }
         busy: 0, queue: [], lastT: 0,
         busyTime: 0, qTime: 0,
         arrivals: 0, completions: 0, drops: 0,
-        waitAccum: 0, waitCount: 0, maxInSystem: 0
+        waitAccum: 0, waitCount: 0, maxInSystem: 0,
+        // Phase: kind별 부하 분리 관측 — busyByKind는 현재 서비스 중인 서버의 kind별 개수
+        // (Σ busyByKind === busy 불변). byKind는 kind별 누적 통계(bucket() 지연 생성).
+        busyByKind: {}, byKind: {}
       };
       if (self.trace) self.nodeSeries[n.id] = [];
     });
@@ -3035,6 +3076,11 @@ li.chk-fail { background: #43140f; }
     if (dt > 0) {
       ns.busyTime += ns.busy * dt;
       ns.qTime += ns.queue.length * dt;
+      // kind별 busyTime도 동일한 시간가중 적분으로 누적 → Σ_kind busyTime === ns.busyTime 보존
+      // (종료시각 시점에 서비스 중인 작업의 부분 점유까지 정확히 귀속됨). 완료시점 합산이 아니라
+      // 적분으로 계산하는 이유: 종료 미완료 서비스가 있어도 합 보존이 부동소수까지 정확해야 하기 때문.
+      var bbk = ns.busyByKind;
+      for (var k in bbk) { if (bbk[k] > 0) bucket(ns, k).busyTime += bbk[k] * dt; }
       ns.lastT = t;
     }
   };
@@ -3045,15 +3091,18 @@ li.chk-fail { background: #43140f; }
     if (!ns) return;
     this._advance(ns, t);
     ns.arrivals++;
+    var bk = bucket(ns, job.kind); bk.arrivals++;
     var inSystem = ns.busy + ns.queue.length;
     if (ns.busy < ns.c) {
       ns.busy++;
+      ns.busyByKind[job.kind] = (ns.busyByKind[job.kind] || 0) + 1;
       ns.waitAccum += 0; ns.waitCount++;
+      bk.waitAccum += 0; bk.waitCount++;   // 즉시 서비스 = 대기 0 (kind별 Wq 표본에도 계상)
       this._startService(ns, t, job, onDone);
     } else if (inSystem < ns.K) {
       ns.queue.push({ job: job, onDone: onDone, enqT: t });
     } else {
-      ns.drops++;                 // M/M/c/K 포화 → 항적/교전기회 상실
+      ns.drops++; bk.drops++;     // M/M/c/K 포화 → 항적/교전기회 상실
       job.threat.pipelineDead = true;
       if (!job.threat.leakReason) job.threat.leakReason = 'overflow:' + nsId;
     }
@@ -3062,7 +3111,7 @@ li.chk-fail { background: #43140f; }
   };
 
   Simulation.prototype._startService = function (ns, t, job, onDone) {
-    var svc = this.rng.exponential(ns.mean);
+    var svc = this.rng.exponential(ns.mean);   // ← RNG 소비: kind 분리와 무관하게 draw 1회 유지
     this.schedule(t + svc, PRI.SERVICE_END, 'SERVICE_END', { nsId: ns.node.id, job: job, onDone: onDone });
   };
 
@@ -3070,14 +3119,19 @@ li.chk-fail { background: #43140f; }
     var ns = this.nodeState[d.nsId];
     this._advance(ns, t);
     ns.busy--;
+    if (ns.busyByKind[d.job.kind] > 0) ns.busyByKind[d.job.kind]--; // kind별 서버 점유 해제
     ns.completions++;
+    bucket(ns, d.job.kind).completions++;
     // 다음 대기 작업 인출 — 이미 공역이탈(누수)·폐기된 항적은 건너뜀(track abandonment/reneging).
     // 포화 노드가 이미 떠난 항적에 유령 서비스 부하를 계상하지 않도록 한다.
     while (ns.queue.length > 0) {
       var nx = ns.queue.shift();
       if (!nx.job.threat.alive || nx.job.threat.pipelineDead) continue; // 재고에서 폐기
       ns.busy++;
+      ns.busyByKind[nx.job.kind] = (ns.busyByKind[nx.job.kind] || 0) + 1;
       ns.waitAccum += (t - nx.enqT); ns.waitCount++;
+      var nbk = bucket(ns, nx.job.kind);
+      nbk.waitAccum += (t - nx.enqT); nbk.waitCount++;
       this._startService(ns, t, nx.job, nx.onDone);
       break;
     }
@@ -3099,11 +3153,40 @@ li.chk-fail { background: #43140f; }
     this.schedule(t + SCAN_SEC, PRI.DETECT, 'DETECT', { threat: threat });
   };
 
+  /**
+   * 스캔 1회당 탐지확률 — [센서 고유 Pd] × [위협 고유 탐지난이도] × [민감도 배수]를
+   * per-sensor로 계산한 뒤 모드별 융합 규칙으로 결합한다 (SEN-FUSION-01).
+   *   pᵢ = clamp(sensorPd_i × threat.detectFactor × mult.detect, 0, 1)
+   *   As-Is (비융합) : p = maxᵢ(pᵢ)          — 자군 최선의 단일 센서 성능이 곧 체계 성능
+   *   To-Be (융합)   : p = 1 − Πᵢ(1 − pᵢ)     — 다출처 센서 병렬 결합(Any Sensor)
+   * 의미론: nodes[].detectProb.value = 센서 고유 스캔당 탐지확률(표준 표적 기준),
+   *         threats[].detectFactor = 위협 고유 탐지난이도 계수(저RCS·저고도 등, 0~1).
+   * 민감도 배수(mult.detect)는 결합 *전*(per-sensor)에 곱한다 — 결합 후 곱하면 스윕 의미가 달라짐.
+   * value 누락 센서는 폴백 Pd=1.0 (데이터 누락이 조용한 0 탐지가 되지 않도록). 발동 시 STEP5 보고.
+   * RNG는 소비하지 않는다(호출부가 단일 draw로 판정 — 스캔당 정확히 1회 유지).
+   */
+  Simulation.prototype._scanProb = function (threat) {
+    var tt = KJ.threatType(threat.type);
+    var md = this.mult.detect;
+    var sensors = threat._sensors || [];
+    var ps = sensors.map(function (s) {
+      var pd = (s.detectProb && typeof s.detectProb.value === 'number')
+        ? s.detectProb.value : 1.0;                       // value 누락 시 안전 폴백
+      return Math.max(0, Math.min(1, pd * tt.detectFactor * md));
+    });
+    if (!ps.length) return 0;
+    if (this.mode === 'tobe') {
+      // 다출처 융합(Any Sensor): 센서 병렬 결합
+      return 1 - ps.reduce(function (acc, p) { return acc * (1 - p); }, 1);
+    }
+    // 비융합(As-Is): 최선의 단일 센서만
+    return Math.max.apply(null, ps);
+  };
+
   Simulation.prototype._onDetect = function (t, d) {
     var threat = d.threat;
     if (!threat.alive || threat.detected || threat.pipelineDead) return;
-    var tt = KJ.threatType(threat.type);
-    var p = Math.min(1, tt.detectFactor * this.mult.detect); // per-scan 탐지확률(민감도 배수 적용)
+    var p = this._scanProb(threat); // per-scan 탐지확률: 센서 Pd × 위협 난이도, 모드별 융합
     if (this.rng.raw() < p) {
       threat.detected = true;
       threat._detectT = t; // 결심 지연(MoP) 기준 시각
@@ -3116,20 +3199,103 @@ li.chk-fail { background: #43140f; }
     }
   };
 
-  /** 2 추적생성: 최속 보고경로로 담당 C2에 항적 전달 */
+  /**
+   * 링크 1건 전달 지연(초) — comm.dist가 있으면 분포 샘플링, 없으면 대표값(delaySec).
+   * mult.delay(민감도 배수)는 항상 곱한다. RNG는 dist가 있을 때만 소비(스캔당/홉당 1회).
+   * ※ 경로 "선택"(argmin·coordPath BFS)은 항상 대표값 delaySec으로 하고, 여기서는
+   *   실제 전달 "시각"만 샘플링한다 — 비결정론적 경로 선택을 피하기 위함(재현성).
+   */
+  Simulation.prototype._linkDelay = function (comm) {
+    var base = comm.delaySec;
+    if (comm.dist) {
+      if (comm.dist.kind === 'triangular') base = this.rng.triangular(comm.dist.min, comm.dist.mode, comm.dist.max);
+      else if (comm.dist.kind === 'lognormal') base = this.rng.lognormal(comm.dist.mean, comm.dist.stddev);
+      else if (comm.dist.kind === 'normal') base = this.rng.normal(comm.dist.mean, comm.dist.stddev);
+    }
+    return Math.max(0, base) * this.mult.delay;
+  };
+
+  /**
+   * 중복 항적(dup) 프록시(ghost) — C2 서버 부하만 소비하는 유령 작업. 실제 위협을 참조만 한다.
+   * alive를 getter로 두어 실제 위협이 격추/누수되면 ghost도 alive=false → 큐에서 자동 reneging
+   * (_onServiceEnd의 죽은 작업 스킵 재사용). ghost 드롭은 ns.drops에 계상되나 EXIT 이벤트가
+   * 없어 global.leaked에는 절대 반영되지 않는다(보존 항등식 유지).
+   */
+  function makeGhost(real) {
+    return {
+      type: real.type, _dup: true, _real: real,
+      pipelineDead: false, leakReason: null,
+      get alive() { return real.alive; }
+    };
+  }
+
+  /** 2 추적생성: 최속 보고경로로 담당 C2에 항적 전달 (To-Be는 직결 센서면 JAMDC2 직행) */
   Simulation.prototype._onDetected = function (threat, t) {
-    var self = this, best = null;
+    var self = this;
+    // To-Be 다출처 Plug-in 직결(Phase 3): 센서→JAMDC2 직결 링크를 가진 센서가 하나라도 있으면
+    // 담당 C2를 건너뛰고 JAMDC2로 직행한다(FUSION_ARRIVE). argmin에 섞지 않는 명시적 우선 규칙 —
+    // 직결/담당C2 모두 2s라 tiebreak가 자의적으로 갈리는 것을 피한다. 근거: KJADS "P→F 전환"
+    // (다출처 plot 수신·융합 → 기존 체계 사각지대의 신규 항적 F 생성). 담당 C2 포화가 융합을
+    // 막지 못하게 한다. detects/커버리지·탐지 확률(①)은 불변 — 여기는 "탐지 후 어디로"의 문제.
+    if (this.mode === 'tobe' && this.nodeState['JAMDC2']) {
+      var dbest = null;
+      threat._sensors.forEach(function (s) {
+        KJ.LINKS.forEach(function (l) {
+          if (l.from === s.id && l.to === 'JAMDC2' && l.kind === 'report' && l.comm.tobe) {
+            var dd = l.comm.tobe.delaySec;
+            if (!dbest || dd < dbest.delay || (dd === dbest.delay && l.from < dbest.from)) {
+              dbest = { delay: dd, comm: l.comm.tobe, from: l.from };
+            }
+          }
+        });
+      });
+      if (dbest) {
+        this._recordLink(dbest.from, 'JAMDC2', dbest.comm, 'report');
+        this._mark(threat, '직결→JAMDC2', t);
+        this.schedule(t + this._linkDelay(dbest.comm), PRI.LINK_ARRIVE, 'FUSION_ARRIVE', { threat: threat });
+        return;
+      }
+    }
+    // 담당 C2 후보 수집 (C2별 최속 report 링크, 동점 시 센서 id 사전순 — 데이터 순서 의존성 제거).
+    var targets = {}; // c2Id -> { delay, comm, from }
     threat._sensors.forEach(function (s) {
       KJ.LINKS.forEach(function (l) {
-        if (l.from === s.id && l.kind === 'report' && l.comm[self.mode]) {
+        if (l.from === s.id && l.to !== 'JAMDC2' && l.kind === 'report' && l.comm[self.mode]) {
           var d = l.comm[self.mode].delaySec;
-          if (!best || d < best.delay) best = { c2: l.to, delay: d, comm: l.comm[self.mode], from: s.id };
+          var cur = targets[l.to];
+          if (!cur || d < cur.delay || (d === cur.delay && l.from < cur.from)) {
+            targets[l.to] = { delay: d, comm: l.comm[self.mode], from: l.from };
+          }
         }
       });
     });
-    if (!best) { threat.leakReason = 'no_report_path'; return; }
-    this._recordLink(best.from, best.c2, best.comm, 'report');
-    this.schedule(t + best.delay * this.mult.delay, PRI.LINK_ARRIVE, 'C2_ARRIVE', { threat: threat, c2: best.c2 });
+    var ids = Object.keys(targets);
+    if (!ids.length) { threat.leakReason = 'no_report_path'; return; }
+    ids.sort(function (a, b) { return targets[a].delay - targets[b].delay || (a < b ? -1 : 1); });
+    // 주 항적: 최속 C2 — 하위 단계(⑥⑦⑧)를 구동한다.
+    var main = targets[ids[0]];
+    this._recordLink(main.from, ids[0], main.comm, 'report');
+    this.schedule(t + this._linkDelay(main.comm), PRI.LINK_ARRIVE, 'C2_ARRIVE', { threat: threat, c2: ids[0] });
+    // 중복 항적(Phase 4, As-Is 전용): 나머지 커버 C2 전부에 팬아웃. Track Fusion 부재로 같은 표적이
+    // 각 군 C2에 별개 항적으로 생성되는 KJADS GAP 1을 모사한다. 이들은 C2 서버 부하만 소비하고
+    // 하위 단계는 구동하지 않는다(프록시 ghost). To-Be는 팬아웃하지 않는다 — JAMDC2 Track Fusion이
+    // dup을 흡수(직결 없는 위협도 주 항적 1건만). 재획득 dup(config.dupReacquire)은 기본 off·별개 과제.
+    if (this.mode === 'asis') {
+      for (var i = 1; i < ids.length; i++) {
+        var dup = targets[ids[i]];
+        this._recordLink(dup.from, ids[i], dup.comm, 'report');
+        this._mark(threat, '중복항적→' + ids[i], t);
+        this.schedule(t + this._linkDelay(dup.comm), PRI.LINK_ARRIVE, 'C2_ARRIVE_DUP',
+          { threat: makeGhost(threat), c2: ids[i] });
+      }
+    }
+  };
+
+  /** 중복 항적 C2 도착(As-Is): C2 서버 부하만 소비, 하위 단계(⑥⑦⑧) 미구동 */
+  Simulation.prototype._onC2ArriveDup = function (t, d) {
+    var threat = d.threat; // ghost
+    if (!threat.alive || threat.pipelineDead) return;
+    this._nodeArrive(d.c2, t, { threat: threat, kind: 'track' }, function () { /* 부하만 소비 — onDone 무연산 */ });
   };
 
   /** 3·4·5 식별·위협평가·WTA: C2(또는 To-Be JAMDC2) 서버 처리 */
@@ -3137,7 +3303,7 @@ li.chk-fail { background: #43140f; }
     var self = this, threat = d.threat;
     if (!threat.alive || threat.pipelineDead) return;
     this._mark(threat, 'C2도착:' + d.c2, t);
-    this._nodeArrive(d.c2, t, { threat: threat }, function (tt2, job) {
+    this._nodeArrive(d.c2, t, { threat: threat, kind: 'track' }, function (tt2, job) {
       if (!job.threat._countedC2) { job.threat._countedC2 = true; self.global.reachedC2++; }
       self._mark(job.threat, 'C2처리완료:' + d.c2, tt2);
       self._afterC2(tt2, job.threat, d.c2);
@@ -3150,10 +3316,10 @@ li.chk-fail { background: #43140f; }
     // To-Be: 다중센서 융합·AI 식별·무기배정을 JAMDC2에서 집중 수행
     if (this.mode === 'tobe' && KJ.nodeById('JAMDC2') && this.nodeState['JAMDC2'] && c2Id !== 'JAMDC2') {
       var comm = this._link(c2Id, 'JAMDC2', 'report') || this._link(c2Id, 'JAMDC2', null);
-      var delay = comm ? comm.delaySec : 0;
+      var delay = comm ? this._linkDelay(comm) : 0;
       if (comm) this._recordLink(c2Id, 'JAMDC2', comm, 'report');
       this._mark(threat, '융합경유', t);
-      this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'FUSION_ARRIVE', { threat: threat });
+      this.schedule(t + delay, PRI.LINK_ARRIVE, 'FUSION_ARRIVE', { threat: threat });
       return;
     }
     this._decision(threat, t, c2Id);
@@ -3162,7 +3328,7 @@ li.chk-fail { background: #43140f; }
   Simulation.prototype._onFusionArrive = function (t, d) {
     var self = this, threat = d.threat;
     if (!threat.alive || threat.pipelineDead) return;
-    this._nodeArrive('JAMDC2', t, { threat: threat }, function (tt2, job) {
+    this._nodeArrive('JAMDC2', t, { threat: threat, kind: 'track' }, function (tt2, job) {
       if (!job.threat._countedC2) { job.threat._countedC2 = true; self.global.reachedC2++; }
       self._mark(job.threat, '융합처리완료', tt2);
       // To-Be는 사전승인 자동교전(approval=null)이 대부분 → 결심 홉 없이 바로 교전
@@ -3209,17 +3375,17 @@ li.chk-fail { background: #43140f; }
     if (!path) { threat.leakReason = 'responsibility_gap'; return; } // 책임공백(협조 경로 부재)
     var self = this, delay = 0;
     path.forEach(function (l) {
-      delay += l.comm[self.mode].delaySec;
+      delay += self._linkDelay(l.comm[self.mode]); // 홉별 실제 전달시각 샘플링(경로는 대표값으로 이미 선택됨)
       self._recordLink(l.from, l.to, l.comm[self.mode], 'coord');
     });
     this._mark(threat, '협조개시:' + controlC2 + '→' + approvalId, t);
-    this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'APPROVE_ARRIVE', { threat: threat, appr: approvalId });
+    this.schedule(t + delay, PRI.LINK_ARRIVE, 'APPROVE_ARRIVE', { threat: threat, appr: approvalId });
   };
 
   Simulation.prototype._onApproveArrive = function (t, d) {
     var self = this, threat = d.threat;
     if (!threat.alive || threat.pipelineDead) return;
-    this._nodeArrive(d.appr, t, { threat: threat }, function (tt2, job) {
+    this._nodeArrive(d.appr, t, { threat: threat, kind: 'approval' }, function (tt2, job) {
       self._mark(job.threat, '승인완료:' + d.appr, tt2);
       self._doEngage(job.threat, tt2);
     });
@@ -3262,7 +3428,7 @@ li.chk-fail { background: #43140f; }
     var shooter = best.sh;
     var controlC2 = shooter.controlledBy[mode][0];
     var comm = this._link(controlC2, shooter.id, 'command');
-    var delay = comm ? comm.delaySec : 0;
+    var delay = comm ? this._linkDelay(comm) : 0;
     if (comm) this._recordLink(controlC2, shooter.id, comm, 'command');
     this.global.engaged++;
     if (!threat._countedEngaged) {
@@ -3275,13 +3441,13 @@ li.chk-fail { background: #43140f; }
       }
     }
     this._mark(threat, '교전명령#' + (threat.tries + 1) + ':' + shooter.id, t);
-    this.schedule(t + delay * this.mult.delay, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: threat, shooter: shooter.id });
+    this.schedule(t + delay, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: threat, shooter: shooter.id });
   };
 
   Simulation.prototype._onShooterArrive = function (t, d) {
     var self = this, threat = d.threat;
     if (!threat.alive || threat.pipelineDead) return;
-    this._nodeArrive(d.shooter, t, { threat: threat }, function (tt2, job) {
+    this._nodeArrive(d.shooter, t, { threat: threat, kind: 'engage' }, function (tt2, job) {
       self._onEngageEnd(tt2, job.threat, d.shooter);
     });
   };
@@ -3414,6 +3580,7 @@ li.chk-fail { background: #43140f; }
       case 'SPAWN': this._spawn(ev.t, ev.data); break;
       case 'DETECT': this._onDetect(ev.t, ev.data); break;
       case 'C2_ARRIVE': this._onC2Arrive(ev.t, ev.data); break;
+      case 'C2_ARRIVE_DUP': this._onC2ArriveDup(ev.t, ev.data); break;
       case 'FUSION_ARRIVE': this._onFusionArrive(ev.t, ev.data); break;
       case 'APPROVE_ARRIVE': this._onApproveArrive(ev.t, ev.data); break;
       case 'SHOOTER_ARRIVE': this._onShooterArrive(ev.t, ev.data); break;
@@ -3437,11 +3604,24 @@ li.chk-fail { background: #43140f; }
         else if (rho >= RHO_WARN) level = 'warn';
         else level = 'normal';
       }
+      // ── kind별 분해(track/approval/engage) — 기존 필드는 전체 합계로 그대로 유지, 추가만 ──
+      // C2 서버풀이 ③④⑤(track)과 ⑥⑦(approval)에 공유되므로, 카드가 자기 단계만 보게 하려면
+      // 노드 통계를 kind로 쪼갠 값이 필요하다. 부재 kind는 0(빈 버킷)으로 노출한다.
+      var rhoByKind = {}, arrivalsByKind = {}, dropsByKind = {}, WqByKind = {};
+      ['track', 'approval', 'engage'].forEach(function (k) {
+        var b = ns.byKind[k];
+        rhoByKind[k] = b ? b.busyTime / (ns.c * T) : 0;
+        arrivalsByKind[k] = b ? b.arrivals : 0;
+        dropsByKind[k] = b ? b.drops : 0;
+        WqByKind[k] = (b && b.waitCount) ? b.waitAccum / b.waitCount : 0;
+      });
       return {
         id: id, name: ns.node.name, category: ns.node.category,
         c: ns.c, K: ns.K, meanSec: ns.mean,
         arrivals: ns.arrivals, completions: ns.completions, drops: ns.drops,
-        rho: rho, Lq: Lq, Wq: Wq, maxInSystem: ns.maxInSystem, level: level
+        rho: rho, Lq: Lq, Wq: Wq, maxInSystem: ns.maxInSystem, level: level,
+        rhoByKind: rhoByKind, arrivalsByKind: arrivalsByKind,
+        dropsByKind: dropsByKind, WqByKind: WqByKind
       };
     });
 
@@ -4417,10 +4597,15 @@ li.chk-fail { background: #43140f; }
     return desCache.data;
   }
 
-  /** 링크 전달 1건당 평균 통신지연(초) — sim-view의 MoP 지표와 동일 정의 */
-  function commMeanDelay(res) {
+  /** 링크 전달 1건당 평균 통신지연(초) — sim-view의 MoP 지표와 동일 정의.
+   * kind 지정 시 그 종류(report/coord/command)만 집계 → 각 단계가 자기 단계 링크만 측정.
+   * kind 생략 시 전 링크(하위호환). */
+  function commMeanDelay(res, kind) {
     var num = 0, den = 0;
-    res.links.forEach(function (l) { num += l.delaySec * l.count; den += l.count; });
+    res.links.forEach(function (l) {
+      if (kind && l.kind !== kind) return;
+      num += l.delaySec * l.count; den += l.count;
+    });
     return den ? num / den : 0;
   }
   /** 구조적 실패(공백·포화·지연) 합 — KJ.LEAK_TAXONOMY.structural 기준 */
@@ -4435,6 +4620,41 @@ li.chk-fail { background: #43140f; }
   function maxRho(res, cat) {
     var m = 0;
     res.nodes.forEach(function (n) { if (n.category === cat && n.rho > m) m = n.rho; });
+    return m;
+  }
+  /** 카테고리별 최대 관측 Wq(평균 대기시간, 초). idle 노드(waitCount=0)는 _results가 Wq=0으로
+   * 산출하므로 정상 참여하나, 방어적으로 isFinite 가드를 둔다(NaN/Infinity가 카드에 새지 않도록). */
+  function maxWq(res, cat) {
+    var m = 0;
+    res.nodes.forEach(function (n) {
+      if (n.category === cat && isFinite(n.Wq) && n.Wq > m) m = n.Wq;
+    });
+    return m;
+  }
+  // ── kind별(track/approval/engage) 분해 지표 — C2 서버풀이 ③④⑤ 항적처리(track)와
+  //    ⑥⑦ 승인처리(approval)에 공유되므로, 각 카드가 자기 kind만 보게 한다(엔진 rhoByKind 등).
+  //    구 필드가 없는 결과(하위호환·이론분석 노드)에는 0으로 폴백한다. ──
+  function maxRhoByKind(res, cat, kind) {
+    var m = 0;
+    res.nodes.forEach(function (n) {
+      var v = n.rhoByKind ? n.rhoByKind[kind] : 0;
+      if (n.category === cat && v > m) m = v;
+    });
+    return m;
+  }
+  function sumDropsByKind(res, cat, kind) {
+    var s = 0;
+    res.nodes.forEach(function (n) {
+      if (n.category === cat && n.dropsByKind) s += n.dropsByKind[kind] || 0;
+    });
+    return s;
+  }
+  function maxWqByKind(res, cat, kind) {
+    var m = 0;
+    res.nodes.forEach(function (n) {
+      var v = n.WqByKind ? n.WqByKind[kind] : 0;
+      if (n.category === cat && isFinite(v) && v > m) m = v;
+    });
     return m;
   }
   function dropSum(res, cat) {
@@ -4570,13 +4790,16 @@ li.chk-fail { background: #43140f; }
       {
         no: '①', name: '탐지 (Detect)', fn: '_beginDetect · _onDetect',
         bottleneck: '저고도·저RCS 탐지 실패, 센서 커버리지 공백 — 격추율 하락의 근원',
-        fix: '다센서 융합으로 저피탐 항적 연속성 향상',
+        fix: '다센서 병렬 결합(Any Sensor)으로 per-scan 획득확률·탐지 시점 향상 (항적 연속성은 미구현)',
         codes: ['not_detected', 'no_sensor'],
         metrics: [
           { label: '탐지율', mom: 'MoP', kind: 'rate', lower: false, max: 1,
             a: ga.spawned ? ga.detected / ga.spawned : null,
             b: gb.spawned ? gb.detected / gb.spawned : null,
-            tip: '생성 위협 중 스캔 반복 끝에 탐지에 성공한 비율. 저탐지 위협(무인기 detectFactor 0.4)의 항적소실→재획득 반복을 반영.' }
+            tip: 'per-scan 탐지확률 pᵢ = 센서Pd × 위협난이도(detectFactor) × 민감도배수. ' +
+              'As-Is = maxᵢ(pᵢ)(비융합·최선 단일센서) / To-Be = 1−Πᵢ(1−pᵢ)(다센서 병렬 결합). ' +
+              '체공 위협은 시행횟수 N=dwell/스캔이 커 누적 탐지"율"은 두 모드 모두 ~1.0으로 포화되므로, ' +
+              '융합 효과는 율이 아니라 탐지 "시점" 단축으로 나타남(단일센서만 커버하는 위협은 개선 없음).' }
         ]
       },
       {
@@ -4585,24 +4808,35 @@ li.chk-fail { background: #43140f; }
         fix: 'JAMDC2 융합 허브로 단일 연속 항적 생성',
         codes: ['no_report_path'],
         metrics: [
-          { label: '통신지연 부하 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
-            a: commMeanDelay(a), b: commMeanDelay(b),
-            tip: '실제 발생한 링크 전달의 평균 지연 — 음성(As-Is 180s)↔데이터링크(To-Be 2s) 구조 차이의 관측치 (C2-VOICE-DLY-01).' }
+          { label: 'report 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
+            a: commMeanDelay(a, 'report'), b: commMeanDelay(b, 'report'),
+            tip: '②단계 report(센서→담당 C2) 링크 전달의 평균 지연만 집계(coord·command 제외). ' +
+              'As-Is에서도 이 경로는 대부분 데이터링크/KVMF라 음성 180s는 여기서 발화하지 않는다 — ' +
+              '음성 협조 180s는 ⑥⑦(coord)단계의 지표다.' }
         ]
       },
       {
         no: '③④⑤', name: '식별·위협평가·WTA — C2 서버 처리',
-        fn: '_onC2Arrive · _afterC2 · _doEngage (To-Be: _onFusionArrive)',
-        bottleneck: 'C2 처리 포화(대기행렬), Best-Shooter 배정 실패',
+        fn: '_onC2Arrive · _afterC2 (To-Be: _onFusionArrive)',
+        bottleneck: 'C2 처리 포화(대기행렬), Best-Shooter 배정 실패 — ⑤ WTA(_doEngage)는 ' +
+          '실제로는 ⑥⑦ 결심(_decision) 이후 ⑧ 단계에서 실행됨(엔진 실행 순서 ≠ 교리 F2T2EA 순서)',
         fix: 'JAMDC2 집중 처리·AI 식별로 서비스시간 단축(서버 풀링 효과)',
         codes: ['overflow_c2'],
         metrics: [
-          { label: 'C2 최대 관측 ρ', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
-            a: maxRho(a, 'c2'), b: maxRho(b, 'c2'),
-            tip: 'C2 노드 중 최대 이용률(busyTime/(c·T)). ρ≥0.7 주의 · ≥0.9 병목 · 드롭=포화 (ENV-RHO-THRESH-01).' },
-          { label: 'C2 포화 드롭 합', mom: 'MoP', kind: 'cnt', lower: true,
-            a: dropSum(a, 'c2'), b: dropSum(b, 'c2'),
-            tip: 'M/M/c/K 대기실 용량(K) 초과로 상실된 항적 수 → overflow:<노드> 실패코드.' },
+          { label: 'C2 항적처리 최대 ρ (track)', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
+            a: maxRhoByKind(a, 'c2', 'track'), b: maxRhoByKind(b, 'c2', 'track'),
+            tip: 'C2 노드 중 최대 항적처리(track) 이용률. C2 서버풀은 ③④⑤ 항적처리와 ⑥⑦ 승인처리에 ' +
+              '공유되므로, 이 값은 승인 부하를 제외한 순수 ③④⑤ 부하만 집계한다(승인 ρ는 ⑥⑦ 카드). ' +
+              'ρ≥0.7 주의 · ≥0.9 병목 · 드롭=포화 (ENV-RHO-THRESH-01). ' +
+              '관측 ρ는 시간가중 적분값이며 드롭·reneging으로 버려진 부하는 분자에 포함되지 않으므로, ' +
+              '포화 구간에서 실제 수요를 과소표현한다(이론 ρ가 1을 넘어도 관측 ρ는 <1). ρ는 반드시 드롭 수·Wq와 함께 읽어야 한다.' },
+          { label: 'C2 항적처리 최대 대기 (Wq·track)', mom: 'MoP', kind: 'sec', lower: true,
+            a: maxWqByKind(a, 'c2', 'track'), b: maxWqByKind(b, 'c2', 'track'),
+            tip: '항적처리(track) 대기행렬에서 서버를 기다린 평균 시간(초). ρ와 달리 포화의 체감 비용을 직접 표현한다. ' +
+              '관측 ρ는 버린 일을 분자에 포함하지 않으므로(드롭·reneging), ρ만으로는 포화를 과소평가한다.' },
+          { label: 'C2 항적처리 포화 드롭 (track)', mom: 'MoP', kind: 'cnt', lower: true,
+            a: sumDropsByKind(a, 'c2', 'track'), b: sumDropsByKind(b, 'c2', 'track'),
+            tip: 'M/M/c/K 대기실 용량(K) 초과로 상실된 항적처리(track) 작업 수 → overflow:<노드> 실패코드.' },
           { label: '도출 병목 수', mom: 'MoCE', kind: 'cnt', lower: true,
             a: a.bottlenecks.length, b: b.bottlenecks.length,
             tip: '관측 통계(ρ≥0.9·드롭·공백)에서 도출된 병목 수 — 하드코딩이 아니라 부하의 함수.' }
@@ -4618,6 +4852,18 @@ li.chk-fail { background: #43140f; }
           { label: '결심 지연 (탐지→교전개시)', mom: 'MoP', kind: 'sec', lower: true,
             a: ga.meanDecisionDelaySec, b: gb.meanDecisionDelaySec,
             tip: 'F2T2EA Find→Engage 평균 소요. 협조·승인·권한위임 홉과 C2 대기(Wq)가 모두 포함 — As-Is 음성 협조 부담이 여기서 발생.' },
+          { label: '승인 노드 최대 ρ (approval)', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
+            a: maxRhoByKind(a, 'c2', 'approval'), b: maxRhoByKind(b, 'c2', 'approval'),
+            tip: '교전승인권자 노드가 승인 처리(⑥⑦)로 점유된 이용률 — C2 서버풀 공유 부하 중 approval만 분리. ' +
+              '종전 ③④⑤ 카드의 C2 ρ에는 이 승인 부하가 섞여 있어(예: KAOC는 승인 전용에 가깝다) 항적처리 부하를 과대표시했다. ' +
+              '이 지표가 ⑥⑦(한국 이원화 C2의 승인 병목)을 직접 측정한다.' },
+          { label: '승인 대기 (Wq·approval)', mom: 'MoP', kind: 'sec', lower: true,
+            a: maxWqByKind(a, 'c2', 'approval'), b: maxWqByKind(b, 'c2', 'approval'),
+            tip: '승인 대기행렬에서 승인권자 서버를 기다린 평균 시간(초) — ⑥⑦ 결심 병목의 직접 증거. ' +
+              'To-Be는 사전승인 자동교전·동적 분권으로 승인 홉이 줄어 대기가 감소한다.' },
+          { label: 'coord 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
+            a: commMeanDelay(a, 'coord'), b: commMeanDelay(b, 'coord'),
+            tip: '⑥⑦단계 coord(교전협조) 링크 전달의 평균 지연만 집계 — As-Is 육↔공 음성 협조(≥180s)가 실제로 발화하는 곳.' },
           { label: '중복교전 위험 (축선 합)', mom: 'MoCE', kind: 'raw', lower: true,
             a: d.heatA, b: d.heatB,
             tip: '서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합 — 이원화의 공간적 문제.' },
@@ -4639,6 +4885,12 @@ li.chk-fail { background: #43140f; }
           { label: '무기 최대 관측 ρ', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
             a: maxRho(a, 'shooter'), b: maxRho(b, 'shooter'),
             tip: '교전 무기 노드 중 최대 채널 이용률.' },
+          { label: '무기 최대 평균대기 (Wq)', mom: 'MoP', kind: 'sec', lower: true,
+            a: maxWq(a, 'shooter'), b: maxWq(b, 'shooter'),
+            tip: '교전 대기실에서 채널을 기다린 평균 시간(초). ρ와 달리 포화의 체감 비용을 직접 표현한다.' },
+          { label: 'command 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
+            a: commMeanDelay(a, 'command'), b: commMeanDelay(b, 'command'),
+            tip: '⑧단계 command(교전명령) 링크 전달의 평균 지연만 집계(C2→무기체계).' },
           { label: '교전채널 포화 드롭 합', mom: 'MoP', kind: 'cnt', lower: true,
             a: dropSum(a, 'shooter'), b: dropSum(b, 'shooter'),
             tip: '교전 대기실(K=채널×2) 초과로 상실된 교전 기회.' }
@@ -5585,10 +5837,14 @@ li.chk-fail { background: #43140f; }
   }
   function signed(n) { return (n > 0 ? '+' : '') + n; }
 
-  /** 링크 전달 1건당 평균 통신지연(초) — 음성(As-Is)↔데이터링크(To-Be) 대비 (MoP) */
-  function commMeanDelay(res) {
+  /** 링크 전달 1건당 평균 통신지연(초) — panels.js의 MoP 지표와 동일 정의.
+   * kind 지정 시 그 종류(report/coord/command)만 집계. 생략 시 전 링크(하위호환). */
+  function commMeanDelay(res, kind) {
     var num = 0, den = 0;
-    res.links.forEach(function (l) { num += l.delaySec * l.count; den += l.count; });
+    res.links.forEach(function (l) {
+      if (kind && l.kind !== kind) return;
+      num += l.delaySec * l.count; den += l.count;
+    });
     return den ? num / den : 0;
   }
   /** 구조적 실패(공백·포화·지연) 건수 — taxonomy structural 합 (MoCE) */
@@ -5635,8 +5891,8 @@ li.chk-fail { background: #43140f; }
       // ── 보조 지표 ──
       { label: '평균 격추시간', mom: 'MoP', a: asisG.meanTimeToKillSec, b: tobeG.meanTimeToKillSec, kind: 'sec', lower: true,
         tip: '격추 성공 항적의 생성→격추 평균 소요.' },
-      { label: '통신지연 부하 (전달 1건 평균)', mom: 'MoP', a: commMeanDelay(asisRes), b: commMeanDelay(tobeRes), kind: 'sec', lower: true,
-        tip: '실제 발생한 링크 전달의 평균 지연 — 음성(As-Is 180s)↔데이터링크(To-Be 2s) 구조 차이의 관측치 (C2-VOICE-DLY-01).' },
+      { label: 'report 링크 전달지연 (전달 1건 평균)', mom: 'MoP', a: commMeanDelay(asisRes, 'report'), b: commMeanDelay(tobeRes, 'report'), kind: 'sec', lower: true,
+        tip: 'report(센서→담당 C2) 링크 전달의 평균 지연만 집계(coord·command 제외). As-Is도 이 경로는 대부분 데이터링크/KVMF라 음성 180s는 여기서 발화하지 않음 — 음성 협조 180s는 ⑥⑦(coord)단계다.' },
       { label: '구조적 실패 (공백·포화·지연)', mom: 'MoCE', a: structuralLeaks(asisG), b: structuralLeaks(tobeG), kind: 'cnt', lower: true,
         tip: '실패 원인 중 구조적 원인(탐지공백·보고경로·책임공백·포화·처리지연) 합 — 원인 대조표의 요약 지표.' },
       { label: '도출 병목 수', mom: 'MoCE', a: asisRes.bottlenecks.length, b: tobeRes.bottlenecks.length, kind: 'cnt', lower: true,

@@ -52,6 +52,20 @@
   var DELEG_QUEUE_MULT = { asis: 4, tobe: 1 };
 
   /**
+   * 작업 종류(kind)별 통계 버킷을 지연 생성해 반환. (Phase: track/approval 부하 분리)
+   * C2 서버풀은 ③④⑤ 항적처리(track: _onC2Arrive/_onFusionArrive)와 ⑥⑦ 승인처리
+   * (approval: _onApproveArrive)에 공유되므로 노드 단위 통계만으로는 두 부하가 섞여
+   * "승인 노드의 ρ가 ③④⑤ 카드에 표시"되는 결함이 생긴다. kind 태그로 분해해 각 카드가
+   * 자기 단계만 측정하게 한다. shooter는 engage 한 종류뿐이다. 순수 관측 — rng 소비·이벤트
+   * 순서·기존 노드 통계(ns.arrivals/busyTime/drops/Wq)에 영향을 주지 않는다(추가만).
+   */
+  function bucket(ns, kind) {
+    var b = ns.byKind[kind];
+    if (!b) b = ns.byKind[kind] = { arrivals: 0, completions: 0, drops: 0, busyTime: 0, waitAccum: 0, waitCount: 0 };
+    return b;
+  }
+
+  /**
    * @param {object} cfg { scenario, mode, intensity, seed, endTimeSec }
    */
   function Simulation(cfg) {
@@ -126,7 +140,10 @@
         busy: 0, queue: [], lastT: 0,
         busyTime: 0, qTime: 0,
         arrivals: 0, completions: 0, drops: 0,
-        waitAccum: 0, waitCount: 0, maxInSystem: 0
+        waitAccum: 0, waitCount: 0, maxInSystem: 0,
+        // Phase: kind별 부하 분리 관측 — busyByKind는 현재 서비스 중인 서버의 kind별 개수
+        // (Σ busyByKind === busy 불변). byKind는 kind별 누적 통계(bucket() 지연 생성).
+        busyByKind: {}, byKind: {}
       };
       if (self.trace) self.nodeSeries[n.id] = [];
     });
@@ -180,6 +197,11 @@
     if (dt > 0) {
       ns.busyTime += ns.busy * dt;
       ns.qTime += ns.queue.length * dt;
+      // kind별 busyTime도 동일한 시간가중 적분으로 누적 → Σ_kind busyTime === ns.busyTime 보존
+      // (종료시각 시점에 서비스 중인 작업의 부분 점유까지 정확히 귀속됨). 완료시점 합산이 아니라
+      // 적분으로 계산하는 이유: 종료 미완료 서비스가 있어도 합 보존이 부동소수까지 정확해야 하기 때문.
+      var bbk = ns.busyByKind;
+      for (var k in bbk) { if (bbk[k] > 0) bucket(ns, k).busyTime += bbk[k] * dt; }
       ns.lastT = t;
     }
   };
@@ -190,15 +212,18 @@
     if (!ns) return;
     this._advance(ns, t);
     ns.arrivals++;
+    var bk = bucket(ns, job.kind); bk.arrivals++;
     var inSystem = ns.busy + ns.queue.length;
     if (ns.busy < ns.c) {
       ns.busy++;
+      ns.busyByKind[job.kind] = (ns.busyByKind[job.kind] || 0) + 1;
       ns.waitAccum += 0; ns.waitCount++;
+      bk.waitAccum += 0; bk.waitCount++;   // 즉시 서비스 = 대기 0 (kind별 Wq 표본에도 계상)
       this._startService(ns, t, job, onDone);
     } else if (inSystem < ns.K) {
       ns.queue.push({ job: job, onDone: onDone, enqT: t });
     } else {
-      ns.drops++;                 // M/M/c/K 포화 → 항적/교전기회 상실
+      ns.drops++; bk.drops++;     // M/M/c/K 포화 → 항적/교전기회 상실
       job.threat.pipelineDead = true;
       if (!job.threat.leakReason) job.threat.leakReason = 'overflow:' + nsId;
     }
@@ -207,7 +232,7 @@
   };
 
   Simulation.prototype._startService = function (ns, t, job, onDone) {
-    var svc = this.rng.exponential(ns.mean);
+    var svc = this.rng.exponential(ns.mean);   // ← RNG 소비: kind 분리와 무관하게 draw 1회 유지
     this.schedule(t + svc, PRI.SERVICE_END, 'SERVICE_END', { nsId: ns.node.id, job: job, onDone: onDone });
   };
 
@@ -215,14 +240,19 @@
     var ns = this.nodeState[d.nsId];
     this._advance(ns, t);
     ns.busy--;
+    if (ns.busyByKind[d.job.kind] > 0) ns.busyByKind[d.job.kind]--; // kind별 서버 점유 해제
     ns.completions++;
+    bucket(ns, d.job.kind).completions++;
     // 다음 대기 작업 인출 — 이미 공역이탈(누수)·폐기된 항적은 건너뜀(track abandonment/reneging).
     // 포화 노드가 이미 떠난 항적에 유령 서비스 부하를 계상하지 않도록 한다.
     while (ns.queue.length > 0) {
       var nx = ns.queue.shift();
       if (!nx.job.threat.alive || nx.job.threat.pipelineDead) continue; // 재고에서 폐기
       ns.busy++;
+      ns.busyByKind[nx.job.kind] = (ns.busyByKind[nx.job.kind] || 0) + 1;
       ns.waitAccum += (t - nx.enqT); ns.waitCount++;
+      var nbk = bucket(ns, nx.job.kind);
+      nbk.waitAccum += (t - nx.enqT); nbk.waitCount++;
       this._startService(ns, t, nx.job, nx.onDone);
       break;
     }
@@ -386,7 +416,7 @@
   Simulation.prototype._onC2ArriveDup = function (t, d) {
     var threat = d.threat; // ghost
     if (!threat.alive || threat.pipelineDead) return;
-    this._nodeArrive(d.c2, t, { threat: threat }, function () { /* 부하만 소비 — onDone 무연산 */ });
+    this._nodeArrive(d.c2, t, { threat: threat, kind: 'track' }, function () { /* 부하만 소비 — onDone 무연산 */ });
   };
 
   /** 3·4·5 식별·위협평가·WTA: C2(또는 To-Be JAMDC2) 서버 처리 */
@@ -394,7 +424,7 @@
     var self = this, threat = d.threat;
     if (!threat.alive || threat.pipelineDead) return;
     this._mark(threat, 'C2도착:' + d.c2, t);
-    this._nodeArrive(d.c2, t, { threat: threat }, function (tt2, job) {
+    this._nodeArrive(d.c2, t, { threat: threat, kind: 'track' }, function (tt2, job) {
       if (!job.threat._countedC2) { job.threat._countedC2 = true; self.global.reachedC2++; }
       self._mark(job.threat, 'C2처리완료:' + d.c2, tt2);
       self._afterC2(tt2, job.threat, d.c2);
@@ -419,7 +449,7 @@
   Simulation.prototype._onFusionArrive = function (t, d) {
     var self = this, threat = d.threat;
     if (!threat.alive || threat.pipelineDead) return;
-    this._nodeArrive('JAMDC2', t, { threat: threat }, function (tt2, job) {
+    this._nodeArrive('JAMDC2', t, { threat: threat, kind: 'track' }, function (tt2, job) {
       if (!job.threat._countedC2) { job.threat._countedC2 = true; self.global.reachedC2++; }
       self._mark(job.threat, '융합처리완료', tt2);
       // To-Be는 사전승인 자동교전(approval=null)이 대부분 → 결심 홉 없이 바로 교전
@@ -476,7 +506,7 @@
   Simulation.prototype._onApproveArrive = function (t, d) {
     var self = this, threat = d.threat;
     if (!threat.alive || threat.pipelineDead) return;
-    this._nodeArrive(d.appr, t, { threat: threat }, function (tt2, job) {
+    this._nodeArrive(d.appr, t, { threat: threat, kind: 'approval' }, function (tt2, job) {
       self._mark(job.threat, '승인완료:' + d.appr, tt2);
       self._doEngage(job.threat, tt2);
     });
@@ -538,7 +568,7 @@
   Simulation.prototype._onShooterArrive = function (t, d) {
     var self = this, threat = d.threat;
     if (!threat.alive || threat.pipelineDead) return;
-    this._nodeArrive(d.shooter, t, { threat: threat }, function (tt2, job) {
+    this._nodeArrive(d.shooter, t, { threat: threat, kind: 'engage' }, function (tt2, job) {
       self._onEngageEnd(tt2, job.threat, d.shooter);
     });
   };
@@ -695,11 +725,24 @@
         else if (rho >= RHO_WARN) level = 'warn';
         else level = 'normal';
       }
+      // ── kind별 분해(track/approval/engage) — 기존 필드는 전체 합계로 그대로 유지, 추가만 ──
+      // C2 서버풀이 ③④⑤(track)과 ⑥⑦(approval)에 공유되므로, 카드가 자기 단계만 보게 하려면
+      // 노드 통계를 kind로 쪼갠 값이 필요하다. 부재 kind는 0(빈 버킷)으로 노출한다.
+      var rhoByKind = {}, arrivalsByKind = {}, dropsByKind = {}, WqByKind = {};
+      ['track', 'approval', 'engage'].forEach(function (k) {
+        var b = ns.byKind[k];
+        rhoByKind[k] = b ? b.busyTime / (ns.c * T) : 0;
+        arrivalsByKind[k] = b ? b.arrivals : 0;
+        dropsByKind[k] = b ? b.drops : 0;
+        WqByKind[k] = (b && b.waitCount) ? b.waitAccum / b.waitCount : 0;
+      });
       return {
         id: id, name: ns.node.name, category: ns.node.category,
         c: ns.c, K: ns.K, meanSec: ns.mean,
         arrivals: ns.arrivals, completions: ns.completions, drops: ns.drops,
-        rho: rho, Lq: Lq, Wq: Wq, maxInSystem: ns.maxInSystem, level: level
+        rho: rho, Lq: Lq, Wq: Wq, maxInSystem: ns.maxInSystem, level: level,
+        rhoByKind: rhoByKind, arrivalsByKind: arrivalsByKind,
+        dropsByKind: dropsByKind, WqByKind: WqByKind
       };
     });
 

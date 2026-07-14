@@ -44,7 +44,8 @@ var suites = [
   ['detect.test.js', '① 탐지 융합 (센서 Pd × 위협난이도 · 모드별 융합 · 단일센서 대조군)'],
   ['track.test.js', '② 추적생성 (센서→JAMDC2 직결 · ①②독립성)'],
   ['refine.test.js', '정밀화 (Phase A~D — 정합·WTA·권한위임·원인분포·신규지표)'],
-  ['metrics-verification.test.js', '지표 검증 감사 (Lq·overlapRiskSum·분권전환·비용교환비 방향성)']
+  ['metrics-verification.test.js', '지표 검증 감사 (Lq·overlapRiskSum·분권전환·비용교환비 방향성)'],
+  ['nodekind.test.js', '작업종류 분리 (③④⑤ track vs ⑥⑦ approval — 합보존·귀속·분리·결정론)']
 ];
 suites.forEach(function (s) {
   console.log('\n== ' + s[1] + ' ==');

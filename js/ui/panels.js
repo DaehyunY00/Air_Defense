@@ -81,6 +81,32 @@
     });
     return m;
   }
+  // ── kind별(track/approval/engage) 분해 지표 — C2 서버풀이 ③④⑤ 항적처리(track)와
+  //    ⑥⑦ 승인처리(approval)에 공유되므로, 각 카드가 자기 kind만 보게 한다(엔진 rhoByKind 등).
+  //    구 필드가 없는 결과(하위호환·이론분석 노드)에는 0으로 폴백한다. ──
+  function maxRhoByKind(res, cat, kind) {
+    var m = 0;
+    res.nodes.forEach(function (n) {
+      var v = n.rhoByKind ? n.rhoByKind[kind] : 0;
+      if (n.category === cat && v > m) m = v;
+    });
+    return m;
+  }
+  function sumDropsByKind(res, cat, kind) {
+    var s = 0;
+    res.nodes.forEach(function (n) {
+      if (n.category === cat && n.dropsByKind) s += n.dropsByKind[kind] || 0;
+    });
+    return s;
+  }
+  function maxWqByKind(res, cat, kind) {
+    var m = 0;
+    res.nodes.forEach(function (n) {
+      var v = n.WqByKind ? n.WqByKind[kind] : 0;
+      if (n.category === cat && isFinite(v) && v > m) m = v;
+    });
+    return m;
+  }
   function dropSum(res, cat) {
     var s = 0;
     res.nodes.forEach(function (n) { if (n.category === cat) s += n.drops; });
@@ -247,18 +273,20 @@
         fix: 'JAMDC2 집중 처리·AI 식별로 서비스시간 단축(서버 풀링 효과)',
         codes: ['overflow_c2'],
         metrics: [
-          { label: 'C2 최대 관측 ρ', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
-            a: maxRho(a, 'c2'), b: maxRho(b, 'c2'),
-            tip: 'C2 노드 중 최대 이용률(busyTime/(c·T)). ρ≥0.7 주의 · ≥0.9 병목 · 드롭=포화 (ENV-RHO-THRESH-01). ' +
+          { label: 'C2 항적처리 최대 ρ (track)', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
+            a: maxRhoByKind(a, 'c2', 'track'), b: maxRhoByKind(b, 'c2', 'track'),
+            tip: 'C2 노드 중 최대 항적처리(track) 이용률. C2 서버풀은 ③④⑤ 항적처리와 ⑥⑦ 승인처리에 ' +
+              '공유되므로, 이 값은 승인 부하를 제외한 순수 ③④⑤ 부하만 집계한다(승인 ρ는 ⑥⑦ 카드). ' +
+              'ρ≥0.7 주의 · ≥0.9 병목 · 드롭=포화 (ENV-RHO-THRESH-01). ' +
               '관측 ρ는 시간가중 적분값이며 드롭·reneging으로 버려진 부하는 분자에 포함되지 않으므로, ' +
               '포화 구간에서 실제 수요를 과소표현한다(이론 ρ가 1을 넘어도 관측 ρ는 <1). ρ는 반드시 드롭 수·Wq와 함께 읽어야 한다.' },
-          { label: 'C2 최대 평균대기 (Wq)', mom: 'MoP', kind: 'sec', lower: true,
-            a: maxWq(a, 'c2'), b: maxWq(b, 'c2'),
-            tip: '대기행렬에서 서버를 기다린 평균 시간(초). ρ와 달리 포화의 체감 비용을 직접 표현한다. ' +
+          { label: 'C2 항적처리 최대 대기 (Wq·track)', mom: 'MoP', kind: 'sec', lower: true,
+            a: maxWqByKind(a, 'c2', 'track'), b: maxWqByKind(b, 'c2', 'track'),
+            tip: '항적처리(track) 대기행렬에서 서버를 기다린 평균 시간(초). ρ와 달리 포화의 체감 비용을 직접 표현한다. ' +
               '관측 ρ는 버린 일을 분자에 포함하지 않으므로(드롭·reneging), ρ만으로는 포화를 과소평가한다.' },
-          { label: 'C2 포화 드롭 합', mom: 'MoP', kind: 'cnt', lower: true,
-            a: dropSum(a, 'c2'), b: dropSum(b, 'c2'),
-            tip: 'M/M/c/K 대기실 용량(K) 초과로 상실된 항적 수 → overflow:<노드> 실패코드.' },
+          { label: 'C2 항적처리 포화 드롭 (track)', mom: 'MoP', kind: 'cnt', lower: true,
+            a: sumDropsByKind(a, 'c2', 'track'), b: sumDropsByKind(b, 'c2', 'track'),
+            tip: 'M/M/c/K 대기실 용량(K) 초과로 상실된 항적처리(track) 작업 수 → overflow:<노드> 실패코드.' },
           { label: '도출 병목 수', mom: 'MoCE', kind: 'cnt', lower: true,
             a: a.bottlenecks.length, b: b.bottlenecks.length,
             tip: '관측 통계(ρ≥0.9·드롭·공백)에서 도출된 병목 수 — 하드코딩이 아니라 부하의 함수.' }
@@ -274,6 +302,15 @@
           { label: '결심 지연 (탐지→교전개시)', mom: 'MoP', kind: 'sec', lower: true,
             a: ga.meanDecisionDelaySec, b: gb.meanDecisionDelaySec,
             tip: 'F2T2EA Find→Engage 평균 소요. 협조·승인·권한위임 홉과 C2 대기(Wq)가 모두 포함 — As-Is 음성 협조 부담이 여기서 발생.' },
+          { label: '승인 노드 최대 ρ (approval)', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
+            a: maxRhoByKind(a, 'c2', 'approval'), b: maxRhoByKind(b, 'c2', 'approval'),
+            tip: '교전승인권자 노드가 승인 처리(⑥⑦)로 점유된 이용률 — C2 서버풀 공유 부하 중 approval만 분리. ' +
+              '종전 ③④⑤ 카드의 C2 ρ에는 이 승인 부하가 섞여 있어(예: KAOC는 승인 전용에 가깝다) 항적처리 부하를 과대표시했다. ' +
+              '이 지표가 ⑥⑦(한국 이원화 C2의 승인 병목)을 직접 측정한다.' },
+          { label: '승인 대기 (Wq·approval)', mom: 'MoP', kind: 'sec', lower: true,
+            a: maxWqByKind(a, 'c2', 'approval'), b: maxWqByKind(b, 'c2', 'approval'),
+            tip: '승인 대기행렬에서 승인권자 서버를 기다린 평균 시간(초) — ⑥⑦ 결심 병목의 직접 증거. ' +
+              'To-Be는 사전승인 자동교전·동적 분권으로 승인 홉이 줄어 대기가 감소한다.' },
           { label: 'coord 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
             a: commMeanDelay(a, 'coord'), b: commMeanDelay(b, 'coord'),
             tip: '⑥⑦단계 coord(교전협조) 링크 전달의 평균 지연만 집계 — As-Is 육↔공 음성 협조(≥180s)가 실제로 발화하는 곳.' },

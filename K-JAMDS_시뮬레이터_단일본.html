@@ -3891,6 +3891,7 @@ li.chk-fail { background: #43140f; }
 
   KJ.Simulation = Simulation;
   KJ._coordPath = coordPath;   // 테스트/검증용 노출 (다익스트라 coord 최단지연 경로)
+  KJ.DELEG_QUEUE_MULT = DELEG_QUEUE_MULT;  // 감사/스윕용 노출 (속성 변경 시 엔진이 즉시 참조 — 기본 asis4/tobe1)
 
   // ── 정밀화 Phase C: 요격 실패(누수) 원인 코드 → 병목 분류(taxonomy) ──
   // 엔진이 태깅하는 leakReason 코드의 정본 분류. UI(대조표·타임라인·분석 탭 파이프라인)와

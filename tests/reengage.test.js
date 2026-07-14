@@ -114,6 +114,29 @@ var shooterOv = KJ.leakTaxonomy('overflow:MDU-L'), c2Ov = KJ.leakTaxonomy('overf
 assert(shooterOv.structural === false && c2Ov.structural === true,
   'overflow:MDU-L(교전채널)=비구조 · overflow:MCRC(C2)=구조 — 노드 category 기반 재분류(종전 둘 다 구조 오분류 정정)');
 
+// ══════════ Phase 5 — 재교전 상관 pk(pkCorrelated, 기본 OFF) ══════════
+console.log('# Phase 5 — 재교전 상관 pk (기본 OFF = 되돌리기)');
+// 기본이 OFF임을 증명: 명시 OFF와 기본(미지정)이 완전 동일
+var p5mism = 0;
+for (var s5 = 1; s5 <= 6; s5++) {
+  var gDef = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: s5, endTimeSec: 1800 }).global;
+  var gOff5 = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: s5, endTimeSec: 1800, features: { pkCorrelated: false } }).global;
+  if (gDef.killed !== gOff5.killed || gDef.leaked !== gOff5.leaked) p5mism++;
+}
+assert(p5mism === 0, 'pkCorrelated 기본 = 명시 OFF (기본 OFF·근거 C — 조건 2 준수, ' + p5mism + '/6 불일치)');
+// 단조성: ρ가 커질수록 격추율이 감소(재교전 이득 축소) — 상관의 방향 정합
+function killRateRho(rho) {
+  var sp = 0, k = 0;
+  for (var s = 1; s <= 12; s++) {
+    var g = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: s, endTimeSec: 1800, features: { pkCorrelated: rho > 0, pkCorrelation: rho } }).global;
+    sp += g.spawned; k += g.killed;
+  }
+  return k / sp;
+}
+var kr0 = killRateRho(0), kr7 = killRateRho(0.7), kr10 = killRateRho(1.0);
+assert(kr0 >= kr7 && kr7 >= kr10, '격추율 단조 감소: ρ0 ' + (kr0 * 100).toFixed(1) + '% ≥ ρ0.7 ' + (kr7 * 100).toFixed(1) + '% ≥ ρ1 ' + (kr10 * 100).toFixed(1) + '% (재교전 상관 → 이득 축소)');
+assert(kr10 < kr0, '완전상관(ρ=1) 격추율 < 독립(ρ=0) — 재교전이 실패를 구제하지 못함(2022.12.26 방향)');
+
 // ══════════ 결정론 ══════════
 console.log('# 결정론');
 function sig(feat) { var g = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2.5, seed: 7, endTimeSec: 1800, features: feat }).global; return [g.killed, g.leaked, +g.cost.interceptM.toFixed(4)].join(','); }

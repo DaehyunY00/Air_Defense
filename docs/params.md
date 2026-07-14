@@ -550,6 +550,14 @@ launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한
 - **MC 적용방식**: 고정. timeoutSplit OFF → 단일 timeout(구조) = legacy 코드 분포
 - **비고**: ⚠️ 과제 예측(구조적 −97%)과 불일치. 실측 To-Be 개선폭 25.09p→26.85p(**+7.0%**, 20% 미달, 🔴 아님). 이유: ⑧ 교전창 필터가 tries===0 위협을 교전 전 `no_engage_window`로 선점 → To-Be 잔여 timeout은 대부분 `timeout:c2`(구조 유지). 상세 ADR-004
 
+### [ENV-DES-PKCORR-01] 재교전 요격확률 상관 ρ (Phase 5 ⑨, `js/engine/sim-engine.js`) — **기본 OFF**
+- **값/분포**: 표적별 공유 잠재 `frailty`(최초 교전 1회 추출)와 발사별 신규 추출을 `u = ρ·frailty + (1−ρ)·raw()`로 혼합, `u<pk`면 격추. `PK_CORR_RHO=0.7`(기본), `features.pkCorrelation`로 재정의(스윕). `features.pkCorrelated` 기본 **false**
+- **출처**: 재교전 실패의 체계적 상관(교전기하·ECM·표적특성 발사 간 공유). 앵커: 2022.12.26 소형 무인기 5대 남파 반복 대응에도 전량 미격추 — 독립 모델이 재교전 효과를 과대평가함을 시사(개념 모형)
+- **적용범위**: `_onEngageEnd` 격추 판정. OFF → legacy 독립(`raw()<pk`), 그리기 수·지문·스냅샷 불변
+- **신뢰도 등급**: **C**(ρ 실측 근거 없음) → 조건 2에 따라 기본 OFF
+- **MC 적용방식**: 옵션. ON 시 표적당 frailty 1회 추가 추출. 스윕 결과(전체 격추율 To-Be): 독립 50.0% / ρ0.7 44.3% / ρ1.0 40.2%
+- **비고**: 혼합 모형의 주변분포는 엄밀 균일 아님(평균 0.5·단조) — 효과는 주로 재교전 이득 축소로 발현. 위협유형별 격추율 분리 계측은 Phase 7 신규지표 예정. 상세 ADR-005
+
 ### [ENV-DES-CRN-01] 공통난수(CRN) — As-Is↔To-Be 짝지은 비교 (`js/engine/sim-engine.js`)
 - **값/분포**: 난수 스트림 2분리 — `arrRng`(위협 도착간격 전용, seed에서 황금비 해시로 독립 파생) / `rng`(처리 무작위성: 탐지·서비스시간·요격확률·링크지연 분포·중복교전). 도착은 `arrRng`에서만 소비
 - **출처**: 분산감소 표준기법(Common Random Numbers) — `claude/c2-simulation-review` 검토에서 이식. 근거: 동일 seed에서 두 형상이 같은 위협열을 마주해야 차이가 위협표본이 아니라 C2 구조에서만 비롯됨(짝지은 비교의 타당성)

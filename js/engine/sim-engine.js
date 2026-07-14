@@ -38,6 +38,11 @@
 
   var SCAN_SEC = 10;        // 센서 스캔 주기(개념값) — 탐지 재시도 간격
   var MAX_ENGAGE_TRIES = 3; // BDA 실패 시 재교전 상한(무한 폐루프 방지)
+  // Phase 5(⑨, pkCorrelated): 동일 표적 재교전 상관계수 ρ. 종전 모델은 매 발사 pk를 독립 추출해
+  // 재교전이 항상 누적 격추확률을 끌어올린다(1−(1−pk)^n) — 2022.12.26 무인기 5대 전량 미격추 같은
+  // "체계적 실패(기하·ECM·표적특성이 발사 간 공유)"를 재현 못 한다. ρ=공유잠재(frailty) 가중.
+  // ρ=0 → 독립(legacy와 동일 평균), ρ=1 → 완전상관(재교전 무의미). 근거 등급 C → 기본 OFF.
+  var PK_CORR_RHO = 0.7;
   var SHOOTER_QUEUE_MULT = 2; // 무기 대기실 = 교전채널 × 배수 (M/M/c/K, K=c*mult)
   // ⑧ 교전창 실현가능성 여유계수 — 명령링크지연+교전소요(engageTimeSec 평균)이 잔여 체공창의
   // 이 비율 이하일 때만 후보로 인정. 1.0 = 결정론(평균 ≤ 잔여). 교전시간은 지수분포라 평균이
@@ -99,6 +104,8 @@
       pkCorrelated: ff('pkCorrelated', false), // Phase 5: 재교전 pk 상관(근거 약함 — 기본 OFF)
       salvo: ff('salvo', false)                // Phase 6: 연발(범위 확대 — 기본 OFF)
     };
+    // Phase 5: 상관계수 ρ(0~1). features.pkCorrelation 숫자로 재정의 가능(민감도 스윕용), 없으면 문서 기본.
+    this.pkCorrRho = (typeof f.pkCorrelation === 'number') ? Math.max(0, Math.min(1, f.pkCorrelation)) : PK_CORR_RHO;
     // 공통난수(CRN, `claude/c2-simulation-review` 검토 이식): 난수 스트림을 도착·처리로 분리한다.
     //  · rng    — 처리 무작위성(탐지 판정·서비스시간·요격확률·링크지연 분포·중복교전 등)
     //  · arrRng — 위협 도착간격(시나리오 그 자체) 전용. seed에서 독립 파생(황금비 해시)해
@@ -739,7 +746,19 @@
     this.cost.interceptM += shot;
     if (SAT_THREATS[threat.type]) this.cost.interceptSatM += shot;
     var pk = this._pk(shooter, threat);
-    if (this.rng.raw() < pk) {
+    // Phase 5(pkCorrelated): 재교전 상관. OFF면 독립 추출(legacy: raw() < pk). ON이면 표적별 공유
+    // 잠재 frailty(최초 교전서 1회 추출)와 발사별 신규 추출을 ρ로 혼합 → 같은 표적 발사들이 양의
+    // 상관을 가져 재교전의 누적 격추 이득이 줄어든다(체계적 실패 재현). 그리기 수: OFF=발사당 raw 1회
+    // (종전과 동일), ON=+표적당 frailty 1회. u<pk이면 격추.
+    var hit;
+    if (this.features.pkCorrelated) {
+      if (threat._frailty === null) threat._frailty = this.rng.raw(); // 지연 추출(최초 교전 표적만)
+      var u = this.pkCorrRho * threat._frailty + (1 - this.pkCorrRho) * this.rng.raw();
+      hit = u < pk;
+    } else {
+      hit = this.rng.raw() < pk;
+    }
+    if (hit) {
       threat.alive = false; threat.killed = true;
       this.global.killed++;
       this.global.timeToKill.push(t - threat.spawnT);
@@ -796,6 +815,7 @@
       id: entry.type + '#' + this.threatSeq, type: entry.type, axis: entry.axis,
       spawnT: t, dwellSec: tt.dwellSec, alive: true, killed: false,
       detected: false, pipelineDead: false, tries: 0, leakReason: null,
+      _frailty: null, // Phase 5(pkCorrelated): 표적별 공유 잠재(재교전 상관) — ON일 때 최초 교전에서 지연 추출
       _trace: null, _countedC2: false, _countedEngaged: false, _detectT: null, _coordDelay: 0
     };
     if (this.trace) {

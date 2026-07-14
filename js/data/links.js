@@ -68,6 +68,20 @@
     { from: 'MCRC', to: 'KAMDOC', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
       note: 'As-Is: 공중위협·탄도탄 이원화 체계 간 협조 지연' },
 
+    // ─── ⑥⑦ 수평 교전협조 링크 (Phase 2, C2-COORD-HORIZ-01) ───
+    // As-Is의 "협조 수단 부재"는 링크가 없는 게 아니라 "느린 음성 링크"로 표현해야 한다 —
+    // 링크가 아예 없으면 coordCheck가 호출조차 되지 않아 중복교전을 판정할 수 없다.
+    // As-Is: 육↔육/상↔하 음성 협조(180s급) → 잔여 체공창보다 느리면 협조 실패=책임공백.
+    // To-Be: JAMDC2 COP 공유로 2s 데이터링크(사실상 중복 원천 차단).
+    { from: 'AOC-1C', to: 'JAOC-CD', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
+      note: 'As-Is: 군단 AOC↔수방사 JAOC 직접 협조 수단 부재 — 음성 VTC 의존(KJADS 문제상황 1)' },
+    { from: 'JAOC-CD', to: 'AOC-1C', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
+      note: 'As-Is: 수방사 JAOC↔군단 AOC 직접 협조 수단 부재(양방향)' },
+    { from: 'MCRC', to: 'AOC-1C', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
+      note: 'As-Is: 상급(공군 MCRC)→군단 AOC 협조 지시 경로(음성). SAWS broadcast와 별개(교전협조 가능).' },
+    { from: 'MCRC', to: 'JAOC-CD', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
+      note: 'As-Is: 상급(공군 MCRC)→수방사 JAOC 협조 지시 경로(음성)' },
+
     // ─── To-Be: 다출처 Plug-in 직결 (센서 → JAMDC2) — KJADS "P→F 전환" 근거 ───
     // 육군 계열 센서(As-Is에서 국가방공체계 미통합·담당 C2 사각지대)만 직결한다. 담당 C2를
     // 건너뛰어 JAMDC2가 신규 융합항적(F)을 직접 생성 → 담당 C2 포화가 융합을 막지 못한다.

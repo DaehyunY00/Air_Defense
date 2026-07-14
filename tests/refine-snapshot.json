@@ -1,9 +1,9 @@
 {
   "sc1/asis": {
-    "spawned": 61,
-    "killed": 38,
-    "leaked": 13,
-    "bn": ""
+    "spawned": 59,
+    "killed": 40,
+    "leaked": 12,
+    "bn": "gap:responsibility_gap"
   },
   "sc1/tobe": {
     "spawned": 63,
@@ -24,10 +24,10 @@
     "bn": ""
   },
   "sc3/asis": {
-    "spawned": 305,
-    "killed": 63,
-    "leaked": 211,
-    "bn": "link:AOC-1C→MCRC,node:KAMDOC"
+    "spawned": 367,
+    "killed": 67,
+    "leaked": 254,
+    "bn": "gap:responsibility_gap,link:AOC-1C→MCRC,node:AOC-1C,node:KAMDOC,node:MCRC"
   },
   "sc3/tobe": {
     "spawned": 361,

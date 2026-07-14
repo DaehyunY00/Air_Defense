@@ -1863,6 +1863,20 @@ li.chk-fail { background: #43140f; }
     { from: 'MCRC', to: 'KAMDOC', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
       note: 'As-Is: 공중위협·탄도탄 이원화 체계 간 협조 지연' },
 
+    // ─── ⑥⑦ 수평 교전협조 링크 (Phase 2, C2-COORD-HORIZ-01) ───
+    // As-Is의 "협조 수단 부재"는 링크가 없는 게 아니라 "느린 음성 링크"로 표현해야 한다 —
+    // 링크가 아예 없으면 coordCheck가 호출조차 되지 않아 중복교전을 판정할 수 없다.
+    // As-Is: 육↔육/상↔하 음성 협조(180s급) → 잔여 체공창보다 느리면 협조 실패=책임공백.
+    // To-Be: JAMDC2 COP 공유로 2s 데이터링크(사실상 중복 원천 차단).
+    { from: 'AOC-1C', to: 'JAOC-CD', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
+      note: 'As-Is: 군단 AOC↔수방사 JAOC 직접 협조 수단 부재 — 음성 VTC 의존(KJADS 문제상황 1)' },
+    { from: 'JAOC-CD', to: 'AOC-1C', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
+      note: 'As-Is: 수방사 JAOC↔군단 AOC 직접 협조 수단 부재(양방향)' },
+    { from: 'MCRC', to: 'AOC-1C', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
+      note: 'As-Is: 상급(공군 MCRC)→군단 AOC 협조 지시 경로(음성). SAWS broadcast와 별개(교전협조 가능).' },
+    { from: 'MCRC', to: 'JAOC-CD', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST },
+      note: 'As-Is: 상급(공군 MCRC)→수방사 JAOC 협조 지시 경로(음성)' },
+
     // ─── To-Be: 다출처 Plug-in 직결 (센서 → JAMDC2) — KJADS "P→F 전환" 근거 ───
     // 육군 계열 센서(As-Is에서 국가방공체계 미통합·담당 C2 사각지대)만 직결한다. 담당 C2를
     // 건너뛰어 JAMDC2가 신규 융합항적(F)을 직접 생성 → 담당 C2 포화가 융합을 막지 못한다.
@@ -2970,7 +2984,12 @@ li.chk-fail { background: #43140f; }
     this.global = {
       spawned: 0, detected: 0, engaged: 0, killed: 0, leaked: 0,
       reachedC2: 0, everEngaged: 0,
-      leakReasons: {}, timeToKill: []
+      leakReasons: {}, timeToKill: [],
+      // Phase 2(⑥⑦): 수평 교전협조·중복교전 관측 (As-Is 팬아웃 계통 간 조율)
+      // coordAttempts: 중복항적 계통이 교전 가능해 협조 판정이 일어난 횟수
+      // deconflicted: 잔여 체공창 내 협조 성립(중복 회피) / coordGaps: 협조 실패(책임공백)
+      // duplicateEngagements: 협조 실패로 두 계통이 각각 교전한 건수(요격탄 이중 소모)
+      coordAttempts: 0, deconflicted: 0, coordGaps: 0, duplicateEngagements: 0
     };
     // Phase B-2: 동적 권한위임(분권 전환) 관측 상태 — 전환 시점·횟수·노드별 분포
     this.deleg = { count: 0, firstT: null, byNode: {} };
@@ -2980,7 +2999,8 @@ li.chk-fail { background: #43140f; }
     this.coordDelaySum = 0;   // 1B: 결심지연 중 coord 협조 홉 지연 몫(잔여=C2 처리·승인 대기)
     // Phase D: 비용교환비(MoFE) — 개념 요격탄 소모비용 / 격추 위협가치 (백만 USD 개념)
     // sat*는 저가 포화위협(장사정포·소형무인기) 부분집합. 전부 개념값(WPN/THR-*-COST-01).
-    this.cost = { interceptM: 0, killedThreatM: 0, interceptSatM: 0, killedThreatSatM: 0 };
+    this.cost = { interceptM: 0, killedThreatM: 0, interceptSatM: 0, killedThreatSatM: 0,
+      duplicateInterceptM: 0 };  // Phase 2: 중복교전으로 이중 소모된 요격탄 비용(As-Is 책임공백 비용)
     this.eventCount = 0;
     this.log = [];        // 표본 이벤트 로그(앞부분만 보존)
 
@@ -3273,8 +3293,10 @@ li.chk-fail { background: #43140f; }
     var ids = Object.keys(targets);
     if (!ids.length) { threat.leakReason = 'no_report_path'; return; }
     ids.sort(function (a, b) { return targets[a].delay - targets[b].delay || (a < b ? -1 : 1); });
-    // 주 항적: 최속 C2 — 하위 단계(⑥⑦⑧)를 구동한다.
+    // 주 항적: 최속 C2 — 하위 단계(⑥⑦⑧)를 구동한다. 이 C2가 주교전 통제계통(_mainC2)이며,
+    // 중복항적 계통(ghost)은 이 계통과 협조가 안 되면 중복교전한다(_coordCheck).
     var main = targets[ids[0]];
+    threat._mainC2 = ids[0];
     this._recordLink(main.from, ids[0], main.comm, 'report');
     this.schedule(t + this._linkDelay(main.comm), PRI.LINK_ARRIVE, 'C2_ARRIVE', { threat: threat, c2: ids[0] });
     // 중복 항적(Phase 4, As-Is 전용): 나머지 커버 C2 전부에 팬아웃. Track Fusion 부재로 같은 표적이
@@ -3292,11 +3314,93 @@ li.chk-fail { background: #43140f; }
     }
   };
 
-  /** 중복 항적 C2 도착(As-Is): C2 서버 부하만 소비, 하위 단계(⑥⑦⑧) 미구동 */
+  /**
+   * 중복 항적 C2 도착(As-Is): C2 서버 부하를 소비한 뒤, 처리 완료 시점에 ⑥⑦ 교전협조 검사.
+   * 종전에는 부하만 소비하고 하위 단계를 구동하지 않았다(중복교전 미모사). 이제 이 계통이
+   * 주교전 계통(_mainC2)과 협조가 안 되면 중복교전한다 — KJADS 문제상황 1(교전 중복·책임 공백).
+   */
   Simulation.prototype._onC2ArriveDup = function (t, d) {
-    var threat = d.threat; // ghost
+    var self = this, threat = d.threat; // ghost
     if (!threat.alive || threat.pipelineDead) return;
-    this._nodeArrive(d.c2, t, { threat: threat, kind: 'track' }, function () { /* 부하만 소비 — onDone 무연산 */ });
+    this._nodeArrive(d.c2, t, { threat: threat, kind: 'track' }, function (tt2, job) {
+      self._coordCheck(tt2, job.threat, d.c2);
+    });
+  };
+
+  /**
+   * ⑥⑦ 교전협조 검사 — 중복항적을 받은 이 계통(ghostC2)이 주교전 계통(_mainC2)과
+   * 잔여 체공창 내에 협조(deconflict)할 수 있는가?
+   *  - 협조 성립(coord 경로 지연 < 잔여 dwell): 주교전자 1개 지정, 이 계통 교전 포기(중복 회피).
+   *  - 협조 실패(경로 부재 OR 지연 ≥ 잔여 dwell): responsibility_gap(책임공백) → 두 계통 각각 교전.
+   * To-Be는 팬아웃이 없어(JAMDC2 COP 공유) 이 경로에 진입하지 않는다(중복 원천 차단).
+   * 순수 관측이 아니라 거동 변경 — 요격탄 이중 소모·engaged 이중 계상이 발생한다(문제상황 1의 비용).
+   */
+  Simulation.prototype._coordCheck = function (t, ghost, ghostC2) {
+    var self = this, real = ghost._real;
+    if (!real.alive || real.killed) return;             // 이미 종결 → 중복 없음
+    var mainC2 = real._mainC2, type = real.type;
+    if (!mainC2 || mainC2 === ghostC2) return;          // 동일 계통 → 중복 아님
+    // 이 계통이 이 위협을 교전할 수단(canEngage 무기)을 실제로 통제하는가?
+    var shooters = KJ.nodesInMode(this.mode).filter(function (n) {
+      return n.category === 'shooter' && n.canEngage[type] &&
+        n.controlledBy && (n.controlledBy[self.mode] || []).indexOf(ghostC2) !== -1;
+    });
+    if (!shooters.length) return;                       // 교전수단 없음 → 중복 아님
+    this.global.coordAttempts++;
+    // 협조 성립 여부: coord 경로(대표값) 총지연이 잔여 체공창 내인가
+    var remaining = (real.spawnT + real.dwellSec) - t;
+    var path = coordPath(ghostC2, mainC2, this.mode);
+    var coordSec = null;
+    if (path) { coordSec = 0; for (var i = 0; i < path.length; i++) coordSec += path[i].comm[this.mode].delaySec; }
+    if (path && coordSec < remaining) {
+      this.global.deconflicted++;                       // 제때 협조 → 중복 회피
+      this._mark(real, '교전협조:' + ghostC2 + '⇄' + mainC2 + '(' + coordSec.toFixed(0) + 's)', t);
+      return;
+    }
+    // ── 책임공백: 협조 경로 부재 또는 잔여 체공창 내 협조 불가 → 중복교전 ──
+    this.global.coordGaps++;
+    real._hadCoordGap = true;
+    this._mark(real, '책임공백:' + ghostC2 + '↮' + mainC2 +
+      (path ? '(협조' + coordSec.toFixed(0) + 's≥잔여' + Math.max(0, remaining).toFixed(0) + 's)' : '(협조경로없음)'), t);
+    this._dupEngage(t, ghost, ghostC2, shooters);
+  };
+
+  /**
+   * 중복교전 명령 — 협조 실패 계통이 자기 무기로 별개 교전. 요격탄·engaged를 이중 계상하되,
+   * 실제 격추/누수(BDA)는 주 계통이 소유한다(이중 계상 방지·보존 항등식 유지). 즉 "낭비된 병렬 사격".
+   */
+  Simulation.prototype._dupEngage = function (t, ghost, ghostC2, shooters) {
+    var self = this, best = null;
+    shooters.forEach(function (sh) {
+      var ns = self.nodeState[sh.id];
+      var load = ns ? (ns.busy + ns.queue.length) : 0;
+      if (!best || load < best.load || (load === best.load && sh.id < best.sh.id)) best = { sh: sh, load: load };
+    });
+    var shooter = best.sh;
+    var comm = this._link(ghostC2, shooter.id, 'command');
+    var delay = comm ? this._linkDelay(comm) : 0;
+    if (comm) this._recordLink(ghostC2, shooter.id, comm, 'command');
+    this.global.engaged++;
+    this.global.duplicateEngagements++;
+    this._mark(ghost._real, '중복교전명령:' + ghostC2 + '→' + shooter.id, t);
+    this.schedule(t + delay, PRI.LINK_ARRIVE, 'DUP_SHOOTER_ARRIVE', { threat: ghost, shooter: shooter.id });
+  };
+
+  Simulation.prototype._onDupShooterArrive = function (t, d) {
+    var self = this, ghost = d.threat;
+    if (!ghost.alive) return;   // 주 계통이 이미 격추/누수 → ghost.alive=false → 중복 사격 취소(사격 안 함)
+    this._nodeArrive(d.shooter, t, { threat: ghost, kind: 'engage' }, function (tt2, job) {
+      self._onDupEngageEnd(tt2, d.shooter, job.threat.type);
+    });
+  };
+
+  /** 중복 교전탄 소모만 계상 — BDA 없음(실제 격추/누수는 주 계통 소유, 보존 유지) */
+  Simulation.prototype._onDupEngageEnd = function (t, shooterId, type) {
+    var shooter = KJ.nodeById(shooterId);
+    var shot = (shooter.engage && shooter.engage.costPerShotM) || 0;
+    this.cost.interceptM += shot;
+    this.cost.duplicateInterceptM += shot;
+    if (SAT_THREATS[type]) this.cost.interceptSatM += shot;
   };
 
   /** 3·4·5 식별·위협평가·WTA: C2(또는 To-Be JAMDC2) 서버 처리 */
@@ -3538,6 +3642,9 @@ li.chk-fail { background: #43140f; }
     threat.alive = false;
     this.global.leaked++;
     var reason = threat.leakReason || (threat.detected ? 'timeout' : 'not_detected');
+    // Phase 2: 협조 실패(책임공백)를 겪은 항적이 결국 누수하면, 일반 사유(명중실패·처리지연)보다
+    // 구조적 원인(responsibility_gap)이 근본 원인이다 → 사유 승격(死 코드 부활, taxonomy 정합).
+    if (threat._hadCoordGap && (reason === 'missed' || reason === 'timeout')) reason = 'responsibility_gap';
     this.global.leakReasons[reason] = (this.global.leakReasons[reason] || 0) + 1;
     if (threat._trace) {
       threat._trace.exitT = t;
@@ -3590,6 +3697,7 @@ li.chk-fail { background: #43140f; }
       case 'FUSION_ARRIVE': this._onFusionArrive(ev.t, ev.data); break;
       case 'APPROVE_ARRIVE': this._onApproveArrive(ev.t, ev.data); break;
       case 'SHOOTER_ARRIVE': this._onShooterArrive(ev.t, ev.data); break;
+      case 'DUP_SHOOTER_ARRIVE': this._onDupShooterArrive(ev.t, ev.data); break;
       case 'SERVICE_END': this._onServiceEnd(ev.t, ev.data); break;
       case 'EXIT': this._onExit(ev.t, ev.data); break;
     }
@@ -3705,6 +3813,12 @@ li.chk-fail { background: #43140f; }
         delegation: {
           count: this.deleg.count, firstT: this.deleg.firstT, byNode: this.deleg.byNode
         },
+        // Phase 2(⑥⑦): 교전협조 관측. coordAttempts=협조 판정 발생, deconflicted=협조 성립(중복 회피),
+        // coordGaps=협조 실패(책임공백), duplicateEngagements=중복교전(요격탄 이중 소모) 건수.
+        coordination: {
+          attempts: this.global.coordAttempts, deconflicted: this.global.deconflicted,
+          gaps: this.global.coordGaps, duplicates: this.global.duplicateEngagements
+        },
         // 비용교환비(MoFE, 백만 USD 개념): exchange = 소모 요격탄 비용 / 격추 위협가치
         // (>1이면 아군이 더 비싼 자원을 소모). sat*는 저가 포화위협(무인기·방사포) 부분집합
         cost: {
@@ -3713,7 +3827,9 @@ li.chk-fail { background: #43140f; }
           exchange: this.cost.killedThreatM > 0 ? this.cost.interceptM / this.cost.killedThreatM : null,
           interceptSatM: this.cost.interceptSatM,
           killedThreatSatM: this.cost.killedThreatSatM,
-          exchangeSat: this.cost.killedThreatSatM > 0 ? this.cost.interceptSatM / this.cost.killedThreatSatM : null
+          exchangeSat: this.cost.killedThreatSatM > 0 ? this.cost.interceptSatM / this.cost.killedThreatSatM : null,
+          // Phase 2: 중복교전으로 이중 소모된 요격탄 비용(책임공백의 MoFE 비용). interceptM에 이미 포함됨.
+          duplicateInterceptM: this.cost.duplicateInterceptM
         }
       },
       // 단계별 흐름 카운트 (Sankey/funnel용) — trace 없이도 항상 제공(집계 카운터라 저비용)
@@ -4894,9 +5010,19 @@ li.chk-fail { background: #43140f; }
           { label: 'coord 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
             a: commMeanDelay(a, 'coord'), b: commMeanDelay(b, 'coord'),
             tip: '⑥⑦단계 coord(교전협조) 링크 전달의 평균 지연만 집계 — As-Is 육↔공 음성 협조(≥180s)가 실제로 발화하는 곳.' },
-          { label: '중복교전 위험 (축선 합)', mom: 'MoCE', kind: 'raw', lower: true,
+          { label: '중복교전 위험 (축선 합, 정적)', mom: 'MoCE', kind: 'raw', lower: true,
             a: d.heatA, b: d.heatB,
-            tip: '서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합 — 이원화의 공간적 문제.' },
+            tip: '[정적 사전 예측] 서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합. ' +
+              'DES가 실제로 중복교전을 시뮬레이션하기 전의 위험 "점수"다 — 아래 "중복교전 발생(동적)"과 나란히 읽어 예측력을 검증한다(computeOverlapHeat 유지).' },
+          { label: '중복교전 발생 (동적, 건수)', mom: 'MoCE', kind: 'cnt', lower: true,
+            a: ga.coordination.duplicates, b: gb.coordination.duplicates,
+            tip: '[동적 실제 발생] DES에서 동일 항적을 두 통제계통이 각각 교전한 실제 건수(_coordCheck 협조 실패). ' +
+              'As-Is 팬아웃 계통이 잔여 체공창 내 협조(음성 180s)에 실패하면 발생 — KJADS 문제상황 1(교전 중복·책임공백)의 직접 관측. ' +
+              'To-Be는 JAMDC2 COP 공유로 팬아웃 자체가 없어 0. 승인 실패코드 responsibility_gap이 이때 부활한다.' },
+          { label: '요격탄 이중 소모 (중복교전 비용)', mom: 'MoFE', kind: 'raw', lower: true,
+            a: ga.cost.duplicateInterceptM, b: gb.cost.duplicateInterceptM,
+            tip: '중복교전으로 이중 소모된 요격탄 개념 비용(백만$). ⑨ 비용교환비(MoFE)를 As-Is에서 악화시키는 요인 — ' +
+              '종전 모델은 이 비용을 전혀 계상하지 않아 As-Is 중복교전 비용을 과소평가했다(To-Be는 0).' },
           { label: '분권 전환 (횟수)', mom: 'MoCE', kind: 'cnt', lower: null,
             a: delegA.count, b: delegB.count,
             tip: '승인권자 대기열 임계(C2-DELEG-THRESH-01) 초과 시 중앙↔분권 동적 전환 횟수' +

@@ -136,6 +136,21 @@
 - **신뢰도 등급**: C(개념 임계)
 - **MC 적용방식**: 고정 (민감도스윕 후보)
 
+### [C2-COORD-HORIZ-01] 수평 교전협조 링크 (Phase 2 ⑥⑦, `js/data/links.js`)
+- **값/분포**: As-Is 신규 coord 링크 — `AOC-1C↔JAOC-CD`(양방향)·`MCRC→AOC-1C`·`MCRC→JAOC-CD`. As-Is=`VOICE_COORD`(대칭 삼각분포 min90/mode180/max270, 대표 180s), To-Be=`DL_FAST`(2s)
+- **단위**: 초(링크 전달 지연)
+- **출처**: 개념 설정 — KJADS 문제상황 1("각 군 개별 작전 → 음성 VTC에 의존, 신속 조율 불가")의 "협조 수단 부재"를 **링크 부재가 아니라 느린 음성 링크**로 표현. 종전엔 육↔육/상↔하 coord 링크가 아예 없어 `coordPath`가 호출조차 되지 않아 중복교전을 판정할 수 없었다. 지연값은 `[C2-VOICE-COORD-01]` 승계(등급 C)
+- **적용범위**: DES `_coordCheck`(중복항적 계통 간 교전협조)·`coordPath`(다익스트라 최소지연). To-Be는 JAMDC2 COP 공유로 2s
+- **신뢰도 등급**: C(개념 — 음성 협조 지연은 `[C2-VOICE-COORD-01]` 근거 승계)
+- **MC 적용방식**: 분포샘플링(전달 시각) / 대표값(경로 선택·협조 성립 판정)
+
+### [C2-RESPGAP-01] 책임공백(responsibility_gap) 발화 조건 (Phase 2 ⑥⑦, `js/engine/sim-engine.js` `_coordCheck`)
+- **값/분포**: 동일 항적이 2개 이상 통제계통에 팬아웃(As-Is)되고, 그 계통이 교전 가능 무기를 통제할 때 — **계통 간 coord 협조 경로가 없거나, 협조 지연(대표값 총합) ≥ 잔여 체공창(spawnT+dwellSec−t)**이면 책임공백 → 두 계통이 각각 교전(중복교전). 잔여 체공창 내 협조 가능하면 주교전자 1개 지정(중복 회피)
+- **출처**: 개념 설정 — KJADS 문제상황 1(교전 중복·책임 공백). 종전 `responsibility_gap`은 `coordPath(controlC2,approvalId)===null`(승인 경로 부재)에서만 발화하도록 되어 있었으나 coord 그래프가 상향 연결되어 **전 시나리오·전 모드·전 seed 0건(死 코드)**이었다. 본 항목으로 재정의해 부활시킨다
+- **적용범위**: DES `_coordCheck`. 발화 시 `global.coordination.gaps`·`duplicateEngagements` 증가, 요격탄 이중 소모(`cost.duplicateInterceptM`), 해당 항적이 결국 누수하면 leakReason이 responsibility_gap으로 승격. **실측: As-Is SC1 x2.5 196건·SC3 x2.5 560건, To-Be 0건**(팬아웃 없음). SC2(무인기 dwell 900s)는 음성 180s로도 협조 성립해 0건 — 느린 위협은 책임공백이 안 생긴다
+- **신뢰도 등급**: C(개념 — 임계=잔여 체공창은 물리적 근거, 협조 지연은 `[C2-COORD-HORIZ-01]` 승계)
+- **MC 적용방식**: 고정(판정은 대표값). 정적 히트맵(`computeOverlapHeat`, 0.5×dwell 임계)과 **나란히 유지** — 정적 예측 vs 동적 발생의 상호 검증용(삭제 금지)
+
 ### [C2-AUTO-LEVEL-01] 위협별 자동화 차등 (정밀화 Phase B-3, `js/data/threats.js` automation)
 - **값/분포**: human-in-loop(승인권자까지 협조경로+승인 처리) / human-on-loop(감독하 자동교전 — 승인 처리만, 협조 홉 생략) / auto-preauth(사전승인 자동교전 — 결심 홉 생략). As-Is 전 위협 in-loop; To-Be 무인기·순항(주1)·탄도탄 auto-preauth 또는 on-loop, 유인기 위협 on-loop
 - **출처**: 합참 K-JAMDS 구축 개념안(AI 기반 표적 식별·무기 배정)·무인기 사전승인 자동교전 개념 — 기존 threats.js note 텍스트의 엔진 플래그 승격

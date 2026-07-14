@@ -319,9 +319,19 @@
           { label: 'coord 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
             a: commMeanDelay(a, 'coord'), b: commMeanDelay(b, 'coord'),
             tip: '⑥⑦단계 coord(교전협조) 링크 전달의 평균 지연만 집계 — As-Is 육↔공 음성 협조(≥180s)가 실제로 발화하는 곳.' },
-          { label: '중복교전 위험 (축선 합)', mom: 'MoCE', kind: 'raw', lower: true,
+          { label: '중복교전 위험 (축선 합, 정적)', mom: 'MoCE', kind: 'raw', lower: true,
             a: d.heatA, b: d.heatB,
-            tip: '서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합 — 이원화의 공간적 문제.' },
+            tip: '[정적 사전 예측] 서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합. ' +
+              'DES가 실제로 중복교전을 시뮬레이션하기 전의 위험 "점수"다 — 아래 "중복교전 발생(동적)"과 나란히 읽어 예측력을 검증한다(computeOverlapHeat 유지).' },
+          { label: '중복교전 발생 (동적, 건수)', mom: 'MoCE', kind: 'cnt', lower: true,
+            a: ga.coordination.duplicates, b: gb.coordination.duplicates,
+            tip: '[동적 실제 발생] DES에서 동일 항적을 두 통제계통이 각각 교전한 실제 건수(_coordCheck 협조 실패). ' +
+              'As-Is 팬아웃 계통이 잔여 체공창 내 협조(음성 180s)에 실패하면 발생 — KJADS 문제상황 1(교전 중복·책임공백)의 직접 관측. ' +
+              'To-Be는 JAMDC2 COP 공유로 팬아웃 자체가 없어 0. 승인 실패코드 responsibility_gap이 이때 부활한다.' },
+          { label: '요격탄 이중 소모 (중복교전 비용)', mom: 'MoFE', kind: 'raw', lower: true,
+            a: ga.cost.duplicateInterceptM, b: gb.cost.duplicateInterceptM,
+            tip: '중복교전으로 이중 소모된 요격탄 개념 비용(백만$). ⑨ 비용교환비(MoFE)를 As-Is에서 악화시키는 요인 — ' +
+              '종전 모델은 이 비용을 전혀 계상하지 않아 As-Is 중복교전 비용을 과소평가했다(To-Be는 0).' },
           { label: '분권 전환 (횟수)', mom: 'MoCE', kind: 'cnt', lower: null,
             a: delegA.count, b: delegB.count,
             tip: '승인권자 대기열 임계(C2-DELEG-THRESH-01) 초과 시 중앙↔분권 동적 전환 횟수' +

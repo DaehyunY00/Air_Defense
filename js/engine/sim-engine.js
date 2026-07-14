@@ -91,7 +91,12 @@
     this.global = {
       spawned: 0, detected: 0, engaged: 0, killed: 0, leaked: 0,
       reachedC2: 0, everEngaged: 0,
-      leakReasons: {}, timeToKill: []
+      leakReasons: {}, timeToKill: [],
+      // Phase 2(⑥⑦): 수평 교전협조·중복교전 관측 (As-Is 팬아웃 계통 간 조율)
+      // coordAttempts: 중복항적 계통이 교전 가능해 협조 판정이 일어난 횟수
+      // deconflicted: 잔여 체공창 내 협조 성립(중복 회피) / coordGaps: 협조 실패(책임공백)
+      // duplicateEngagements: 협조 실패로 두 계통이 각각 교전한 건수(요격탄 이중 소모)
+      coordAttempts: 0, deconflicted: 0, coordGaps: 0, duplicateEngagements: 0
     };
     // Phase B-2: 동적 권한위임(분권 전환) 관측 상태 — 전환 시점·횟수·노드별 분포
     this.deleg = { count: 0, firstT: null, byNode: {} };
@@ -101,7 +106,8 @@
     this.coordDelaySum = 0;   // 1B: 결심지연 중 coord 협조 홉 지연 몫(잔여=C2 처리·승인 대기)
     // Phase D: 비용교환비(MoFE) — 개념 요격탄 소모비용 / 격추 위협가치 (백만 USD 개념)
     // sat*는 저가 포화위협(장사정포·소형무인기) 부분집합. 전부 개념값(WPN/THR-*-COST-01).
-    this.cost = { interceptM: 0, killedThreatM: 0, interceptSatM: 0, killedThreatSatM: 0 };
+    this.cost = { interceptM: 0, killedThreatM: 0, interceptSatM: 0, killedThreatSatM: 0,
+      duplicateInterceptM: 0 };  // Phase 2: 중복교전으로 이중 소모된 요격탄 비용(As-Is 책임공백 비용)
     this.eventCount = 0;
     this.log = [];        // 표본 이벤트 로그(앞부분만 보존)
 
@@ -394,8 +400,10 @@
     var ids = Object.keys(targets);
     if (!ids.length) { threat.leakReason = 'no_report_path'; return; }
     ids.sort(function (a, b) { return targets[a].delay - targets[b].delay || (a < b ? -1 : 1); });
-    // 주 항적: 최속 C2 — 하위 단계(⑥⑦⑧)를 구동한다.
+    // 주 항적: 최속 C2 — 하위 단계(⑥⑦⑧)를 구동한다. 이 C2가 주교전 통제계통(_mainC2)이며,
+    // 중복항적 계통(ghost)은 이 계통과 협조가 안 되면 중복교전한다(_coordCheck).
     var main = targets[ids[0]];
+    threat._mainC2 = ids[0];
     this._recordLink(main.from, ids[0], main.comm, 'report');
     this.schedule(t + this._linkDelay(main.comm), PRI.LINK_ARRIVE, 'C2_ARRIVE', { threat: threat, c2: ids[0] });
     // 중복 항적(Phase 4, As-Is 전용): 나머지 커버 C2 전부에 팬아웃. Track Fusion 부재로 같은 표적이
@@ -413,11 +421,93 @@
     }
   };
 
-  /** 중복 항적 C2 도착(As-Is): C2 서버 부하만 소비, 하위 단계(⑥⑦⑧) 미구동 */
+  /**
+   * 중복 항적 C2 도착(As-Is): C2 서버 부하를 소비한 뒤, 처리 완료 시점에 ⑥⑦ 교전협조 검사.
+   * 종전에는 부하만 소비하고 하위 단계를 구동하지 않았다(중복교전 미모사). 이제 이 계통이
+   * 주교전 계통(_mainC2)과 협조가 안 되면 중복교전한다 — KJADS 문제상황 1(교전 중복·책임 공백).
+   */
   Simulation.prototype._onC2ArriveDup = function (t, d) {
-    var threat = d.threat; // ghost
+    var self = this, threat = d.threat; // ghost
     if (!threat.alive || threat.pipelineDead) return;
-    this._nodeArrive(d.c2, t, { threat: threat, kind: 'track' }, function () { /* 부하만 소비 — onDone 무연산 */ });
+    this._nodeArrive(d.c2, t, { threat: threat, kind: 'track' }, function (tt2, job) {
+      self._coordCheck(tt2, job.threat, d.c2);
+    });
+  };
+
+  /**
+   * ⑥⑦ 교전협조 검사 — 중복항적을 받은 이 계통(ghostC2)이 주교전 계통(_mainC2)과
+   * 잔여 체공창 내에 협조(deconflict)할 수 있는가?
+   *  - 협조 성립(coord 경로 지연 < 잔여 dwell): 주교전자 1개 지정, 이 계통 교전 포기(중복 회피).
+   *  - 협조 실패(경로 부재 OR 지연 ≥ 잔여 dwell): responsibility_gap(책임공백) → 두 계통 각각 교전.
+   * To-Be는 팬아웃이 없어(JAMDC2 COP 공유) 이 경로에 진입하지 않는다(중복 원천 차단).
+   * 순수 관측이 아니라 거동 변경 — 요격탄 이중 소모·engaged 이중 계상이 발생한다(문제상황 1의 비용).
+   */
+  Simulation.prototype._coordCheck = function (t, ghost, ghostC2) {
+    var self = this, real = ghost._real;
+    if (!real.alive || real.killed) return;             // 이미 종결 → 중복 없음
+    var mainC2 = real._mainC2, type = real.type;
+    if (!mainC2 || mainC2 === ghostC2) return;          // 동일 계통 → 중복 아님
+    // 이 계통이 이 위협을 교전할 수단(canEngage 무기)을 실제로 통제하는가?
+    var shooters = KJ.nodesInMode(this.mode).filter(function (n) {
+      return n.category === 'shooter' && n.canEngage[type] &&
+        n.controlledBy && (n.controlledBy[self.mode] || []).indexOf(ghostC2) !== -1;
+    });
+    if (!shooters.length) return;                       // 교전수단 없음 → 중복 아님
+    this.global.coordAttempts++;
+    // 협조 성립 여부: coord 경로(대표값) 총지연이 잔여 체공창 내인가
+    var remaining = (real.spawnT + real.dwellSec) - t;
+    var path = coordPath(ghostC2, mainC2, this.mode);
+    var coordSec = null;
+    if (path) { coordSec = 0; for (var i = 0; i < path.length; i++) coordSec += path[i].comm[this.mode].delaySec; }
+    if (path && coordSec < remaining) {
+      this.global.deconflicted++;                       // 제때 협조 → 중복 회피
+      this._mark(real, '교전협조:' + ghostC2 + '⇄' + mainC2 + '(' + coordSec.toFixed(0) + 's)', t);
+      return;
+    }
+    // ── 책임공백: 협조 경로 부재 또는 잔여 체공창 내 협조 불가 → 중복교전 ──
+    this.global.coordGaps++;
+    real._hadCoordGap = true;
+    this._mark(real, '책임공백:' + ghostC2 + '↮' + mainC2 +
+      (path ? '(협조' + coordSec.toFixed(0) + 's≥잔여' + Math.max(0, remaining).toFixed(0) + 's)' : '(협조경로없음)'), t);
+    this._dupEngage(t, ghost, ghostC2, shooters);
+  };
+
+  /**
+   * 중복교전 명령 — 협조 실패 계통이 자기 무기로 별개 교전. 요격탄·engaged를 이중 계상하되,
+   * 실제 격추/누수(BDA)는 주 계통이 소유한다(이중 계상 방지·보존 항등식 유지). 즉 "낭비된 병렬 사격".
+   */
+  Simulation.prototype._dupEngage = function (t, ghost, ghostC2, shooters) {
+    var self = this, best = null;
+    shooters.forEach(function (sh) {
+      var ns = self.nodeState[sh.id];
+      var load = ns ? (ns.busy + ns.queue.length) : 0;
+      if (!best || load < best.load || (load === best.load && sh.id < best.sh.id)) best = { sh: sh, load: load };
+    });
+    var shooter = best.sh;
+    var comm = this._link(ghostC2, shooter.id, 'command');
+    var delay = comm ? this._linkDelay(comm) : 0;
+    if (comm) this._recordLink(ghostC2, shooter.id, comm, 'command');
+    this.global.engaged++;
+    this.global.duplicateEngagements++;
+    this._mark(ghost._real, '중복교전명령:' + ghostC2 + '→' + shooter.id, t);
+    this.schedule(t + delay, PRI.LINK_ARRIVE, 'DUP_SHOOTER_ARRIVE', { threat: ghost, shooter: shooter.id });
+  };
+
+  Simulation.prototype._onDupShooterArrive = function (t, d) {
+    var self = this, ghost = d.threat;
+    if (!ghost.alive) return;   // 주 계통이 이미 격추/누수 → ghost.alive=false → 중복 사격 취소(사격 안 함)
+    this._nodeArrive(d.shooter, t, { threat: ghost, kind: 'engage' }, function (tt2, job) {
+      self._onDupEngageEnd(tt2, d.shooter, job.threat.type);
+    });
+  };
+
+  /** 중복 교전탄 소모만 계상 — BDA 없음(실제 격추/누수는 주 계통 소유, 보존 유지) */
+  Simulation.prototype._onDupEngageEnd = function (t, shooterId, type) {
+    var shooter = KJ.nodeById(shooterId);
+    var shot = (shooter.engage && shooter.engage.costPerShotM) || 0;
+    this.cost.interceptM += shot;
+    this.cost.duplicateInterceptM += shot;
+    if (SAT_THREATS[type]) this.cost.interceptSatM += shot;
   };
 
   /** 3·4·5 식별·위협평가·WTA: C2(또는 To-Be JAMDC2) 서버 처리 */
@@ -659,6 +749,9 @@
     threat.alive = false;
     this.global.leaked++;
     var reason = threat.leakReason || (threat.detected ? 'timeout' : 'not_detected');
+    // Phase 2: 협조 실패(책임공백)를 겪은 항적이 결국 누수하면, 일반 사유(명중실패·처리지연)보다
+    // 구조적 원인(responsibility_gap)이 근본 원인이다 → 사유 승격(死 코드 부활, taxonomy 정합).
+    if (threat._hadCoordGap && (reason === 'missed' || reason === 'timeout')) reason = 'responsibility_gap';
     this.global.leakReasons[reason] = (this.global.leakReasons[reason] || 0) + 1;
     if (threat._trace) {
       threat._trace.exitT = t;
@@ -711,6 +804,7 @@
       case 'FUSION_ARRIVE': this._onFusionArrive(ev.t, ev.data); break;
       case 'APPROVE_ARRIVE': this._onApproveArrive(ev.t, ev.data); break;
       case 'SHOOTER_ARRIVE': this._onShooterArrive(ev.t, ev.data); break;
+      case 'DUP_SHOOTER_ARRIVE': this._onDupShooterArrive(ev.t, ev.data); break;
       case 'SERVICE_END': this._onServiceEnd(ev.t, ev.data); break;
       case 'EXIT': this._onExit(ev.t, ev.data); break;
     }
@@ -826,6 +920,12 @@
         delegation: {
           count: this.deleg.count, firstT: this.deleg.firstT, byNode: this.deleg.byNode
         },
+        // Phase 2(⑥⑦): 교전협조 관측. coordAttempts=협조 판정 발생, deconflicted=협조 성립(중복 회피),
+        // coordGaps=협조 실패(책임공백), duplicateEngagements=중복교전(요격탄 이중 소모) 건수.
+        coordination: {
+          attempts: this.global.coordAttempts, deconflicted: this.global.deconflicted,
+          gaps: this.global.coordGaps, duplicates: this.global.duplicateEngagements
+        },
         // 비용교환비(MoFE, 백만 USD 개념): exchange = 소모 요격탄 비용 / 격추 위협가치
         // (>1이면 아군이 더 비싼 자원을 소모). sat*는 저가 포화위협(무인기·방사포) 부분집합
         cost: {
@@ -834,7 +934,9 @@
           exchange: this.cost.killedThreatM > 0 ? this.cost.interceptM / this.cost.killedThreatM : null,
           interceptSatM: this.cost.interceptSatM,
           killedThreatSatM: this.cost.killedThreatSatM,
-          exchangeSat: this.cost.killedThreatSatM > 0 ? this.cost.interceptSatM / this.cost.killedThreatSatM : null
+          exchangeSat: this.cost.killedThreatSatM > 0 ? this.cost.interceptSatM / this.cost.killedThreatSatM : null,
+          // Phase 2: 중복교전으로 이중 소모된 요격탄 비용(책임공백의 MoFE 비용). interceptM에 이미 포함됨.
+          duplicateInterceptM: this.cost.duplicateInterceptM
         }
       },
       // 단계별 흐름 카운트 (Sankey/funnel용) — trace 없이도 항상 제공(집계 카운터라 저비용)

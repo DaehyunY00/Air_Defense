@@ -53,7 +53,12 @@ var sig = {};
   });
 });
 assert(new Set(Object.values(sig)).size > 3, '시나리오·강도·모드별 병목 다양 (' + new Set(Object.values(sig)).size + '종)');
-assert(run('sc1', 'asis', 0.5, 5).bottlenecks.length === 0, 'SC1 저강도(0.5×): 병목 0 (부하의 함수)');
+// SC1 저강도: 노드·링크 병목(부하 함수)은 0. 단 책임공백(responsibility_gap)은 구조적 실패라
+// 부하와 무관하게 발화할 수 있다(팬아웃된 항적이 잔여 체공창 내 협조 불가 시) — Phase 2(⑥⑦)에서
+// 死 코드가 부활했다. 따라서 부하 함수성 주장은 node/link 병목으로 한정해 검증한다.
+assert(run('sc1', 'asis', 0.5, 5).bottlenecks.filter(function (b) {
+  return b.kind === 'node' || b.kind === 'link';
+}).length === 0, 'SC1 저강도(0.5×): 노드·링크 병목 0 (부하의 함수 — gap은 구조적이라 별개)');
 ['sc2', 'sc3'].forEach(function (id) {
   assert(run(id, 'asis', 2.5, 100).bottlenecks.length >= run(id, 'asis', 1, 100).bottlenecks.length,
     id + ': 강도↑ 병목 비감소');

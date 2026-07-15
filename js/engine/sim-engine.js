@@ -123,12 +123,23 @@
       costAwareWtaAsis: ff('costAwareWtaAsis', false), // 반증 실험 전용(As-Is에도 적용) — 항상 기본 OFF
       magazine: ff('magazine', false),               // Step 2: 유도탄 재고 — 근거 C, 기본 OFF
       reserveFloor: ff('reserveFloor', false),        // Step 2: 보존 최소수량(magazine 의존) — 기본 OFF
-      thresholdReweight: ff('thresholdReweight', false) // Step 3: 임계 재가중 — 기본 OFF
+      thresholdReweight: ff('thresholdReweight', false), // Step 3: 임계 재가중 — 기본 OFF
+      // ── WP1: 요격체계 세분화(Fire-Unit Layer) — 기본 OFF (ADR-010) ──
+      //   ON이면 집계 shooter 노드(MDU-L 등)를 ICC(대대급 사격지휘) → 포대(ECS+MFR+TEL[]) 계층
+      //   인스턴스로 대체한다. OFF면 기존 집계 노드 그대로 — 두 세계가 한 실행에서 하나만 활성.
+      //   OFF 경로는 추가 RNG 소비 0·기존 지문과 비트 동일(tests/fireunit.test.js 되돌리기 어서션).
+      fireUnitLayer: ff('fireUnitLayer', false),
+      // ── WP2: 자체교전(Self-Defense / 자율 교전) — 기본 OFF (ADR-011) ──
+      //   ON이면 포대 MFR이 상위 C2 교전명령 없이 자체 탐지·자체 요격(자위권). 양 모드 공통.
+      //   fireUnitLayer와 직교(OFF+ON 조합 시 legacy 집계 노드에 개념 MFR 폴백 부여).
+      selfDefense: ff('selfDefense', false)
     };
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
     this.magazineSize = (typeof f.magazineSize === 'number') ? f.magazineSize : null;
+    // WP1: MFR 동시교전 채널 스윕용 균일 override(모든 포대 동일). 없으면 포대별 mfr.channels 사용.
+    this.mfrChannels = (typeof f.mfrChannels === 'number') ? f.mfrChannels : null;
     // Phase 5: 상관계수 ρ(0~1). features.pkCorrelation 숫자로 재정의 가능(민감도 스윕용), 없으면 문서 기본.
     this.pkCorrRho = (typeof f.pkCorrelation === 'number') ? Math.max(0, Math.min(1, f.pkCorrelation)) : PK_CORR_RHO;
     // Phase 6: 연발 발수 k(≥1 정수). features.salvoSize로 재정의, 없으면 문서 기본. salvo OFF면 미사용(k=1).
@@ -164,7 +175,12 @@
       // 자원최적화 Step 1: 고가 유도탄(MDU-L 계열) 소모액 · 교전한 위협가치 합(격추 무관).
       //  · 고가유도탄 보존율 = 1 − highValueInterceptM/interceptM (KJADS 5-1 직접 지표)
       //  · 위협등급 대비 요격탄 단가 비율 = interceptM/engagedThreatValueM (쏜 것 전부, 격추 여부 무관)
-      highValueInterceptM: 0, engagedThreatValueM: 0
+      highValueInterceptM: 0, engagedThreatValueM: 0,
+      // WP1: 티어 핸드오버(상위→하위 포대 재교전) 계수 · 발사대 재장전 완료 계수
+      tierHandoffs: 0, reloads: 0,
+      // WP2: 자체교전 관측(자위권) — engagements/kills/rescuedFromTimeoutC2/iffRiskEngagements
+      selfDefense: { engagements: 0, kills: 0, rescuedFromTimeoutC2: 0, iffRiskEngagements: 0,
+        reactionSum: 0, reactionCount: 0 }
     };
     // Phase B-2: 동적 권한위임(분권 전환) 관측 상태 — 전환 시점·횟수·노드별 분포
     this.deleg = { count: 0, firstT: null, byNode: {} };
@@ -197,10 +213,38 @@
     this._initNodes();
   }
 
+  /**
+   * WP1: 이 실행에서 활성인 노드 집합을 구성한다(모드 + fireUnitLayer 플래그 함수).
+   *  - fireUnitLayer OFF: KJ.nodesInMode(mode) 그대로(기존 집계 shooter 노드). 비트 동일 경로.
+   *  - fireUnitLayer ON : 대체 대상 집계 shooter(legacyOf로 참조된 것)를 제거하고, 그 자리에
+   *                       ICC(대대급 사격지휘, category 'c2') + 포대(category 'battery') 인스턴스를
+   *                       주입한다. 대체 대상이 아닌 shooter(예: 함정 — ADR-010 결정 시)는 유지.
+   * 순수 목록 구성 — RNG 미소비. 결정론(노드 순서는 KJ.NODES/FIRE_UNITS 정의 순서 고정).
+   */
+  Simulation.prototype._buildActiveNodes = function (mode) {
+    var base = KJ.nodesInMode(mode);
+    if (!this.features.fireUnitLayer || !KJ.FIRE_UNITS) return base;
+    var units = KJ.fireUnitsInMode(mode);           // ICC + battery 인스턴스(모드 활성분)
+    // legacyOf로 대체되는 집계 shooter id 집합
+    var replaced = {};
+    units.forEach(function (u) { if (u.legacyOf) replaced[u.legacyOf] = true; });
+    var kept = base.filter(function (n) { return !(n.category === 'shooter' && replaced[n.id]); });
+    return kept.concat(units);
+  };
+
+  /** id → 활성 노드(이 실행 기준). 미등록 id는 전역 KJ.nodeById 폴백(링크·정적 참조 호환). */
+  Simulation.prototype._node = function (id) {
+    return this._nodeIdx[id] || KJ.nodeById(id);
+  };
+
   Simulation.prototype._initNodes = function () {
     var self = this, mode = this.mode;
-    KJ.nodesInMode(mode).forEach(function (n) {
+    this._nodes = this._buildActiveNodes(mode);
+    this._nodeIdx = {};
+    this._nodes.forEach(function (n) { self._nodeIdx[n.id] = n; });
+    this._nodes.forEach(function (n) {
       if (n.category === 'sensor') return;
+      if (n.category === 'battery') { self._initBattery(n, mode); return; }
       var c, mean, K;
       if (n.category === 'c2') {
         c = n.queue.servers;
@@ -230,6 +274,53 @@
       };
       if (self.trace) self.nodeSeries[n.id] = [];
     });
+  };
+
+  /**
+   * WP1: 포대(battery) 노드 상태 초기화 — ECS 큐 + MFR 채널을 두 개의 M/M/c/K 서버풀로 모델링해
+   * 기존 검증된 대기행렬 기계(_nodeArrive/_startService/_onServiceEnd)를 그대로 재사용한다.
+   *   · nodeState[B]        : MFR 채널 풀(category 'battery'). 실질 동시교전 상한 = mfr.channels.
+   *                           serviceTime = mfr.illumTimeSec("조사 점유시간", engageTimeSec 재해석).
+   *                           TEL 재고(ammo)·재장전 상태는 이 풀에 귀속.
+   *   · nodeState[B::ecs]   : ECS 콘솔 풀. serviceTime = ecs.serviceTimeSec[mode].
+   * ICC(대대 사격지휘)는 category 'c2'라 일반 c2 분기에서 초기화된다(별도 노드).
+   * ammo(TEL 장전 발수 합)와 magazine0는 fireUnitLayer가 항상 관장한다(magazine 플래그와 독립 —
+   * 재장전/발사대 물리는 fireUnitLayer의 일부. ADR-010에서 ADR-008의 재장전 기각을 번복).
+   */
+  Simulation.prototype._initBattery = function (n, mode) {
+    var self = this;
+    var mfrC = (typeof this.mfrChannels === 'number') ? this.mfrChannels : n.mfr.channels; // WP1 스윕 override
+    var readyTotal = (n.tels.count || 0) * (n.tels.readyRoundsPerTel || 0);
+    // MFR 채널 풀(주 노드)
+    this.nodeState[n.id] = {
+      node: n, c: mfrC, mean: (n.mfr.illumTimeSec) * this.mult.service, K: mfrC * SHOOTER_QUEUE_MULT,
+      busy: 0, queue: [], lastT: 0, busyTime: 0, qTime: 0,
+      arrivals: 0, completions: 0, drops: 0, waitAccum: 0, waitCount: 0, maxInSystem: 0,
+      busyByKind: {}, byKind: {},
+      // TEL 발사대 재고: 발사대별 장전 발수 배열 + 총 가용 재고(ammo). 재장전은 TEL 단위(reloadSec).
+      // magazine 플래그와 무관하게 fireUnitLayer ON이면 항상 유한(발사대 물리). OFF면 이 분기 미진입.
+      ammo: readyTotal, magazine0: readyTotal, ammoDepletedT: null, reserveTriggers: 0,
+      // 발사대 상태: 각 TEL의 잔여 장전수(초기 readyRoundsPerTel)·재장전 완료시각(null=가용)
+      tels: [], reloadingCount: 0,
+      // 재장전 중 비가용 시간 적분(관측): 발사대가 재장전으로 못 쏘는 시간 비율 산출용
+      reloadBusyTime: 0
+    };
+    for (var i = 0; i < (n.tels.count || 0); i++) {
+      this.nodeState[n.id].tels.push({ rounds: n.tels.readyRoundsPerTel || 0, reloadDoneT: null });
+    }
+    // ECS 콘솔 풀(보조 노드) — id는 '::ecs' 접미. 결과·병목에 별도 행으로 노출.
+    var ecsC = n.ecs.servers, ecsMean = n.ecs.serviceTimeSec[mode];
+    if (typeof ecsMean === 'number') {
+      this.nodeState[n.id + '::ecs'] = {
+        node: { id: n.id + '::ecs', name: n.name + ' · ECS', category: 'battery-ecs' },
+        c: ecsC, mean: ecsMean * this.mult.service, K: isFinite(n.ecs.capacity) ? n.ecs.capacity : ecsC * SHOOTER_QUEUE_MULT,
+        busy: 0, queue: [], lastT: 0, busyTime: 0, qTime: 0,
+        arrivals: 0, completions: 0, drops: 0, waitAccum: 0, waitCount: 0, maxInSystem: 0,
+        busyByKind: {}, byKind: {}, ammo: Infinity, magazine0: Infinity, ammoDepletedT: null, reserveTriggers: 0
+      };
+      if (self.trace) self.nodeSeries[n.id + '::ecs'] = [];
+    }
+    if (self.trace) self.nodeSeries[n.id] = [];
   };
 
   /** 노드 재고(재계 중+대기) 시계열 샘플 기록 (trace 모드 전용, 상한 초과 시 절삭·플래그) */
@@ -264,6 +355,14 @@
       return x.from === fromId && x.to === toId &&
         (kind ? x.kind === kind : true) && x.comm[this.mode];
     }, this);
+    // WP1: fireUnitLayer ON이면 상위C2→ICC·ICC→포대 command 링크(FIRE_LINKS)도 참조.
+    // OFF 경로는 fire-unit id를 절대 조회하지 않으므로 이 폴백은 발동하지 않는다(결과 불변).
+    if (!l && this.features.fireUnitLayer && KJ.FIRE_LINKS) {
+      l = KJ.FIRE_LINKS.find(function (x) {
+        return x.from === fromId && x.to === toId &&
+          (kind ? x.kind === kind : true) && x.comm[this.mode];
+      }, this);
+    }
     return l ? l.comm[this.mode] : null;
   };
 
@@ -348,7 +447,7 @@
   /** 1 탐지: 축선·클래스 커버 센서 선별 후 첫 스캔 예약 */
   Simulation.prototype._beginDetect = function (threat, t) {
     var mode = this.mode, type = threat.type, axis = threat.axis;
-    var sensors = KJ.nodesInMode(mode).filter(function (n) {
+    var sensors = this._nodes.filter(function (n) {
       return n.category === 'sensor' &&
         n.detects.indexOf(type) !== -1 && n.coverage.indexOf(axis) !== -1;
     });
@@ -526,8 +625,11 @@
     var mainC2 = real._mainC2, type = real.type;
     if (!mainC2 || mainC2 === ghostC2) return;          // 동일 계통 → 중복 아님
     // 이 계통이 이 위협을 교전할 수단(canEngage 무기)을 실제로 통제하는가?
-    var shooters = KJ.nodesInMode(this.mode).filter(function (n) {
-      return n.category === 'shooter' && n.canEngage[type] &&
+    // fireUnitLayer ON이면 shooter가 battery로 대체되며, 포대는 상위 C2가 아니라 예하 ICC가
+    // 통제한다 — 중복교전 협조(As-Is 팬아웃)는 집계 노드 세계의 현상이라, 세분화 세계에서는
+    // battery도 canEngage/controlledBy로 동일 판정한다(controlledBy는 ICC를 가리킴, 아래 참조).
+    var shooters = this._nodes.filter(function (n) {
+      return (n.category === 'shooter' || n.category === 'battery') && n.canEngage[type] &&
         n.controlledBy && (n.controlledBy[self.mode] || []).indexOf(ghostC2) !== -1;
     });
     if (!shooters.length) return;                       // 교전수단 없음 → 중복 아님
@@ -581,7 +683,7 @@
 
   /** 중복 교전탄 소모만 계상 — BDA 없음(실제 격추/누수는 주 계통 소유, 보존 유지) */
   Simulation.prototype._onDupEngageEnd = function (t, shooterId, type) {
-    var shooter = KJ.nodeById(shooterId);
+    var shooter = this._node(shooterId);
     var shot = (shooter.engage && shooter.engage.costPerShotM) || 0;
     this.cost.interceptM += shot;
     this.cost.duplicateInterceptM += shot;
@@ -712,10 +814,17 @@
     // (1) 능력 후보: canEngage 제약(신궁·천마 탄도탄 배제 등) + 통제계통 존재 + 축선 담당.
     //     coverage(Phase 2, WPN-*-COV-01)가 위협 축선을 포함해야 교전 가능 — 사거리 7km 무기가
     //     전 축선을 맡던 결함(SM2-E가 서부 순항 요격 등) 차단. coverage 미지정 노드는 전축선 폴백.
-    var capable = KJ.nodesInMode(mode).filter(function (n) {
-      if (n.category !== 'shooter' || !n.canEngage[type]) return false;
+    var capable = this._nodes.filter(function (n) {
+      // fireUnitLayer OFF: shooter. ON: 집계 shooter가 battery로 대체됨(둘 다 canEngage/coverage 스키마 공유).
+      if ((n.category !== 'shooter' && n.category !== 'battery') || !n.canEngage[type]) return false;
       if (!n.controlledBy || !(n.controlledBy[mode] || []).length) return false;
       if (n.coverage && n.coverage.indexOf(threat.axis) === -1) return false; // 축선 미담당
+      // WP1: 티어 섹터 제약 — 탄도탄 대응 섹터모드 MFR은 담당 축선 외 위협을 후보에서 제외
+      //   (합참 기고문 "360도 모드 시 탄도탄 방어 취약"의 역방향: 섹터 지향 시 대공 취약). 정적 설정.
+      if (n.category === 'battery' && n.mfr && n.mfr.sectorMode === 'ballistic-sector') {
+        var ab = KJ.threatType(type).altBand;
+        if (ab !== 'ballistic') return false; // 탄도 섹터 지향 → 비탄도 위협 미담당
+      }
       return true;
     });
     if (capable.length === 0) { threat.leakReason = 'no_shooter'; return; } // 능력·축선 공백(방공 공백)
@@ -749,6 +858,22 @@
       });
       if (withAmmo.length === 0) { threat.leakReason = 'no_ammo'; return; }
       shooters = withAmmo;
+    }
+    // WP1: 포대 TEL 재고·보존 필터 — fireUnitLayer ON이면 magazine 플래그와 무관하게 항상 적용
+    // (발사대 장전 발수는 물리). 재장전 중이라도 잔여 readyRounds가 있으면 가용(채널이 곧 제약).
+    if (this.features.fireUnitLayer) {
+      var withTel = shooters.filter(function (n) {
+        if (n.category !== 'battery') return true;
+        var ns = self.nodeState[n.id];
+        if (!ns || ns.ammo <= 0) return false;                 // TEL 전량 소진
+        if (mode === 'tobe' && self.features.reserveFloor) {
+          var fl = reserveFloorFor(n, type);
+          if (fl > 0 && ns.ammo <= fl) { ns.reserveTriggers++; return false; }
+        }
+        return true;
+      });
+      if (withTel.length === 0) { threat.leakReason = 'no_ammo'; return; }
+      shooters = withTel;
     }
     var best = null;
     // 자원최적화 Step 1(costAwareWta): 비용 인식 점수. score = suit·(0.25+0.75·remain)·((1−W)+W·costFit),
@@ -800,10 +925,13 @@
       });
     }
     var shooter = best.sh;
-    var controlC2 = shooter.controlledBy[mode][0];
-    var comm = this._link(controlC2, shooter.id, 'command');
-    var delay = comm ? this._linkDelay(comm) : 0;
-    if (comm) this._recordLink(controlC2, shooter.id, comm, 'command');
+    // WP1: 티어 핸드오버 관측 — 재교전이 상위 티어 실패 후 하위 티어 포대로 넘어갈 때 계수.
+    // (탄도탄 상층 실패 → 하층 자연 핸드오버 = 잔여 체공창·티어 적합도가 하층을 선택한 결과.)
+    if (shooter.category === 'battery' && shooter.tier) {
+      var TORD = { upper: 3, mid: 2, low: 1 };
+      if (threat._lastTier && TORD[shooter.tier] < TORD[threat._lastTier]) this.global.tierHandoffs++;
+      threat._lastTier = shooter.tier;
+    }
     this.global.engaged++;
     if (!threat._countedEngaged) {
       threat._countedEngaged = true;
@@ -822,7 +950,57 @@
       }
     }
     this._mark(threat, '교전명령#' + (threat.tries + 1) + ':' + shooter.id, t);
+    if (shooter.category === 'battery') { this._engageBattery(threat, shooter, t); return; }
+    // 집계 shooter 경로(OFF, 또는 대체되지 않은 FTR·SM2): 상위 C2 → 무기 교전채널 직행.
+    var controlC2 = shooter.controlledBy[mode][0];
+    var comm = this._link(controlC2, shooter.id, 'command');
+    var delay = comm ? this._linkDelay(comm) : 0;
+    if (comm) this._recordLink(controlC2, shooter.id, comm, 'command');
     this.schedule(t + delay, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: threat, shooter: shooter.id });
+  };
+
+  /**
+   * WP1: 포대 교전 파이프라인 — 상위C2 →(command)→ ICC(대대 사격지휘 큐) →(command)→ ECS(콘솔 큐)
+   * → MFR(채널 점유·조사) → BDA. 각 단계는 검증된 _nodeArrive 대기행렬을 재사용한다.
+   * MFR 채널 포화면 ECS 대기, ECS 대기실 초과면 overflow:<포대ID>(taxonomy는 battery=비구조로 재분류).
+   */
+  Simulation.prototype._engageBattery = function (threat, B, t) {
+    var self = this, mode = this.mode;
+    var upperC2 = B.controlledBy[mode][0], iccId = B.icc;
+    var comm = this._link(upperC2, iccId, 'command');
+    var delay = comm ? this._linkDelay(comm) : 0;
+    if (comm) this._recordLink(upperC2, iccId, comm, 'command');
+    this.schedule(t + delay, PRI.LINK_ARRIVE, 'ICC_ARRIVE', { threat: threat, icc: iccId, battery: B.id });
+  };
+
+  Simulation.prototype._onIccArrive = function (t, d) {
+    var self = this, threat = d.threat;
+    if (!threat.alive || threat.pipelineDead) return;
+    // ICC 대대 사격지휘 처리(kind 'fire-direction' — 결과 카드에서 대대 부하로 관측)
+    this._nodeArrive(d.icc, t, { threat: threat, kind: 'fire-direction' }, function (tt2, job) {
+      if (!job.threat.alive || job.threat.pipelineDead) return;
+      var B = self._node(d.battery);
+      var comm = self._link(d.icc, d.battery, 'command');
+      var delay = comm ? self._linkDelay(comm) : 0;
+      if (comm) self._recordLink(d.icc, d.battery, comm, 'command');
+      self._mark(job.threat, 'ICC→포대:' + d.battery, tt2);
+      var ecsId = self.nodeState[d.battery + '::ecs'] ? d.battery + '::ecs' : null;
+      if (ecsId) {
+        self.schedule(tt2 + delay, PRI.LINK_ARRIVE, 'ECS_ARRIVE', { threat: job.threat, ecs: ecsId, battery: d.battery });
+      } else {
+        self.schedule(tt2 + delay, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: job.threat, shooter: d.battery });
+      }
+    });
+  };
+
+  Simulation.prototype._onEcsArrive = function (t, d) {
+    var self = this, threat = d.threat;
+    if (!threat.alive || threat.pipelineDead) return;
+    // ECS 콘솔 처리(kind 'ecs') → 완료 시 MFR 채널로(SHOOTER_ARRIVE 재사용, kind 'engage'=illum 점유)
+    this._nodeArrive(d.ecs, t, { threat: threat, kind: 'ecs' }, function (tt2, job) {
+      if (!job.threat.alive || job.threat.pipelineDead) return;
+      self.schedule(tt2, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: job.threat, shooter: d.battery });
+    });
   };
 
   Simulation.prototype._onShooterArrive = function (t, d) {
@@ -833,13 +1011,46 @@
     });
   };
 
+  /**
+   * WP1: 포대 TEL 발사대 재고 차감 — 잔여 rounds가 있는 발사대에서 순차 소모. 발사대가 비면
+   * reloadSec 후 복구(RELOAD_DONE) 예약. ammo = Σ tel.rounds. 재장전 중 그 발사대는 비가용.
+   * RNG 미소비(순수 재고 회계 — 그리기 수 불변).
+   */
+  Simulation.prototype._telFire = function (sns, B, shots, t) {
+    var remaining = shots, reloadSec = (B.tels && B.tels.reloadSec) || 0;
+    for (var i = 0; i < sns.tels.length && remaining > 0; i++) {
+      var tel = sns.tels[i];
+      if (tel.rounds <= 0) continue;
+      var take = Math.min(tel.rounds, remaining);
+      tel.rounds -= take; remaining -= take; sns.ammo -= take;
+      if (tel.rounds === 0 && tel.reloadDoneT === null) {
+        tel.reloadDoneT = t + reloadSec; sns.reloadingCount++;
+        this.schedule(t + reloadSec, PRI.LINK_ARRIVE, 'RELOAD_DONE', { nsId: B.id, telIdx: i });
+      }
+    }
+    if (sns.ammo <= 0 && sns.ammoDepletedT === null) sns.ammoDepletedT = t;
+  };
+
+  /** WP1: 발사대 재장전 완료 — 해당 TEL을 만재로 복구. */
+  Simulation.prototype._onReloadDone = function (t, d) {
+    var sns = this.nodeState[d.nsId];
+    if (!sns || !sns.tels) return;
+    var tel = sns.tels[d.telIdx];
+    var refill = (sns.node.tels && sns.node.tels.readyRoundsPerTel) || 0;
+    var add = refill - tel.rounds; // 부분 잔여가 있을 수 있으나 통상 0에서 만재
+    tel.rounds = refill; tel.reloadDoneT = null;
+    sns.ammo += Math.max(0, add);
+    sns.reloadingCount = Math.max(0, sns.reloadingCount - 1);
+    this.global.reloads++;
+  };
+
   // 비용교환비의 '저가 포화위협' 부분집합 (계획서: 장사정포·UAV 대응 소모 비용)
   var SAT_THREATS = { uav_small: true, mrl_large: true };
 
   /** 9 BDA: 요격확률 판정 → 실패 시 재교전 피드백(폐루프) */
   Simulation.prototype._onEngageEnd = function (t, threat, shooterId) {
     if (!threat.alive) return;
-    var shooter = KJ.nodeById(shooterId);
+    var shooter = this._node(shooterId);
     threat.tries++;
     // Phase D: 교전 시도 1회 = 요격탄 1발 소모(개념) — 비용교환비(MoFE) 집계.
     // Phase 6(salvo): ON이면 교전당 k발 동시 발사 → 비용 k배, 누적 pk=1−(1−pk)^k. OFF면 k=1(legacy).
@@ -853,7 +1064,10 @@
     if (cps >= HIGH_VALUE_COST_M) this.global.highValueInterceptM += shot;
     // 자원최적화 Step 2(magazine): 재고 차감(As-Is·To-Be 공통 — 물리). 첫 소진 시각 기록(비대칭 소진 지표).
     var sns = this.nodeState[shooterId];
-    if (this.features.magazine && sns && isFinite(sns.ammo)) {
+    if (shooter.category === 'battery' && sns) {
+      // WP1: 포대 TEL 발사대 재고 차감 + 재장전 스케줄(magazine 플래그와 독립 — 발사대 물리)
+      this._telFire(sns, shooter, shots, t);
+    } else if (this.features.magazine && sns && isFinite(sns.ammo)) {
       sns.ammo -= shots;
       if (sns.ammo <= 0 && sns.ammoDepletedT === null) sns.ammoDepletedT = t;
     }
@@ -1031,6 +1245,10 @@
       case 'C2_ARRIVE_DUP': this._onC2ArriveDup(ev.t, ev.data); break;
       case 'FUSION_ARRIVE': this._onFusionArrive(ev.t, ev.data); break;
       case 'APPROVE_ARRIVE': this._onApproveArrive(ev.t, ev.data); break;
+      case 'ICC_ARRIVE': this._onIccArrive(ev.t, ev.data); break;       // WP1
+      case 'ECS_ARRIVE': this._onEcsArrive(ev.t, ev.data); break;       // WP1
+      case 'RELOAD_DONE': this._onReloadDone(ev.t, ev.data); break;     // WP1
+      case 'SDEF_SCAN': this._onSelfDefScan(ev.t, ev.data); break;      // WP2
       case 'SHOOTER_ARRIVE': this._onShooterArrive(ev.t, ev.data); break;
       case 'DUP_SHOOTER_ARRIVE': this._onDupShooterArrive(ev.t, ev.data); break;
       case 'SERVICE_END': this._onServiceEnd(ev.t, ev.data); break;
@@ -1057,7 +1275,8 @@
       // C2 서버풀이 ③④⑤(track)과 ⑥⑦(approval)에 공유되므로, 카드가 자기 단계만 보게 하려면
       // 노드 통계를 kind로 쪼갠 값이 필요하다. 부재 kind는 0(빈 버킷)으로 노출한다.
       var rhoByKind = {}, arrivalsByKind = {}, dropsByKind = {}, WqByKind = {};
-      ['track', 'approval', 'engage'].forEach(function (k) {
+      // WP1: 'fire-direction'(ICC 대대 사격지휘)·'ecs'(포대 콘솔)·'illum'는 'engage'로 관측(MFR 조사)
+      ['track', 'approval', 'engage', 'fire-direction', 'ecs'].forEach(function (k) {
         var b = ns.byKind[k];
         rhoByKind[k] = b ? b.busyTime / (ns.c * T) : 0;
         arrivalsByKind[k] = b ? b.arrivals : 0;
@@ -1073,8 +1292,12 @@
         dropsByKind: dropsByKind, WqByKind: WqByKind,
         // 자원최적화 Step 2: 잔여 유도탄 비율·첫 소진 시각·보존 발동 횟수(magazine ON일 때만 유의).
         ammo: isFinite(ns.ammo) ? ns.ammo : null,
+        magazine0: isFinite(ns.magazine0) ? ns.magazine0 : null,
         ammoRatio: (isFinite(ns.ammo) && isFinite(ns.magazine0) && ns.magazine0 > 0) ? ns.ammo / ns.magazine0 : null,
-        ammoDepletedT: ns.ammoDepletedT, reserveTriggers: ns.reserveTriggers
+        ammoDepletedT: ns.ammoDepletedT, reserveTriggers: ns.reserveTriggers,
+        // WP1: 포대 발사대 재장전 중 개수(관측) + 티어(상/중/하층)
+        reloadingCount: ns.reloadingCount != null ? ns.reloadingCount : null,
+        tier: ns.node && ns.node.tier ? ns.node.tier : null
       };
     });
 
@@ -1189,6 +1412,16 @@
         },
         // Phase 1(⑨): 문서 pk 폴백 발동 조합(무기×위협) · Phase 3: 종료 절단 위협 수
         pkFallback: this.global.pkFallback, censored: this.global.censored,
+        // WP1: 티어 핸드오버(상위→하위 포대 재교전)·발사대 재장전 완료 수
+        tierHandoffs: this.global.tierHandoffs, reloads: this.global.reloads,
+        // WP2: 자체교전 관측 — 자위권 교전 건수·격추·timeout:c2 구제·IFF 위험 교전·평균 반응시간
+        selfDefense: {
+          engagements: this.global.selfDefense.engagements, kills: this.global.selfDefense.kills,
+          rescuedFromTimeoutC2: this.global.selfDefense.rescuedFromTimeoutC2,
+          iffRiskEngagements: this.global.selfDefense.iffRiskEngagements,
+          meanReactionSec: this.global.selfDefense.reactionCount
+            ? this.global.selfDefense.reactionSum / this.global.selfDefense.reactionCount : 0
+        },
         features: this.features,
         // 비용교환비(MoFE, 백만 USD 개념): exchange = 소모 요격탄 비용 / 격추 위협가치
         // (>1이면 아군이 더 비싼 자원을 소모). sat*는 저가 포화위협(무인기·방사포) 부분집합

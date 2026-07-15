@@ -417,6 +417,69 @@
 
 ---
 
+## Fire-Unit Layer — 요격체계 세분화 (WP1, `js/data/fire-units.js`, ADR-010)
+
+> 집계 shooter(MDU-L·MDU-M·MSAM-1C·SHORAD-1C·SHORAD-CD)를 ICC(대대급 사격지휘)→포대(ECS+MFR+TEL[])
+> 계층으로 대체한다(`features.fireUnitLayer` 기본 OFF). 능력·pk·비용·적합도·제약(canEngage)은 legacyOf에서
+> 상속하므로 신궁·천마 탄도탄 불가가 전 포대 인스턴스에 자동 상속된다. 조사·출처는 `docs/laydown-sources.md`.
+> **전 신규 파라미터 등급 C(공개 정수 부재) → 스윕 필수.** 좌표는 도시 수준 개념좌표만.
+
+### [C2-ICC-SVC-01] ICC(대대급 사격지휘소) 처리시간
+- **값/분포**: ICC-LSAM/MDUM(MD 대대) As-Is 8 / To-Be 4 s · 육군 ICC(MSAM/SHORAD) As-Is 20–22 / To-Be 10 s, 서버 2 (개념). MD 대대는 탄도 체공창(90s)이 좁아 준자동(짧은 서비스)
+- **단위**: 초 (M/M/c 서비스시간 평균)
+- **출처**: 개념 설정 — 유사 체계(패트리엇류) 대대 사격지휘 절차 유추. **공개 처리시간 근거 없음.** laydown-sources.md §1.5 "재장전·ECS 처리·운용 절차 소요=등급 C" 규율
+- **적용범위**: DES `_onIccArrive`(kind 'fire-direction'). fireUnitLayer ON일 때만
+- **신뢰도 등급**: **C**(공개근거 부재)
+- **MC 적용방식**: 민감도 **스윕 대상**(scripts/step-fireunit-sweep.mjs). 탄도 요격 실현성이 이 값에 민감(ballistic dwell 90s 대비)
+
+### [C2-ECS-SVC-01] ECS(포대 사격통제 콘솔) 처리시간
+- **값/분포**: MD 포대 As-Is 6 / To-Be 3 s · SHORAD 포대 As-Is 8 / To-Be 4 s, 서버(콘솔) 2, 대기실 8–10 (개념)
+- **단위**: 초 (M/M/c 서비스시간 평균)
+- **출처**: 개념 설정 — 유사 체계 교전통제 콘솔 처리 유추. **공개 근거 없음.** laydown-sources.md §1.5 규율(등급 C 필수 스윕)
+- **적용범위**: DES `_onEcsArrive`(kind 'ecs', nodeState `<포대>::ecs`). fireUnitLayer ON
+- **신뢰도 등급**: **C**
+- **MC 적용방식**: 민감도 **스윕 대상**. MFR 채널이 실질 제약이라 ECS는 통상 비병목(스윕으로 확인)
+
+### [WPN-MFR-CH-01] MFR(교전통제레이더) 동시 추적·조사 채널
+- **값/분포**: L-SAM 3 · 천궁-II/PAC-3 4 · 군단천궁 2 · SHORAD 4 (동시교전 상한=M/M/c의 c). 조사 점유시간(illumTimeSec) L-SAM 40 · MD 45 · 군단천궁 90 · SHORAD 60 s. 섹터모드 L-SAM='ballistic-sector'(탄도 지향), 그 외 '360'
+- **단위**: 채널 수, 초
+- **출처**: 공개 표현은 정성적("다표적 동시 요격")뿐 — **정확 채널 정수 비공개**(laydown-sources.md §1: L-SAM 채널 GAP, 천궁-II "6 동시교전" 단일출처 C). 방산 전시·보도 표현의 하한 채택
+- **적용범위**: DES 포대 MFR 서버풀(_initBattery). 실질 동시교전 상한 — 포화 시 ECS 대기·overflow
+- **신뢰도 등급**: **C**(채널 정수 비공개)
+- **MC 적용방식**: 민감도 **스윕 대상** {2,3,4,6}(scripts/step-fireunit-sweep.mjs). "병목이 C2→MFR 채널로 이동"의 핵심 인자
+
+### [SEN-MFR-PD-01] MFR 자체 탐지확률 (WP2 자체교전용)
+- **값/분포**: L-SAM 0.9 · MD 0.85 · 군단천궁 0.8 · SHORAD 0.55 per 스캔 (개념). 위협 detectFactor와 곱해 per-scan 자체획득 확률
+- **단위**: 확률(per 스캔)
+- **출처**: 개념 설정 — 각 체계 교전통제레이더의 표적획득 성능을 SEN-*-PD 계열(관제레이더 0.9·국지레이더 0.6)과 정합 서열화. **정밀 Pd 공개근거 없음**
+- **적용범위**: DES `_onSelfDefScan`(WP2 자체교전 트리거). fireUnitLayer+selfDefense 조합 시
+- **신뢰도 등급**: **C**
+- **MC 적용방식**: 고정 배선 · 후보 **스윕 대상**(SEN-*-PD 계열 동일 규율)
+
+### [WPN-TEL-01] 발사대(TEL) 장전 발수·재장전
+- **값/분포**: 발사대당 장전 발수(readyRoundsPerTel) L-SAM 6 · 천궁계열 8 · 재장전 reloadSec MD 1500–1800 · SHORAD 900 s. 포대 총 재고 magazine = Σ(발사대 수 × readyRoundsPerTel) — legacyOf magazine 상한 이하(이중계상 금지)
+- **단위**: 발, 초
+- **출처**: 발사대당 발수 — L-SAM 6발/발사대·천궁-II 8발/발사대(공개 제원, laydown-sources.md §1, 등급 B). **재장전 시간은 공개근거 없음(등급 C)** — 유사 체계 유추
+- **적용범위**: DES `_telFire`/`_onReloadDone`(TEL 소진→reloadSec 후 복구). fireUnitLayer ON. ADR-008이 기각한 재장전을 ADR-010에서 번복(충실도 우선)
+- **신뢰도 등급**: **B**(발사대당 발수) / **C**(재장전 시간)
+- **MC 적용방식**: 발수 고정(공개 제원) · 재장전 시간 **스윕 대상**
+
+### [WPN-BTY-LAYDOWN-01] 개념 배치(laydown) — 축선×티어 무공백
+- **값/분포**: 상층 L-SAM 2포대(전 축선 탄도 커버) · 중층 천궁-II/PAC-3 2포대 + 군단천궁 1포대 · 하층 SHORAD 3포대. FTR·SM2는 battery화하지 않고 집계 유지(ADR-010 선택지). 커버리지 매트릭스 무공백(`KJ.checkCoverageMatrix`)
+- **출처**: 공개 배치 수량(laydown-sources.md §2, 등급 B/C: Patriot 8·천궁-II ~7–20·L-SAM 2–4·이지스 목표6)의 **하한~중앙값 축소 개념**. **정확 포대 수·좌표 미공개(C)** — 커버리지 무공백을 목표로 축소 배치, 실제 배치·좌표 특정 안 함
+- **적용범위**: `js/data/fire-units.js` BATTERIES. `tests/fireunit.test.js` 커버리지 어서션으로 무공백 고정
+- **신뢰도 등급**: **C**(정확 수량·배치 비공개)
+- **MC 적용방식**: 포대 수·배치 **스윕 대상**(향후). 현재는 무공백 최소 배치 고정
+
+### [C2-FIREUNIT-01] fireUnitLayer 기능 플래그(되돌리기)
+- **값/분포**: `features.fireUnitLayer` 기본 **OFF**. OFF → 집계 shooter 노드 그대로(legacy 지문 비트 동일, 추가 RNG 소비 0). ON → 포대 계층 대체. `KJ.PRESETS.highFidelity`로 selfDefense·magazine·reserveFloor와 함께 ON
+- **출처**: 작업지시서 §1 절대규칙 3(되돌리기 가능성) — 모든 신규 거동은 토글 가능
+- **적용범위**: DES `_buildActiveNodes`. `tests/fireunit.test.js` 되돌리기 어서션(전 플래그 OFF=legacy-snapshot 비트 동일)
+- **신뢰도 등급**: B(방법론)
+- **MC 적용방식**: 고정(구조 스위치). OFF↔ON 짝비교로 병목 이동 정량화(docs/vv-report.md)
+
+---
+
 ## THR (위협)
 
 ### [THR-UAV-RCS-01] 북한 소형 무인기 탐지확률

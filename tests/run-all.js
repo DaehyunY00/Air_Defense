@@ -51,7 +51,8 @@ var suites = [
   ['wta.test.js', '⑧ 교전/요격명령 (교전창·축선 필터·canEngage·결정론·병목이동)'],
   ['reengage.test.js', '⑨ BDA·재교전 (되돌리기 플래그·무기별 pk 차등·폴백 경계·결정론)'],
   ['deadcode.test.js', '死 코드 레지스트리 (Gate 3 — 부활/영구死 정본·정직한 미부활)'],
-  ['resource.test.js', '자원 최적화 (원칙 5 — As-Is불변·MDU-L생존·제약유지·SC2보호·되돌리기)']
+  ['resource.test.js', '자원 최적화 (원칙 5 — As-Is불변·MDU-L생존·제약유지·SC2보호·되돌리기)'],
+  ['fireunit.test.js', 'WP1 요격체계 세분화 (되돌리기·제약상속·커버리지·재장전·티어핸드오버·결정론)']
 ];
 suites.forEach(function (s) {
   console.log('\n== ' + s[1] + ' ==');
@@ -71,6 +72,16 @@ suites.forEach(function (s) {
     console.log('  마지막 출력: ' + tail.slice(-3).join(' | '));
   }
 });
+
+// ── 3) 파라미터 근거 감사 (§1.5 — 신규 Fire-Unit/자체교전 파라미터 출처·스윕 게이트) ──
+console.log('\n== 파라미터 근거 감사 (params-audit.mjs) ==');
+var pa = cp.spawnSync(process.execPath, [path.join(root, 'scripts', 'params-audit.mjs')], { encoding: 'utf8', cwd: root, timeout: 60000 });
+if (pa.status === 0) {
+  console.log('  통과 (신규 파라미터 출처·스윕 규율 준수)');
+} else {
+  failures++;
+  console.log('  ★ 실패\n' + (pa.stdout || '') + (pa.stderr || ''));
+}
 
 console.log('\n' + (failures === 0
   ? '════ 전체 회귀 스위트 통과 ════'

@@ -18,7 +18,7 @@ var path = require('path');
 var fs = require('fs');
 var root = path.join(__dirname, '..');
 ['data/nodes.js', 'data/links.js', 'data/threats.js', 'data/scenarios.js', 'data/axes.js',
- 'core/rng.js', 'core/heap.js', 'engine/sim-engine.js', 'analysis/bottleneck.js'].forEach(function (f) {
+ 'data/fire-units.js', 'core/rng.js', 'core/heap.js', 'engine/sim-engine.js', 'analysis/bottleneck.js'].forEach(function (f) {
   require(path.join(root, 'js', f));
 });
 var KJ = global.KJ;
@@ -45,6 +45,17 @@ assert(des.nodes.filter(function (n) { return n.id.indexOf('SHORAD') === 0 && n.
 var an = KJ.analyzeScenario(balScn, 'asis', 3);
 assert(an.nodes.filter(function (n) { return n.id.indexOf('SHORAD') === 0 && n.lambda > 0; }).length === 0,
   '해석 행위: 탄도탄 단독 구성에서 SHORAD 부하 λ=0');
+// (a-2) 세분화(fireUnitLayer) 후 — 인스턴스 단위 제약 상속 검증 (§1 절대규칙 2)
+console.log('# (a-2) Fire-Unit 세분화 후 인스턴스 단위 탄도탄 불가 상속');
+var vfu = KJ.validateFireUnits();
+assert(vfu.ok, 'validateFireUnits: 전 포대 제약 상속·재고상한·개념좌표 (' + (vfu.errors.join('|') || 'OK') + ')');
+var shBats = KJ.FIRE_UNITS.filter(function (n) { return n.category === 'battery' && n.legacyOf.indexOf('SHORAD') === 0; });
+assert(shBats.length >= 1 && shBats.every(function (b) { return b.canEngage.srbm === false && b.canEngage.mrl_large === false; }),
+  '데이터: 전 SHORAD 포대 인스턴스 canEngage.srbm/mrl_large = false');
+// 행위: fireUnitLayer ON에서도 SHORAD 포대는 탄도탄 교전 투입 0
+var desFU = KJ.runDES({ scenario: balScn, mode: 'asis', intensity: 3, seed: 11, endTimeSec: 1800, features: { fireUnitLayer: true } });
+assert(desFU.nodes.filter(function (n) { return n.category === 'battery' && n.id.indexOf('SHORAD') === 0 && n.arrivals > 0; }).length === 0,
+  'DES 행위(세분화 ON): 탄도탄 단독 강도3에서 SHORAD 포대 도착 0건');
 
 // ── (b) THAAD 미모델링 ──
 console.log('# (b) KAMDOC↔THAAD 연동 부재');

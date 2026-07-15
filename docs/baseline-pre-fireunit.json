@@ -1,0 +1,130 @@
+{
+ "sc1/asis/1/1": {
+  "spawned": 54,
+  "detected": 53,
+  "reachedC2": 53,
+  "everEngaged": 50,
+  "engaged": 77,
+  "killed": 39,
+  "leaked": 11,
+  "killRate": 0.78,
+  "leakRate": 0.22,
+  "leakReasons": {
+   "responsibility_gap": 2,
+   "timeout:engage": 2,
+   "no_engage_window": 2,
+   "missed": 5
+  },
+  "interceptM": 116.2,
+  "exchange": 2.562858,
+  "defenseEfficiency": 0.829036,
+  "shotsFired": 59,
+  "eventCount": 748
+ },
+ "sc1/tobe/1/1": {
+  "spawned": 54,
+  "detected": 53,
+  "reachedC2": 53,
+  "everEngaged": 53,
+  "engaged": 70,
+  "killed": 42,
+  "leaked": 10,
+  "killRate": 0.807692,
+  "leakRate": 0.192308,
+  "leakReasons": {
+   "timeout:engage": 1,
+   "timeout:c2": 3,
+   "missed": 6
+  },
+  "interceptM": 38.5,
+  "exchange": 0.826358,
+  "defenseEfficiency": 0.807452,
+  "shotsFired": 66,
+  "eventCount": 506
+ },
+ "sc2/asis/1/1": {
+  "spawned": 50,
+  "detected": 50,
+  "reachedC2": 48,
+  "everEngaged": 44,
+  "engaged": 91,
+  "killed": 23,
+  "leaked": 14,
+  "killRate": 0.621622,
+  "leakRate": 0.378378,
+  "leakReasons": {
+   "timeout:c2": 1,
+   "missed": 13
+  },
+  "interceptM": 25.8,
+  "exchange": 112.173913,
+  "defenseEfficiency": 0.621622,
+  "shotsFired": 84,
+  "eventCount": 682
+ },
+ "sc2/tobe/1/1": {
+  "spawned": 50,
+  "detected": 50,
+  "reachedC2": 50,
+  "everEngaged": 50,
+  "engaged": 97,
+  "killed": 29,
+  "leaked": 8,
+  "killRate": 0.783784,
+  "leakRate": 0.216216,
+  "leakReasons": {
+   "missed": 7,
+   "timeout:engage": 1
+  },
+  "interceptM": 22.6,
+  "exchange": 77.931034,
+  "defenseEfficiency": 0.783784,
+  "shotsFired": 86,
+  "eventCount": 539
+ },
+ "sc3/asis/1/1": {
+  "spawned": 227,
+  "detected": 225,
+  "reachedC2": 217,
+  "everEngaged": 126,
+  "engaged": 205,
+  "killed": 62,
+  "leaked": 140,
+  "killRate": 0.306931,
+  "leakRate": 0.693069,
+  "leakReasons": {
+   "timeout:c2": 44,
+   "missed": 18,
+   "no_engage_window": 63,
+   "responsibility_gap": 10,
+   "timeout:engage": 5
+  },
+  "interceptM": 412.3,
+  "exchange": 1.60603,
+  "defenseEfficiency": 0.327922,
+  "shotsFired": 133,
+  "eventCount": 2237
+ },
+ "sc3/tobe/1/1": {
+  "spawned": 227,
+  "detected": 225,
+  "reachedC2": 225,
+  "everEngaged": 195,
+  "engaged": 263,
+  "killed": 112,
+  "leaked": 92,
+  "killRate": 0.54902,
+  "leakRate": 0.45098,
+  "leakReasons": {
+   "no_engage_window": 29,
+   "missed": 34,
+   "timeout:c2": 26,
+   "timeout:engage": 3
+  },
+  "interceptM": 565.3,
+  "exchange": 0.884954,
+  "defenseEfficiency": 0.796596,
+  "shotsFired": 221,
+  "eventCount": 2135
+ }
+}

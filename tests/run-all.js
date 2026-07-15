@@ -52,7 +52,8 @@ var suites = [
   ['reengage.test.js', '⑨ BDA·재교전 (되돌리기 플래그·무기별 pk 차등·폴백 경계·결정론)'],
   ['deadcode.test.js', '死 코드 레지스트리 (Gate 3 — 부활/영구死 정본·정직한 미부활)'],
   ['resource.test.js', '자원 최적화 (원칙 5 — As-Is불변·MDU-L생존·제약유지·SC2보호·되돌리기)'],
-  ['fireunit.test.js', 'WP1 요격체계 세분화 (되돌리기·제약상속·커버리지·재장전·티어핸드오버·결정론)']
+  ['fireunit.test.js', 'WP1 요격체계 세분화 (되돌리기·제약상속·커버리지·재장전·티어핸드오버·결정론)'],
+  ['selfdefense.test.js', 'WP2 자체교전 (되돌리기·중복교전방지·taxonomy분리·직교성·As-Is하한상승·결정론)']
 ];
 suites.forEach(function (s) {
   console.log('\n== ' + s[1] + ' ==');

@@ -140,6 +140,13 @@
     this.magazineSize = (typeof f.magazineSize === 'number') ? f.magazineSize : null;
     // WP1: MFR 동시교전 채널 스윕용 균일 override(모든 포대 동일). 없으면 포대별 mfr.channels 사용.
     this.mfrChannels = (typeof f.mfrChannels === 'number') ? f.mfrChannels : null;
+    // WP2: 자체교전 파라미터(근거 C, 스윕 대상 — params.md C2-SELFDEF-01)
+    //  · selfDefenseWindowSec : 잔여 체공창이 이 값 이하면 자체교전 트리거 개시(터미널 근접 프록시)
+    //  · selfDefenseDecisionSec: ECS 로컬 결심 시간(상위 C2·협조·승인 홉 전부 우회)
+    //  · selfDefensePkMult    : 자체교전 pk 감쇠(단일센서·비융합·촉박 기하) 0.7~0.9 스윕
+    this.selfDefWindowSec = (typeof f.selfDefenseWindowSec === 'number') ? f.selfDefenseWindowSec : 60;
+    this.selfDefDecisionSec = (typeof f.selfDefenseDecisionSec === 'number') ? f.selfDefenseDecisionSec : 5;
+    this.selfDefPkMult = (typeof f.selfDefensePkMult === 'number') ? Math.max(0, Math.min(1, f.selfDefensePkMult)) : 0.8;
     // Phase 5: 상관계수 ρ(0~1). features.pkCorrelation 숫자로 재정의 가능(민감도 스윕용), 없으면 문서 기본.
     this.pkCorrRho = (typeof f.pkCorrelation === 'number') ? Math.max(0, Math.min(1, f.pkCorrelation)) : PK_CORR_RHO;
     // Phase 6: 연발 발수 k(≥1 정수). features.salvoSize로 재정의, 없으면 문서 기본. salvo OFF면 미사용(k=1).
@@ -1007,8 +1014,77 @@
     var self = this, threat = d.threat;
     if (!threat.alive || threat.pipelineDead) return;
     this._nodeArrive(d.shooter, t, { threat: threat, kind: 'engage' }, function (tt2, job) {
-      self._onEngageEnd(tt2, job.threat, d.shooter);
+      self._onEngageEnd(tt2, job.threat, d.shooter, d.selfDef ? { selfDef: true } : null);
     });
+  };
+
+  // ══════════ WP2: 자체교전(Self-Defense / 자율 교전) — features.selfDefense (ADR-011) ══════════
+  // 자위권 교전(JP 3-01 right of self-defense). 상위 C2 교전명령 없이 포대 MFR이 자체 탐지·자체 요격.
+  // 양 모드 공통(As-Is에도 존재하는 물리·교리 — As-Is 하한을 올려 To-Be 개선폭을 줄이는 반증 성격, ADR-011).
+  // C2가 늦었거나 실패한 위협만 구제(!_countedEngaged || pipelineDead) — 정상 파이프라인과 중복교전 안 함.
+
+  /** 자체교전 후보(포대 또는 폴백 집계 shooter) — coverage·canEngage·재고·섹터 필터 통과분. */
+  Simulation.prototype._selfDefCandidates = function (threat) {
+    var self = this, mode = this.mode, type = threat.type;
+    return this._nodes.filter(function (n) {
+      var isBat = n.category === 'battery';
+      // fireUnitLayer OFF면 집계 shooter가 폴백 MFR로 자체교전(플래그 직교성). ON이면 battery만.
+      if (!isBat && n.category !== 'shooter') return false;
+      if (isBat === false && self.features.fireUnitLayer) return false; // ON일 땐 집계 shooter는 대체돼 미사용
+      if (!n.canEngage[type]) return false;
+      if (n.coverage && n.coverage.indexOf(threat.axis) === -1) return false;
+      if (isBat && n.mfr && n.mfr.sectorMode === 'ballistic-sector' && KJ.threatType(type).altBand !== 'ballistic') return false;
+      var ns = self.nodeState[n.id];
+      if (!ns) return false;
+      if (isBat && ns.ammo <= 0) return false;                       // TEL 소진
+      if (!isBat && self.features.magazine && isFinite(ns.ammo) && ns.ammo <= 0) return false;
+      return true;
+    });
+  };
+
+  /** MFR 자체 스캔 판정 확률 — 포대는 mfr.detectProb, 폴백 집계 shooter는 개념 Pd 0.6. */
+  var SDEF_FALLBACK_PD = 0.6; // fireUnitLayer OFF 집계 shooter 개념 MFR Pd (params.md C2-SELFDEF-01, C·스윕)
+  Simulation.prototype._onSelfDefScan = function (t, d) {
+    var self = this, threat = d.threat;
+    if (!threat.alive) return;                          // 격추/공역이탈 → 종료
+    if (threat._countedEngaged || threat._selfDefEngaged) return; // C2가 이미 교전 → 중복 안 함(구제 대상 아님)
+    var remaining = (threat.spawnT + threat.dwellSec) - t;
+    if (remaining <= 0) return;
+    var cands = this._selfDefCandidates(threat);
+    if (cands.length) {
+      // 후보 중 최소부하(결정론: 동점 id 사전순) 선택
+      var best = null;
+      cands.forEach(function (n) {
+        var ns = self.nodeState[n.id];
+        var load = ns ? (ns.busy + ns.queue.length) : 0;
+        if (!best || load < best.load || (load === best.load && n.id < best.n.id)) best = { n: n, load: load };
+      });
+      var node = best.n;
+      var pd = (node.category === 'battery' && node.mfr && node.mfr.detectProb && typeof node.mfr.detectProb.value === 'number')
+        ? node.mfr.detectProb.value : SDEF_FALLBACK_PD;
+      var p = Math.max(0, Math.min(1, pd * KJ.threatType(threat.type).detectFactor * this.mult.detect));
+      // 그리기 수: 자체 스캔당 raw 1회(기존 탐지 규율과 동일). selfDefense OFF면 SDEF_SCAN 미예약 → 소비 0.
+      if (this.rng.raw() < p) { this._selfEngage(threat, node, t); return; }
+    }
+    // 미획득 → 다음 자체 스캔 재시도(공역 이탈 전까지)
+    var next = t + SCAN_SEC;
+    if (next < threat.spawnT + threat.dwellSec) this.schedule(next, PRI.DETECT, 'SDEF_SCAN', { threat: threat });
+  };
+
+  /** 자체 획득 → ECS 로컬 결심(상위 C2·협조·승인 우회) → MFR 채널 점유·발사(pk 감쇠). */
+  Simulation.prototype._selfEngage = function (threat, node, t) {
+    threat._selfDefEngaged = true;
+    // 중복 방지: 자체교전한 위협은 _countedEngaged로 표시해 이후 C2 파이프라인과 이중교전 차단.
+    if (!threat._countedEngaged) { threat._countedEngaged = true; this.global.everEngaged++;
+      this.global.engagedThreatValueM += KJ.threatType(threat.type).unitCostM || 0; }
+    this.global.engaged++;
+    this.global.selfDefense.engagements++;
+    this.global.selfDefense.iffRiskEngagements++; // 상위 CID 없이 교전 — 오격 위험(카운터만, ADR-011)
+    // 반응시간(MoP 별도 지표): 탐지→자체교전. meanDecisionDelaySec 분모 오염 방지(경로 다름).
+    if (threat._detectT != null) { this.global.selfDefense.reactionSum += (t - threat._detectT); this.global.selfDefense.reactionCount++; }
+    this._mark(threat, '자체교전:' + node.id, t);
+    // ECS 로컬 결심 지연 후 MFR 채널 투입(selfDef 플래그 → BDA에서 pk 감쇠·자체교전 회계)
+    this.schedule(t + this.selfDefDecisionSec, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: threat, shooter: node.id, selfDef: true });
   };
 
   /**
@@ -1047,9 +1123,10 @@
   // 비용교환비의 '저가 포화위협' 부분집합 (계획서: 장사정포·UAV 대응 소모 비용)
   var SAT_THREATS = { uav_small: true, mrl_large: true };
 
-  /** 9 BDA: 요격확률 판정 → 실패 시 재교전 피드백(폐루프) */
-  Simulation.prototype._onEngageEnd = function (t, threat, shooterId) {
+  /** 9 BDA: 요격확률 판정 → 실패 시 재교전 피드백(폐루프). opts.selfDef=자체교전(WP2, pk 감쇠). */
+  Simulation.prototype._onEngageEnd = function (t, threat, shooterId, opts) {
     if (!threat.alive) return;
+    var selfDef = !!(opts && opts.selfDef);
     var shooter = this._node(shooterId);
     threat.tries++;
     // Phase D: 교전 시도 1회 = 요격탄 1발 소모(개념) — 비용교환비(MoFE) 집계.
@@ -1073,6 +1150,8 @@
     }
     var pk = this._pk(shooter, threat);
     if (shots > 1) pk = 1 - Math.pow(1 - pk, shots); // 연발 누적 요격확률 (그리기 수 불변 — pk 값만 상향)
+    // WP2: 자체교전 pk 감쇠(단일센서·비융합·촉박 기하). pk 값만 낮춤 — 그리기 수 불변.
+    if (selfDef) pk *= this.selfDefPkMult;
     // Phase 5(pkCorrelated): 재교전 상관. OFF면 독립 추출(legacy: raw() < pk). ON이면 표적별 공유
     // 잠재 frailty(최초 교전서 1회 추출)와 발사별 신규 추출을 ρ로 혼합 → 같은 표적 발사들이 양의
     // 상관을 가져 재교전의 누적 격추 이득이 줄어든다(체계적 실패 재현). 그리기 수: OFF=발사당 raw 1회
@@ -1089,6 +1168,9 @@
       threat.alive = false; threat.killed = true;
       this.global.killed++;
       this.global.timeToKill.push(t - threat.spawnT);
+      // WP2: 자체교전 격추 — C2 파이프라인이 교전 못 한 위협을 구제. 구조적 timeout:c2 감소분의 실체.
+      if (selfDef) { this.global.selfDefense.kills++; this.global.selfDefense.rescuedFromTimeoutC2++;
+        this._mark(threat, '자체격추#' + threat.tries, t); }
       var tv = KJ.threatType(threat.type).unitCostM || 0;
       this.cost.killedThreatM += tv;
       if (SAT_THREATS[threat.type]) this.cost.killedThreatSatM += tv;
@@ -1143,7 +1225,8 @@
       spawnT: t, dwellSec: tt.dwellSec, alive: true, killed: false,
       detected: false, pipelineDead: false, tries: 0, leakReason: null,
       _frailty: null, // Phase 5(pkCorrelated): 표적별 공유 잠재(재교전 상관) — ON일 때 최초 교전에서 지연 추출
-      _trace: null, _countedC2: false, _countedEngaged: false, _detectT: null, _coordDelay: 0
+      _trace: null, _countedC2: false, _countedEngaged: false, _detectT: null, _coordDelay: 0,
+      _selfDefEngaged: false, _lastTier: null // WP1/WP2: 티어 핸드오버·자체교전 상태
     };
     if (this.trace) {
       if (this.threatTraces.length < this.traceCap) {
@@ -1158,6 +1241,12 @@
     }
     this.schedule(t + threat.dwellSec, PRI.EXIT, 'EXIT', { threat: threat });
     this._beginDetect(threat, t);
+    // WP2: 자체교전 자체 스캔 예약(selfDefense ON일 때만 — OFF면 SDEF_SCAN 미예약, 추가 RNG 소비 0).
+    // 잔여 체공창이 selfDefWindowSec 이하가 되는 시점(=터미널 근접)부터 스캔 개시, 이후 SCAN_SEC 간격.
+    if (this.features.selfDefense) {
+      var firstSdef = t + Math.max(SCAN_SEC, threat.dwellSec - this.selfDefWindowSec);
+      if (firstSdef < t + threat.dwellSec) this.schedule(firstSdef, PRI.DETECT, 'SDEF_SCAN', { threat: threat });
+    }
     // 다음 도착 (포아송: 지수 도착간격) — burst 전용 항목(ratePerMin 부재)은 후속 도착 없음
     var ratePerSec = ((entry.ratePerMin || 0) * this.intensity) / 60;
     if (ratePerSec > 0) {

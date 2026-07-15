@@ -478,6 +478,15 @@
 - **신뢰도 등급**: B(방법론)
 - **MC 적용방식**: 고정(구조 스위치). OFF↔ON 짝비교로 병목 이동 정량화(docs/vv-report.md)
 
+### [C2-SELFDEF-01] 자체교전(Self-Defense / 자율 교전) 파라미터 (WP2, ADR-011)
+- **값/분포**: `features.selfDefense` 기본 **OFF**. 트리거: 잔여 체공창 ≤ `selfDefenseWindowSec`(기본 60, 스윕 {30,60,90}) AND coverage∋축선 AND canEngage AND C2 미교전(`!_countedEngaged` 또는 pipelineDead). ECS 로컬 결심 `selfDefenseDecisionSec`(기본 5s, 상위 C2·협조·승인 우회). 자체 pk 감쇠 `selfDefensePkMult`(기본 0.8, 스윕 {0.7,0.8,0.9}). MFR 자체 스캔 Pd=포대 mfr.detectProb(폴백 집계 shooter 0.6)
+- **단위**: 초, 배수, 확률
+- **출처**: 자위권 교전(JP 3-01 right of self-defense) — 지휘관은 적대행위로부터 부대·방호자산을 보호할 권한. KJADS 원칙 6-2(중앙→분권→자율 전환)·6-1(로컬 IDD) 최소 구현. **창·결심·감쇠 값은 공개근거 없음(등급 C)** — 스윕으로만 해석
+- **적용범위**: DES `_onSelfDefScan`/`_selfEngage`/`_onEngageEnd(opts.selfDef)`. 양 모드 공통(As-Is에도 존재하는 물리·교리 — As-Is 하한↑ = To-Be 개선폭↓, 반증 성격). 자체 스캔당 raw 1회(OFF면 SDEF_SCAN 미예약, 추가 RNG 소비 0)
+- **신뢰도 등급**: **C**(창·결심·감쇠 근거 부재)
+- **MC 적용방식**: 민감도 **스윕 대상** selfDefenseWindowSec{30,60,90}·selfDefensePkMult{0.7,0.8,0.9}(scripts/step-fireunit-sweep.mjs)
+- **비고**: 오격(fratricide)은 상위 CID 없이 교전하므로 위험 카운터(`iffRiskEngagements`)만 신설 — 실제 오격 확률 모델링은 근거 부재로 범위 밖(ADR-011). meanSelfDefenseReactionSec는 meanDecisionDelaySec 분모와 분리(경로 상이)
+
 ---
 
 ## THR (위협)

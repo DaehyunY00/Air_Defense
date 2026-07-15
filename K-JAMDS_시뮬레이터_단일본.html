@@ -5494,6 +5494,36 @@ li.chk-fail { background: #43140f; }
       }
     },
 
+    // WP1(§3-3-4): 요격체계 세분화 최소 지도 오버레이 — 포대 마커 + 커버리지 원 + 티어 색.
+    // 기존 딥링크·탭 구조를 건드리지 않는 독립 오버레이(별도 layerGroup). fireUnitLayer 시각화용.
+    // 호출부가 켤 때만 렌더(기본 미표출) — KJ.mapView.renderFireUnits(mode) / clearFireUnits().
+    renderFireUnits: function (mode) {
+      if (fallback || !map || !KJ.FIRE_UNITS) return;
+      if (!this._fuLayer) this._fuLayer = L.layerGroup().addTo(map);
+      this._fuLayer.clearLayers();
+      var TIER_COLOR = { upper: '#c0392b', mid: '#e67e22', low: '#27ae60' }; // 상/중/하층 색
+      var self = this;
+      KJ.fireUnitsInMode(mode).filter(function (u) { return u.category === 'battery'; }).forEach(function (b) {
+        var col = TIER_COLOR[b.tier] || '#888';
+        // 커버리지(교전) 범위 원 — MFR rangeKm 개념값(도시 수준 개념좌표)
+        if (b.mfr && b.mfr.rangeKm) {
+          self._fuLayer.addLayer(L.circle(b.coord, {
+            radius: b.mfr.rangeKm * 1000, color: col, weight: 1,
+            fill: b.mfr.rangeKm <= 200, fillColor: col, fillOpacity: 0.05, opacity: 0.4, interactive: false
+          }));
+        }
+        var icon = L.divIcon({ className: 'node-icon',
+          html: '<div class="node-mark" style="--svc:' + col + ';border-radius:2px"></div>' +
+            '<div class="node-label">' + b.id.replace(/-BTY/, '') + '</div>',
+          iconSize: [60, 30], iconAnchor: [30, 10] });
+        var m = L.marker(b.coord, { icon: icon });
+        m.bindTooltip(b.name + '<br>티어 ' + b.tier + ' · MFR ' + b.mfr.channels + '채널 · TEL ' +
+          b.tels.count + '×' + b.tels.readyRoundsPerTel + '발<br><i>ICC: ' + b.icc + ' (개념 배치)</i>', { sticky: true });
+        self._fuLayer.addLayer(m);
+      });
+    },
+    clearFireUnits: function () { if (this._fuLayer) this._fuLayer.clearLayers(); },
+
     invalidateSize: function () { if (map) map.invalidateSize(); }
   };
 

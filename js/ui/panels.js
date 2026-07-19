@@ -37,21 +37,41 @@
   // As-Is↔To-Be 결정론 DES 1복제(동일 seed)로 나란히 비교한다.
 
   // DES 양모드 캐시 (설정이 같으면 재계산하지 않음 — 탭 전환·재렌더 대비)
-  var desCache = { key: null, data: null };
-  function pipelineData(state) {
+  var desCache = { key: null, data: null, pendingKey: null, requestId: 0, error: null, errorKey: null };
+  function pipelineData(state, onReady) {
     var key = [state.sc, state.x, state.seed, state.dur, state.dep || 'legacy'].join('|');
     if (desCache.key === key) return desCache.data;
-    var scn = KJ.scenarioById(state.sc);
-    var cfg = Object.assign({ scenario: scn, intensity: state.x, seed: state.seed, endTimeSec: state.dur }, modelConfig(state));
-    var a = KJ.runDES(Object.assign({ mode: 'asis' }, cfg));
-    var b = KJ.runDES(Object.assign({ mode: 'tobe' }, cfg));
-    function heatSum(mode) {
-      return KJ.computeOverlapHeat(scn, mode, state.x, modelConfig(state)).axes
-        .reduce(function (s, ax) { return s + ax.raw; }, 0);
-    }
-    desCache.key = key;
-    desCache.data = { a: a, b: b, heatA: heatSum('asis'), heatB: heatSum('tobe') };
-    return desCache.data;
+    if (desCache.errorKey === key) return null;
+    if (desCache.pendingKey === key) return null;
+    desCache.pendingKey = key;
+    desCache.error = null; desCache.errorKey = null;
+    var requestId = ++desCache.requestId;
+    var highCfg = modelConfig(state);
+    KJ.compute.run('desPair', {
+      cfg: {
+        scenarioId: state.sc, mode: 'asis', intensity: state.x,
+        seed: state.seed, endTimeSec: state.dur,
+        deploymentId: highCfg.deploymentId, features: highCfg.features
+      },
+      includeHeat: true
+    }).then(function (pair) {
+      if (requestId !== desCache.requestId) return;
+      desCache.key = key;
+      desCache.pendingKey = null;
+      desCache.errorKey = null;
+      desCache.data = {
+        a: pair.current, b: pair.other,
+        heatA: pair.heatCurrent, heatB: pair.heatOther
+      };
+      if (onReady) onReady();
+    }).catch(function (err) {
+      if (requestId !== desCache.requestId) return;
+      desCache.pendingKey = null;
+      desCache.error = err.message;
+      desCache.errorKey = key;
+      if (onReady) onReady();
+    });
+    return null;
   }
 
   /** 링크 전달 1건당 평균 통신지연(초) — sim-view의 MoP 지표와 동일 정의.
@@ -234,7 +254,16 @@
   function renderPipeline(state) {
     var box = el('pipeline-stages');
     if (!box) return;
-    var d = pipelineData(state);
+    var d = pipelineData(state, function () { renderPipeline(state); });
+    if (!d) {
+      el('pipeline-context').textContent = desCache.error
+        ? 'DES 비교 계산 실패: ' + desCache.error
+        : 'As-Is/To-Be DES를 백그라운드 Worker에서 계산 중입니다. 다른 탭·지도는 계속 조작할 수 있습니다.';
+      box.innerHTML = '<div class="note">⏳ 9단계 파이프라인 비교 계산 중…</div>';
+      var taxonomy = el('taxonomy-body');
+      if (taxonomy) taxonomy.innerHTML = '<tr><td colspan="9">⏳ DES 결과 대기 중…</td></tr>';
+      return;
+    }
     var a = d.a, b = d.b, ga = a.global, gb = b.global;
     var catalog = catalogFor(state);
     var ca = codeCounts(a, catalog), cb = codeCounts(b, catalog);

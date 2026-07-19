@@ -12,6 +12,7 @@
   var state = null;
   var analysisCache = null;
   var prevTab = null;
+  var intensityTimer = null;
 
   function modelConfig() {
     var high = state.dep && state.dep !== 'legacy';
@@ -73,11 +74,6 @@
       KJ.panels.renderData(state);
     }
 
-    // 헤더 요약 (전 탭 공통): 도출된 병목 개수 (정상상태 해석 기준)
-    var n = analysis.bottlenecks.length;
-    var summary = document.getElementById('header-bn-count');
-    summary.textContent = n > 0 ? '도출된 병목 ' + n + '건' : '병목 없음';
-    summary.className = n > 0 ? 'bn-count has-bn' : 'bn-count';
   }
 
   function bindEvents() {
@@ -95,6 +91,13 @@
       setState({ dep: e.target.value, open: '' });
     });
     document.getElementById('intensity-slider').addEventListener('input', function (e) {
+      var value = parseFloat(e.target.value);
+      document.getElementById('intensity-value').textContent = '×' + value.toFixed(1);
+      clearTimeout(intensityTimer);
+      intensityTimer = setTimeout(function () { setState({ x: value }); }, 120);
+    });
+    document.getElementById('intensity-slider').addEventListener('change', function (e) {
+      clearTimeout(intensityTimer);
       setState({ x: parseFloat(e.target.value) });
     });
 
@@ -121,6 +124,9 @@
     });
     document.getElementById('toggle-rings').addEventListener('change', function (e) {
       KJ.simView.toggleRings(e.target.checked);
+    });
+    document.getElementById('toggle-links').addEventListener('change', function (e) {
+      KJ.simView.toggleLinks(e.target.checked);
     });
 
     // 결과 모달 닫기 (배경 클릭 포함)

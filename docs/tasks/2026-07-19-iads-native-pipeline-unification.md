@@ -37,7 +37,7 @@
 
 - `tests/iads-native-pipeline.test.js` 12건: NORMAL/DOWN/To-Be 책임 C2, PIP/FC 발사, 실제 중복 BDA, 발사대 탄약/재장전, 결정론.
 - `tests/baseline.test.js` 18건: SC1–SC3×As-Is/To-Be 전체 JSON SHA-256 및 플래그 생략=OFF bit-exact.
-- 전체: JS 25개 `node --check`, 21개 스위트·540개 어서션.
+- 전체: JS 27개 `node --check`, 22개 스위트·555개 어서션.
 
 ## 해석 한계·후속
 

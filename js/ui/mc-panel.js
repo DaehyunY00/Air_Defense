@@ -64,18 +64,35 @@
       var maxReps = Math.max(30, Math.min(2000, parseInt(el('mc-maxreps').value, 10) || 500));
       var tol = Math.max(0.001, (parseFloat(el('mc-tol').value) || 1) / 100);
       var self = this;
-      // 다음 프레임에 계산 → 버튼 상태가 먼저 그려짐
-      setTimeout(function () {
-        var t0 = now();
-        var base = Object.assign({ scenario: KJ.scenarioById(state.sc), intensity: state.x, seed: state.seed, endTimeSec: state.dur }, modelConfig(state));
-        var cur = KJ.runMonteCarlo(Object.assign({ mode: state.mode }, base), { minReps: 30, maxReps: maxReps, tol: tol });
-        var otherMode = state.mode === 'asis' ? 'tobe' : 'asis';
-        var oth = KJ.runMonteCarlo(Object.assign({ mode: otherMode }, base), { minReps: 30, maxReps: maxReps, tol: tol });
-        var sens = KJ.sensitivitySweep(Object.assign({ mode: state.mode }, base), { reps: Math.min(60, maxReps), deltaPct: 0.2 });
-        last = { cur: cur, oth: oth, otherMode: otherMode, mode: state.mode, sens: sens, elapsed: now() - t0 };
+      var t0 = now();
+      var highCfg = modelConfig(state);
+      KJ.compute.run('mcBundle', {
+        cfg: {
+          scenarioId: state.sc, mode: state.mode, intensity: state.x,
+          seed: state.seed, endTimeSec: state.dur,
+          deploymentId: highCfg.deploymentId, features: highCfg.features
+        },
+        opts: { minReps: 30, maxReps: maxReps, tol: tol },
+        sensitivityOpts: { reps: Math.min(60, maxReps), deltaPct: 0.2 }
+      }, function (stage) {
+        var labels = {
+          'current-mc': '⏳ 현재 체계 Monte Carlo 중…',
+          'comparison-mc': '⏳ 비교 체계 Monte Carlo 중…',
+          sensitivity: '⏳ 민감도 스윗 중…'
+        };
+        btn.textContent = labels[stage] || '⏳ Monte Carlo 실행 중…';
+      }).then(function (result) {
+        last = {
+          cur: result.current, oth: result.other,
+          otherMode: result.otherMode, mode: state.mode,
+          sens: result.sensitivity, elapsed: now() - t0
+        };
         self._renderResult(last);
         btn.disabled = false; btn.textContent = '▶ Monte Carlo 실행';
-      }, 30);
+      }).catch(function (err) {
+        btn.disabled = false; btn.textContent = '▶ Monte Carlo 실행';
+        el('mc-converge').innerHTML = '<div class="mc-conv conv-no">⚠️ 계산 실패: ' + esc(err.message) + '</div>';
+      });
     },
 
     _renderResult: function (res) {
@@ -174,16 +191,24 @@
     var btn = el('mc-transition-run');
     btn.disabled = true; btn.textContent = '⏳ 스윕 실행 중 (11점 × 2모드 × 20복제)...';
     var state = lastState;
-    setTimeout(function () {
-      var t0 = now();
-      var r = KJ.analyzeTransition(KJ.scenarioById(state.sc), {
+    var t0 = now();
+    var highCfg = modelConfig(state);
+    KJ.compute.run('transition', {
+      scenarioId: state.sc,
+      opts: {
         reps: 20, seed: state.seed, endTimeSec: Math.min(state.dur, 1800),
-        deploymentId: modelConfig(state).deploymentId,
-        features: modelConfig(state).features
-      });
-      renderTransition(r, state, now() - t0);
+        deploymentId: highCfg.deploymentId,
+        features: highCfg.features
+      }
+    }, function () {
+      btn.textContent = '⏳ 임계 전환점 Worker 계산 중…';
+    }).then(function (out) {
+      renderTransition(out.result, state, now() - t0);
       btn.disabled = false; btn.textContent = '▶ 임계 전환점 스윕 실행';
-    }, 30);
+    }).catch(function (err) {
+      btn.disabled = false; btn.textContent = '▶ 임계 전환점 스윕 실행';
+      el('mc-transition-result').innerHTML = '<div class="mc-conv conv-no">⚠️ 계산 실패: ' + esc(err.message) + '</div>';
+    });
   }
 
   function renderTransition(r, state, elapsedMs) {

@@ -57,6 +57,7 @@ var suites = [
   ,['deployment-adapter.test.js', '배치 호환 어댑터 (토폴로지·DOWN·결정론·보존법칙)']
   ,['high-resolution-connection.test.js', '고해상도 C2 연결 (ICC 상향 승인경로·As-Is 주교전)']
   ,['iads-native-pipeline.test.js', '원본 IADS 파이프라인 (책임 C2·scope WTA·PIP·발사대·실제 중복 BDA)']
+  ,['ui-performance.test.js', 'UI 응답성·지도 제어 (Worker·병목배지·C2링크·범례)']
 ];
 suites.forEach(function (s) {
   console.log('\n== ' + s[1] + ' ==');

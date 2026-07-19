@@ -19,7 +19,6 @@
     <h1>K-JAMDS C2 시뮬레이터
       <small>KJADS 구축안 3대 문제 상황(교전 중복·무인기 대응 실패·전략적 섞어쏘기) · As-Is 분절형 ↔ To-Be 통합형</small>
     </h1>
-    <span id="header-bn-count" class="bn-count">—</span>
   </header>
 
   <div id="controls">
@@ -106,7 +105,9 @@
           </div>
           <div class="lg-row">
             <span class="lg-line" style="border-color:#2e6fd8"></span>
-            <span>데이터링크 / Link-16 (합동·공군·해군)</span>
+            <span>C2 연결선 (데이터링크 / Link-16 등)
+              <label class="lg-toggle"><input type="checkbox" id="toggle-links" checked> 표시</label>
+            </span>
           </div>
           <div class="lg-row">
             <span class="lg-line" style="border-color:#2eb8c9;border-top-style:dashed"></span>
@@ -335,6 +336,7 @@
   <script src="js/analysis/mc-runner.js"></script>
   <script src="js/analysis/transition.js"></script>
   <script src="js/analysis/overlap-heatmap.js"></script>
+  <script src="js/core/sim-worker-client.js"></script>
   <script src="js/ui/geo.js"></script>
   <script src="js/ui/table-sort.js"></script>
   <script src="js/ui/map-view.js"></script>

@@ -25,9 +25,11 @@
   var linkLayer = null;
   var ringLayer = null;   // 자산 범위 링 (탐지/교전, 개념값)
   var ringsVisible = true;
+  var linksVisible = true;
   var markers = {}; // nodeId -> marker
   var fallback = false; // Leaflet 로드 실패(오프라인/폐쇄망) 시 SVG 개념도로 대체
   var containerId = null;
+  var lastState = null, lastAnalysis = null;
 
   function catalogFor(state) {
     if (!KJ.resolveModelCatalog) return null;
@@ -69,8 +71,21 @@
       else if (map.hasLayer(ringLayer)) map.removeLayer(ringLayer);
     },
 
+    /** C2 보고·협조·명령 연결선 레이어 표시 토글 */
+    setLinksVisible: function (v) {
+      linksVisible = !!v;
+      if (fallback) {
+        if (lastState) renderFallbackSvg(lastState, lastAnalysis);
+        return;
+      }
+      if (!map || !linkLayer) return;
+      if (linksVisible) { if (!map.hasLayer(linkLayer)) map.addLayer(linkLayer); }
+      else if (map.hasLayer(linkLayer)) map.removeLayer(linkLayer);
+    },
+
     /** 모드·분석 결과에 따라 노드/링크 재렌더 */
     render: function (state, analysis) {
+      lastState = state; lastAnalysis = analysis;
       if (fallback) { renderFallbackSvg(state, analysis); return; }
       if (!map) return;
       var mode = state.mode;
@@ -170,7 +185,7 @@
     var LINK_DASH = { datalink: '', kvmf: '8 3', link16: '6 4', voice: '2 6', broadcast: '1 5' };
 
     var svg = '';
-    KJ.linksInMode(mode, catalog).forEach(function (l) {
+    (linksVisible ? KJ.linksInMode(mode, catalog) : []).forEach(function (l) {
       var from = KJ.nodeById(l.from, catalog), to = KJ.nodeById(l.to, catalog);
       if (!from || !to) return;
       if (from.modes && from.modes.indexOf(mode) === -1) return;

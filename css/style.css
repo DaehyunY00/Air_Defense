@@ -36,12 +36,6 @@ header {
 }
 header h1 { font-size: 16px; font-weight: 700; white-space: nowrap; }
 header h1 small { color: var(--muted); font-weight: 400; font-size: 11px; display: block; }
-.bn-count {
-  margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 12px;
-  background: var(--panel-2); color: var(--muted);
-}
-.bn-count.has-bn { background: #4a1712; color: #ff9a8d; }
-
 /* ── 컨트롤 바 ── */
 #controls {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
@@ -429,13 +423,17 @@ li.chk-fail { background: #43140f; }
  * 가능한 칩(.lg-chip)으로, (2) 설명이 긴 항목은 아이콘 열 고정 그리드(.lg-row)로
  * 분리한다 — 좁은 폭에서 아이콘과 라벨 사이 임의 지점이 끊기는 것을 방지한다. */
 .map-legend {
-  position: absolute; bottom: 20px; left: 12px; z-index: 1000;
+  position: absolute; bottom: 20px; right: 12px; left: auto; z-index: 1000;
   background: rgba(16, 20, 26, .94); border: 1px solid var(--border);
   border-radius: 8px; padding: 10px 12px; font-size: 11px; color: var(--text);
   /* 폭을 넉넉히 잡아 각 항목(칩·행)이 줄바꿈 없이 한 줄에 들어오게 함 */
   width: 400px; max-width: calc(100vw - 40px);
   max-height: min(62vh, 460px); overflow-y: auto;
   word-break: keep-all; overflow-wrap: break-word;
+}
+
+@media (max-width: 760px) {
+  .map-legend { right: 8px; bottom: 8px; width: min(400px, calc(100vw - 16px)); }
 }
 .map-legend h4 { font-size: 12px; margin: 0 0 8px; color: #aecbeb; display: flex; align-items: baseline; gap: 6px; }
 .map-legend h4 .lg-h4-sub { font-size: 10px; font-weight: 400; color: var(--muted); }

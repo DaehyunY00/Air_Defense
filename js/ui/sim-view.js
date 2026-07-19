@@ -77,9 +77,13 @@
 
   // ── 모듈 상태 ──
   var run = null;   // { cfg, res, resOther, threats, nodeMeta, mc:{asis,tobe,pending} }
-  var anim = { playing: false, t: 0, speed: 30, lastTs: null, raf: null, done: false };
+  var anim = {
+    playing: false, t: 0, speed: 30, lastTs: null, raf: null, done: false,
+    lastRenderWall: 0, lastRingWall: 0
+  };
   var layers = null; // { canvasRenderer, threatMarkers:{}, nodeRings:{}, group }
   var currentState = null;
+  var computeGeneration = 0;
   var inputTouched = { seed: false, dur: false };
   var tlog = { els: {}, lastUpdate: 0 }; // 위협 항적 로그 패널 상태 (실행당 재구성)
 
@@ -125,6 +129,7 @@
     start: function (state) {
       var self = this;
       this.stop(); // 이전 실행 정리
+      var generation = ++computeGeneration;
       var seed = Math.max(0, Math.floor(parseFloat(el('sim-seed').value) || 0));
       var dur = Math.min(7200, Math.max(60, Math.floor(parseFloat(el('sim-dur').value) || 1800)));
       var cfg = { sc: state.sc, mode: state.mode, dep: state.dep || 'legacy', x: state.x, seed: seed, dur: dur };
@@ -132,24 +137,28 @@
       btn.disabled = true; btn.textContent = '⏳ DES 실행 중...';
       setStatus('DES 실행 중 (trace 모드)...');
 
-      setTimeout(function () {
-        var scenario = KJ.scenarioById(cfg.sc);
-        var t0 = now();
-        var highCfg = modelConfig(cfg);
-        var res = KJ.runDES(Object.assign({
-          scenario: scenario, mode: cfg.mode, intensity: cfg.x,
-          seed: cfg.seed, endTimeSec: cfg.dur, trace: true, traceCap: 300
-        }, highCfg));
-        var other = cfg.mode === 'asis' ? 'tobe' : 'asis';
-        var resOther = KJ.runDES(Object.assign({
-          scenario: scenario, mode: other, intensity: cfg.x,
-          seed: cfg.seed, endTimeSec: cfg.dur
-        }, highCfg));
+      var highCfg = modelConfig(cfg);
+      var computeCfg = {
+        scenarioId: cfg.sc, mode: cfg.mode, intensity: cfg.x,
+        seed: cfg.seed, endTimeSec: cfg.dur, trace: true, traceCap: 300,
+        deploymentId: highCfg.deploymentId, features: highCfg.features
+      };
+      var t0 = now();
+      KJ.compute.run('desPair', { cfg: computeCfg }, function (stage) {
+        if (generation !== computeGeneration) return;
+        setStatus(stage === 'comparison-des' ? '비교 체계 DES 계산 중…' : '현재 체계 DES 계산 중…');
+      }).then(function (pair) {
+        if (generation !== computeGeneration) return;
+        var res = pair.current;
+        var resOther = pair.other;
+        var other = pair.otherMode;
+        var computeLabel = pair.execution === 'web-worker' ? 'Worker' : '메인 스레드 폴백';
         var elapsed = now() - t0;
 
         run = {
           cfg: cfg, res: res, resOther: resOther, otherMode: other,
-          elapsedMs: elapsed, nodeMeta: {}, threats: buildThreats(res),
+          elapsedMs: elapsed, execution: pair.execution,
+          nodeMeta: {}, threats: buildThreats(res),
           mc: { pending: true, asis: null, tobe: null }
         };
         res.nodes.forEach(function (n) { run.nodeMeta[n.id] = n; });
@@ -157,17 +166,31 @@
         // 병목 하이라이트를 이번 DES 실행 결과로 갱신 (해석 근사 아님)
         KJ.mapView.render(currentState, { nodes: res.nodes });
 
-        // 백그라운드 Monte Carlo (양 모드, 수렴판정) — 요구: "백그라운드에서 DES·MC 수행"
-        setStatus('백그라운드 Monte Carlo 수렴 중...');
-        setTimeout(function () {
-          var mcOpts = { minReps: 30, maxReps: 200, tol: 0.01, primary: 'leakRate' };
-          var mcBase = Object.assign({ scenario: scenario, intensity: cfg.x, seed: cfg.seed, endTimeSec: cfg.dur }, highCfg);
-          run.mc.asis = KJ.runMonteCarlo(Object.assign({ mode: 'asis' }, mcBase), mcOpts);
-          run.mc.tobe = KJ.runMonteCarlo(Object.assign({ mode: 'tobe' }, mcBase), mcOpts);
+        // MC도 동일 Worker에서 실행해 지도 재생·조작을 차단하지 않는다.
+        setStatus('백그라운드 Monte Carlo 수렴 중… (' + computeLabel + ')');
+        KJ.compute.run('mcPair', {
+          cfg: Object.assign({}, computeCfg, { trace: false }),
+          opts: { minReps: 30, maxReps: 200, tol: 0.01, primary: 'leakRate' }
+        }, function (stage) {
+          if (generation !== computeGeneration) return;
+          setStatus((stage === 'comparison-mc' ? '백그라운드 비교 체계 MC 중…' : '백그라운드 현재 체계 MC 중…') +
+            ' (' + computeLabel + ')');
+        }).then(function (mcPair) {
+          if (generation !== computeGeneration || !run) return;
+          if (cfg.mode === 'asis') {
+            run.mc.asis = mcPair.current; run.mc.tobe = mcPair.other;
+          } else {
+            run.mc.tobe = mcPair.current; run.mc.asis = mcPair.other;
+          }
           run.mc.pending = false;
           setStatus(anim.playing ? '재생 중 — MC 수렴 완료 (' + run.mc.asis.reps + '·' + run.mc.tobe.reps + '복제)' : 'MC 수렴 완료');
           renderModalIfOpen();
-        }, 60);
+        }).catch(function (err) {
+          if (generation !== computeGeneration || !run) return;
+          run.mc.pending = false;
+          setStatus('MC 계산 실패: ' + err.message);
+          renderModalIfOpen();
+        });
 
         el('sim-results').disabled = false;
         btn.disabled = false; btn.textContent = '↺ 다시 실행';
@@ -188,7 +211,11 @@
         playBtn.disabled = false;
         setStatus('위협궤적 재생 중 (' + run.threats.length + '건 추적, ×' + anim.speed + ')');
         play();
-      }, 30);
+      }).catch(function (err) {
+        if (generation !== computeGeneration) return;
+        btn.disabled = false; btn.textContent = '▶ 시뮬레이션 시작';
+        setStatus('DES 계산 실패: ' + err.message);
+      });
     },
 
     /** ⏯ 재생/일시멈춤 토글 (재생 종료 후에는 처음부터 다시 재생) */
@@ -234,9 +261,12 @@
     },
 
     toggleRings: function (v) { KJ.mapView.setRingsVisible(v); },
+    toggleLinks: function (v) { KJ.mapView.setLinksVisible(v); },
 
     /** 탭 이탈·재실행 시 정리 (rAF 누수 방지) */
     stop: function () {
+      computeGeneration++;
+      if (KJ.compute) KJ.compute.terminate();
       pause();
       if (layers && layers.group) {
         var map = KJ.mapView.getMap();
@@ -279,7 +309,7 @@
     });
   }
 
-  // ── Leaflet 애니메이션 레이어 (canvas 렌더러 — 300 마커 60fps) ──
+  // ── Leaflet 애니메이션 레이어 (canvas 렌더러 — 규모별 적응형 프레임률) ──
   function buildLayers(mode) {
     var map = KJ.mapView.getMap();
     if (!map) return;
@@ -321,6 +351,7 @@
   function play() {
     if (!run) return;
     anim.playing = true; anim.lastTs = null;
+    anim.lastRenderWall = 0; anim.lastRingWall = 0;
     syncPlayBtn();
     loop();
   }
@@ -351,7 +382,7 @@
     anim.t += dt * anim.speed;
     if (anim.t >= run.cfg.dur) {
       anim.t = run.cfg.dur;
-      renderFrame(anim.t);
+      renderFrame(anim.t, cur, true);
       updateThreatLog(anim.t);
       pause();
       anim.done = true;
@@ -360,19 +391,36 @@
       KJ.simView.showResults(); // 요구: 시뮬레이션 종료 시 결과창
       return;
     }
-    renderFrame(anim.t);
+    // FULL 배치에서는 수백 개 Leaflet 객체를 매 rAF마다 갱신하지 않는다. 시간 진행은
+    // rAF로 유지하되 화면 그리기만 10fps, legacy/MINI는 30fps로 제한한다.
+    var objectCount = run.threats.length + Object.keys(run.nodeMeta).length;
+    var renderEveryMs = objectCount > 160 ? 100 : 33;
+    if (cur - anim.lastRenderWall >= renderEveryMs) {
+      anim.lastRenderWall = cur;
+      renderFrame(anim.t, cur, false);
+    }
     scheduleNext();
   }
 
   var FADE_SEC = 6;
-  function renderFrame(t) {
+  function renderFrame(t, wallNow, force) {
     if (!run || !layers) return;
     // 위협 위치·가시성
     run.threats.forEach(function (th) {
       var m = layers.threatMarkers[th.id];
       if (!m) return;
       if (t < th.spawnT) {
-        if (m.options.opacity !== 0) m.setStyle({ opacity: 0, fillOpacity: 0 });
+        if (m._kjStyleKey !== 'hidden') {
+          m.setStyle({ opacity: 0, fillOpacity: 0 });
+          m._kjStyleKey = 'hidden';
+        }
+        return;
+      }
+      if (th.exitT != null && t >= th.exitT + FADE_SEC) {
+        if (m._kjStyleKey !== 'hidden') {
+          m.setStyle({ opacity: 0, fillOpacity: 0 });
+          m._kjStyleKey = 'hidden';
+        }
         return;
       }
       var endT = th.exitT != null ? th.exitT : Math.min(t, th.spawnT + th.dwellSec);
@@ -383,24 +431,35 @@
       var op = 1;
       if (th.exitT != null && t > th.exitT) op = Math.max(0, 1 - (t - th.exitT) / FADE_SEC);
       var killed = th.outcome === 'killed' && th.exitT != null && t >= th.exitT;
-      m.setStyle({
-        opacity: op * 0.9, fillOpacity: op * 0.9,
-        color: killed ? '#7dd982' : '#0008', weight: killed ? 2 : 1
-      });
+      var styleKey = (killed ? 'k:' : 'a:') + op.toFixed(2);
+      if (m._kjStyleKey !== styleKey) {
+        m.setStyle({
+          opacity: op * 0.9, fillOpacity: op * 0.9,
+          color: killed ? '#7dd982' : '#0008', weight: killed ? 2 : 1
+        });
+        m._kjStyleKey = styleKey;
+      }
     });
-    // 노드 재고 링
-    var series = run.res.nodeSeries || {};
-    Object.keys(run.nodeMeta).forEach(function (id) {
-      var ring = layers.nodeRings[id];
-      if (!ring) return;
-      var meta = run.nodeMeta[id];
-      var n = countAt(series[id], t);
-      var ratio = meta.K > 0 ? n / meta.K : 0;
-      ring.setStyle({
-        weight: ratio >= 0.9 ? 4 : (ratio >= 0.7 ? 2.5 : (n > 0 ? 1 : 0)),
-        color: ratio >= 0.9 ? '#ff2d1a' : (ratio >= 0.7 ? '#e05545' : '#f0a020')
+    // 노드 재고는 위치보다 천천히 변하므로 4Hz로 제한하고, 시각 등급이 바뀔 때만
+    // Leaflet setStyle을 호출한다.
+    if (force || wallNow - anim.lastRingWall >= 250) {
+      anim.lastRingWall = wallNow;
+      var series = run.res.nodeSeries || {};
+      Object.keys(run.nodeMeta).forEach(function (id) {
+        var ring = layers.nodeRings[id];
+        if (!ring) return;
+        var meta = run.nodeMeta[id];
+        var n = countAt(series[id], t);
+        var ratio = meta.K > 0 ? n / meta.K : 0;
+        var level = ratio >= 0.9 ? 'critical' : (ratio >= 0.7 ? 'warn' : (n > 0 ? 'busy' : 'idle'));
+        if (ring._kjLevel === level) return;
+        ring._kjLevel = level;
+        ring.setStyle({
+          weight: level === 'critical' ? 4 : (level === 'warn' ? 2.5 : (level === 'busy' ? 1 : 0)),
+          color: level === 'critical' ? '#ff2d1a' : (level === 'warn' ? '#e05545' : '#f0a020')
+        });
       });
-    });
+    }
     // 진행 표시
     el('sim-clock').textContent = fmtTime(t) + ' / ' + fmtTime(run.cfg.dur);
     el('sim-progress-bar').style.width = (t / run.cfg.dur * 100).toFixed(1) + '%';

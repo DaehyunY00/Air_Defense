@@ -10,7 +10,7 @@
   // 아군 자산 색: 기능별 구분 — 탐지(센서)=파랑, C2(지휘통제)=호박, 요격(무기)=초록.
   // 적 위협은 붉은색 계열(sim-view.js THREAT_COLOR)로 표시해 피아·기능이 즉시 구분된다.
   var CAT_COLOR = { sensor: '#2e6fd8', c2: '#f0a020', shooter: '#3d8b40' };
-  var SERVICE_LABEL = { af: '공군', army: '육군', navy: '해군', joint: '합동' };
+  var SERVICE_LABEL = { af: '공군', army: '육군', navy: '해군', joint: '합동', usfk: '주한미군' };
   var CAT_SHAPE = { c2: 'shape-square', sensor: 'shape-circle', shooter: 'shape-triangle' };
   var COMM_STYLE = {
     datalink: { color: '#2e6fd8', dashArray: null, weight: 2 },
@@ -28,6 +28,15 @@
   var markers = {}; // nodeId -> marker
   var fallback = false; // Leaflet 로드 실패(오프라인/폐쇄망) 시 SVG 개념도로 대체
   var containerId = null;
+
+  function catalogFor(state) {
+    if (!KJ.resolveModelCatalog) return null;
+    var high = state && state.dep && state.dep !== 'legacy';
+    return KJ.resolveModelCatalog(high ? {
+      deploymentId: state.dep,
+      features: { highResolutionDeployment: true }
+    } : {});
+  }
 
   KJ.mapView = {
     init: function (id, onNodeClick) {
@@ -65,6 +74,7 @@
       if (fallback) { renderFallbackSvg(state, analysis); return; }
       if (!map) return;
       var mode = state.mode;
+      var catalog = catalogFor(state);
       var levelById = {};
       if (analysis) {
         analysis.nodes.forEach(function (r) { levelById[r.id] = r; });
@@ -72,7 +82,7 @@
 
       // ── 자산 범위 링 (공개자료 기반 개념값: 센서 탐지범위 / 무기 교전범위) ──
       ringLayer.clearLayers();
-      KJ.nodesInMode(mode).forEach(function (n) {
+      KJ.nodesInMode(mode, catalog).forEach(function (n) {
         var km = n.category === 'sensor' ? n.rangeKm
           : (n.category === 'shooter' && n.engage ? n.engage.rangeKm : null);
         if (!km) return;
@@ -92,8 +102,8 @@
 
       // ── 링크 ──
       linkLayer.clearLayers();
-      KJ.linksInMode(mode).forEach(function (l) {
-        var from = KJ.nodeById(l.from), to = KJ.nodeById(l.to);
+      KJ.linksInMode(mode, catalog).forEach(function (l) {
+        var from = KJ.nodeById(l.from, catalog), to = KJ.nodeById(l.to, catalog);
         if (!from || !to) return;
         if (from.modes && from.modes.indexOf(mode) === -1) return;
         if (to.modes && to.modes.indexOf(mode) === -1) return;
@@ -116,7 +126,7 @@
       markerLayer.clearLayers();
       markers = {};
       var self = this;
-      KJ.nodesInMode(mode).forEach(function (n) {
+      KJ.nodesInMode(mode, catalog).forEach(function (n) {
         var res = levelById[n.id];
         var levelClass = res && (res.level === 'bottleneck' || res.level === 'saturated')
           ? ' node-' + res.level : '';
@@ -150,6 +160,7 @@
     var el = document.getElementById(containerId);
     if (!el) return;
     var mode = state.mode;
+    var catalog = catalogFor(state);
     var levelById = {};
     if (analysis) analysis.nodes.forEach(function (r) { levelById[r.id] = r; });
 
@@ -159,8 +170,8 @@
     var LINK_DASH = { datalink: '', kvmf: '8 3', link16: '6 4', voice: '2 6', broadcast: '1 5' };
 
     var svg = '';
-    KJ.linksInMode(mode).forEach(function (l) {
-      var from = KJ.nodeById(l.from), to = KJ.nodeById(l.to);
+    KJ.linksInMode(mode, catalog).forEach(function (l) {
+      var from = KJ.nodeById(l.from, catalog), to = KJ.nodeById(l.to, catalog);
       if (!from || !to) return;
       if (from.modes && from.modes.indexOf(mode) === -1) return;
       if (to.modes && to.modes.indexOf(mode) === -1) return;
@@ -171,7 +182,7 @@
         (LINK_DASH[comm.type] ? ' stroke-dasharray="' + LINK_DASH[comm.type] + '"' : '') + '>' +
         '<title>' + from.name + ' → ' + to.name + ' | ' + comm.type + ' ' + comm.delaySec + 's</title></line>';
     });
-    KJ.nodesInMode(mode).forEach(function (n) {
+    KJ.nodesInMode(mode, catalog).forEach(function (n) {
       var p = px(n.coord);
       var res = levelById[n.id];
       var hot = res && (res.level === 'bottleneck' || res.level === 'saturated');

@@ -3,7 +3,7 @@
  *
  * 연구 제약사항을 데이터가 위반하지 않는지 상시 검증한다 (회귀 스위트의 기초).
  *  (a) KP-SAM(신궁)·천마(단거리방공무기)는 탄도탄 교전 불가
- *  (b) KAMDOC↔THAAD 연동 노드·링크 부재
+ *  (b) legacy THAAD 부재 + FULL USFK 독립축/KAMDOC 미연동
  *  (c) 디스클레이머 상시 표출
  *  (d) 모든 좌표는 도시 수준 개념좌표 (coordNote 필수)
  *  (e) KF-21은 국산 보라매로 표기 (인도수출형 F-21 아님)
@@ -27,15 +27,26 @@
       }),
       'WPN-SHIN-CON-01: 대상 노드 ' + shorads.map(function (n) { return n.id; }).join(', '));
 
-    // (b) THAAD 미모델링
+    // (b) legacy에는 THAAD가 없고, FULL에서는 USFK 독립축으로만 존재
     var thaadNode = KJ.NODES.some(function (n) {
       return /thaad|사드/i.test(n.id + n.name);
     });
     var thaadLink = KJ.LINKS.some(function (l) {
       return /thaad/i.test(l.from + l.to);
     });
-    add('B', 'KAMDOC↔THAAD 연동 미모델링', !thaadNode && !thaadLink,
-      'THAAD 노드·링크가 데이터에 존재하지 않아야 함');
+    var fullIndependent = true;
+    if (KJ.buildDeploymentCatalog) {
+      var full = KJ.buildDeploymentCatalog('HANBANDO_FULL_NORMAL');
+      var usfk = full.nodes.filter(function (n) { return n.forceOwner === 'USFK'; });
+      fullIndependent = usfk.some(function (n) { return n.typeId === 'THAAD'; }) &&
+        full.links.every(function (l) {
+          return (full.nodeMap[l.from].forceOwner === 'USFK') === (full.nodeMap[l.to].forceOwner === 'USFK');
+        }) && usfk.filter(function (n) { return n.category === 'shooter'; }).every(function (n) {
+          return Object.keys(n.canEngage).every(function (k) { return n.canEngage[k] === false; });
+        });
+    }
+    add('B', 'legacy THAAD 부재·FULL USFK 독립축', !thaadNode && !thaadLink && fullIndependent,
+      'legacy에는 THAAD가 없고, FULL의 THAAD/Patriot은 KAMDOC 교차 링크·한국군 WTA 후보 없이 독립');
 
     // (c) 디스클레이머 상시 표출
     var el = document.getElementById('disclaimer');

@@ -4,7 +4,7 @@
  *
  * "제약 준수 상시 검증(회귀 스위트에 어서션으로 고정)":
  *  (a) KP-SAM(신궁)·천마(K-31)의 탄도탄 교전 시도 시 실패/거부
- *  (b) KAMDOC↔THAAD 연동 노드·엣지 부재
+ *  (b) legacy 배치의 KAMDOC↔THAAD 노드·엣지 부재
  *  (c) 디스클레이머("정책연구용 개념값 · 실제 작전자료 아님") 상시 표출
  *  (d) 모든 좌표가 도시 수준 개념좌표
  *  (e) KF-21이 국산 4.5세대 보라매(F-21 인도수출형 아님)로 표기
@@ -46,17 +46,17 @@ var an = KJ.analyzeScenario(balScn, 'asis', 3);
 assert(an.nodes.filter(function (n) { return n.id.indexOf('SHORAD') === 0 && n.lambda > 0; }).length === 0,
   '해석 행위: 탄도탄 단독 구성에서 SHORAD 부하 λ=0');
 
-// ── (b) THAAD 미모델링 ──
-console.log('# (b) KAMDOC↔THAAD 연동 부재');
+// ── (b) legacy THAAD 부재 (FULL 독립축은 deployment-adapter.test.js) ──
+console.log('# (b) legacy KAMDOC↔THAAD 연동 부재');
 assert(!KJ.NODES.some(function (n) { return /thaad|사드/i.test(n.id + n.name); }),
-  '노드 식별자(id·name)에 THAAD 부재');
+  'legacy 노드 식별자(id·name)에 THAAD 부재');
 // role 설명문에 THAAD가 등장한다면 반드시 "모델링하지 않음" 등 부정(제외 선언) 문맥이어야 함
 assert(KJ.NODES.every(function (n) {
   if (!/thaad/i.test(n.role || '')) return true;
   return /(않음|않는다|제외|미모델링|불가)/.test(n.role);
 }), 'role의 THAAD 언급은 제외 선언 문맥만 허용');
 assert(!KJ.LINKS.some(function (l) { return /thaad/i.test(l.from + l.to); }),
-  '링크에 THAAD 부재');
+  'legacy 링크에 THAAD 부재');
 
 // ── (c) 디스클레이머 정적 소스 검증 ──
 console.log('# (c) 디스클레이머 상시 표출 (정적 소스)');

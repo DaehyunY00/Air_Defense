@@ -25,13 +25,15 @@
   }
 
   /** 한 (시나리오, 모드, 강도) 점을 reps회 복제해 평균 지표 산출 */
-  function meanPoint(scenario, mode, x, baseSeed, endTimeSec, reps) {
+  function meanPoint(scenario, mode, x, baseSeed, endTimeSec, reps, modelConfig) {
     var leak = new KJ.Welford(), kill = new KJ.Welford();
     var maxRho = new KJ.Welford(), ttk = new KJ.Welford();
     for (var i = 0; i < reps; i++) {
       var r = KJ.runDES({
         scenario: scenario, mode: mode, intensity: x,
-        seed: repSeed(baseSeed, i), endTimeSec: endTimeSec
+        seed: repSeed(baseSeed, i), endTimeSec: endTimeSec,
+        deploymentId: modelConfig && modelConfig.deploymentId,
+        features: modelConfig && modelConfig.features
       });
       leak.push(r.global.leakRate);
       kill.push(r.global.killRate);
@@ -60,14 +62,15 @@
     var reps = opts.reps || 30;
     var seed = opts.seed === undefined ? 12345 : (opts.seed >>> 0);
     var endTimeSec = opts.endTimeSec || 1800;
+    var modelConfig = { deploymentId: opts.deploymentId, features: opts.features };
 
     var points = [];
     // 부동소수 누적 오차 방지: 정수 스텝 카운트로 순회
     var nSteps = Math.round((xMax - xMin) / xStep);
     for (var s = 0; s <= nSteps; s++) {
       var x = +(xMin + s * xStep).toFixed(4);
-      var a = meanPoint(scenario, 'asis', x, seed, endTimeSec, reps);
-      var b = meanPoint(scenario, 'tobe', x, seed, endTimeSec, reps);
+      var a = meanPoint(scenario, 'asis', x, seed, endTimeSec, reps, modelConfig);
+      var b = meanPoint(scenario, 'tobe', x, seed, endTimeSec, reps, modelConfig);
       points.push({ x: x, asis: a, tobe: b, gap: a.leakRate - b.leakRate });
     }
 

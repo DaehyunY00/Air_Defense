@@ -1,0 +1,633 @@
+{
+  "generatedAt": "2026-07-19T00:00:00+09:00",
+  "fixedExperiment": {
+    "scenario": "sc3",
+    "seed": 42,
+    "intensity": 1.5,
+    "endTimeSec": 1800
+  },
+  "comparisons": [
+    {
+      "deployment": "legacy",
+      "sameThreatInputCount": 307,
+      "totalPaired": 307,
+      "metrics": {
+        "asis": {
+          "spawned": 307,
+          "detected": 304,
+          "reachedC2": 269,
+          "everEngaged": 103,
+          "killed": 56,
+          "leaked": 213,
+          "censored": 38,
+          "killRate": 0.20817843866171004,
+          "leakRate": 0.79182156133829,
+          "meanTimeToKillSec": 398.83088478356643,
+          "meanTimeToEngageSec": 254.59395548063895,
+          "meanDecisionDelaySec": 218.9628875194739,
+          "meanCoordDelaySec": 83.08245291893994,
+          "shotsFired": 127,
+          "interceptCostM": 266.1999999999993,
+          "defenseEfficiency": 0.15974375975873226,
+          "coordination": {
+            "attempts": 44,
+            "deconflicted": 13,
+            "gaps": 31,
+            "duplicates": 31
+          },
+          "leakReasons": {
+            "timeout:c2": 87,
+            "missed": 19,
+            "no_engage_window": 82,
+            "responsibility_gap": 20,
+            "timeout:engage": 3,
+            "overflow:FTR": 2
+          },
+          "eventCount": 2830,
+          "activeNodes": 12,
+          "activeLinks": 19,
+          "bottlenecks": [
+            "node:FTR",
+            "gap:responsibility_gap",
+            "node:MCRC",
+            "node:KAMDOC",
+            "link:AOC-1C→MCRC"
+          ]
+        },
+        "tobe": {
+          "spawned": 307,
+          "detected": 303,
+          "reachedC2": 301,
+          "everEngaged": 247,
+          "killed": 149,
+          "leaked": 129,
+          "censored": 29,
+          "killRate": 0.5359712230215827,
+          "leakRate": 0.46402877697841727,
+          "meanTimeToKillSec": 91.96024180662218,
+          "meanTimeToEngageSec": 35.04760641755553,
+          "meanDecisionDelaySec": 18.32695864427619,
+          "meanCoordDelaySec": 0,
+          "shotsFired": 273,
+          "interceptCostM": 704.000000000001,
+          "defenseEfficiency": 0.6474199315840059,
+          "coordination": {
+            "attempts": 0,
+            "deconflicted": 0,
+            "gaps": 0,
+            "duplicates": 0
+          },
+          "leakReasons": {
+            "timeout:c2": 44,
+            "no_engage_window": 46,
+            "missed": 32,
+            "timeout:engage": 7
+          },
+          "eventCount": 2816,
+          "activeNodes": 11,
+          "activeLinks": 15,
+          "bottlenecks": [
+            "node:FTR"
+          ]
+        },
+        "tobeMinusAsis": {
+          "spawned": 0,
+          "detected": -1,
+          "reachedC2": 32,
+          "everEngaged": 144,
+          "killed": 93,
+          "leaked": -84,
+          "censored": -9,
+          "killRate": 0.3277927843598727,
+          "leakRate": -0.3277927843598727,
+          "meanTimeToKillSec": -306.8706429769443,
+          "meanTimeToEngageSec": -219.54634906308343,
+          "meanDecisionDelaySec": -200.6359288751977,
+          "meanCoordDelaySec": -83.08245291893994,
+          "shotsFired": 146,
+          "interceptCostM": 437.8000000000017,
+          "defenseEfficiency": 0.4876761718252737,
+          "eventCount": -14,
+          "activeNodes": -1,
+          "activeLinks": -4
+        }
+      },
+      "traceHashes": {
+        "asis": "27f95e6147d78050a8be77954ea48520d620dd499e93a025692b2f52e5fc4a08",
+        "tobe": "c3dfd23309599f414ae656649755cc8001a2797c13087b08000e0cbf1d84d434"
+      },
+      "changedThreatOutcomes": 302,
+      "architectureInputs": {
+        "common": [
+          "same deployment catalog",
+          "same threat arrivals through dedicated arrival RNG",
+          "same physical type Pk/range declarations"
+        ],
+        "asis": [
+          "best single-sensor Pd",
+          "distributed C2/approval and coord links",
+          "minimum observed aggregate shooter load"
+        ],
+        "tobe": [
+          "any-sensor Pd fusion",
+          "IAOC/JAMDC2 fusion path where present",
+          "automation/preauthorization",
+          "suitability/cost-aware aggregate WTA"
+        ]
+      }
+    },
+    {
+      "deployment": "HANBANDO_MINI_NORMAL",
+      "sameThreatInputCount": 307,
+      "totalPaired": 307,
+      "metrics": {
+        "asis": {
+          "spawned": 307,
+          "detected": 302,
+          "reachedC2": 301,
+          "everEngaged": 5,
+          "killed": 2,
+          "leaked": 256,
+          "censored": 49,
+          "killRate": 0.007751937984496124,
+          "leakRate": 0.9922480620155039,
+          "meanTimeToKillSec": 33.3428533715082,
+          "meanTimeToEngageSec": 20.71893649462164,
+          "meanDecisionDelaySec": 6.718936494621653,
+          "meanCoordDelaySec": 0,
+          "shotsFired": 2,
+          "interceptCostM": 4565,
+          "defenseEfficiency": 0.0021414193327337367,
+          "coordination": {
+            "attempts": 1071,
+            "deconflicted": 0,
+            "gaps": 1071,
+            "duplicates": 1071
+          },
+          "leakReasons": {
+            "responsibility_gap": 205,
+            "no_engage_window": 5,
+            "no_shooter": 46
+          },
+          "eventCount": 6622,
+          "activeNodes": 18,
+          "activeLinks": 23,
+          "bottlenecks": [
+            "gap:responsibility_gap",
+            "gap:no_shooter",
+            "node:C2_KAMD_OPS_KAMD_OPS",
+            "link:ECS_LSAM_BAT_N1→C2_ICC_ICC_BRIGADE_3",
+            "link:ECS_C2_BAT_N1→C2_ICC_ICC_BRIGADE_3"
+          ]
+        },
+        "tobe": {
+          "spawned": 307,
+          "detected": 302,
+          "reachedC2": 302,
+          "everEngaged": 221,
+          "killed": 157,
+          "leaked": 106,
+          "censored": 44,
+          "killRate": 0.596958174904943,
+          "leakRate": 0.40304182509505704,
+          "meanTimeToKillSec": 49.05136870584079,
+          "meanTimeToEngageSec": 18.285517936101552,
+          "meanDecisionDelaySec": 8.240269067323279,
+          "meanCoordDelaySec": 0,
+          "shotsFired": 208,
+          "interceptCostM": 1004,
+          "defenseEfficiency": 0.7518446360470902,
+          "coordination": {
+            "attempts": 0,
+            "deconflicted": 0,
+            "gaps": 0,
+            "duplicates": 0
+          },
+          "leakReasons": {
+            "timeout:c2": 33,
+            "timeout:engage": 10,
+            "missed": 16,
+            "no_engage_window": 1,
+            "no_shooter": 46
+          },
+          "eventCount": 2270,
+          "activeNodes": 8,
+          "activeLinks": 9,
+          "bottlenecks": [
+            "gap:no_shooter"
+          ]
+        },
+        "tobeMinusAsis": {
+          "spawned": 0,
+          "detected": 0,
+          "reachedC2": 1,
+          "everEngaged": 216,
+          "killed": 155,
+          "leaked": -150,
+          "censored": -5,
+          "killRate": 0.5892062369204468,
+          "leakRate": -0.5892062369204468,
+          "meanTimeToKillSec": 15.708515334332589,
+          "meanTimeToEngageSec": -2.4334185585200885,
+          "meanDecisionDelaySec": 1.5213325727016258,
+          "meanCoordDelaySec": 0,
+          "shotsFired": 206,
+          "interceptCostM": -3561,
+          "defenseEfficiency": 0.7497032167143565,
+          "eventCount": -4352,
+          "activeNodes": -10,
+          "activeLinks": -14
+        }
+      },
+      "traceHashes": {
+        "asis": "1496fc25ba19c1da302eeb74e0572c5b99d9b791c17ee27cf7972f67bcbc7b19",
+        "tobe": "4113ea0b718c6cde39077c173921dc92abca2e32e76a555639d40f6c8b8deab4"
+      },
+      "changedThreatOutcomes": 302,
+      "architectureInputs": {
+        "common": [
+          "same deployment catalog",
+          "same threat arrivals through dedicated arrival RNG",
+          "same physical type Pk/range declarations"
+        ],
+        "asis": [
+          "best single-sensor Pd",
+          "distributed C2/approval and coord links",
+          "minimum observed aggregate shooter load"
+        ],
+        "tobe": [
+          "any-sensor Pd fusion",
+          "IAOC/JAMDC2 fusion path where present",
+          "automation/preauthorization",
+          "suitability/cost-aware aggregate WTA"
+        ]
+      }
+    },
+    {
+      "deployment": "HANBANDO_FULL_NORMAL",
+      "sameThreatInputCount": 307,
+      "totalPaired": 307,
+      "metrics": {
+        "asis": {
+          "spawned": 307,
+          "detected": 303,
+          "reachedC2": 303,
+          "everEngaged": 2,
+          "killed": 2,
+          "leaked": 256,
+          "censored": 49,
+          "killRate": 0.007751937984496124,
+          "leakRate": 0.9922480620155039,
+          "meanTimeToKillSec": 47.590351035104675,
+          "meanTimeToEngageSec": 15.008423418841346,
+          "meanDecisionDelaySec": 5.008423418841346,
+          "meanCoordDelaySec": 0,
+          "shotsFired": 2,
+          "interceptCostM": 11778,
+          "defenseEfficiency": 0.004282838665467473,
+          "coordination": {
+            "attempts": 3437,
+            "deconflicted": 0,
+            "gaps": 3437,
+            "duplicates": 3437
+          },
+          "leakReasons": {
+            "responsibility_gap": 253,
+            "no_engage_window": 3
+          },
+          "eventCount": 18304,
+          "activeNodes": 56,
+          "activeLinks": 65,
+          "bottlenecks": [
+            "gap:responsibility_gap",
+            "node:C2_KAMD_OPS_KAMD_OPS",
+            "link:ECS_LSAM_CAPITAL→C2_ICC_ICC_BRIGADE_3",
+            "link:ECS_MSAM2_BAENGNYEONG→C2_ICC_ICC_BRIGADE_3",
+            "link:ECS_MSAM2_CHEONAN→C2_ICC_ICC_BRIGADE_2"
+          ]
+        },
+        "tobe": {
+          "spawned": 307,
+          "detected": 303,
+          "reachedC2": 303,
+          "everEngaged": 302,
+          "killed": 189,
+          "leaked": 95,
+          "censored": 23,
+          "killRate": 0.6654929577464789,
+          "leakRate": 0.3345070422535211,
+          "meanTimeToKillSec": 74.70228993642783,
+          "meanTimeToEngageSec": 19.616731794911463,
+          "meanDecisionDelaySec": 8.22600331809026,
+          "meanCoordDelaySec": 0,
+          "shotsFired": 351,
+          "interceptCostM": 572.3999999999992,
+          "defenseEfficiency": 0.7706077559616243,
+          "coordination": {
+            "attempts": 0,
+            "deconflicted": 0,
+            "gaps": 0,
+            "duplicates": 0
+          },
+          "leakReasons": {
+            "timeout:c2": 50,
+            "missed": 37,
+            "timeout:engage": 7,
+            "no_engage_window": 1
+          },
+          "eventCount": 2398,
+          "activeNodes": 24,
+          "activeLinks": 26,
+          "bottlenecks": []
+        },
+        "tobeMinusAsis": {
+          "spawned": 0,
+          "detected": 0,
+          "reachedC2": 0,
+          "everEngaged": 300,
+          "killed": 187,
+          "leaked": -161,
+          "censored": -26,
+          "killRate": 0.6577410197619827,
+          "leakRate": -0.6577410197619827,
+          "meanTimeToKillSec": 27.111938901323157,
+          "meanTimeToEngageSec": 4.6083083760701165,
+          "meanDecisionDelaySec": 3.217579899248914,
+          "meanCoordDelaySec": 0,
+          "shotsFired": 349,
+          "interceptCostM": -11205.6,
+          "defenseEfficiency": 0.7663249172961568,
+          "eventCount": -15906,
+          "activeNodes": -32,
+          "activeLinks": -39
+        }
+      },
+      "traceHashes": {
+        "asis": "d900d6f440de129736732884c3df56c7d177e48c5f6ff146d95d29cf00c59e51",
+        "tobe": "588a295c735c25a802969adf44ea01eacfc1952b738d7c29bb54d5fedb210826"
+      },
+      "changedThreatOutcomes": 303,
+      "architectureInputs": {
+        "common": [
+          "same deployment catalog",
+          "same threat arrivals through dedicated arrival RNG",
+          "same physical type Pk/range declarations"
+        ],
+        "asis": [
+          "best single-sensor Pd",
+          "distributed C2/approval and coord links",
+          "minimum observed aggregate shooter load"
+        ],
+        "tobe": [
+          "any-sensor Pd fusion",
+          "IAOC/JAMDC2 fusion path where present",
+          "automation/preauthorization",
+          "suitability/cost-aware aggregate WTA"
+        ]
+      }
+    },
+    {
+      "deployment": "HANBANDO_FULL_MCRC_DOWN",
+      "sameThreatInputCount": 307,
+      "totalPaired": 307,
+      "metrics": {
+        "asis": {
+          "spawned": 307,
+          "detected": 304,
+          "reachedC2": 303,
+          "everEngaged": 14,
+          "killed": 7,
+          "leaked": 252,
+          "censored": 48,
+          "killRate": 0.02702702702702703,
+          "leakRate": 0.972972972972973,
+          "meanTimeToKillSec": 68.32584730720676,
+          "meanTimeToEngageSec": 20.46420224972388,
+          "meanDecisionDelaySec": 4.03563082115244,
+          "meanCoordDelaySec": 0,
+          "shotsFired": 10,
+          "interceptCostM": 11774.400000000001,
+          "defenseEfficiency": 0.0358304098571062,
+          "coordination": {
+            "attempts": 3437,
+            "deconflicted": 0,
+            "gaps": 3437,
+            "duplicates": 3437
+          },
+          "leakReasons": {
+            "responsibility_gap": 250,
+            "no_engage_window": 2
+          },
+          "eventCount": 18186,
+          "activeNodes": 57,
+          "activeLinks": 63,
+          "bottlenecks": [
+            "gap:responsibility_gap",
+            "node:C2_KAMD_OPS_KAMD_OPS",
+            "link:ECS_LSAM_CAPITAL→C2_ICC_ICC_BRIGADE_3",
+            "link:ECS_MSAM2_BAENGNYEONG→C2_ICC_ICC_BRIGADE_3",
+            "link:ECS_MSAM2_CHEONAN→C2_ICC_ICC_BRIGADE_2"
+          ]
+        },
+        "tobe": {
+          "spawned": 307,
+          "detected": 304,
+          "reachedC2": 303,
+          "everEngaged": 303,
+          "killed": 200,
+          "leaked": 90,
+          "censored": 17,
+          "killRate": 0.6896551724137931,
+          "leakRate": 0.3103448275862069,
+          "meanTimeToKillSec": 72.89127006729181,
+          "meanTimeToEngageSec": 15.907040632075102,
+          "meanDecisionDelaySec": 4.487898717883689,
+          "meanCoordDelaySec": 0,
+          "shotsFired": 371,
+          "interceptCostM": 622.4000000000001,
+          "defenseEfficiency": 0.8392579426794046,
+          "coordination": {
+            "attempts": 0,
+            "deconflicted": 0,
+            "gaps": 0,
+            "duplicates": 0
+          },
+          "leakReasons": {
+            "timeout:c2": 45,
+            "missed": 37,
+            "timeout:engage": 8
+          },
+          "eventCount": 2377,
+          "activeNodes": 23,
+          "activeLinks": 26,
+          "bottlenecks": []
+        },
+        "tobeMinusAsis": {
+          "spawned": 0,
+          "detected": 0,
+          "reachedC2": 0,
+          "everEngaged": 289,
+          "killed": 193,
+          "leaked": -162,
+          "censored": -31,
+          "killRate": 0.6626281453867662,
+          "leakRate": -0.6626281453867662,
+          "meanTimeToKillSec": 4.565422760085056,
+          "meanTimeToEngageSec": -4.557161617648777,
+          "meanDecisionDelaySec": 0.45226789673124923,
+          "meanCoordDelaySec": 0,
+          "shotsFired": 361,
+          "interceptCostM": -11152.000000000002,
+          "defenseEfficiency": 0.8034275328222984,
+          "eventCount": -15809,
+          "activeNodes": -34,
+          "activeLinks": -37
+        }
+      },
+      "traceHashes": {
+        "asis": "46ce7e4bf2ed7b6190f80326d07d30f2646c5c8b570dc6e3a626c3ea03f6eb92",
+        "tobe": "7554b7540b9bd5d54609e4817967e369873abb8212824a29d9c5dfe6e0dea9e8"
+      },
+      "changedThreatOutcomes": 304,
+      "architectureInputs": {
+        "common": [
+          "same deployment catalog",
+          "same threat arrivals through dedicated arrival RNG",
+          "same physical type Pk/range declarations"
+        ],
+        "asis": [
+          "best single-sensor Pd",
+          "distributed C2/approval and coord links",
+          "minimum observed aggregate shooter load"
+        ],
+        "tobe": [
+          "any-sensor Pd fusion",
+          "IAOC/JAMDC2 fusion path where present",
+          "automation/preauthorization",
+          "suitability/cost-aware aggregate WTA"
+        ]
+      }
+    },
+    {
+      "deployment": "HANBANDO_FULL_KAMDOC_DOWN",
+      "sameThreatInputCount": 307,
+      "totalPaired": 307,
+      "metrics": {
+        "asis": {
+          "spawned": 307,
+          "detected": 303,
+          "reachedC2": 303,
+          "everEngaged": 183,
+          "killed": 111,
+          "leaked": 148,
+          "censored": 48,
+          "killRate": 0.42857142857142855,
+          "leakRate": 0.5714285714285714,
+          "meanTimeToKillSec": 41.64272991884648,
+          "meanTimeToEngageSec": 15.432027075201846,
+          "meanDecisionDelaySec": 4.175196474108943,
+          "meanCoordDelaySec": 0,
+          "shotsFired": 150,
+          "interceptCostM": 12287,
+          "defenseEfficiency": 0.21025443989071047,
+          "coordination": {
+            "attempts": 3354,
+            "deconflicted": 0,
+            "gaps": 3354,
+            "duplicates": 3354
+          },
+          "leakReasons": {
+            "responsibility_gap": 145,
+            "no_engage_window": 3
+          },
+          "eventCount": 18041,
+          "activeNodes": 55,
+          "activeLinks": 62,
+          "bottlenecks": [
+            "gap:responsibility_gap",
+            "link:ECS_MSAM2_BAENGNYEONG→C2_ICC_ICC_BRIGADE_3",
+            "link:ECS_MSAM2_CHEONAN→C2_ICC_ICC_BRIGADE_2"
+          ]
+        },
+        "tobe": {
+          "spawned": 307,
+          "detected": 303,
+          "reachedC2": 303,
+          "everEngaged": 302,
+          "killed": 189,
+          "leaked": 95,
+          "censored": 23,
+          "killRate": 0.6654929577464789,
+          "leakRate": 0.3345070422535211,
+          "meanTimeToKillSec": 74.70228993642783,
+          "meanTimeToEngageSec": 19.616731794911463,
+          "meanDecisionDelaySec": 8.22600331809026,
+          "meanCoordDelaySec": 0,
+          "shotsFired": 351,
+          "interceptCostM": 572.3999999999992,
+          "defenseEfficiency": 0.7706077559616243,
+          "coordination": {
+            "attempts": 0,
+            "deconflicted": 0,
+            "gaps": 0,
+            "duplicates": 0
+          },
+          "leakReasons": {
+            "timeout:c2": 50,
+            "missed": 37,
+            "timeout:engage": 7,
+            "no_engage_window": 1
+          },
+          "eventCount": 2398,
+          "activeNodes": 24,
+          "activeLinks": 26,
+          "bottlenecks": []
+        },
+        "tobeMinusAsis": {
+          "spawned": 0,
+          "detected": 0,
+          "reachedC2": 0,
+          "everEngaged": 119,
+          "killed": 78,
+          "leaked": -53,
+          "censored": -25,
+          "killRate": 0.23692152917505033,
+          "leakRate": -0.23692152917505027,
+          "meanTimeToKillSec": 33.059560017581354,
+          "meanTimeToEngageSec": 4.184704719709616,
+          "meanDecisionDelaySec": 4.050806843981317,
+          "meanCoordDelaySec": 0,
+          "shotsFired": 201,
+          "interceptCostM": -11714.6,
+          "defenseEfficiency": 0.5603533160709139,
+          "eventCount": -15643,
+          "activeNodes": -31,
+          "activeLinks": -36
+        }
+      },
+      "traceHashes": {
+        "asis": "87c72339288984bd7162a79d0c13532e856a290aca7a0f02d06b9c2e1510596a",
+        "tobe": "588a295c735c25a802969adf44ea01eacfc1952b738d7c29bb54d5fedb210826"
+      },
+      "changedThreatOutcomes": 303,
+      "architectureInputs": {
+        "common": [
+          "same deployment catalog",
+          "same threat arrivals through dedicated arrival RNG",
+          "same physical type Pk/range declarations"
+        ],
+        "asis": [
+          "best single-sensor Pd",
+          "distributed C2/approval and coord links",
+          "minimum observed aggregate shooter load"
+        ],
+        "tobe": [
+          "any-sensor Pd fusion",
+          "IAOC/JAMDC2 fusion path where present",
+          "automation/preauthorization",
+          "suitability/cost-aware aggregate WTA"
+        ]
+      }
+    }
+  ]
+}

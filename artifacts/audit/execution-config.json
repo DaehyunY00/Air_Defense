@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2026-07-19T00:00:00+09:00",
+  "comparisonPriority": [
+    "Air_Defense read-only sibling",
+    "legacy mode",
+    "phase0 baseline fixture"
+  ],
+  "paths": {
+    "target": "/Users/daehyunyoo/Library/CloudStorage/GoogleDrive-dhyoo970111@gmail.com/내 드라이브/Air_Defense_v2",
+    "baseline": "/Users/daehyunyoo/Library/CloudStorage/GoogleDrive-dhyoo970111@gmail.com/내 드라이브/Air_Defense",
+    "baselineExists": true
+  },
+  "fixedExperiment": {
+    "scenario": "sc3",
+    "seed": 42,
+    "intensity": 1.5,
+    "endTimeSec": 1800
+  },
+  "uiDefaults": {
+    "deployment": "legacy",
+    "scenario": "sc1",
+    "architecture": "asis",
+    "seed": 12345,
+    "intensity": 1,
+    "durationSec": 1800
+  },
+  "engineDefaults": {
+    "deployment": "legacy",
+    "intensity": 1,
+    "seed": 1,
+    "durationSec": 1800,
+    "highResolutionDeployment": false
+  },
+  "auditApplied": {
+    "deployment": [
+      "legacy",
+      "HANBANDO_MINI_NORMAL",
+      "HANBANDO_FULL_NORMAL",
+      "HANBANDO_FULL_MCRC_DOWN",
+      "HANBANDO_FULL_KAMDOC_DOWN"
+    ],
+    "scenario": "sc3",
+    "architecture": [
+      "asis",
+      "tobe"
+    ],
+    "seed": 42,
+    "intensity": 1.5,
+    "durationSec": 1800
+  },
+  "urlState": {
+    "scheme": "#tab=&sc=&mode=&dep=&t=&open=&x=&seed=&dur=",
+    "invalidDeploymentFallsBackTo": "legacy"
+  },
+  "notes": [
+    "UI deployment selection is converted to deploymentId plus features.highResolutionDeployment=true.",
+    "Headless runDES uses the legacy catalog unless the feature is explicitly true.",
+    "MC and transition analysis pass the same deploymentId/features into runDES."
+  ]
+}

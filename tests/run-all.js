@@ -3,7 +3,7 @@
  * 실행:  node tests/run-all.js   (저장소 루트에서)
  *
  * 1) 전 JS 파일 구문 검증(node --check)
- * 2) 회귀 테스트 5종 순차 실행 (엔진·MC·중복교전 히트맵·임계 전환점·제약 어서션)
+ * 2) 등록된 회귀 테스트 순차 실행
  * 하나라도 실패하면 비영(非零) 종료 — CI 게이트로 사용.
  */
 'use strict';
@@ -52,6 +52,11 @@ var suites = [
   ['reengage.test.js', '⑨ BDA·재교전 (되돌리기 플래그·무기별 pk 차등·폴백 경계·결정론)'],
   ['deadcode.test.js', '死 코드 레지스트리 (Gate 3 — 부활/영구死 정본·정직한 미부활)'],
   ['resource.test.js', '자원 최적화 (원칙 5 — As-Is불변·MDU-L생존·제약유지·SC2보호·되돌리기)']
+  ,['baseline.test.js', 'Phase 0 legacy 기준선 (SC1–SC3·양모드·SHA-256·OFF bit-exact)']
+  ,['deployment.test.js', '고해상도 배치 선언 (6개 ID·수량·참조·SHORAD·USFK·MDL)']
+  ,['deployment-adapter.test.js', '배치 호환 어댑터 (토폴로지·DOWN·결정론·보존법칙)']
+  ,['high-resolution-connection.test.js', '고해상도 C2 연결 (ICC 상향 승인경로·As-Is 주교전)']
+  ,['iads-native-pipeline.test.js', '원본 IADS 파이프라인 (책임 C2·scope WTA·PIP·발사대·실제 중복 BDA)']
 ];
 suites.forEach(function (s) {
   console.log('\n== ' + s[1] + ' ==');

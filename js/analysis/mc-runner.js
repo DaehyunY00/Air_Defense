@@ -70,7 +70,8 @@
     for (var i = 0; i < maxReps; i++) {
       var r = KJ.runDES({
         scenario: cfg.scenario, mode: cfg.mode, intensity: cfg.intensity,
-        seed: repSeed(baseSeed, i), endTimeSec: cfg.endTimeSec, mult: cfg.mult
+        seed: repSeed(baseSeed, i), endTimeSec: cfg.endTimeSec, mult: cfg.mult,
+        deploymentId: cfg.deploymentId, features: cfg.features
       });
       var m = metricsOf(r);
       METRIC_KEYS.forEach(function (k) { acc[k].push(m[k]); });
@@ -107,7 +108,8 @@
     for (var i = 0; i < reps; i++) {
       var r = KJ.runDES({
         scenario: cfg.scenario, mode: cfg.mode, intensity: cfg.intensity,
-        seed: repSeed(baseSeed, i), endTimeSec: cfg.endTimeSec, mult: cfg.mult
+        seed: repSeed(baseSeed, i), endTimeSec: cfg.endTimeSec, mult: cfg.mult,
+        deploymentId: cfg.deploymentId, features: cfg.features
       });
       w.push(r.global.leakRate);
     }

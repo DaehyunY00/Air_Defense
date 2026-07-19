@@ -294,6 +294,38 @@
     }
   ];
 
+  // Phase 0 compatibility boundary: keep the representative deployment's exact
+  // public object shape while exposing type/instance declarations separately.
+  // Key order is retained during reconstruction so legacy JSON/result hashes do
+  // not change when high-resolution deployment support is disabled.
+  var INSTANCE_FIELDS = {
+    id: true, name: true, service: true, echelon: true, coord: true,
+    coordNote: true, role: true, modes: true, fusion: true
+  };
+  var legacyTypes = {}, legacyInstances = [];
+  KJ.NODES.forEach(function (node) {
+    var typeId = 'LEGACY_' + node.id;
+    var type = {}, instance = { typeId: typeId }, keyOrder = Object.keys(node);
+    keyOrder.forEach(function (key) {
+      (INSTANCE_FIELDS[key] ? instance : type)[key] = node[key];
+    });
+    instance.keyOrder = keyOrder;
+    legacyTypes[typeId] = Object.freeze(type);
+    legacyInstances.push(Object.freeze(instance));
+  });
+  KJ.LEGACY_SYSTEM_TYPES = Object.freeze(legacyTypes);
+  KJ.LEGACY_NODE_INSTANCES = Object.freeze(legacyInstances);
+  KJ.buildLegacyNodes = function () {
+    return KJ.LEGACY_NODE_INSTANCES.map(function (instance) {
+      var type = KJ.LEGACY_SYSTEM_TYPES[instance.typeId], node = {};
+      instance.keyOrder.forEach(function (key) {
+        node[key] = Object.prototype.hasOwnProperty.call(instance, key) ? instance[key] : type[key];
+      });
+      return node;
+    });
+  };
+  KJ.NODES = KJ.buildLegacyNodes();
+
   KJ.nodeById = function (id) {
     return KJ.NODES.find(function (n) { return n.id === id; }) || null;
   };

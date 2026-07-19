@@ -1,0 +1,1492 @@
+{
+  "generatedAt": "2026-07-19T00:00:00+09:00",
+  "fixedExperiment": {
+    "scenario": "sc3",
+    "seed": 42,
+    "intensity": 1.5,
+    "endTimeSec": 1800
+  },
+  "runs": [
+    {
+      "deployment": "legacy",
+      "mode": "asis",
+      "catalog": {
+        "id": "legacy",
+        "mode": "asis",
+        "compatibilityMode": null,
+        "declaredNodes": 24,
+        "visibleNodes": 23,
+        "visibleLinks": 32,
+        "categories": {
+          "c2": 5,
+          "sensor": 10,
+          "shooter": 8
+        },
+        "axisCoverageEntries": 42,
+        "nativeCounts": null
+      },
+      "metrics": {
+        "spawned": 307,
+        "detected": 304,
+        "reachedC2": 269,
+        "everEngaged": 103,
+        "killed": 56,
+        "leaked": 213,
+        "censored": 38,
+        "killRate": 0.20817843866171004,
+        "leakRate": 0.79182156133829,
+        "meanTimeToKillSec": 398.83088478356643,
+        "meanTimeToEngageSec": 254.59395548063895,
+        "meanDecisionDelaySec": 218.9628875194739,
+        "meanCoordDelaySec": 83.08245291893994,
+        "shotsFired": 127,
+        "interceptCostM": 266.1999999999993,
+        "defenseEfficiency": 0.15974375975873226,
+        "coordination": {
+          "attempts": 44,
+          "deconflicted": 13,
+          "gaps": 31,
+          "duplicates": 31
+        },
+        "leakReasons": {
+          "timeout:c2": 87,
+          "missed": 19,
+          "no_engage_window": 82,
+          "responsibility_gap": 20,
+          "timeout:engage": 3,
+          "overflow:FTR": 2
+        },
+        "eventCount": 2830,
+        "activeNodes": 12,
+        "activeLinks": 19,
+        "bottlenecks": [
+          "node:FTR",
+          "gap:responsibility_gap",
+          "node:MCRC",
+          "node:KAMDOC",
+          "link:AOC-1C→MCRC"
+        ]
+      },
+      "aggregateHash": "e1fb50c8e8a1a1c4b3f31b5feb5df4e99352fea703b5fa26711fb4d56817f4a3"
+    },
+    {
+      "deployment": "legacy",
+      "mode": "tobe",
+      "catalog": {
+        "id": "legacy",
+        "mode": "tobe",
+        "compatibilityMode": null,
+        "declaredNodes": 24,
+        "visibleNodes": 24,
+        "visibleLinks": 42,
+        "categories": {
+          "c2": 6,
+          "sensor": 10,
+          "shooter": 8
+        },
+        "axisCoverageEntries": 42,
+        "nativeCounts": null
+      },
+      "metrics": {
+        "spawned": 307,
+        "detected": 303,
+        "reachedC2": 301,
+        "everEngaged": 247,
+        "killed": 149,
+        "leaked": 129,
+        "censored": 29,
+        "killRate": 0.5359712230215827,
+        "leakRate": 0.46402877697841727,
+        "meanTimeToKillSec": 91.96024180662218,
+        "meanTimeToEngageSec": 35.04760641755553,
+        "meanDecisionDelaySec": 18.32695864427619,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 273,
+        "interceptCostM": 704.000000000001,
+        "defenseEfficiency": 0.6474199315840059,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "timeout:c2": 44,
+          "no_engage_window": 46,
+          "missed": 32,
+          "timeout:engage": 7
+        },
+        "eventCount": 2816,
+        "activeNodes": 11,
+        "activeLinks": 15,
+        "bottlenecks": [
+          "node:FTR"
+        ]
+      },
+      "aggregateHash": "da6cc98174d4ed0606b936fde99cbfd017dc9408c45f297eb3efe1ac8e36f3d5"
+    },
+    {
+      "deployment": "HANBANDO_MINI_NORMAL",
+      "mode": "asis",
+      "catalog": {
+        "id": "HANBANDO_MINI_NORMAL",
+        "mode": "asis",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 33,
+        "visibleNodes": 31,
+        "visibleLinks": 35,
+        "categories": {
+          "c2": 12,
+          "sensor": 11,
+          "shooter": 8
+        },
+        "axisCoverageEntries": 52,
+        "nativeCounts": {
+          "positions": 27,
+          "sensors": 11,
+          "batteries": 8,
+          "c2Nodes": 14,
+          "ecs": 8,
+          "shorad": 0
+        }
+      },
+      "metrics": {
+        "spawned": 307,
+        "detected": 302,
+        "reachedC2": 301,
+        "everEngaged": 5,
+        "killed": 2,
+        "leaked": 256,
+        "censored": 49,
+        "killRate": 0.007751937984496124,
+        "leakRate": 0.9922480620155039,
+        "meanTimeToKillSec": 33.3428533715082,
+        "meanTimeToEngageSec": 20.71893649462164,
+        "meanDecisionDelaySec": 6.718936494621653,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 2,
+        "interceptCostM": 4565,
+        "defenseEfficiency": 0.0021414193327337367,
+        "coordination": {
+          "attempts": 1071,
+          "deconflicted": 0,
+          "gaps": 1071,
+          "duplicates": 1071
+        },
+        "leakReasons": {
+          "responsibility_gap": 205,
+          "no_engage_window": 5,
+          "no_shooter": 46
+        },
+        "eventCount": 6622,
+        "activeNodes": 18,
+        "activeLinks": 23,
+        "bottlenecks": [
+          "gap:responsibility_gap",
+          "gap:no_shooter",
+          "node:C2_KAMD_OPS_KAMD_OPS",
+          "link:ECS_LSAM_BAT_N1→C2_ICC_ICC_BRIGADE_3",
+          "link:ECS_C2_BAT_N1→C2_ICC_ICC_BRIGADE_3"
+        ]
+      },
+      "aggregateHash": "f47fa06b75acb3ad37d72060b916b41a7190efb541af5173b68bc72309cf1479"
+    },
+    {
+      "deployment": "HANBANDO_MINI_NORMAL",
+      "mode": "tobe",
+      "catalog": {
+        "id": "HANBANDO_MINI_NORMAL",
+        "mode": "tobe",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 33,
+        "visibleNodes": 33,
+        "visibleLinks": 72,
+        "categories": {
+          "c2": 14,
+          "sensor": 11,
+          "shooter": 8
+        },
+        "axisCoverageEntries": 52,
+        "nativeCounts": {
+          "positions": 27,
+          "sensors": 11,
+          "batteries": 8,
+          "c2Nodes": 14,
+          "ecs": 8,
+          "shorad": 0
+        }
+      },
+      "metrics": {
+        "spawned": 307,
+        "detected": 302,
+        "reachedC2": 302,
+        "everEngaged": 221,
+        "killed": 157,
+        "leaked": 106,
+        "censored": 44,
+        "killRate": 0.596958174904943,
+        "leakRate": 0.40304182509505704,
+        "meanTimeToKillSec": 49.05136870584079,
+        "meanTimeToEngageSec": 18.285517936101552,
+        "meanDecisionDelaySec": 8.240269067323279,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 208,
+        "interceptCostM": 1004,
+        "defenseEfficiency": 0.7518446360470902,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "timeout:c2": 33,
+          "timeout:engage": 10,
+          "missed": 16,
+          "no_engage_window": 1,
+          "no_shooter": 46
+        },
+        "eventCount": 2270,
+        "activeNodes": 8,
+        "activeLinks": 9,
+        "bottlenecks": [
+          "gap:no_shooter"
+        ]
+      },
+      "aggregateHash": "814a2d8ac522a4d9df50ccae128bd22f3739d032c14080fc6cf5156d656a3e27"
+    },
+    {
+      "deployment": "HANBANDO_MINI_MCRC_DOWN",
+      "mode": "asis",
+      "catalog": {
+        "id": "HANBANDO_MINI_MCRC_DOWN",
+        "mode": "asis",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 32,
+        "visibleNodes": 30,
+        "visibleLinks": 29,
+        "categories": {
+          "c2": 11,
+          "sensor": 11,
+          "shooter": 8
+        },
+        "axisCoverageEntries": 52,
+        "nativeCounts": {
+          "positions": 27,
+          "sensors": 11,
+          "batteries": 8,
+          "c2Nodes": 13,
+          "ecs": 8,
+          "shorad": 0
+        }
+      },
+      "metrics": {
+        "spawned": 307,
+        "detected": 303,
+        "reachedC2": 222,
+        "everEngaged": 15,
+        "killed": 13,
+        "leaked": 245,
+        "censored": 49,
+        "killRate": 0.050387596899224806,
+        "leakRate": 0.9496124031007752,
+        "meanTimeToKillSec": 54.330697487165985,
+        "meanTimeToEngageSec": 24.239979214046016,
+        "meanDecisionDelaySec": 4.239979214046012,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 17,
+        "interceptCostM": 4583,
+        "defenseEfficiency": 0.025161677159621407,
+        "coordination": {
+          "attempts": 1063,
+          "deconflicted": 0,
+          "gaps": 1063,
+          "duplicates": 1063
+        },
+        "leakReasons": {
+          "responsibility_gap": 198,
+          "no_engage_window": 1,
+          "no_report_path": 46
+        },
+        "eventCount": 6403,
+        "activeNodes": 17,
+        "activeLinks": 20,
+        "bottlenecks": [
+          "gap:responsibility_gap",
+          "node:C2_KAMD_OPS_KAMD_OPS",
+          "link:ECS_LSAM_BAT_N1→C2_ICC_ICC_BRIGADE_3",
+          "link:ECS_C2_BAT_N1→C2_ICC_ICC_BRIGADE_3"
+        ]
+      },
+      "aggregateHash": "363e85c4cf31b9a3b1ba670f96f0a5bcac9865ba5e02970d94da78dee0619c93"
+    },
+    {
+      "deployment": "HANBANDO_MINI_MCRC_DOWN",
+      "mode": "tobe",
+      "catalog": {
+        "id": "HANBANDO_MINI_MCRC_DOWN",
+        "mode": "tobe",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 32,
+        "visibleNodes": 32,
+        "visibleLinks": 64,
+        "categories": {
+          "c2": 13,
+          "sensor": 11,
+          "shooter": 8
+        },
+        "axisCoverageEntries": 52,
+        "nativeCounts": {
+          "positions": 27,
+          "sensors": 11,
+          "batteries": 8,
+          "c2Nodes": 13,
+          "ecs": 8,
+          "shorad": 0
+        }
+      },
+      "metrics": {
+        "spawned": 307,
+        "detected": 303,
+        "reachedC2": 302,
+        "everEngaged": 223,
+        "killed": 144,
+        "leaked": 119,
+        "censored": 44,
+        "killRate": 0.5475285171102662,
+        "leakRate": 0.4524714828897338,
+        "meanTimeToKillSec": 46.65979737355628,
+        "meanTimeToEngageSec": 14.699559058197655,
+        "meanDecisionDelaySec": 4.654716008870292,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 186,
+        "interceptCostM": 838,
+        "defenseEfficiency": 0.8567258265817695,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "timeout:c2": 48,
+          "timeout:engage": 9,
+          "missed": 16,
+          "no_shooter": 46
+        },
+        "eventCount": 2219,
+        "activeNodes": 7,
+        "activeLinks": 9,
+        "bottlenecks": [
+          "gap:no_shooter"
+        ]
+      },
+      "aggregateHash": "b1f638d6ffe6da1774fb82222cb0ca72d729d79a13ed96fac132a65dbd8acedd"
+    },
+    {
+      "deployment": "HANBANDO_MINI_KAMDOC_DOWN",
+      "mode": "asis",
+      "catalog": {
+        "id": "HANBANDO_MINI_KAMDOC_DOWN",
+        "mode": "asis",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 32,
+        "visibleNodes": 30,
+        "visibleLinks": 30,
+        "categories": {
+          "c2": 11,
+          "sensor": 11,
+          "shooter": 8
+        },
+        "axisCoverageEntries": 52,
+        "nativeCounts": {
+          "positions": 27,
+          "sensors": 11,
+          "batteries": 8,
+          "c2Nodes": 13,
+          "ecs": 8,
+          "shorad": 0
+        }
+      },
+      "metrics": {
+        "spawned": 307,
+        "detected": 303,
+        "reachedC2": 298,
+        "everEngaged": 183,
+        "killed": 110,
+        "leaked": 150,
+        "censored": 47,
+        "killRate": 0.4230769230769231,
+        "leakRate": 0.5769230769230769,
+        "meanTimeToKillSec": 41.701666944321296,
+        "meanTimeToEngageSec": 16.58155772699364,
+        "meanDecisionDelaySec": 4.723634229725881,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 153,
+        "interceptCostM": 5335,
+        "defenseEfficiency": 0.18550897692865376,
+        "coordination": {
+          "attempts": 1058,
+          "deconflicted": 0,
+          "gaps": 1058,
+          "duplicates": 1058
+        },
+        "leakReasons": {
+          "responsibility_gap": 102,
+          "no_engage_window": 2,
+          "no_shooter": 46
+        },
+        "eventCount": 6552,
+        "activeNodes": 17,
+        "activeLinks": 20,
+        "bottlenecks": [
+          "gap:responsibility_gap",
+          "gap:no_shooter",
+          "link:ECS_C2_BAT_N1→C2_ICC_ICC_BRIGADE_3"
+        ]
+      },
+      "aggregateHash": "539f41ea1492608c5964ec7eed3ab04a5696e37fbf5d3c11d89dd7012ccc949b"
+    },
+    {
+      "deployment": "HANBANDO_MINI_KAMDOC_DOWN",
+      "mode": "tobe",
+      "catalog": {
+        "id": "HANBANDO_MINI_KAMDOC_DOWN",
+        "mode": "tobe",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 32,
+        "visibleNodes": 32,
+        "visibleLinks": 65,
+        "categories": {
+          "c2": 13,
+          "sensor": 11,
+          "shooter": 8
+        },
+        "axisCoverageEntries": 52,
+        "nativeCounts": {
+          "positions": 27,
+          "sensors": 11,
+          "batteries": 8,
+          "c2Nodes": 13,
+          "ecs": 8,
+          "shorad": 0
+        }
+      },
+      "metrics": {
+        "spawned": 307,
+        "detected": 302,
+        "reachedC2": 302,
+        "everEngaged": 221,
+        "killed": 157,
+        "leaked": 106,
+        "censored": 44,
+        "killRate": 0.596958174904943,
+        "leakRate": 0.40304182509505704,
+        "meanTimeToKillSec": 49.05136870584079,
+        "meanTimeToEngageSec": 18.285517936101552,
+        "meanDecisionDelaySec": 8.240269067323279,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 208,
+        "interceptCostM": 1004,
+        "defenseEfficiency": 0.7518446360470902,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "timeout:c2": 33,
+          "timeout:engage": 10,
+          "missed": 16,
+          "no_engage_window": 1,
+          "no_shooter": 46
+        },
+        "eventCount": 2270,
+        "activeNodes": 8,
+        "activeLinks": 9,
+        "bottlenecks": [
+          "gap:no_shooter"
+        ]
+      },
+      "aggregateHash": "c86fb5449c1b81c9fdf8e3f19982467fbfc9b7fae48512ec4177036d02e844b7"
+    },
+    {
+      "deployment": "HANBANDO_FULL_NORMAL",
+      "mode": "asis",
+      "catalog": {
+        "id": "HANBANDO_FULL_NORMAL",
+        "mode": "asis",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 253,
+        "visibleNodes": 251,
+        "visibleLinks": 263,
+        "categories": {
+          "c2": 96,
+          "sensor": 71,
+          "shooter": 84
+        },
+        "axisCoverageEntries": 232,
+        "nativeCounts": {
+          "positions": 171,
+          "sensors": 71,
+          "batteries": 84,
+          "c2Nodes": 98,
+          "ecs": 84,
+          "shorad": 45
+        }
+      },
+      "metrics": {
+        "spawned": 307,
+        "detected": 303,
+        "reachedC2": 303,
+        "everEngaged": 2,
+        "killed": 2,
+        "leaked": 256,
+        "censored": 49,
+        "killRate": 0.007751937984496124,
+        "leakRate": 0.9922480620155039,
+        "meanTimeToKillSec": 47.590351035104675,
+        "meanTimeToEngageSec": 15.008423418841346,
+        "meanDecisionDelaySec": 5.008423418841346,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 2,
+        "interceptCostM": 11778,
+        "defenseEfficiency": 0.004282838665467473,
+        "coordination": {
+          "attempts": 3437,
+          "deconflicted": 0,
+          "gaps": 3437,
+          "duplicates": 3437
+        },
+        "leakReasons": {
+          "responsibility_gap": 253,
+          "no_engage_window": 3
+        },
+        "eventCount": 18304,
+        "activeNodes": 56,
+        "activeLinks": 65,
+        "bottlenecks": [
+          "gap:responsibility_gap",
+          "node:C2_KAMD_OPS_KAMD_OPS",
+          "link:ECS_LSAM_CAPITAL→C2_ICC_ICC_BRIGADE_3",
+          "link:ECS_MSAM2_BAENGNYEONG→C2_ICC_ICC_BRIGADE_3",
+          "link:ECS_MSAM2_CHEONAN→C2_ICC_ICC_BRIGADE_2"
+        ]
+      },
+      "aggregateHash": "8352069fb76ebd3875b64478398ee443770e874069aa24353fc0b7e67824bb32"
+    },
+    {
+      "deployment": "HANBANDO_FULL_NORMAL",
+      "mode": "tobe",
+      "catalog": {
+        "id": "HANBANDO_FULL_NORMAL",
+        "mode": "tobe",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 253,
+        "visibleNodes": 253,
+        "visibleLinks": 506,
+        "categories": {
+          "c2": 98,
+          "sensor": 71,
+          "shooter": 84
+        },
+        "axisCoverageEntries": 232,
+        "nativeCounts": {
+          "positions": 171,
+          "sensors": 71,
+          "batteries": 84,
+          "c2Nodes": 98,
+          "ecs": 84,
+          "shorad": 45
+        }
+      },
+      "metrics": {
+        "spawned": 307,
+        "detected": 303,
+        "reachedC2": 303,
+        "everEngaged": 302,
+        "killed": 189,
+        "leaked": 95,
+        "censored": 23,
+        "killRate": 0.6654929577464789,
+        "leakRate": 0.3345070422535211,
+        "meanTimeToKillSec": 74.70228993642783,
+        "meanTimeToEngageSec": 19.616731794911463,
+        "meanDecisionDelaySec": 8.22600331809026,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 351,
+        "interceptCostM": 572.3999999999992,
+        "defenseEfficiency": 0.7706077559616243,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "timeout:c2": 50,
+          "missed": 37,
+          "timeout:engage": 7,
+          "no_engage_window": 1
+        },
+        "eventCount": 2398,
+        "activeNodes": 24,
+        "activeLinks": 26,
+        "bottlenecks": []
+      },
+      "aggregateHash": "d9697805346841e4fbcf9ef09377f1be926a2edcf41f47e41269c0cbfe86e47b"
+    },
+    {
+      "deployment": "HANBANDO_FULL_MCRC_DOWN",
+      "mode": "asis",
+      "catalog": {
+        "id": "HANBANDO_FULL_MCRC_DOWN",
+        "mode": "asis",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 252,
+        "visibleNodes": 250,
+        "visibleLinks": 229,
+        "categories": {
+          "c2": 95,
+          "sensor": 71,
+          "shooter": 84
+        },
+        "axisCoverageEntries": 232,
+        "nativeCounts": {
+          "positions": 171,
+          "sensors": 71,
+          "batteries": 84,
+          "c2Nodes": 97,
+          "ecs": 84,
+          "shorad": 45
+        }
+      },
+      "metrics": {
+        "spawned": 307,
+        "detected": 304,
+        "reachedC2": 303,
+        "everEngaged": 14,
+        "killed": 7,
+        "leaked": 252,
+        "censored": 48,
+        "killRate": 0.02702702702702703,
+        "leakRate": 0.972972972972973,
+        "meanTimeToKillSec": 68.32584730720676,
+        "meanTimeToEngageSec": 20.46420224972388,
+        "meanDecisionDelaySec": 4.03563082115244,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 10,
+        "interceptCostM": 11774.400000000001,
+        "defenseEfficiency": 0.0358304098571062,
+        "coordination": {
+          "attempts": 3437,
+          "deconflicted": 0,
+          "gaps": 3437,
+          "duplicates": 3437
+        },
+        "leakReasons": {
+          "responsibility_gap": 250,
+          "no_engage_window": 2
+        },
+        "eventCount": 18186,
+        "activeNodes": 57,
+        "activeLinks": 63,
+        "bottlenecks": [
+          "gap:responsibility_gap",
+          "node:C2_KAMD_OPS_KAMD_OPS",
+          "link:ECS_LSAM_CAPITAL→C2_ICC_ICC_BRIGADE_3",
+          "link:ECS_MSAM2_BAENGNYEONG→C2_ICC_ICC_BRIGADE_3",
+          "link:ECS_MSAM2_CHEONAN→C2_ICC_ICC_BRIGADE_2"
+        ]
+      },
+      "aggregateHash": "aa7f21c30fba120ca7c43f7ad48ae1e301fe704d05a5b69d8e90cdc3db56f444"
+    },
+    {
+      "deployment": "HANBANDO_FULL_MCRC_DOWN",
+      "mode": "tobe",
+      "catalog": {
+        "id": "HANBANDO_FULL_MCRC_DOWN",
+        "mode": "tobe",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 252,
+        "visibleNodes": 252,
+        "visibleLinks": 470,
+        "categories": {
+          "c2": 97,
+          "sensor": 71,
+          "shooter": 84
+        },
+        "axisCoverageEntries": 232,
+        "nativeCounts": {
+          "positions": 171,
+          "sensors": 71,
+          "batteries": 84,
+          "c2Nodes": 97,
+          "ecs": 84,
+          "shorad": 45
+        }
+      },
+      "metrics": {
+        "spawned": 307,
+        "detected": 304,
+        "reachedC2": 303,
+        "everEngaged": 303,
+        "killed": 200,
+        "leaked": 90,
+        "censored": 17,
+        "killRate": 0.6896551724137931,
+        "leakRate": 0.3103448275862069,
+        "meanTimeToKillSec": 72.89127006729181,
+        "meanTimeToEngageSec": 15.907040632075102,
+        "meanDecisionDelaySec": 4.487898717883689,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 371,
+        "interceptCostM": 622.4000000000001,
+        "defenseEfficiency": 0.8392579426794046,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "timeout:c2": 45,
+          "missed": 37,
+          "timeout:engage": 8
+        },
+        "eventCount": 2377,
+        "activeNodes": 23,
+        "activeLinks": 26,
+        "bottlenecks": []
+      },
+      "aggregateHash": "dcb28ef93c12bae40c60b70cbe56969ad62958cd5089bbe4ba79036333951630"
+    },
+    {
+      "deployment": "HANBANDO_FULL_KAMDOC_DOWN",
+      "mode": "asis",
+      "catalog": {
+        "id": "HANBANDO_FULL_KAMDOC_DOWN",
+        "mode": "asis",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 252,
+        "visibleNodes": 250,
+        "visibleLinks": 253,
+        "categories": {
+          "c2": 95,
+          "sensor": 71,
+          "shooter": 84
+        },
+        "axisCoverageEntries": 232,
+        "nativeCounts": {
+          "positions": 171,
+          "sensors": 71,
+          "batteries": 84,
+          "c2Nodes": 97,
+          "ecs": 84,
+          "shorad": 45
+        }
+      },
+      "metrics": {
+        "spawned": 307,
+        "detected": 303,
+        "reachedC2": 303,
+        "everEngaged": 183,
+        "killed": 111,
+        "leaked": 148,
+        "censored": 48,
+        "killRate": 0.42857142857142855,
+        "leakRate": 0.5714285714285714,
+        "meanTimeToKillSec": 41.64272991884648,
+        "meanTimeToEngageSec": 15.432027075201846,
+        "meanDecisionDelaySec": 4.175196474108943,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 150,
+        "interceptCostM": 12287,
+        "defenseEfficiency": 0.21025443989071047,
+        "coordination": {
+          "attempts": 3354,
+          "deconflicted": 0,
+          "gaps": 3354,
+          "duplicates": 3354
+        },
+        "leakReasons": {
+          "responsibility_gap": 145,
+          "no_engage_window": 3
+        },
+        "eventCount": 18041,
+        "activeNodes": 55,
+        "activeLinks": 62,
+        "bottlenecks": [
+          "gap:responsibility_gap",
+          "link:ECS_MSAM2_BAENGNYEONG→C2_ICC_ICC_BRIGADE_3",
+          "link:ECS_MSAM2_CHEONAN→C2_ICC_ICC_BRIGADE_2"
+        ]
+      },
+      "aggregateHash": "8c470eb85c465cfd1d711b70c44f7fb300d3a2e6f536c987fe3a7f76541a69d9"
+    },
+    {
+      "deployment": "HANBANDO_FULL_KAMDOC_DOWN",
+      "mode": "tobe",
+      "catalog": {
+        "id": "HANBANDO_FULL_KAMDOC_DOWN",
+        "mode": "tobe",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 252,
+        "visibleNodes": 252,
+        "visibleLinks": 494,
+        "categories": {
+          "c2": 97,
+          "sensor": 71,
+          "shooter": 84
+        },
+        "axisCoverageEntries": 232,
+        "nativeCounts": {
+          "positions": 171,
+          "sensors": 71,
+          "batteries": 84,
+          "c2Nodes": 97,
+          "ecs": 84,
+          "shorad": 45
+        }
+      },
+      "metrics": {
+        "spawned": 307,
+        "detected": 303,
+        "reachedC2": 303,
+        "everEngaged": 302,
+        "killed": 189,
+        "leaked": 95,
+        "censored": 23,
+        "killRate": 0.6654929577464789,
+        "leakRate": 0.3345070422535211,
+        "meanTimeToKillSec": 74.70228993642783,
+        "meanTimeToEngageSec": 19.616731794911463,
+        "meanDecisionDelaySec": 8.22600331809026,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 351,
+        "interceptCostM": 572.3999999999992,
+        "defenseEfficiency": 0.7706077559616243,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "timeout:c2": 50,
+          "missed": 37,
+          "timeout:engage": 7,
+          "no_engage_window": 1
+        },
+        "eventCount": 2398,
+        "activeNodes": 24,
+        "activeLinks": 26,
+        "bottlenecks": []
+      },
+      "aggregateHash": "3e28dac8fbf2f2c2abbc409d5f9b2c505d9be1a9a2d88316dc2a5a185317956f"
+    }
+  ],
+  "comparisons": [
+    {
+      "from": "HANBANDO_MINI_NORMAL",
+      "to": "HANBANDO_MINI_MCRC_DOWN",
+      "mode": "asis",
+      "delta": {
+        "spawned": 0,
+        "detected": 1,
+        "reachedC2": -79,
+        "everEngaged": 10,
+        "killed": 11,
+        "leaked": -11,
+        "censored": 0,
+        "killRate": 0.04263565891472868,
+        "leakRate": -0.04263565891472865,
+        "meanTimeToKillSec": 20.987844115657786,
+        "meanTimeToEngageSec": 3.5210427194243756,
+        "meanDecisionDelaySec": -2.4789572805756412,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 15,
+        "interceptCostM": 18,
+        "defenseEfficiency": 0.023020257826887672,
+        "eventCount": -219,
+        "activeNodes": -1,
+        "activeLinks": -3
+      },
+      "exactAggregate": false
+    },
+    {
+      "from": "HANBANDO_MINI_NORMAL",
+      "to": "HANBANDO_MINI_MCRC_DOWN",
+      "mode": "tobe",
+      "delta": {
+        "spawned": 0,
+        "detected": 1,
+        "reachedC2": 0,
+        "everEngaged": 2,
+        "killed": -13,
+        "leaked": 13,
+        "censored": 0,
+        "killRate": -0.049429657794676785,
+        "leakRate": 0.049429657794676785,
+        "meanTimeToKillSec": -2.3915713322845065,
+        "meanTimeToEngageSec": -3.585958877903897,
+        "meanDecisionDelaySec": -3.5855530584529873,
+        "meanCoordDelaySec": 0,
+        "shotsFired": -22,
+        "interceptCostM": -166,
+        "defenseEfficiency": 0.10488119053467937,
+        "eventCount": -51,
+        "activeNodes": -1,
+        "activeLinks": 0
+      },
+      "exactAggregate": false
+    },
+    {
+      "from": "HANBANDO_MINI_NORMAL",
+      "to": "HANBANDO_MINI_KAMDOC_DOWN",
+      "mode": "asis",
+      "delta": {
+        "spawned": 0,
+        "detected": 1,
+        "reachedC2": -3,
+        "everEngaged": 178,
+        "killed": 108,
+        "leaked": -106,
+        "censored": -2,
+        "killRate": 0.41532498509242693,
+        "leakRate": -0.415324985092427,
+        "meanTimeToKillSec": 8.358813572813098,
+        "meanTimeToEngageSec": -4.137378767628,
+        "meanDecisionDelaySec": -1.9953022648957726,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 151,
+        "interceptCostM": 770,
+        "defenseEfficiency": 0.18336755759592002,
+        "eventCount": -70,
+        "activeNodes": -1,
+        "activeLinks": -3
+      },
+      "exactAggregate": false
+    },
+    {
+      "from": "HANBANDO_MINI_NORMAL",
+      "to": "HANBANDO_MINI_KAMDOC_DOWN",
+      "mode": "tobe",
+      "delta": {
+        "spawned": 0,
+        "detected": 0,
+        "reachedC2": 0,
+        "everEngaged": 0,
+        "killed": 0,
+        "leaked": 0,
+        "censored": 0,
+        "killRate": 0,
+        "leakRate": 0,
+        "meanTimeToKillSec": 0,
+        "meanTimeToEngageSec": 0,
+        "meanDecisionDelaySec": 0,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 0,
+        "interceptCostM": 0,
+        "defenseEfficiency": 0,
+        "eventCount": 0,
+        "activeNodes": 0,
+        "activeLinks": 0
+      },
+      "exactAggregate": false
+    },
+    {
+      "from": "HANBANDO_FULL_NORMAL",
+      "to": "HANBANDO_FULL_MCRC_DOWN",
+      "mode": "asis",
+      "delta": {
+        "spawned": 0,
+        "detected": 1,
+        "reachedC2": 0,
+        "everEngaged": 12,
+        "killed": 5,
+        "leaked": -4,
+        "censored": -1,
+        "killRate": 0.019275089042530905,
+        "leakRate": -0.019275089042530835,
+        "meanTimeToKillSec": 20.735496272102083,
+        "meanTimeToEngageSec": 5.455778830882533,
+        "meanDecisionDelaySec": -0.9727925976889065,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 8,
+        "interceptCostM": -3.599999999998545,
+        "defenseEfficiency": 0.03154757119163873,
+        "eventCount": -118,
+        "activeNodes": 1,
+        "activeLinks": -2
+      },
+      "exactAggregate": false
+    },
+    {
+      "from": "HANBANDO_FULL_NORMAL",
+      "to": "HANBANDO_FULL_MCRC_DOWN",
+      "mode": "tobe",
+      "delta": {
+        "spawned": 0,
+        "detected": 1,
+        "reachedC2": 0,
+        "everEngaged": 1,
+        "killed": 11,
+        "leaked": -5,
+        "censored": -6,
+        "killRate": 0.024162214667314275,
+        "leakRate": -0.02416221466731422,
+        "meanTimeToKillSec": -1.8110198691360182,
+        "meanTimeToEngageSec": -3.7096911628363607,
+        "meanDecisionDelaySec": -3.7381046002065714,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 20,
+        "interceptCostM": 50.00000000000091,
+        "defenseEfficiency": 0.06865018671778023,
+        "eventCount": -21,
+        "activeNodes": -1,
+        "activeLinks": 0
+      },
+      "exactAggregate": false
+    },
+    {
+      "from": "HANBANDO_FULL_NORMAL",
+      "to": "HANBANDO_FULL_KAMDOC_DOWN",
+      "mode": "asis",
+      "delta": {
+        "spawned": 0,
+        "detected": 0,
+        "reachedC2": 0,
+        "everEngaged": 181,
+        "killed": 109,
+        "leaked": -108,
+        "censored": -1,
+        "killRate": 0.4208194905869324,
+        "leakRate": -0.42081949058693247,
+        "meanTimeToKillSec": -5.947621116258198,
+        "meanTimeToEngageSec": 0.4236036563605001,
+        "meanDecisionDelaySec": -0.8332269447324032,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 148,
+        "interceptCostM": 509,
+        "defenseEfficiency": 0.205971601225243,
+        "eventCount": -263,
+        "activeNodes": -1,
+        "activeLinks": -3
+      },
+      "exactAggregate": false
+    },
+    {
+      "from": "HANBANDO_FULL_NORMAL",
+      "to": "HANBANDO_FULL_KAMDOC_DOWN",
+      "mode": "tobe",
+      "delta": {
+        "spawned": 0,
+        "detected": 0,
+        "reachedC2": 0,
+        "everEngaged": 0,
+        "killed": 0,
+        "leaked": 0,
+        "censored": 0,
+        "killRate": 0,
+        "leakRate": 0,
+        "meanTimeToKillSec": 0,
+        "meanTimeToEngageSec": 0,
+        "meanDecisionDelaySec": 0,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 0,
+        "interceptCostM": 0,
+        "defenseEfficiency": 0,
+        "eventCount": 0,
+        "activeNodes": 0,
+        "activeLinks": 0
+      },
+      "exactAggregate": false
+    },
+    {
+      "from": "HANBANDO_MINI_NORMAL",
+      "to": "HANBANDO_FULL_NORMAL",
+      "mode": "asis",
+      "delta": {
+        "spawned": 0,
+        "detected": 1,
+        "reachedC2": 2,
+        "everEngaged": -3,
+        "killed": 0,
+        "leaked": 0,
+        "censored": 0,
+        "killRate": 0,
+        "leakRate": 0,
+        "meanTimeToKillSec": 14.247497663596477,
+        "meanTimeToEngageSec": -5.710513075780295,
+        "meanDecisionDelaySec": -1.710513075780307,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 0,
+        "interceptCostM": 7213,
+        "defenseEfficiency": 0.0021414193327337367,
+        "eventCount": 11682,
+        "activeNodes": 38,
+        "activeLinks": 42
+      },
+      "exactAggregate": false
+    },
+    {
+      "from": "HANBANDO_MINI_NORMAL",
+      "to": "HANBANDO_FULL_NORMAL",
+      "mode": "tobe",
+      "delta": {
+        "spawned": 0,
+        "detected": 1,
+        "reachedC2": 1,
+        "everEngaged": 81,
+        "killed": 32,
+        "leaked": -11,
+        "censored": -21,
+        "killRate": 0.06853478284153591,
+        "leakRate": -0.06853478284153591,
+        "meanTimeToKillSec": 25.650921230587045,
+        "meanTimeToEngageSec": 1.3312138588099103,
+        "meanDecisionDelaySec": -0.01426574923301871,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 143,
+        "interceptCostM": -431.6000000000008,
+        "defenseEfficiency": 0.018763119914534165,
+        "eventCount": 128,
+        "activeNodes": 16,
+        "activeLinks": 17
+      },
+      "exactAggregate": false
+    }
+  ],
+  "controlledMutations": [
+    {
+      "label": "unmodified cloned catalog",
+      "aggregateHash": "d9697805346841e4fbcf9ef09377f1be926a2edcf41f47e41269c0cbfe86e47b",
+      "metrics": {
+        "spawned": 307,
+        "detected": 303,
+        "reachedC2": 303,
+        "everEngaged": 302,
+        "killed": 189,
+        "leaked": 95,
+        "censored": 23,
+        "killRate": 0.6654929577464789,
+        "leakRate": 0.3345070422535211,
+        "meanTimeToKillSec": 74.70228993642783,
+        "meanTimeToEngageSec": 19.616731794911463,
+        "meanDecisionDelaySec": 8.22600331809026,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 351,
+        "interceptCostM": 572.3999999999992,
+        "defenseEfficiency": 0.7706077559616243,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "timeout:c2": 50,
+          "missed": 37,
+          "timeout:engage": 7,
+          "no_engage_window": 1
+        },
+        "eventCount": 2398,
+        "activeNodes": 24,
+        "activeLinks": 26,
+        "bottlenecks": []
+      },
+      "sameAsUnmodified": true
+    },
+    {
+      "label": "quantity and launcherConfig only",
+      "aggregateHash": "d9697805346841e4fbcf9ef09377f1be926a2edcf41f47e41269c0cbfe86e47b",
+      "metrics": {
+        "spawned": 307,
+        "detected": 303,
+        "reachedC2": 303,
+        "everEngaged": 302,
+        "killed": 189,
+        "leaked": 95,
+        "censored": 23,
+        "killRate": 0.6654929577464789,
+        "leakRate": 0.3345070422535211,
+        "meanTimeToKillSec": 74.70228993642783,
+        "meanTimeToEngageSec": 19.616731794911463,
+        "meanDecisionDelaySec": 8.22600331809026,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 351,
+        "interceptCostM": 572.3999999999992,
+        "defenseEfficiency": 0.7706077559616243,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "timeout:c2": 50,
+          "missed": 37,
+          "timeout:engage": 7,
+          "no_engage_window": 1
+        },
+        "eventCount": 2398,
+        "activeNodes": 24,
+        "activeLinks": 26,
+        "bottlenecks": []
+      },
+      "sameAsUnmodified": true
+    },
+    {
+      "label": "reloadConfig only",
+      "aggregateHash": "d9697805346841e4fbcf9ef09377f1be926a2edcf41f47e41269c0cbfe86e47b",
+      "metrics": {
+        "spawned": 307,
+        "detected": 303,
+        "reachedC2": 303,
+        "everEngaged": 302,
+        "killed": 189,
+        "leaked": 95,
+        "censored": 23,
+        "killRate": 0.6654929577464789,
+        "leakRate": 0.3345070422535211,
+        "meanTimeToKillSec": 74.70228993642783,
+        "meanTimeToEngageSec": 19.616731794911463,
+        "meanDecisionDelaySec": 8.22600331809026,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 351,
+        "interceptCostM": 572.3999999999992,
+        "defenseEfficiency": 0.7706077559616243,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "timeout:c2": 50,
+          "missed": 37,
+          "timeout:engage": 7,
+          "no_engage_window": 1
+        },
+        "eventCount": 2398,
+        "activeNodes": 24,
+        "activeLinks": 26,
+        "bottlenecks": []
+      },
+      "sameAsUnmodified": true
+    },
+    {
+      "label": "declared sensor/shooter range only; precomputed coverage unchanged",
+      "aggregateHash": "d9697805346841e4fbcf9ef09377f1be926a2edcf41f47e41269c0cbfe86e47b",
+      "metrics": {
+        "spawned": 307,
+        "detected": 303,
+        "reachedC2": 303,
+        "everEngaged": 302,
+        "killed": 189,
+        "leaked": 95,
+        "censored": 23,
+        "killRate": 0.6654929577464789,
+        "leakRate": 0.3345070422535211,
+        "meanTimeToKillSec": 74.70228993642783,
+        "meanTimeToEngageSec": 19.616731794911463,
+        "meanDecisionDelaySec": 8.22600331809026,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 351,
+        "interceptCostM": 572.3999999999992,
+        "defenseEfficiency": 0.7706077559616243,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "timeout:c2": 50,
+          "missed": 37,
+          "timeout:engage": 7,
+          "no_engage_window": 1
+        },
+        "eventCount": 2398,
+        "activeNodes": 24,
+        "activeLinks": 26,
+        "bottlenecks": []
+      },
+      "sameAsUnmodified": true
+    },
+    {
+      "label": "legacy decision field coverage removed",
+      "aggregateHash": "82de7628ef977c022fa383e0162dddde67b39c0e3bbc8e8a8b84bd4afcd1ef76",
+      "metrics": {
+        "spawned": 307,
+        "detected": 0,
+        "reachedC2": 0,
+        "everEngaged": 0,
+        "killed": 0,
+        "leaked": 258,
+        "censored": 49,
+        "killRate": 0,
+        "leakRate": 1,
+        "meanTimeToKillSec": 0,
+        "meanTimeToEngageSec": 0,
+        "meanDecisionDelaySec": 0,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 0,
+        "interceptCostM": 0,
+        "defenseEfficiency": 0,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "no_sensor": 258
+        },
+        "eventCount": 565,
+        "activeNodes": 0,
+        "activeLinks": 0,
+        "bottlenecks": [
+          "gap:no_sensor"
+        ]
+      },
+      "sameAsUnmodified": false
+    }
+  ],
+  "extremes": [
+    {
+      "label": "detect multiplier 0.01",
+      "metrics": {
+        "spawned": 307,
+        "detected": 218,
+        "reachedC2": 208,
+        "everEngaged": 153,
+        "killed": 95,
+        "leaked": 170,
+        "censored": 42,
+        "killRate": 0.3584905660377358,
+        "leakRate": 0.6415094339622641,
+        "meanTimeToKillSec": 153.5733980090849,
+        "meanTimeToEngageSec": 117.25769552997471,
+        "meanDecisionDelaySec": 9.349198797948555,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 166,
+        "interceptCostM": 327.99999999999943,
+        "defenseEfficiency": 0.5716783403162013,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "not_detected": 60,
+          "no_engage_window": 52,
+          "timeout:c2": 38,
+          "timeout:engage": 7,
+          "missed": 13
+        },
+        "eventCount": 6766,
+        "activeNodes": 22,
+        "activeLinks": 24,
+        "bottlenecks": []
+      },
+      "hash": "6cedd7f1f10f2e17a34f0e983a9ffc8038d092ad234aa4af2998a1fe9239a2af"
+    },
+    {
+      "label": "delay multiplier 10",
+      "metrics": {
+        "spawned": 307,
+        "detected": 304,
+        "reachedC2": 299,
+        "everEngaged": 171,
+        "killed": 100,
+        "leaked": 181,
+        "censored": 26,
+        "killRate": 0.35587188612099646,
+        "leakRate": 0.6441281138790036,
+        "meanTimeToKillSec": 117.96056756124632,
+        "meanTimeToEngageSec": 38.264610343231766,
+        "meanDecisionDelaySec": 25.691510928027075,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 245,
+        "interceptCostM": 253.19999999999905,
+        "defenseEfficiency": 0.48443201946264314,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "no_engage_window": 120,
+          "missed": 34,
+          "timeout:c2": 22,
+          "timeout:engage": 5
+        },
+        "eventCount": 2107,
+        "activeNodes": 21,
+        "activeLinks": 23,
+        "bottlenecks": []
+      },
+      "hash": "1baa84a2bd926a564d2f77d068f587f956424d583dbbb0f6d07f5b83e3205789"
+    },
+    {
+      "label": "aggregate magazine size 1",
+      "metrics": {
+        "spawned": 307,
+        "detected": 304,
+        "reachedC2": 304,
+        "everEngaged": 39,
+        "killed": 21,
+        "leaked": 237,
+        "censored": 49,
+        "killRate": 0.08139534883720931,
+        "leakRate": 0.9186046511627907,
+        "meanTimeToKillSec": 56.0593777774106,
+        "meanTimeToEngageSec": 15.757598824147381,
+        "meanDecisionDelaySec": 4.988368054916611,
+        "meanCoordDelaySec": 0,
+        "shotsFired": 36,
+        "interceptCostM": 93.20000000000002,
+        "defenseEfficiency": 0.08516424686282072,
+        "coordination": {
+          "attempts": 0,
+          "deconflicted": 0,
+          "gaps": 0,
+          "duplicates": 0
+        },
+        "leakReasons": {
+          "timeout:c2": 7,
+          "missed": 3,
+          "timeout:engage": 1,
+          "no_ammo": 226
+        },
+        "eventCount": 1643,
+        "activeNodes": 25,
+        "activeLinks": 27,
+        "bottlenecks": []
+      },
+      "hash": "5934153a68c8ef37297acd7f6144292ad8b8f19a97dce5eb5d9a55cc8508e276"
+    }
+  ],
+  "interpretation": {
+    "unchangedFields": [
+      "quantity",
+      "launcherConfig",
+      "reloadConfig",
+      "rangeKm after adapter coverage generation"
+    ],
+    "activeCompatibilityFields": [
+      "coverage axis list",
+      "detectProb",
+      "queue servers/capacity/service time",
+      "canEngage",
+      "aggregate engage channels/magazine/Pk",
+      "links and their delays"
+    ],
+    "warning": "통제 변형은 운영 정본을 변경하지 않고 메모리 복제 catalog에서만 수행했다."
+  }
+}

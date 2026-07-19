@@ -27,16 +27,17 @@
    * report 유입 + coord 유출 조합이 곧 "통합 협조"다. 이 허브 특례가 없으면 To-Be에서도
    * JAMDC2를 경유한 협조가 전혀 인정되지 않아 K-JAMDS의 실제 개선 효과가 드러나지 않는다.
    */
-  function coordDelay(fromId, toId, mode) {
+  function coordDelay(fromId, toId, mode, catalog) {
     if (fromId === toId) return 0;
     var queue = [fromId], best = {};
     best[fromId] = 0;
     while (queue.length) {
       var cur = queue.shift();
-      KJ.LINKS.forEach(function (l) {
+      (catalog ? catalog.links : KJ.LINKS).forEach(function (l) {
         if (l.from !== cur || !l.comm[mode]) return;
         var isCoordKind = l.kind === 'coord';
-        var isFusionHop = l.to === 'JAMDC2' || cur === 'JAMDC2'; // 허브 유입/유출 특례
+        var fusionId = catalog && catalog.roles ? catalog.roles.fusionC2 : 'JAMDC2';
+        var isFusionHop = l.to === fusionId || cur === fusionId; // 허브 유입/유출 특례
         if (!isCoordKind && !isFusionHop) return;
         var nd = best[cur] + l.comm[mode].delaySec;
         if (best[l.to] === undefined || nd < best[l.to]) {
@@ -49,8 +50,8 @@
   }
 
   /** 두 노드 간 최단 협조지연(양방향 중 짧은 쪽). 둘 다 도달 불가면 null */
-  function minCoordDelay(a, b, mode) {
-    var d1 = coordDelay(a, b, mode), d2 = coordDelay(b, a, mode);
+  function minCoordDelay(a, b, mode, catalog) {
+    var d1 = coordDelay(a, b, mode, catalog), d2 = coordDelay(b, a, mode, catalog);
     if (d1 === null) return d2;
     if (d2 === null) return d1;
     return Math.min(d1, d2);
@@ -60,9 +61,10 @@
    * 시나리오·모드에서 축선별 중복교전 위험도를 계산.
    * @returns { axes: [{axis,label,raw,score,details:[{type,typeName,riskPairs,totalPairs,weight}]}], maxRaw }
    */
-  KJ.computeOverlapHeat = function (scenario, mode, intensity) {
+  KJ.computeOverlapHeat = function (scenario, mode, intensity, modelConfig) {
     intensity = intensity || 1;
-    var nodes = KJ.nodesInMode(mode);
+    var catalog = KJ.resolveModelCatalog ? KJ.resolveModelCatalog(modelConfig || {}) : null;
+    var nodes = KJ.nodesInMode(mode, catalog);
     var results = AXIS_KEYS.map(function (axis) {
       var entries = scenario.mix.filter(function (m) { return m.axis === axis; });
       var raw = 0, details = [];
@@ -81,7 +83,7 @@
         for (var i = 0; i < roots.length; i++) {
           for (var j = i + 1; j < roots.length; j++) {
             totalPairs++;
-            var d = minCoordDelay(roots[i], roots[j], mode);
+            var d = minCoordDelay(roots[i], roots[j], mode, catalog);
             if (d === null || d >= tt.dwellSec * COORD_RISK_FRACTION) riskPairs++;
           }
         }

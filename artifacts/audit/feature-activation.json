@@ -1,0 +1,456 @@
+{
+  "generatedAt": "2026-07-19T00:00:00+09:00",
+  "verdict": "Only the deployment/catalog adapter is active; detailed high-resolution dynamics and canonical observability are absent.",
+  "lifecycleLegend": [
+    "defined",
+    "imported",
+    "instantiated",
+    "called",
+    "return-used",
+    "canonical-event",
+    "metric",
+    "UI"
+  ],
+  "features": [
+    {
+      "feature": "고해상도 배치",
+      "definition": "js/config/deployments.js; deployment-adapter.js",
+      "entry": "Simulation constructor → resolveModelCatalog",
+      "flag": "highResolutionDeployment",
+      "defaultState": false,
+      "evidence": "실행",
+      "impact": "노드·링크·정적 축선 후보·집계 queue/WTA"
+    },
+    {
+      "feature": "개별 위협 운동학",
+      "definition": "정의 없음",
+      "entry": "없음",
+      "flag": "없음",
+      "defaultState": false,
+      "evidence": "미실행",
+      "impact": "없음"
+    },
+    {
+      "feature": "센서 기하",
+      "definition": "사거리 선언만 존재",
+      "entry": "adapter가 coverage axis를 1회 생성",
+      "flag": "없음",
+      "defaultState": false,
+      "evidence": "런타임 미실행",
+      "impact": "정적 axis coverage로 평탄화"
+    },
+    {
+      "feature": "센서 상태머신",
+      "definition": "정의 없음",
+      "entry": "없음",
+      "flag": "없음",
+      "defaultState": false,
+      "evidence": "미실행",
+      "impact": "없음"
+    },
+    {
+      "feature": "재밍·ECM",
+      "definition": "구현 없음",
+      "entry": "없음",
+      "flag": "없음",
+      "defaultState": false,
+      "evidence": "미실행",
+      "impact": "없음"
+    },
+    {
+      "feature": "항적 신선도",
+      "definition": "구현 없음",
+      "entry": "없음",
+      "flag": "없음",
+      "defaultState": false,
+      "evidence": "미실행",
+      "impact": "없음"
+    },
+    {
+      "feature": "항적 상관",
+      "definition": "상세 구현 없음",
+      "entry": "없음",
+      "flag": "없음",
+      "defaultState": false,
+      "evidence": "미실행",
+      "impact": "없음"
+    },
+    {
+      "feature": "C2 scope resolver",
+      "definition": "역할 ID 정적 매핑만 존재",
+      "entry": "_resolveRole",
+      "flag": "없음",
+      "defaultState": false,
+      "evidence": "동적 resolver 미실행",
+      "impact": "USFK WTA 제외"
+    },
+    {
+      "feature": "PIP",
+      "definition": "구현 없음",
+      "entry": "없음",
+      "flag": "없음",
+      "defaultState": false,
+      "evidence": "미실행",
+      "impact": "없음"
+    },
+    {
+      "feature": "상세 교전봉투",
+      "definition": "사거리 선언만 존재",
+      "entry": "_doEngage",
+      "flag": "없음",
+      "defaultState": false,
+      "evidence": "런타임 미실행",
+      "impact": "정적 axis coverage+체공시간으로 대체"
+    },
+    {
+      "feature": "PSSEK",
+      "definition": "구현 없음",
+      "entry": "없음",
+      "flag": "없음",
+      "defaultState": false,
+      "evidence": "미실행",
+      "impact": "없음"
+    },
+    {
+      "feature": "발사대별 자원",
+      "definition": "launcherConfig/quantity 선언",
+      "entry": "adapter node field copy",
+      "flag": "없음",
+      "defaultState": false,
+      "evidence": "필드는 존재·동역학 미실행",
+      "impact": "포대 합산 channels/magazine로 평탄화"
+    },
+    {
+      "feature": "재장전",
+      "definition": "reloadConfig 선언",
+      "entry": "adapter node field copy",
+      "flag": "없음",
+      "defaultState": false,
+      "evidence": "미실행",
+      "impact": "없음"
+    },
+    {
+      "feature": "canonical trace",
+      "definition": "구현 없음",
+      "entry": "없음",
+      "flag": "trace(구 형식)",
+      "defaultState": false,
+      "evidence": "미실행",
+      "impact": "자유형 한국어 stages만 존재"
+    },
+    {
+      "feature": "trace 기반 분석",
+      "definition": "sim-view stageLabel",
+      "entry": "threatTraces/nodeSeries",
+      "flag": "trace",
+      "defaultState": false,
+      "evidence": "부분 실행",
+      "impact": "기존 trace 표시·집계"
+    },
+    {
+      "feature": "신규 replay",
+      "definition": "구현 없음",
+      "entry": "없음",
+      "flag": "없음",
+      "defaultState": false,
+      "evidence": "미실행",
+      "impact": "axisPosition 기반 기존 replay 사용"
+    }
+  ],
+  "catalogs": [
+    {
+      "id": "legacy",
+      "mode": "asis",
+      "compatibilityMode": null,
+      "declaredNodes": 24,
+      "visibleNodes": 23,
+      "visibleLinks": 32,
+      "categories": {
+        "c2": 5,
+        "sensor": 10,
+        "shooter": 8
+      },
+      "axisCoverageEntries": 42,
+      "nativeCounts": null
+    },
+    {
+      "id": "legacy",
+      "mode": "tobe",
+      "compatibilityMode": null,
+      "declaredNodes": 24,
+      "visibleNodes": 24,
+      "visibleLinks": 42,
+      "categories": {
+        "c2": 6,
+        "sensor": 10,
+        "shooter": 8
+      },
+      "axisCoverageEntries": 42,
+      "nativeCounts": null
+    },
+    {
+      "id": "HANBANDO_MINI_NORMAL",
+      "mode": "asis",
+      "compatibilityMode": "phase1-axis-queue",
+      "declaredNodes": 33,
+      "visibleNodes": 31,
+      "visibleLinks": 35,
+      "categories": {
+        "c2": 12,
+        "sensor": 11,
+        "shooter": 8
+      },
+      "axisCoverageEntries": 52,
+      "nativeCounts": {
+        "positions": 27,
+        "sensors": 11,
+        "batteries": 8,
+        "c2Nodes": 14,
+        "ecs": 8,
+        "shorad": 0
+      }
+    },
+    {
+      "id": "HANBANDO_MINI_NORMAL",
+      "mode": "tobe",
+      "compatibilityMode": "phase1-axis-queue",
+      "declaredNodes": 33,
+      "visibleNodes": 33,
+      "visibleLinks": 72,
+      "categories": {
+        "c2": 14,
+        "sensor": 11,
+        "shooter": 8
+      },
+      "axisCoverageEntries": 52,
+      "nativeCounts": {
+        "positions": 27,
+        "sensors": 11,
+        "batteries": 8,
+        "c2Nodes": 14,
+        "ecs": 8,
+        "shorad": 0
+      }
+    },
+    {
+      "id": "HANBANDO_MINI_MCRC_DOWN",
+      "mode": "asis",
+      "compatibilityMode": "phase1-axis-queue",
+      "declaredNodes": 32,
+      "visibleNodes": 30,
+      "visibleLinks": 29,
+      "categories": {
+        "c2": 11,
+        "sensor": 11,
+        "shooter": 8
+      },
+      "axisCoverageEntries": 52,
+      "nativeCounts": {
+        "positions": 27,
+        "sensors": 11,
+        "batteries": 8,
+        "c2Nodes": 13,
+        "ecs": 8,
+        "shorad": 0
+      }
+    },
+    {
+      "id": "HANBANDO_MINI_MCRC_DOWN",
+      "mode": "tobe",
+      "compatibilityMode": "phase1-axis-queue",
+      "declaredNodes": 32,
+      "visibleNodes": 32,
+      "visibleLinks": 64,
+      "categories": {
+        "c2": 13,
+        "sensor": 11,
+        "shooter": 8
+      },
+      "axisCoverageEntries": 52,
+      "nativeCounts": {
+        "positions": 27,
+        "sensors": 11,
+        "batteries": 8,
+        "c2Nodes": 13,
+        "ecs": 8,
+        "shorad": 0
+      }
+    },
+    {
+      "id": "HANBANDO_MINI_KAMDOC_DOWN",
+      "mode": "asis",
+      "compatibilityMode": "phase1-axis-queue",
+      "declaredNodes": 32,
+      "visibleNodes": 30,
+      "visibleLinks": 30,
+      "categories": {
+        "c2": 11,
+        "sensor": 11,
+        "shooter": 8
+      },
+      "axisCoverageEntries": 52,
+      "nativeCounts": {
+        "positions": 27,
+        "sensors": 11,
+        "batteries": 8,
+        "c2Nodes": 13,
+        "ecs": 8,
+        "shorad": 0
+      }
+    },
+    {
+      "id": "HANBANDO_MINI_KAMDOC_DOWN",
+      "mode": "tobe",
+      "compatibilityMode": "phase1-axis-queue",
+      "declaredNodes": 32,
+      "visibleNodes": 32,
+      "visibleLinks": 65,
+      "categories": {
+        "c2": 13,
+        "sensor": 11,
+        "shooter": 8
+      },
+      "axisCoverageEntries": 52,
+      "nativeCounts": {
+        "positions": 27,
+        "sensors": 11,
+        "batteries": 8,
+        "c2Nodes": 13,
+        "ecs": 8,
+        "shorad": 0
+      }
+    },
+    {
+      "id": "HANBANDO_FULL_NORMAL",
+      "mode": "asis",
+      "compatibilityMode": "phase1-axis-queue",
+      "declaredNodes": 253,
+      "visibleNodes": 251,
+      "visibleLinks": 263,
+      "categories": {
+        "c2": 96,
+        "sensor": 71,
+        "shooter": 84
+      },
+      "axisCoverageEntries": 232,
+      "nativeCounts": {
+        "positions": 171,
+        "sensors": 71,
+        "batteries": 84,
+        "c2Nodes": 98,
+        "ecs": 84,
+        "shorad": 45
+      }
+    },
+    {
+      "id": "HANBANDO_FULL_NORMAL",
+      "mode": "tobe",
+      "compatibilityMode": "phase1-axis-queue",
+      "declaredNodes": 253,
+      "visibleNodes": 253,
+      "visibleLinks": 506,
+      "categories": {
+        "c2": 98,
+        "sensor": 71,
+        "shooter": 84
+      },
+      "axisCoverageEntries": 232,
+      "nativeCounts": {
+        "positions": 171,
+        "sensors": 71,
+        "batteries": 84,
+        "c2Nodes": 98,
+        "ecs": 84,
+        "shorad": 45
+      }
+    },
+    {
+      "id": "HANBANDO_FULL_MCRC_DOWN",
+      "mode": "asis",
+      "compatibilityMode": "phase1-axis-queue",
+      "declaredNodes": 252,
+      "visibleNodes": 250,
+      "visibleLinks": 229,
+      "categories": {
+        "c2": 95,
+        "sensor": 71,
+        "shooter": 84
+      },
+      "axisCoverageEntries": 232,
+      "nativeCounts": {
+        "positions": 171,
+        "sensors": 71,
+        "batteries": 84,
+        "c2Nodes": 97,
+        "ecs": 84,
+        "shorad": 45
+      }
+    },
+    {
+      "id": "HANBANDO_FULL_MCRC_DOWN",
+      "mode": "tobe",
+      "compatibilityMode": "phase1-axis-queue",
+      "declaredNodes": 252,
+      "visibleNodes": 252,
+      "visibleLinks": 470,
+      "categories": {
+        "c2": 97,
+        "sensor": 71,
+        "shooter": 84
+      },
+      "axisCoverageEntries": 232,
+      "nativeCounts": {
+        "positions": 171,
+        "sensors": 71,
+        "batteries": 84,
+        "c2Nodes": 97,
+        "ecs": 84,
+        "shorad": 45
+      }
+    },
+    {
+      "id": "HANBANDO_FULL_KAMDOC_DOWN",
+      "mode": "asis",
+      "compatibilityMode": "phase1-axis-queue",
+      "declaredNodes": 252,
+      "visibleNodes": 250,
+      "visibleLinks": 253,
+      "categories": {
+        "c2": 95,
+        "sensor": 71,
+        "shooter": 84
+      },
+      "axisCoverageEntries": 232,
+      "nativeCounts": {
+        "positions": 171,
+        "sensors": 71,
+        "batteries": 84,
+        "c2Nodes": 97,
+        "ecs": 84,
+        "shorad": 45
+      }
+    },
+    {
+      "id": "HANBANDO_FULL_KAMDOC_DOWN",
+      "mode": "tobe",
+      "compatibilityMode": "phase1-axis-queue",
+      "declaredNodes": 252,
+      "visibleNodes": 252,
+      "visibleLinks": 494,
+      "categories": {
+        "c2": 97,
+        "sensor": 71,
+        "shooter": 84
+      },
+      "axisCoverageEntries": 232,
+      "nativeCounts": {
+        "positions": 171,
+        "sensors": 71,
+        "batteries": 84,
+        "c2Nodes": 97,
+        "ecs": 84,
+        "shorad": 45
+      }
+    }
+  ]
+}

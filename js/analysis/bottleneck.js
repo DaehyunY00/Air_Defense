@@ -60,10 +60,11 @@
    * @param {number} intensity 전체 λ 배수 (0.5~3.0)
    * @returns 분석 결과 (nodes/links/gaps/timelines/bottlenecks)
    */
-  KJ.analyzeScenario = function (scenario, mode, intensity) {
+  KJ.analyzeScenario = function (scenario, mode, intensity, modelConfig) {
     intensity = intensity || 1;
-    var nodes = KJ.nodesInMode(mode);
-    var links = KJ.linksInMode(mode);
+    var catalog = KJ.resolveModelCatalog ? KJ.resolveModelCatalog(modelConfig || {}) : null;
+    var nodes = KJ.nodesInMode(mode, catalog);
+    var links = KJ.linksInMode(mode, catalog);
     var nodeLoad = {};   // nodeId -> λ (건/분)
     var linkFlow = {};   // linkIndex -> λ (건/분)
     var gaps = [];
@@ -71,7 +72,7 @@
 
     function addNode(id, v) { nodeLoad[id] = (nodeLoad[id] || 0) + v; }
     function addLink(l, v) {
-      var i = KJ.LINKS.indexOf(l);
+      var i = (catalog ? catalog.links : KJ.LINKS).indexOf(l);
       linkFlow[i] = (linkFlow[i] || 0) + v;
     }
     function outLinks(id, kinds) {
@@ -114,12 +115,13 @@
         // Track Fusion: JAMDC2가 전 센서 유입을 융합 처리, 각 C2 처리부하는 단일 융합항적으로 캡
         var totalInflow = 0;
         Object.keys(loadedC2).forEach(function (id) { totalInflow += loadedC2[id]; });
-        if (KJ.nodeById('JAMDC2')) {
-          addNode('JAMDC2', totalInflow);
+        var fusionId = catalog && catalog.roles ? catalog.roles.fusionC2 : 'JAMDC2';
+        if (fusionId && KJ.nodeById(fusionId, catalog)) {
+          addNode(fusionId, totalInflow);
           // C2 → JAMDC2 보고 링크 플로우 반영
           Object.keys(loadedC2).forEach(function (id) {
             outLinks(id, ['report']).forEach(function (l) {
-              if (l.to === 'JAMDC2') addLink(l, loadedC2[id]);
+              if (l.to === fusionId) addLink(l, loadedC2[id]);
             });
           });
         }
@@ -133,7 +135,8 @@
       //    모든 상향 링크에 부하를 살포하지 않고 실제 협조 경로에만 부하를 싣는다.
       //    To-Be 사전승인 자동교전(approval=null)은 협조·결심 홉 자체가 생략된다.
       var approvalId = threat.approvalLevel ? threat.approvalLevel[mode] : null;
-      if (approvalId && KJ.nodeById(approvalId)) {
+      if (approvalId && KJ.resolveRoleId) approvalId = KJ.resolveRoleId(approvalId, catalog);
+      if (approvalId && KJ.nodeById(approvalId, catalog)) {
         Object.keys(loadedC2).forEach(function (srcId) {
           var path = coordPath(srcId, approvalId, links);
           if (!path) return;
@@ -168,7 +171,7 @@
       }
 
       // 타임라인 추정 (탐지→교전, 대기시간 제외한 경로 지연 합 — Phase 2 DES에서 정밀화)
-      timelines.push(buildTimeline(entry, threat, lam, sensors, shooters, links, mode));
+      timelines.push(buildTimeline(entry, threat, lam, sensors, shooters, links, mode, catalog));
     });
 
     // ── 노드 지표 계산 (M/M/c) ──
@@ -212,7 +215,7 @@
     // ── 링크 지표 (통신지연 병목) ──
     var linkResults = [];
     Object.keys(linkFlow).forEach(function (i) {
-      var l = KJ.LINKS[i];
+      var l = (catalog ? catalog.links : KJ.LINKS)[i];
       var comm = l.comm[mode];
       if (!comm) return;
       linkResults.push({
@@ -244,7 +247,8 @@
         bottlenecks.push({
           kind: 'link', severity: 2,
           id: r.from + '→' + r.to,
-          name: KJ.nodeById(r.from).name + ' → ' + KJ.nodeById(r.to).name,
+          name: (KJ.nodeById(r.from, catalog) || { name: r.from }).name + ' → ' +
+            (KJ.nodeById(r.to, catalog) || { name: r.to }).name,
           detail: r.type + ' 전달지연 ' + r.delaySec + '초 × 유통량 ' +
             r.flow.toFixed(2) + '건/분' + (r.note ? ' — ' + r.note : '')
         });
@@ -293,7 +297,7 @@
   }
 
   /** 위협 1건의 탐지→교전 단계별 지연 추정 (경로 고정지연 합, 대기시간은 노드표 참조) */
-  function buildTimeline(entry, threat, lam, sensors, shooters, links, mode) {
+  function buildTimeline(entry, threat, lam, sensors, shooters, links, mode, catalog) {
     var stages = [];
     // 보고 지연: 센서 report 링크 중 최소 지연 경로(최선 센서) 기준
     var reportDelays = [];
@@ -311,7 +315,8 @@
     var coordSec = 0;
     if (armyFirst && !afAlso) {
       var coordDelays = links.filter(function (l) {
-        return l.kind === 'coord' && KJ.nodeById(l.from).service === 'army';
+        var n = KJ.nodeById(l.from, catalog);
+        return l.kind === 'coord' && n && n.service === 'army';
       }).map(function (l) { return l.comm[mode].delaySec; });
       coordSec = coordDelays.length ? Math.min.apply(null, coordDelays) : 0;
     }
@@ -319,8 +324,9 @@
 
     // 결심 (승인 홉: 서비스타임 1건분 개념치)
     var approvalId = threat.approvalLevel ? threat.approvalLevel[mode] : null;
-    var apr = approvalId && KJ.nodeById(approvalId)
-      ? KJ.nodeById(approvalId).queue.serviceTimeSec[mode] : 0;
+    if (approvalId && KJ.resolveRoleId) approvalId = KJ.resolveRoleId(approvalId, catalog);
+    var approvalNode = approvalId && KJ.nodeById(approvalId, catalog);
+    var apr = approvalNode ? approvalNode.queue.serviceTimeSec[mode] : 0;
     stages.push({ name: '결심/승인', sec: apr || 0 });
 
     // 교전명령 + 교전

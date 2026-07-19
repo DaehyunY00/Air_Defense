@@ -83,9 +83,19 @@
   var inputTouched = { seed: false, dur: false };
   var tlog = { els: {}, lastUpdate: 0 }; // 위협 항적 로그 패널 상태 (실행당 재구성)
 
+  function modelConfig(cfg) {
+    var high = cfg && cfg.dep && cfg.dep !== 'legacy';
+    return high ? { deploymentId: cfg.dep, features: { highResolutionDeployment: true } } : {};
+  }
+
+  function runCatalog() {
+    return KJ.resolveModelCatalog ? KJ.resolveModelCatalog(modelConfig(run && run.cfg)) : null;
+  }
+
   function contextLabel(cfg) {
     return KJ.scenarioById(cfg.sc).name + ' · ' +
       (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형') +
+      ' · ' + (cfg.dep === 'legacy' ? '기존 대표 배치' : cfg.dep) +
       ' · 강도 ×' + Number(cfg.x).toFixed(1) + ' · seed ' + cfg.seed;
   }
 
@@ -117,7 +127,7 @@
       this.stop(); // 이전 실행 정리
       var seed = Math.max(0, Math.floor(parseFloat(el('sim-seed').value) || 0));
       var dur = Math.min(7200, Math.max(60, Math.floor(parseFloat(el('sim-dur').value) || 1800)));
-      var cfg = { sc: state.sc, mode: state.mode, x: state.x, seed: seed, dur: dur };
+      var cfg = { sc: state.sc, mode: state.mode, dep: state.dep || 'legacy', x: state.x, seed: seed, dur: dur };
       var btn = el('sim-run');
       btn.disabled = true; btn.textContent = '⏳ DES 실행 중...';
       setStatus('DES 실행 중 (trace 모드)...');
@@ -125,15 +135,16 @@
       setTimeout(function () {
         var scenario = KJ.scenarioById(cfg.sc);
         var t0 = now();
-        var res = KJ.runDES({
+        var highCfg = modelConfig(cfg);
+        var res = KJ.runDES(Object.assign({
           scenario: scenario, mode: cfg.mode, intensity: cfg.x,
           seed: cfg.seed, endTimeSec: cfg.dur, trace: true, traceCap: 300
-        });
+        }, highCfg));
         var other = cfg.mode === 'asis' ? 'tobe' : 'asis';
-        var resOther = KJ.runDES({
+        var resOther = KJ.runDES(Object.assign({
           scenario: scenario, mode: other, intensity: cfg.x,
           seed: cfg.seed, endTimeSec: cfg.dur
-        });
+        }, highCfg));
         var elapsed = now() - t0;
 
         run = {
@@ -150,8 +161,9 @@
         setStatus('백그라운드 Monte Carlo 수렴 중...');
         setTimeout(function () {
           var mcOpts = { minReps: 30, maxReps: 200, tol: 0.01, primary: 'leakRate' };
-          run.mc.asis = KJ.runMonteCarlo({ scenario: scenario, mode: 'asis', intensity: cfg.x, seed: cfg.seed, endTimeSec: cfg.dur }, mcOpts);
-          run.mc.tobe = KJ.runMonteCarlo({ scenario: scenario, mode: 'tobe', intensity: cfg.x, seed: cfg.seed, endTimeSec: cfg.dur }, mcOpts);
+          var mcBase = Object.assign({ scenario: scenario, intensity: cfg.x, seed: cfg.seed, endTimeSec: cfg.dur }, highCfg);
+          run.mc.asis = KJ.runMonteCarlo(Object.assign({ mode: 'asis' }, mcBase), mcOpts);
+          run.mc.tobe = KJ.runMonteCarlo(Object.assign({ mode: 'tobe' }, mcBase), mcOpts);
           run.mc.pending = false;
           setStatus(anim.playing ? '재생 중 — MC 수렴 완료 (' + run.mc.asis.reps + '·' + run.mc.tobe.reps + '복제)' : 'MC 수렴 완료');
           renderModalIfOpen();
@@ -277,7 +289,7 @@
 
     // 노드 재고 링 (재고/용량 비율에 따라 굵기·색 갱신)
     Object.keys(run.nodeMeta).forEach(function (id) {
-      var n = KJ.nodeById(id);
+      var n = KJ.nodeById(id, runCatalog());
       if (!n) return;
       var ring = L.circleMarker(n.coord, {
         renderer: renderer, radius: 14, fill: false,
@@ -598,8 +610,8 @@
 
     // ⑦ 중복교전 위험 (As-Is ↔ To-Be, 축선별)
     var scenario = KJ.scenarioById(run.cfg.sc);
-    var ha = KJ.computeOverlapHeat(scenario, 'asis', run.cfg.x);
-    var hb = KJ.computeOverlapHeat(scenario, 'tobe', run.cfg.x);
+    var ha = KJ.computeOverlapHeat(scenario, 'asis', run.cfg.x, modelConfig(run.cfg));
+    var hb = KJ.computeOverlapHeat(scenario, 'tobe', run.cfg.x, modelConfig(run.cfg));
     html += '<h3>축선별 중복교전 위험 (As-Is ↔ To-Be)</h3>' +
       '<div class="pb-heat-legend"><span class="sw" style="background:#e05545"></span>As-Is ' +
       '<span class="sw" style="background:#3d8b40"></span>To-Be</div>' +
@@ -743,7 +755,7 @@
   }
   /** 축선 중복교전 위험도 합 (overlap-heatmap raw 합, MoCE) */
   function overlapRiskSum(mode) {
-    var h = KJ.computeOverlapHeat(KJ.scenarioById(run.cfg.sc), mode, run.cfg.x);
+    var h = KJ.computeOverlapHeat(KJ.scenarioById(run.cfg.sc), mode, run.cfg.x, modelConfig(run.cfg));
     return h.axes.reduce(function (s, a) { return s + a.raw; }, 0);
   }
 

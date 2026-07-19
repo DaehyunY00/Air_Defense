@@ -13,8 +13,13 @@
   var analysisCache = null;
   var prevTab = null;
 
+  function modelConfig() {
+    var high = state.dep && state.dep !== 'legacy';
+    return high ? { deploymentId: state.dep, features: { highResolutionDeployment: true } } : {};
+  }
+
   function analyze() {
-    analysisCache = KJ.analyzeScenario(KJ.scenarioById(state.sc), state.mode, state.x);
+    analysisCache = KJ.analyzeScenario(KJ.scenarioById(state.sc), state.mode, state.x, modelConfig());
     return analysisCache;
   }
 
@@ -41,6 +46,13 @@
 
     // 공통 컨트롤 동기화
     document.getElementById('scenario-select').value = state.sc;
+    document.getElementById('deployment-select').value = state.dep;
+    var depWarning = document.getElementById('deployment-warning');
+    var high = state.dep !== 'legacy';
+    depWarning.classList.toggle('hidden', !high);
+    depWarning.textContent = high
+      ? '⚠️ ' + state.dep + ': 원본의 위협종류·아키텍처·C2 생존상태 책임결정, scope WTA, 개념 PIP, 발사대별 탄약·900초 재장전을 실행합니다. 좌표·운동학·센서 상태·PSSEK는 공개자료 기반 개념 근사이며 전술적 절대값으로 해석하면 안 됩니다.'
+      : '';
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
     document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
@@ -58,7 +70,7 @@
     } else if (state.tab === 'mc') {
       KJ.mcPanel.render(state);
     } else if (state.tab === 'data') {
-      KJ.panels.renderData();
+      KJ.panels.renderData(state);
     }
 
     // 헤더 요약 (전 탭 공통): 도출된 병목 개수 (정상상태 해석 기준)
@@ -78,6 +90,9 @@
     });
     document.getElementById('scenario-select').addEventListener('change', function (e) {
       setState({ sc: e.target.value });
+    });
+    document.getElementById('deployment-select').addEventListener('change', function (e) {
+      setState({ dep: e.target.value, open: '' });
     });
     document.getElementById('intensity-slider').addEventListener('input', function (e) {
       setState({ x: parseFloat(e.target.value) });
@@ -135,6 +150,12 @@
     sel.innerHTML = KJ.SCENARIOS.map(function (s) {
       return '<option value="' + s.id + '">' + s.name + '</option>';
     }).join('');
+
+    var depSel = document.getElementById('deployment-select');
+    depSel.innerHTML = '<option value="legacy">기존 대표 배치 (legacy)</option>' +
+      KJ.DEPLOYMENT_IDS.map(function (id) {
+        return '<option value="' + id + '">' + KJ.deploymentById(id).name + '</option>';
+      }).join('');
 
     KJ.mapView.init('map', function (nodeId) {
       state.open = nodeId;

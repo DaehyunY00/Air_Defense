@@ -1,6 +1,6 @@
 # K-JAMDS C2 병목 분석 시뮬레이터 — V&V 보고서 (Phase 5)
 
-> **디스클레이머**: 본 문서와 시뮬레이터의 모든 수치·좌표·확률은 공개자료(오픈소스) 기반의 **정책연구용 개념값**이며, 실제 작전자료가 아님. 모든 좌표는 도시 수준 개념좌표임. KP-SAM(신궁)·천마(K-31)는 탄도탄 요격 불가로 모델링하며, KAMDOC↔THAAD 연동은 모델링하지 않음. 본 시뮬레이터는 절대값 예측 도구가 아니라 **As-Is/To-Be 상대비교** 도구다.
+> **디스클레이머**: 본 문서와 시뮬레이터의 모든 수치·좌표·확률은 공개자료(오픈소스) 기반의 **정책연구용 개념값**이며, 실제 작전자료가 아님. 모든 좌표는 도시·권역 수준 개념좌표임. KP-SAM(신궁)·천마(K-31)는 탄도탄 요격 불가로 모델링함. FULL의 USFK THAAD/Patriot은 독립축으로 존재하지만 KAMDOC와 연동하지 않고 한국군 WTA에서 제외됨. 본 시뮬레이터는 절대값 예측 도구가 아니라 **As-Is/To-Be 상대비교** 도구다.
 
 ## 1. Face Validation — 9단계 프로세스의 표준 프레임워크 정합성
 
@@ -24,6 +24,16 @@
 
 ### 2.1 회귀 스위트 (단일 진입점: `node tests/run-all.js`)
 
+2026-07-19 현재 단일 실행기는 **JS 25개 구문검증 + 21개 스위트·540개 어서션**을 실행한다. 아래 기존 표는 초기 Phase 1–5 주요 스위트 요약이며, 현재 수량 정본은 `tests/run-all.js`와 추가 게이트 5개이다.
+
+| 추가 스위트 | 어서션 | 검증 내용 |
+|---|---:|---|
+| `baseline.test.js` | 18 | SC1–SC3 양모드 전체 결과 SHA-256, 플래그 생략=OFF bit-exact, 핵심 flow |
+| `deployment.test.js` | 54 | 6개 배치 수량·불변 참조·전역 ID/참조·SHORAD 차량 스키마·USFK·MDL |
+| `deployment-adapter.test.js` | 55 | 토폴로지 종점·DOWN 링크·USFK 분리·6×2 결정론/보존법칙/유한 지표 |
+| `high-resolution-connection.test.js` | 3 | ICC 상향 승인경로·As-Is 주교전 연결 |
+| `iads-native-pipeline.test.js` | 12 | 책임 C2 생존대체·scope WTA·PIP/FC·발사대별 탄약/재장전·실제 중복 BDA·결정론 |
+
 | 스위트 | 어서션 | 검증 내용 |
 |---|---|---|
 | `engine.test.js` | 49 | 결정론(동일 seed→완전 동일, seed 0 보존), 극한값(위협 0/강도 0/포화 시 ρ≤1·드롭·무한루프 없음), 시나리오·강도·모드별 병목 상이성(고정 아님), 강도 단조성, To-Be 개선, 보존 항등식(생성≥격추+누수), 흐름 카운터 부등식, trace 모드 무부수효과·절삭 플래그·타임스탬프 단조성·exitT 이후 단계 부재 |
@@ -44,7 +54,7 @@
 | 항목 | 검증 방식 |
 |---|---|
 | (a) 신궁·천마 탄도탄 교전 불가 | 데이터(canEngage=false) + **행위 이중검증**: DES 강도 3.0 탄도탄 시나리오에서 SHORAD 도착 0건, 해석 모듈 부하 λ=0 |
-| (b) KAMDOC↔THAAD 부재 | 노드 식별자·링크 전수 검사 (role의 THAAD 언급은 제외 선언 문맥만 허용) |
+| (b) KAMDOC↔THAAD 미연동 | legacy 노드·링크에 THAAD 부재 + FULL USFK THAAD/Patriot 독립축에서 한국군 교차 링크·WTA 후보 부재 |
 | (c) 디스클레이머 상시 표출 | 정적: index.html 마크업·필수 문구·CSS 비은닉 + README/params.md 존재. 런타임: Playwright computed-style 검사 |
 | (d) 도시 수준 개념좌표 | 전 노드(24개) coordNote + Phase 4 축선 좌표(axes.js) entryNote/targetNote "개념" 명시 전수 |
 | (e) KF-21 보라매 표기 | FTR 노드 명칭·설명 검사 (인도수출형 F-21과 구별 명시) |

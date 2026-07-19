@@ -1,0 +1,142 @@
+{
+  "generatedAt": "2026-07-19T00:00:00+09:00",
+  "deploymentVisualization": {
+    "source": "resolveModelCatalog → nodesInMode/linksInMode → Leaflet or SVG fallback",
+    "connected": true,
+    "catalogs": [
+      {
+        "id": "legacy",
+        "mode": "asis",
+        "compatibilityMode": null,
+        "declaredNodes": 24,
+        "visibleNodes": 23,
+        "visibleLinks": 32,
+        "categories": {
+          "c2": 5,
+          "sensor": 10,
+          "shooter": 8
+        },
+        "axisCoverageEntries": 42,
+        "nativeCounts": null
+      },
+      {
+        "id": "legacy",
+        "mode": "tobe",
+        "compatibilityMode": null,
+        "declaredNodes": 24,
+        "visibleNodes": 24,
+        "visibleLinks": 42,
+        "categories": {
+          "c2": 6,
+          "sensor": 10,
+          "shooter": 8
+        },
+        "axisCoverageEntries": 42,
+        "nativeCounts": null
+      },
+      {
+        "id": "HANBANDO_MINI_NORMAL",
+        "mode": "asis",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 33,
+        "visibleNodes": 31,
+        "visibleLinks": 35,
+        "categories": {
+          "c2": 12,
+          "sensor": 11,
+          "shooter": 8
+        },
+        "axisCoverageEntries": 52,
+        "nativeCounts": {
+          "positions": 27,
+          "sensors": 11,
+          "batteries": 8,
+          "c2Nodes": 14,
+          "ecs": 8,
+          "shorad": 0
+        }
+      },
+      {
+        "id": "HANBANDO_MINI_NORMAL",
+        "mode": "tobe",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 33,
+        "visibleNodes": 33,
+        "visibleLinks": 72,
+        "categories": {
+          "c2": 14,
+          "sensor": 11,
+          "shooter": 8
+        },
+        "axisCoverageEntries": 52,
+        "nativeCounts": {
+          "positions": 27,
+          "sensors": 11,
+          "batteries": 8,
+          "c2Nodes": 14,
+          "ecs": 8,
+          "shorad": 0
+        }
+      },
+      {
+        "id": "HANBANDO_FULL_NORMAL",
+        "mode": "asis",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 253,
+        "visibleNodes": 251,
+        "visibleLinks": 263,
+        "categories": {
+          "c2": 96,
+          "sensor": 71,
+          "shooter": 84
+        },
+        "axisCoverageEntries": 232,
+        "nativeCounts": {
+          "positions": 171,
+          "sensors": 71,
+          "batteries": 84,
+          "c2Nodes": 98,
+          "ecs": 84,
+          "shorad": 45
+        }
+      },
+      {
+        "id": "HANBANDO_FULL_NORMAL",
+        "mode": "tobe",
+        "compatibilityMode": "phase1-axis-queue",
+        "declaredNodes": 253,
+        "visibleNodes": 253,
+        "visibleLinks": 506,
+        "categories": {
+          "c2": 98,
+          "sensor": 71,
+          "shooter": 84
+        },
+        "axisCoverageEntries": 232,
+        "nativeCounts": {
+          "positions": 171,
+          "sensors": 71,
+          "batteries": 84,
+          "c2Nodes": 98,
+          "ecs": 84,
+          "shorad": 45
+        }
+      }
+    ]
+  },
+  "threatReplay": {
+    "source": "runDES(trace=true) → threatTraces → buildThreats → KJ.axisPosition",
+    "usesLegacyTrace": true,
+    "usesCanonicalEvents": false,
+    "usesDetailedKinematics": false,
+    "deterministicDisplayOffsets": true
+  },
+  "analysisAndMc": {
+    "sameDeploymentForwarded": true,
+    "note": "Analysis/MC use the same compatibility catalog and DES; they are not independent high-resolution consumers."
+  },
+  "disclaimer": {
+    "alwaysShownForHighResolutionSelection": true,
+    "textClass": "transitional compatibility warning"
+  }
+}

@@ -12,7 +12,7 @@
   <!-- 제약 (c): 디스클레이머 상시 표출 -->
   <div id="disclaimer">
     ⚠️ 본 시뮬레이터의 모든 수치·좌표·확률·범위는 공개자료 기반 <b>정책연구용 개념값 · 실제 작전자료 아님</b>.
-    좌표는 도시 수준 개념좌표. 신궁·천마는 탄도탄 요격 불가로 모델링, KAMDOC↔THAAD 연동 미모델링.
+    좌표는 도시 수준 개념좌표. 신궁·천마는 탄도탄 요격 불가로 모델링. FULL의 주한미군 THAAD/Patriot은 독립 축으로 표시하며 KAMDOC와 연동하지 않음.
   </div>
 
   <header>
@@ -25,6 +25,8 @@
   <div id="controls">
     <label>시나리오</label>
     <select id="scenario-select"></select>
+    <label>배치</label>
+    <select id="deployment-select"></select>
     <label>체계 모드</label>
     <label class="mode-switch" title="As-Is 분절형 ↔ To-Be K-JAMDS 통합형">
       <span class="ms-side ms-asis">As-Is 분절형</span>
@@ -36,6 +38,7 @@
     <input type="range" id="intensity-slider" min="0.5" max="3" step="0.1" value="1">
     <span id="intensity-value">×1.0</span>
   </div>
+  <div id="deployment-warning" class="deployment-warning hidden" role="status"></div>
 
   <nav class="tabs">
     <button class="tab-btn" data-tab="sim">🎮 시뮬레이션</button>
@@ -310,11 +313,19 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    // 폐쇄망/SVG fallback 재현 스모크: ?svgFallback=1 (기본 실행에는 영향 없음).
+    if (new URLSearchParams(window.location.search).get('svgFallback') === '1') window.L = undefined;
+  </script>
+  <script src="js/config/system-types.js"></script>
+  <script src="js/config/geo-mdl.js"></script>
+  <script src="js/config/deployments.js"></script>
   <script src="js/data/nodes.js"></script>
   <script src="js/data/links.js"></script>
   <script src="js/data/threats.js"></script>
   <script src="js/data/scenarios.js"></script>
   <script src="js/data/axes.js"></script>
+  <script src="js/config/deployment-adapter.js"></script>
   <script src="js/core/router.js"></script>
   <script src="js/core/constraints.js"></script>
   <script src="js/core/rng.js"></script>

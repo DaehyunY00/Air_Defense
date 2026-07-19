@@ -16,6 +16,10 @@
   function el(id) { return document.getElementById(id); }
   function pct(x) { return (x * 100).toFixed(1) + '%'; }
   function pp(x) { return (x * 100).toFixed(2) + '%p'; }
+  function modelConfig(state) {
+    var high = state && state.dep && state.dep !== 'legacy';
+    return high ? { deploymentId: state.dep, features: { highResolutionDeployment: true } } : {};
+  }
 
   // MoM 계층 라벨(NATO COBP/SAS-026, ENV-MOM-COBP-01) — 결과 모달·[분석] 탭과 동일 분류
   var MOM_TIP = {
@@ -47,6 +51,7 @@
       el('mc-context').textContent =
         KJ.scenarioById(state.sc).name + ' · ' +
         (state.mode === 'asis' ? 'As-Is 분절형' : 'To-Be K-JAMDS') +
+        ' · ' + (state.dep === 'legacy' ? '기존 대표 배치' : state.dep) +
         ' · 강도 ×' + Number(state.x).toFixed(1) +
         ' · baseSeed ' + state.seed + ' · ' + state.dur + '초' +
         ' — seed·시간은 [시뮬레이션] 탭 입력값을 따릅니다.';
@@ -62,7 +67,7 @@
       // 다음 프레임에 계산 → 버튼 상태가 먼저 그려짐
       setTimeout(function () {
         var t0 = now();
-        var base = { scenario: KJ.scenarioById(state.sc), intensity: state.x, seed: state.seed, endTimeSec: state.dur };
+        var base = Object.assign({ scenario: KJ.scenarioById(state.sc), intensity: state.x, seed: state.seed, endTimeSec: state.dur }, modelConfig(state));
         var cur = KJ.runMonteCarlo(Object.assign({ mode: state.mode }, base), { minReps: 30, maxReps: maxReps, tol: tol });
         var otherMode = state.mode === 'asis' ? 'tobe' : 'asis';
         var oth = KJ.runMonteCarlo(Object.assign({ mode: otherMode }, base), { minReps: 30, maxReps: maxReps, tol: tol });
@@ -172,7 +177,9 @@
     setTimeout(function () {
       var t0 = now();
       var r = KJ.analyzeTransition(KJ.scenarioById(state.sc), {
-        reps: 20, seed: state.seed, endTimeSec: Math.min(state.dur, 1800)
+        reps: 20, seed: state.seed, endTimeSec: Math.min(state.dur, 1800),
+        deploymentId: modelConfig(state).deploymentId,
+        features: modelConfig(state).features
       });
       renderTransition(r, state, now() - t0);
       btn.disabled = false; btn.textContent = '▶ 임계 전환점 스윕 실행';

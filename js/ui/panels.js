@@ -15,6 +15,13 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
   function el(id) { return document.getElementById(id); }
+  function modelConfig(state) {
+    var high = state && state.dep && state.dep !== 'legacy';
+    return high ? { deploymentId: state.dep, features: { highResolutionDeployment: true } } : {};
+  }
+  function catalogFor(state) {
+    return KJ.resolveModelCatalog ? KJ.resolveModelCatalog(modelConfig(state)) : null;
+  }
 
   var LEVEL_BADGE = {
     idle: '<span class="badge badge-idle">유휴</span>',
@@ -32,14 +39,14 @@
   // DES 양모드 캐시 (설정이 같으면 재계산하지 않음 — 탭 전환·재렌더 대비)
   var desCache = { key: null, data: null };
   function pipelineData(state) {
-    var key = [state.sc, state.x, state.seed, state.dur].join('|');
+    var key = [state.sc, state.x, state.seed, state.dur, state.dep || 'legacy'].join('|');
     if (desCache.key === key) return desCache.data;
     var scn = KJ.scenarioById(state.sc);
-    var cfg = { scenario: scn, intensity: state.x, seed: state.seed, endTimeSec: state.dur };
+    var cfg = Object.assign({ scenario: scn, intensity: state.x, seed: state.seed, endTimeSec: state.dur }, modelConfig(state));
     var a = KJ.runDES(Object.assign({ mode: 'asis' }, cfg));
     var b = KJ.runDES(Object.assign({ mode: 'tobe' }, cfg));
     function heatSum(mode) {
-      return KJ.computeOverlapHeat(scn, mode, state.x).axes
+      return KJ.computeOverlapHeat(scn, mode, state.x, modelConfig(state)).axes
         .reduce(function (s, ax) { return s + ax.raw; }, 0);
     }
     desCache.key = key;
@@ -113,12 +120,12 @@
     return s;
   }
   /** leakReasons를 단계 귀속용 코드로 정규화 (overflow는 노드 카테고리로 C2/교전 분리) */
-  function codeCounts(res) {
+  function codeCounts(res, catalog) {
     var out = {};
     Object.keys(res.global.leakReasons).forEach(function (k) {
       var n = res.global.leakReasons[k];
       if (k.indexOf('overflow:') === 0) {
-        var nd = KJ.nodeById(k.slice(9));
+        var nd = KJ.nodeById(k.slice(9), catalog);
         var bucket = nd && nd.category === 'shooter' ? 'overflow_shooter' : 'overflow_c2';
         out[bucket] = (out[bucket] || 0) + n;
       } else {
@@ -229,7 +236,8 @@
     if (!box) return;
     var d = pipelineData(state);
     var a = d.a, b = d.b, ga = a.global, gb = b.global;
-    var ca = codeCounts(a), cb = codeCounts(b);
+    var catalog = catalogFor(state);
+    var ca = codeCounts(a, catalog), cb = codeCounts(b, catalog);
 
     el('pipeline-context').textContent =
       KJ.scenarioById(state.sc).name + ' · 강도 ×' + Number(state.x).toFixed(1) +
@@ -475,6 +483,7 @@
     /** [분석] 탭: 9단계 파이프라인 지표 + 정상상태 해석 상세 렌더 */
     renderAnalysis: function (state, analysis) {
       var sc = KJ.scenarioById(state.sc);
+      var catalog = catalogFor(state);
       renderPipeline(state);
 
       // ── 병목 종합 (시나리오에서 도출) ──
@@ -516,7 +525,7 @@
         return (b.delaySec * b.flow) - (a.delaySec * a.flow);
       }).map(function (r) {
         return '<tr' + (r.isCommBottleneck ? ' class="row-bottleneck"' : '') + '>' +
-          '<td>' + esc(KJ.nodeById(r.from).name) + ' → ' + esc(KJ.nodeById(r.to).name) + '</td>' +
+          '<td>' + esc(KJ.nodeById(r.from, catalog).name) + ' → ' + esc(KJ.nodeById(r.to, catalog).name) + '</td>' +
           '<td>' + esc(r.type) + '</td>' +
           '<td class="num">' + r.delaySec + 's</td>' +
           '<td class="num">' + r.flow.toFixed(2) + '</td>' +
@@ -551,7 +560,7 @@
     },
 
     /** 근거자료 탭: 제약 어서션 + 파라미터 문서 링크 */
-    renderData: function () {
+    renderData: function (state) {
       var checks = KJ.runConstraintChecks();
       el('constraint-list').innerHTML = checks.map(function (c) {
         return '<li class="' + (c.pass ? 'chk-pass' : 'chk-fail') + '">' +
@@ -559,7 +568,9 @@
           '<div class="chk-detail">' + esc(c.detail) + '</div></li>';
       }).join('');
 
-      var nodeRows = KJ.NODES.map(function (n) {
+      var catalog = catalogFor(state || { dep: 'legacy' });
+      var inventoryNodes = catalog ? catalog.nodes : KJ.NODES;
+      var nodeRows = inventoryNodes.map(function (n) {
         var refs = [];
         if (n.queue && n.queue.paramRef) refs.push(n.queue.paramRef);
         if (n.detectProb && n.detectProb.paramRef) refs.push(n.detectProb.paramRef);

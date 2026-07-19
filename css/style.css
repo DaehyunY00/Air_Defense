@@ -49,9 +49,13 @@ header h1 small { color: var(--muted); font-weight: 400; font-size: 11px; displa
   font-size: 13px;
 }
 #controls label { color: var(--muted); font-size: 12px; }
-#scenario-select {
+#scenario-select, #deployment-select {
   background: var(--panel); color: var(--text); border: 1px solid var(--border);
   padding: 5px 8px; border-radius: 6px; max-width: 340px;
+}
+.deployment-warning {
+  padding: 6px 18px; background: #2a2410; border-bottom: 1px solid #6d5918;
+  color: #ffd166; font-size: 12px; line-height: 1.45;
 }
 /* 체계 모드 단일 토글 스위치 (off=As-Is 분절형, on=To-Be 통합형) */
 .mode-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }

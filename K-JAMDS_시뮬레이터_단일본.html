@@ -785,6 +785,17 @@ main { flex: 1; position: relative; overflow: hidden; }
 .sim-clock-row { display: flex; justify-content: space-between; margin-top: 5px; }
 #sim-clock { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 11px; }
 .sim-status { color: #aecbeb; font-size: 11px; text-align: right; max-width: 200px; }
+.sim-compute-mode {
+  margin-top: 6px; padding: 5px 7px; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--muted); background: rgba(12, 18, 27, .78); font-size: 10px; line-height: 1.35;
+}
+.sim-compute-mode.worker { color: #8de0aa; border-color: #3d8b4066; }
+.sim-compute-mode.fallback { color: #ffd08a; border-color: #d8922b88; background: rgba(90, 55, 7, .22); }
+.compute-warning {
+  padding: 10px 12px; border-left: 3px solid #d8922b; background: rgba(216, 146, 43, .1);
+  color: #ffd08a; line-height: 1.6;
+}
+.compute-warning code { color: #fff0c5; }
 .lg-ring { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: -2px; justify-self: center; }
 .lg-ring.sensor { border: 1px dashed #2e6fd8; }
 .lg-ring.shooter { border: 1px solid #3d8b40; }
@@ -1261,6 +1272,7 @@ li.chk-fail { background: #43140f; }
           <span id="sim-clock">00:00 / 00:00</span>
           <span id="sim-status" class="sim-status"></span>
         </div>
+        <div id="sim-compute-mode" class="sim-compute-mode">계산 모드: 실행 전</div>
       </div>
 
       <div class="map-legend">
@@ -1604,7 +1616,7 @@ li.chk-fail { background: #43140f; }
     })
   };
 
-  function missile(name, envelope, speed, rounds, pkRef, cost) {
+  function missile(name, envelope, speed, rounds, pkRef, cost, defaultPk) {
     return freeze({
       name: name,
       engagementEnvelope: envelope,
@@ -1613,7 +1625,10 @@ li.chk-fail { background: #43140f; }
       launchInterval: 1,
       doctrine: 'shoot-look-shoot',
       interceptMethod: 'conceptual',
-      pssekTable: { default: 0.75 },
+      // 상세 range/aspect 표가 이식되기 전까지 체계 정본 compatibility Pk를 사용한다.
+      // 종전 공통 0.75는 비호·천마(정본 0.30)까지 고성능으로 만들어 반복 재교전 시
+      // UAV 최종 격추확률을 사실상 100%로 올리는 결함이었다.
+      pssekTable: { default: typeof defaultPk === 'number' ? defaultPk : 0.75 },
       bdaDelay: 5,
       costPerShot: cost,
       roundsPerLauncher: rounds,
@@ -1651,43 +1666,43 @@ li.chk-fail { background: #43140f; }
   var SUIT_SHORAD = { low: 1.3, medium: 0.5, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' };
   var SHOOTER_TYPES = {
     LSAM: shooter('L-SAM', 1, BALLISTIC, {
-      ABM: missile('L-SAM ABM', { Rmin: 5, Rmax: 150, Hmin: 15, Hmax: 70 }, 1500, 6, 'WPN-LSAM-PK-01', 8)
+      ABM: missile('L-SAM ABM', { Rmin: 5, Rmax: 150, Hmin: 15, Hmax: 70 }, 1500, 6, 'WPN-LSAM-PK-01', 8, 0.75)
     }, { launcherCount: 4, simultaneousEngagement: 10, reloadTime: 900 }, {
       paramRef: 'WPN-LSAM-PK-01', sourceNote: 'IADS_codex_original LSAM', engageTimeSec: 40,
       pk: 0.75, costPerShotM: 8, wtaSuit: SUIT_BALLISTIC
     }),
     CHEONGUNG2: shooter('천궁-II', 2, AIR.concat(BALLISTIC), {
-      AAM: missile('천궁-II', { Rmin: 1, Rmax: 40, Hmin: 0, Hmax: 20 }, 1200, 8, 'WPN-MSAM2-PK-01', 3)
+      AAM: missile('천궁-II', { Rmin: 1, Rmax: 40, Hmin: 0, Hmax: 20 }, 1200, 8, 'WPN-MSAM2-PK-01', 3, 0.75)
     }, { launcherCount: 4, simultaneousEngagement: 10, reloadTime: 900 }, {
       paramRef: 'WPN-MSAM2-PK-01', sourceNote: 'IADS_codex_original CHEONGUNG2', engageTimeSec: 45,
       pk: 0.75, costPerShotM: 3, wtaSuit: SUIT_MULTI
     }),
     PAC3: shooter('한국군 PAC-3', 2, AIR.concat(BALLISTIC), {
-      ABM: missile('PAC-3', { Rmin: 1, Rmax: 40, Hmin: 0, Hmax: 30 }, 1400, 16, 'WPN-PAC3-PK-01', 3)
+      ABM: missile('PAC-3', { Rmin: 1, Rmax: 40, Hmin: 0, Hmax: 30 }, 1400, 16, 'WPN-PAC3-PK-01', 3, 0.75)
     }, { launcherCount: 4, simultaneousEngagement: 9, reloadTime: 900 }, {
       paramRef: 'WPN-PAC3-PK-01', sourceNote: 'IADS_codex_original PAC3', engageTimeSec: 45,
       pk: 0.75, costPerShotM: 3, wtaSuit: SUIT_MULTI
     }),
     BIHO: shooter('비호 중대', 4, LOW, {
-      AAM: missile('비호 탑재탄', { Rmin: 0, Rmax: 7, Hmin: 0, Hmax: 5 }, 700, 4, 'WPN-SHORAD-PK-01', 0.2)
+      AAM: missile('비호 탑재탄', { Rmin: 0, Rmax: 7, Hmin: 0, Hmax: 5 }, 700, 4, 'WPN-SHORAD-PK-01', 0.2, 0.30)
     }, { launcherCount: 6, simultaneousEngagement: 24, reloadTime: 900 }, {
       integratedSensor: 'BIHO_INTEGRATED', paramRef: 'ADR-049', sourceNote: 'ADR-049 company/vehicle aggregation',
       engageTimeSec: 60, pk: 0.3, costPerShotM: 0.2, wtaSuit: SUIT_SHORAD
     }),
     CHUNMA: shooter('천마 중대', 4, LOW, {
-      AAM: missile('천마 탑재탄', { Rmin: 0, Rmax: 9, Hmin: 0, Hmax: 5 }, 700, 8, 'WPN-SHORAD-PK-01', 0.2)
+      AAM: missile('천마 탑재탄', { Rmin: 0, Rmax: 9, Hmin: 0, Hmax: 5 }, 700, 8, 'WPN-SHORAD-PK-01', 0.2, 0.30)
     }, { launcherCount: 6, simultaneousEngagement: 48, reloadTime: 900 }, {
       integratedSensor: 'CHUNMA_INTEGRATED', paramRef: 'ADR-049', sourceNote: 'ADR-049 company/vehicle aggregation',
       engageTimeSec: 60, pk: 0.3, costPerShotM: 0.2, wtaSuit: SUIT_SHORAD
     }),
     THAAD: shooter('USFK THAAD', 1, BALLISTIC, {
-      ABM: missile('THAAD interceptor', { Rmin: 5, Rmax: 200, Hmin: 40, Hmax: 150 }, 2800, 8, 'WPN-THAAD-PK-01', 8)
+      ABM: missile('THAAD interceptor', { Rmin: 5, Rmax: 200, Hmin: 40, Hmax: 150 }, 2800, 8, 'WPN-THAAD-PK-01', 8, 0.75)
     }, { launcherCount: 6, simultaneousEngagement: 6, reloadTime: 900 }, {
       paramRef: 'ADR-036', sourceNote: 'USFK THAAD independent axis; not KAMDOC integrated', engageTimeSec: 40,
       pk: 0.75, costPerShotM: 8, wtaSuit: SUIT_BALLISTIC, simulationEligible: false
     }),
     USFK_PAC3: shooter('USFK Patriot', 2, AIR.concat(BALLISTIC), {
-      ABM: missile('USFK PAC-3', { Rmin: 1, Rmax: 40, Hmin: 0, Hmax: 30 }, 1400, 16, 'WPN-PAC3-PK-01', 3)
+      ABM: missile('USFK PAC-3', { Rmin: 1, Rmax: 40, Hmin: 0, Hmax: 30 }, 1400, 16, 'WPN-PAC3-PK-01', 3, 0.75)
     }, { launcherCount: 4, simultaneousEngagement: 9, reloadTime: 900 }, {
       paramRef: 'ADR-036', sourceNote: 'USFK Patriot independent axis; not Korean C2 integrated', engageTimeSec: 45,
       pk: 0.75, costPerShotM: 3, wtaSuit: SUIT_MULTI, simulationEligible: false
@@ -4508,6 +4523,7 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
 
   var SCAN_SEC = 10;        // 센서 스캔 주기(개념값) — 탐지 재시도 간격
   var MAX_ENGAGE_TRIES = 3; // BDA 실패 시 재교전 상한(무한 폐루프 방지)
+  var MAX_IADS_SHOTS = 2;   // native shoot-look-shoot: 표적당 전 축 합산 최대 발사수
   // Phase 5(⑨, pkCorrelated): 동일 표적 재교전 상관계수 ρ. 종전 모델은 매 발사 pk를 독립 추출해
   // 재교전이 항상 누적 격추확률을 끌어올린다(1−(1−pk)^n) — 2022.12.26 무인기 5대 전량 미격추 같은
   // "체계적 실패(기하·ECM·표적특성이 발사 간 공유)"를 재현 못 한다. ρ=공유잠재(frailty) 가중.
@@ -4642,6 +4658,10 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
     this.pkCorrRho = (typeof f.pkCorrelation === 'number') ? Math.max(0, Math.min(1, f.pkCorrelation)) : PK_CORR_RHO;
     // Phase 6: 연발 발수 k(≥1 정수). features.salvoSize로 재정의, 없으면 문서 기본. salvo OFF면 미사용(k=1).
     this.salvoSize = (typeof f.salvoSize === 'number' && f.salvoSize >= 1) ? Math.round(f.salvoSize) : SALVO_SIZE;
+    // Native IADS는 종전 MISS마다 체공창 종료까지 무제한 재발사했다. 교리 선언
+    // shoot-look-shoot에 맞춰 전 C2 축 합산 표적당 최대 2발을 기본으로 한다.
+    this.iadsMaxShots = (typeof f.iadsMaxShots === 'number' && f.iadsMaxShots >= 1)
+      ? Math.round(f.iadsMaxShots) : MAX_IADS_SHOTS;
     // 공통난수(CRN, `claude/c2-simulation-review` 검토 이식): 난수 스트림을 도착·처리로 분리한다.
     //  · rng    — 처리 무작위성(탐지 판정·서비스시간·요격확률·링크지연 분포·중복교전 등)
     //  · arrRng — 위협 도착간격(시나리오 그 자체) 전용. seed에서 독립 파생(황금비 해시)해
@@ -5383,6 +5403,10 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
 
   Simulation.prototype._iadsDecide = function (threat, t, commander) {
     if (!threat.alive || threat.pipelineDead) return;
+    if (threat.tries >= this.iadsMaxShots) {
+      if (!threat.leakReason) threat.leakReason = 'missed';
+      return;
+    }
     if (this._iadsPlanBlocks(threat, commander)) {
       this.global.coordAttempts++;
       this.global.deconflicted++;
@@ -5431,6 +5455,13 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
   Simulation.prototype._onIadsFire = function (t, d) {
     var threat = d.threat, plan = d.plan, shooter = this._nodeById(d.shooterId);
     if (!threat.alive || plan.released || plan.resolved) return;
+    // 서로 독립인 ROK/local/USFK plan이 같은 시각에 생성돼도 실제 발사는 표적당 교리 상한을
+    // 공유한다. 상한을 넘는 plan은 탄약을 소모하지 않고 해제한다.
+    if (threat.tries >= this.iadsMaxShots) {
+      plan.released = true; plan.resolved = true;
+      if (!threat.leakReason) threat.leakReason = 'missed';
+      return;
+    }
     var ev = this._iadsEvaluate(shooter, threat, t);
     if (!ev.feasible) {
       plan.released = true;
@@ -5496,7 +5527,8 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
       if (threat._trace) { threat._trace.exitT = t; threat._trace.outcome = 'killed'; }
     } else {
       this._mark(threat, 'BDA:MISS:' + d.shooterId, t);
-      this._scheduleIadsRetry(threat, d.commander, t + 0.5);
+      if (threat.tries < this.iadsMaxShots) this._scheduleIadsRetry(threat, d.commander, t + 0.5);
+      else if (!threat.leakReason) threat.leakReason = 'missed';
     }
   };
 
@@ -6545,40 +6577,55 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
   var COORD_RISK_FRACTION = 0.5; // 협조지연이 dwellSec의 이 비율 이상이면 "제때 협조 불가"로 판정
 
   /**
-   * fromId → toId 로 가는 협조경로 지연 합의 최단경로 (BFS). 도달 불가면 null.
-   * 원칙적으로 kind='coord' 링크만 따라가지만, JAMDC2(Track Fusion) 허브는 예외로 둔다:
-   * DES 엔진(sim-engine.js _afterC2)에서 각 C2에 도착한 항적은 kind='report' 링크로
-   * JAMDC2에 유입되어 융합·WTA된 뒤 kind='coord' 링크로 각 C2에 재전파된다 — 즉 실제로는
-   * report 유입 + coord 유출 조합이 곧 "통합 협조"다. 이 허브 특례가 없으면 To-Be에서도
-   * JAMDC2를 경유한 협조가 전혀 인정되지 않아 K-JAMDS의 실제 개선 효과가 드러나지 않는다.
+   * 모드별 협조 그래프를 한 번만 만든다. 이전 구현은 root 쌍마다 전체 링크 배열을 다시
+   * 훑으며 양방향 최단경로를 계산해 FULL/SC3 한 번에 수만 회의 그래프 탐색이 발생했다.
+   * 아래 인접목록 + source별 Dijkstra 메모는 같은 정의를 O(root × (V+E)) 수준으로 줄인다.
+   *
+   * 원칙적으로 kind='coord' 링크만 따르되, JAMDC2/IAOC fusion 허브의 report 유입과
+   * coord 유출은 기존과 동일하게 협조경로로 인정한다.
    */
-  function coordDelay(fromId, toId, mode, catalog) {
-    if (fromId === toId) return 0;
-    var queue = [fromId], best = {};
-    best[fromId] = 0;
-    while (queue.length) {
-      var cur = queue.shift();
-      (catalog ? catalog.links : KJ.LINKS).forEach(function (l) {
-        if (l.from !== cur || !l.comm[mode]) return;
-        var isCoordKind = l.kind === 'coord';
-        var fusionId = catalog && catalog.roles ? catalog.roles.fusionC2 : 'JAMDC2';
-        var isFusionHop = l.to === fusionId || cur === fusionId; // 허브 유입/유출 특례
-        if (!isCoordKind && !isFusionHop) return;
-        var nd = best[cur] + l.comm[mode].delaySec;
-        if (best[l.to] === undefined || nd < best[l.to]) {
-          best[l.to] = nd;
-          queue.push(l.to);
+  function coordinationGraph(mode, catalog) {
+    var links = catalog ? catalog.links : KJ.LINKS;
+    var fusionId = catalog && catalog.roles ? catalog.roles.fusionC2 : 'JAMDC2';
+    var adjacency = {};
+    links.forEach(function (l) {
+      if (!l.comm[mode]) return;
+      var isFusionHop = l.to === fusionId || l.from === fusionId;
+      if (l.kind !== 'coord' && !isFusionHop) return;
+      (adjacency[l.from] = adjacency[l.from] || []).push({
+        to: l.to, delaySec: l.comm[mode].delaySec
+      });
+    });
+    return adjacency;
+  }
+
+  /** 양의 링크 지연에 대한 단일-source Dijkstra. 그래프가 작아 단순 frontier가 더 가볍다. */
+  function shortestFrom(source, adjacency) {
+    var best = {}, frontier = [{ id: source, d: 0 }];
+    best[source] = 0;
+    while (frontier.length) {
+      var minIdx = 0;
+      for (var i = 1; i < frontier.length; i++) {
+        if (frontier[i].d < frontier[minIdx].d) minIdx = i;
+      }
+      var cur = frontier.splice(minIdx, 1)[0];
+      if (cur.d !== best[cur.id]) continue;
+      (adjacency[cur.id] || []).forEach(function (edge) {
+        var nd = cur.d + edge.delaySec;
+        if (best[edge.to] === undefined || nd < best[edge.to]) {
+          best[edge.to] = nd;
+          frontier.push({ id: edge.to, d: nd });
         }
       });
     }
-    return best[toId] !== undefined ? best[toId] : null;
+    return best;
   }
 
-  /** 두 노드 간 최단 협조지연(양방향 중 짧은 쪽). 둘 다 도달 불가면 null */
-  function minCoordDelay(a, b, mode, catalog) {
-    var d1 = coordDelay(a, b, mode, catalog), d2 = coordDelay(b, a, mode, catalog);
-    if (d1 === null) return d2;
-    if (d2 === null) return d1;
+  function minCoordDelay(a, b, distances) {
+    var d1 = distances[a] && distances[a][b];
+    var d2 = distances[b] && distances[b][a];
+    if (d1 === undefined) return d2 === undefined ? null : d2;
+    if (d2 === undefined) return d1;
     return Math.min(d1, d2);
   }
 
@@ -6590,34 +6637,52 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
     intensity = intensity || 1;
     var catalog = KJ.resolveModelCatalog ? KJ.resolveModelCatalog(modelConfig || {}) : null;
     var nodes = KJ.nodesInMode(mode, catalog);
+    var adjacency = coordinationGraph(mode, catalog);
+    var rootsByType = {}, distances = {}, pairRiskByType = {};
+
+    function rootsFor(type) {
+      if (Object.prototype.hasOwnProperty.call(rootsByType, type)) return rootsByType[type];
+      var roots = [];
+      nodes.forEach(function (n) {
+        if (n.category !== 'shooter' || !n.canEngage[type] || !n.controlledBy ||
+            !(n.controlledBy[mode] || []).length) return;
+        var root = n.controlledBy[mode][0];
+        if (roots.indexOf(root) === -1) roots.push(root);
+      });
+      roots.forEach(function (root) {
+        if (!distances[root]) distances[root] = shortestFrom(root, adjacency);
+      });
+      rootsByType[type] = roots;
+      return roots;
+    }
+
+    function pairRisk(type) {
+      if (Object.prototype.hasOwnProperty.call(pairRiskByType, type)) return pairRiskByType[type];
+      var roots = rootsFor(type), tt = KJ.threatType(type);
+      var riskPairs = 0, totalPairs = 0;
+      for (var i = 0; i < roots.length; i++) {
+        for (var j = i + 1; j < roots.length; j++) {
+          totalPairs++;
+          var d = minCoordDelay(roots[i], roots[j], distances);
+          if (d === null || d >= tt.dwellSec * COORD_RISK_FRACTION) riskPairs++;
+        }
+      }
+      pairRiskByType[type] = { riskPairs: riskPairs, totalPairs: totalPairs };
+      return pairRiskByType[type];
+    }
+
     var results = AXIS_KEYS.map(function (axis) {
       var entries = scenario.mix.filter(function (m) { return m.axis === axis; });
       var raw = 0, details = [];
       entries.forEach(function (entry) {
         var tt = KJ.threatType(entry.type);
-        var shooters = nodes.filter(function (n) {
-          return n.category === 'shooter' && n.canEngage[entry.type] &&
-            n.controlledBy && (n.controlledBy[mode] || []).length > 0;
-        });
-        var roots = [];
-        shooters.forEach(function (sh) {
-          var r = sh.controlledBy[mode][0];
-          if (roots.indexOf(r) === -1) roots.push(r);
-        });
-        var riskPairs = 0, totalPairs = 0;
-        for (var i = 0; i < roots.length; i++) {
-          for (var j = i + 1; j < roots.length; j++) {
-            totalPairs++;
-            var d = minCoordDelay(roots[i], roots[j], mode, catalog);
-            if (d === null || d >= tt.dwellSec * COORD_RISK_FRACTION) riskPairs++;
-          }
-        }
-        if (riskPairs > 0) {
+        var risk = pairRisk(entry.type);
+        if (risk.riskPairs > 0) {
           var weight = KJ.entryRate(entry) * intensity; // burst 항목은 등가 λ 개념값
-          raw += weight * riskPairs;
+          raw += weight * risk.riskPairs;
           details.push({
             type: entry.type, typeName: tt.name,
-            riskPairs: riskPairs, totalPairs: totalPairs, weight: weight
+            riskPairs: risk.riskPairs, totalPairs: risk.totalPairs, weight: weight
           });
         }
       });
@@ -6674,10 +6739,12 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
       };
       if (payload.includeHeat) {
         var modelCfg = { deploymentId: cfg.deploymentId, features: cfg.features };
-        desOut.heatCurrent = KJ.computeOverlapHeat(cfg.scenario, cfg.mode, cfg.intensity, modelCfg).axes
-          .reduce(function (sum, axis) { return sum + axis.raw; }, 0);
-        desOut.heatOther = KJ.computeOverlapHeat(cfg.scenario, otherMode, cfg.intensity, modelCfg).axes
-          .reduce(function (sum, axis) { return sum + axis.raw; }, 0);
+        var heatCurrent = KJ.computeOverlapHeat(cfg.scenario, cfg.mode, cfg.intensity, modelCfg);
+        var heatOther = KJ.computeOverlapHeat(cfg.scenario, otherMode, cfg.intensity, modelCfg);
+        desOut.heatCurrentAxes = heatCurrent.axes;
+        desOut.heatOtherAxes = heatOther.axes;
+        desOut.heatCurrent = heatCurrent.axes.reduce(function (sum, axis) { return sum + axis.raw; }, 0);
+        desOut.heatOther = heatOther.axes.reduce(function (sum, axis) { return sum + axis.raw; }, 0);
       }
       return desOut;
     }
@@ -7836,8 +7903,8 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
  * K-JAMDS 시뮬레이터 — 통합 시뮬레이션 뷰 (실행 → 지도 시각화 → 결과창)
  *
  * 사용 흐름(요구 반영):
- *  1) [시뮬레이션 시작] → DES(trace)를 즉시 실행하고, 동일 seed 반대 모드 DES와
- *     Monte Carlo(양 모드)를 백그라운드로 수행한다.
+   *  1) [시뮬레이션 시작] → DES(trace)를 실행하고, 동일 seed 반대 모드 DES와
+   *     Monte Carlo(양 모드)를 Web Worker에서 수행한다. Worker 불가 환경은 자동 MC를 생략한다.
  *  2) 실행 결과의 위협궤적·노드 재고를 Leaflet 지도 위에 애니메이션으로 재생한다
  *     (위협 = canvas circleMarker, 노드 링 = 재고/용량 비율).
  *  3) 재생 종료(또는 [결과 보기]) 시 결과 모달을 띄워 정량 분석(요약·As-Is↔To-Be 비교·
@@ -7896,6 +7963,7 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
     return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
   }
   function pct(x) { return (x * 100).toFixed(0) + '%'; }
+  function rateOf(count, total) { return total > 0 ? count / total : 0; }
 
   /** nodeSeries(t 오름차순)에서 t 이하 최신 재고 n (이진탐색) */
   function countAt(series, t) {
@@ -7910,7 +7978,7 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
   }
 
   // ── 모듈 상태 ──
-  var run = null;   // { cfg, res, resOther, threats, nodeMeta, mc:{asis,tobe,pending} }
+  var run = null;   // { cfg, res, resOther, heat, threats, nodeMeta, mc, modalRendered }
   var anim = {
     playing: false, t: 0, speed: 30, lastTs: null, raf: null, done: false,
     lastRenderWall: 0, lastRingWall: 0
@@ -7970,6 +8038,7 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
       var btn = el('sim-run');
       btn.disabled = true; btn.textContent = '⏳ DES 실행 중...';
       setStatus('DES 실행 중 (trace 모드)...');
+      setComputeNotice('checking');
 
       var highCfg = modelConfig(cfg);
       var computeCfg = {
@@ -7978,7 +8047,7 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
         deploymentId: highCfg.deploymentId, features: highCfg.features
       };
       var t0 = now();
-      KJ.compute.run('desPair', { cfg: computeCfg }, function (stage) {
+      KJ.compute.run('desPair', { cfg: computeCfg, includeHeat: true }, function (stage) {
         if (generation !== computeGeneration) return;
         setStatus(stage === 'comparison-des' ? '비교 체계 DES 계산 중…' : '현재 체계 DES 계산 중…');
       }).then(function (pair) {
@@ -7988,43 +8057,58 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
         var other = pair.otherMode;
         var computeLabel = pair.execution === 'web-worker' ? 'Worker' : '메인 스레드 폴백';
         var elapsed = now() - t0;
+        var currentHeat = { axes: pair.heatCurrentAxes || [], total: pair.heatCurrent || 0 };
+        var otherHeat = { axes: pair.heatOtherAxes || [], total: pair.heatOther || 0 };
 
         run = {
           cfg: cfg, res: res, resOther: resOther, otherMode: other,
           elapsedMs: elapsed, execution: pair.execution,
           nodeMeta: {}, threats: buildThreats(res),
-          mc: { pending: true, asis: null, tobe: null }
+          heat: cfg.mode === 'asis'
+            ? { asis: currentHeat, tobe: otherHeat }
+            : { asis: otherHeat, tobe: currentHeat },
+          mc: { pending: pair.execution === 'web-worker', skipped: false, error: null, asis: null, tobe: null },
+          modalRendered: false
         };
+        setComputeNotice(pair.execution, cfg.dep !== 'legacy');
         res.nodes.forEach(function (n) { run.nodeMeta[n.id] = n; });
 
         // 병목 하이라이트를 이번 DES 실행 결과로 갱신 (해석 근사 아님)
         KJ.mapView.render(currentState, { nodes: res.nodes });
 
-        // MC도 동일 Worker에서 실행해 지도 재생·조작을 차단하지 않는다.
-        setStatus('백그라운드 Monte Carlo 수렴 중… (' + computeLabel + ')');
-        KJ.compute.run('mcPair', {
-          cfg: Object.assign({}, computeCfg, { trace: false }),
-          opts: { minReps: 30, maxReps: 200, tol: 0.01, primary: 'leakRate' }
-        }, function (stage) {
-          if (generation !== computeGeneration) return;
-          setStatus((stage === 'comparison-mc' ? '백그라운드 비교 체계 MC 중…' : '백그라운드 현재 체계 MC 중…') +
-            ' (' + computeLabel + ')');
-        }).then(function (mcPair) {
-          if (generation !== computeGeneration || !run) return;
-          if (cfg.mode === 'asis') {
-            run.mc.asis = mcPair.current; run.mc.tobe = mcPair.other;
-          } else {
-            run.mc.tobe = mcPair.current; run.mc.asis = mcPair.other;
-          }
+        // 자동 MC는 실제 Web Worker에서만 실행한다. setTimeout 기반 메인 스레드 폴백은
+        // FULL에서 최소 60회의 DES를 동기 실행해 수분간 UI를 멈추므로 명시적으로 차단한다.
+        if (pair.execution === 'web-worker') {
+          setStatus('백그라운드 Monte Carlo 수렴 중… (' + computeLabel + ')');
+          KJ.compute.run('mcPair', {
+            cfg: Object.assign({}, computeCfg, { trace: false }),
+            opts: { minReps: 30, maxReps: 200, tol: 0.01, primary: 'leakRate' }
+          }, function (stage) {
+            if (generation !== computeGeneration) return;
+            setStatus((stage === 'comparison-mc' ? '백그라운드 비교 체계 MC 중…' : '백그라운드 현재 체계 MC 중…') +
+              ' (' + computeLabel + ')');
+          }).then(function (mcPair) {
+            if (generation !== computeGeneration || !run) return;
+            if (cfg.mode === 'asis') {
+              run.mc.asis = mcPair.current; run.mc.tobe = mcPair.other;
+            } else {
+              run.mc.tobe = mcPair.current; run.mc.asis = mcPair.other;
+            }
+            run.mc.pending = false;
+            setStatus(anim.playing ? '재생 중 — MC 수렴 완료 (' + run.mc.asis.reps + '·' + run.mc.tobe.reps + '복제)' : 'MC 수렴 완료');
+            renderMcSectionIfOpen();
+          }).catch(function (err) {
+            if (generation !== computeGeneration || !run) return;
+            run.mc.pending = false;
+            run.mc.error = err.message;
+            setStatus('MC 계산 실패: ' + err.message);
+            renderMcSectionIfOpen();
+          });
+        } else {
           run.mc.pending = false;
-          setStatus(anim.playing ? '재생 중 — MC 수렴 완료 (' + run.mc.asis.reps + '·' + run.mc.tobe.reps + '복제)' : 'MC 수렴 완료');
-          renderModalIfOpen();
-        }).catch(function (err) {
-          if (generation !== computeGeneration || !run) return;
-          run.mc.pending = false;
-          setStatus('MC 계산 실패: ' + err.message);
-          renderModalIfOpen();
-        });
+          run.mc.skipped = true;
+          setStatus('DES 완료 — 메인 스레드 보호를 위해 자동 MC를 생략했습니다.');
+        }
 
         el('sim-results').disabled = false;
         btn.disabled = false; btn.textContent = '↺ 다시 실행';
@@ -8070,7 +8154,8 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
       if (!run) return;
       pause();
       el('result-modal').classList.remove('hidden');
-      renderModal();
+      if (run.modalRendered) renderMcSection();
+      else renderModal();
     },
 
     hideResults: function () {
@@ -8114,12 +8199,29 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
       if (body) body.innerHTML = '';
       var playBtn = el('sim-play');
       if (playBtn) { playBtn.disabled = true; playBtn.textContent = '⏸ 일시멈춤'; }
+      setComputeNotice('idle');
     },
 
     onLeave: function () { pause(); }
   };
 
   function setStatus(msg) { var s = el('sim-status'); if (s) s.textContent = msg; }
+  function setComputeNotice(mode, highResolution) {
+    var notice = el('sim-compute-mode');
+    if (!notice) return;
+    notice.className = 'sim-compute-mode';
+    if (mode === 'web-worker') {
+      notice.classList.add('worker');
+      notice.textContent = '계산 모드: Web Worker — 지도·결과 UI와 분리 실행';
+    } else if (mode === 'main-thread-fallback') {
+      notice.classList.add('fallback');
+      notice.textContent = '계산 모드: 메인 스레드 폴백 — 자동 MC 생략. FULL은 ./scripts/serve.sh 실행 권장';
+    } else if (mode === 'checking') {
+      notice.textContent = '계산 실행 경로 확인 중…';
+    } else {
+      notice.textContent = highResolution ? '고해상도 배치: Worker 실행 권장' : '계산 모드: 실행 전';
+    }
+  }
   function now() { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); }
 
   // ── trace → 애니메이션용 위협 목록 ──
@@ -8416,8 +8518,47 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
   }
 
   // ── 결과 모달 ──
-  function renderModalIfOpen() {
-    if (!el('result-modal').classList.contains('hidden')) renderModal();
+  function renderMcSectionIfOpen() {
+    if (!el('result-modal').classList.contains('hidden')) renderMcSection();
+  }
+
+  function mcSectionHtml() {
+    if (run.mc.pending) {
+      return '<h3>Monte Carlo 95% 신뢰구간 (백그라운드 다중복제)</h3>' +
+        '<div class="bn-none">⏳ 백그라운드 수렴 중 — 완료되면 이 영역만 갱신됩니다.</div>';
+    }
+    if (run.mc.skipped) {
+      return '<h3>Monte Carlo 95% 신뢰구간</h3>' +
+        '<div class="compute-warning">메인 스레드 정지를 방지하기 위해 자동 MC를 생략했습니다. ' +
+        '<code>./scripts/serve.sh</code> 실행 후 <code>http://127.0.0.1:8000</code>으로 접속하면 ' +
+        'Web Worker에서 MC가 실행됩니다.</div>';
+    }
+    if (run.mc.error) {
+      return '<h3>Monte Carlo 95% 신뢰구간</h3><div class="compute-warning">MC 계산 실패: ' +
+        esc(run.mc.error) + '</div>';
+    }
+    if (!run.mc.asis || !run.mc.tobe) {
+      return '<h3>Monte Carlo 95% 신뢰구간</h3><div class="bn-none">MC 결과 없음</div>';
+    }
+    var ma = run.mc.asis.metrics.leakRate, mb = run.mc.tobe.metrics.leakRate;
+    var overlapCI = ma.lo <= mb.hi && mb.lo <= ma.hi;
+    return '<h3>Monte Carlo 95% 신뢰구간 (백그라운드 다중복제)</h3>' +
+      '<table><thead><tr><th>모드</th><th>해결분 기준 요격 실패율 평균</th><th>95% CI</th><th>복제수</th></tr></thead><tbody>' +
+      '<tr><td>As-Is</td><td class="num">' + (ma.mean * 100).toFixed(1) + '%</td><td class="num">±' +
+      (ma.ci * 100).toFixed(2) + '%p</td><td class="num">' + ma.n + '</td></tr>' +
+      '<tr><td>To-Be</td><td class="num">' + (mb.mean * 100).toFixed(1) + '%</td><td class="num">±' +
+      (mb.ci * 100).toFixed(2) + '%p</td><td class="num">' + mb.n + '</td></tr></tbody></table>' +
+      '<div class="note">관측 종료 시점의 미해결 항적은 이 신뢰구간의 분모에서 제외됩니다. ' + (overlapCI
+        ? '두 CI가 겹칩니다 — 이 조건에서 차이는 표본변동으로 설명될 수 있습니다.'
+        : '✅ 두 95% CI 비중첩 — To-Be 개선이 표본변동으로 설명되지 않는 유의한 차이입니다.') + '</div>';
+  }
+
+  function renderMcSection() {
+    if (!run) return;
+    var section = el('sim-mc-section');
+    if (!section) return;
+    section.innerHTML = mcSectionHtml();
+    if (KJ.tableSort) KJ.tableSort.attachAll(section);
   }
 
   function renderModal() {
@@ -8435,8 +8576,12 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
     html += '<h3>결과 요약 (' + esc(modeName) + ')</h3><div class="stat-grid">' +
       statCard('생성 위협', g.spawned + '건') +
       statCard('탐지', g.detected + '건') +
-      statCard('격추', g.killed + '건 (' + pct(g.killRate) + ')') +
-      statCard('요격 실패', g.leaked + '건 (' + pct(g.leakRate) + ')', g.leakRate > 0.3 ? 'crit' : '') +
+      statCard('격추 (전체 생성 기준)', g.killed + '건 (' + pct(rateOf(g.killed, g.spawned)) + ')') +
+      statCard('확정 누출 (전체 생성 기준)', g.leaked + '건 (' + pct(rateOf(g.leaked, g.spawned)) + ')',
+        rateOf(g.leaked, g.spawned) > 0.3 ? 'crit' : '') +
+      statCard('관측 종료 미해결', (g.censoredRaw || 0) + '건 (' +
+        pct(rateOf(g.censoredRaw || 0, g.spawned)) + ')') +
+      statCard('해결분 기준 요격 실패율', pct(g.leakRate), g.leakRate > 0.3 ? 'crit' : '') +
       statCard('평균 격추시간', g.meanTimeToKillSec.toFixed(0) + '초') +
       statCard('결심 지연', g.meanDecisionDelaySec.toFixed(0) + '초') +
       statCard('분권 전환', g.delegation.count + '건' +
@@ -8449,24 +8594,10 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
     var asisRes = run.cfg.mode === 'asis' ? run.res : run.resOther;
     var tobeRes = run.cfg.mode === 'asis' ? run.resOther : run.res;
     html += '<h3>As-Is ↔ To-Be 정량 비교 (좌: 분절형 · 우: 통합형, 동일 seed)</h3>' +
-      vsCompare(asisG, tobeG, asisRes, tobeRes);
+      vsCompare(asisG, tobeG, asisRes, tobeRes, run.heat.asis.total, run.heat.tobe.total);
 
     // ③ Monte Carlo 95% CI (백그라운드)
-    html += '<h3>Monte Carlo 95% 신뢰구간 (백그라운드 다중복제)</h3>';
-    if (run.mc.pending) {
-      html += '<div class="bn-none">⏳ 백그라운드 수렴 중 — 완료되면 자동 갱신됩니다.</div>';
-    } else {
-      var ma = run.mc.asis.metrics.leakRate, mb = run.mc.tobe.metrics.leakRate;
-      var overlapCI = ma.lo <= mb.hi && mb.lo <= ma.hi;
-      html += '<table><thead><tr><th>모드</th><th>요격 실패율 평균</th><th>95% CI</th><th>복제수</th></tr></thead><tbody>' +
-        '<tr><td>As-Is</td><td class="num">' + (ma.mean * 100).toFixed(1) + '%</td><td class="num">±' +
-        (ma.ci * 100).toFixed(2) + '%p</td><td class="num">' + ma.n + '</td></tr>' +
-        '<tr><td>To-Be</td><td class="num">' + (mb.mean * 100).toFixed(1) + '%</td><td class="num">±' +
-        (mb.ci * 100).toFixed(2) + '%p</td><td class="num">' + mb.n + '</td></tr></tbody></table>' +
-        '<div class="note">' + (overlapCI
-          ? '두 CI가 겹칩니다 — 이 조건에서 차이는 표본변동으로 설명될 수 있습니다.'
-          : '✅ 두 95% CI 비중첩 — To-Be 개선이 표본변동으로 설명되지 않는 유의한 차이입니다.') + '</div>';
-    }
+    html += '<section id="sim-mc-section">' + mcSectionHtml() + '</section>';
 
     // ④ 도출된 병목
     html += '<h3>🔎 도출된 병목 (관측 통계 기반)</h3>';
@@ -8502,9 +8633,8 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
     }).join('');
 
     // ⑦ 중복교전 위험 (As-Is ↔ To-Be, 축선별)
-    var scenario = KJ.scenarioById(run.cfg.sc);
-    var ha = KJ.computeOverlapHeat(scenario, 'asis', run.cfg.x, modelConfig(run.cfg));
-    var hb = KJ.computeOverlapHeat(scenario, 'tobe', run.cfg.x, modelConfig(run.cfg));
+    var ha = run.heat.asis;
+    var hb = run.heat.tobe;
     html += '<h3>축선별 중복교전 위험 (As-Is ↔ To-Be)</h3>' +
       '<div class="pb-heat-legend"><span class="sw" style="background:#e05545"></span>As-Is ' +
       '<span class="sw" style="background:#3d8b40"></span>To-Be</div>' +
@@ -8542,6 +8672,7 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
       '정밀 검토는 [분석]·[Monte Carlo] 탭(9단계 파이프라인 지표·민감도 토네이도·임계 전환점 포함)을 이용하세요.</div>';
 
     el('modal-body').innerHTML = html;
+    run.modalRendered = true;
     if (KJ.tableSort) KJ.tableSort.attachAll(el('modal-body')); // 모달 표도 열 정렬 지원
   }
 
@@ -8646,12 +8777,6 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
     });
     return n;
   }
-  /** 축선 중복교전 위험도 합 (overlap-heatmap raw 합, MoCE) */
-  function overlapRiskSum(mode) {
-    var h = KJ.computeOverlapHeat(KJ.scenarioById(run.cfg.sc), mode, run.cfg.x, modelConfig(run.cfg));
-    return h.axes.reduce(function (s, a) { return s + a.raw; }, 0);
-  }
-
   // MoM 계층 라벨 (NATO COBP/SAS-026, ENV-MOM-COBP-01): MoP 과정(성능) ·
   // MoCE C2 효과성 · MoFE 전력 효과성. 각 지표에 정의·근거 툴팁을 부착한다.
   var MOM_TIP = {
@@ -8665,16 +8790,21 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
    * 우선 대조 지표(결심 지연·누출률·격추율·중복교전 위험·비용교환비)를 상단에 두고,
    * 과정(MoP)·C2 효과성(MoCE)·결과(MoFE) 지표를 MoM 계층 라벨·툴팁과 함께 나란히 보인다.
    */
-  function vsCompare(asisG, tobeG, asisRes, tobeRes) {
+  function vsCompare(asisG, tobeG, asisRes, tobeRes, asisHeatTotal, tobeHeatTotal) {
     var rows = [
       // ── 우선 대조 지표 (상단 강조) ──
       { label: '결심 지연 (탐지→교전개시)', mom: 'MoP', a: asisG.meanDecisionDelaySec, b: tobeG.meanDecisionDelaySec, kind: 'sec', lower: true,
         tip: 'F2T2EA Find→Engage 평균 소요(초). 협조·승인·권한위임 홉과 C2 대기(Wq)가 모두 포함된 관측치 — As-Is 음성 협조(≥180s) 부담이 드러남.' },
-      { label: '요격 실패율 (누출률)', mom: 'MoFE', a: asisG.leakRate, b: tobeG.leakRate, kind: 'rate', lower: true, max: 1,
-        tip: '생성 위협 중 격추하지 못하고 공역을 통과(누수)한 비율.' },
-      { label: '격추율', mom: 'MoFE', a: asisG.killRate, b: tobeG.killRate, kind: 'rate', lower: false, max: 1,
-        tip: '생성 위협 중 격추 비율.' },
-      { label: '중복교전 위험 (축선 합)', mom: 'MoCE', a: overlapRiskSum('asis'), b: overlapRiskSum('tobe'), kind: 'raw', lower: true,
+      { label: '확정 누출률 (전체 생성 기준)', mom: 'MoFE',
+        a: rateOf(asisG.leaked, asisG.spawned), b: rateOf(tobeG.leaked, tobeG.spawned), kind: 'rate', lower: true, max: 1,
+        tip: '전체 생성 위협 중 격추하지 못하고 공역을 통과한 비율. 관측 종료 미해결을 분모에 포함한다.' },
+      { label: '격추율 (전체 생성 기준)', mom: 'MoFE',
+        a: rateOf(asisG.killed, asisG.spawned), b: rateOf(tobeG.killed, tobeG.spawned), kind: 'rate', lower: false, max: 1,
+        tip: '전체 생성 위협 중 격추한 비율. 관측 종료 미해결을 분모에 포함한다.' },
+      { label: '관측 종료 미해결률', mom: 'MoFE',
+        a: rateOf(asisG.censoredRaw || 0, asisG.spawned), b: rateOf(tobeG.censoredRaw || 0, tobeG.spawned), kind: 'rate', lower: true, max: 1,
+        tip: '시뮬레이션 종료 시점까지 격추나 누출로 확정되지 않은 항적. 이를 제외한 해결분 기준 비율과 반드시 구분한다.' },
+      { label: '중복교전 위험 (축선 합)', mom: 'MoCE', a: asisHeatTotal, b: tobeHeatTotal, kind: 'raw', lower: true,
         tip: '서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합.' },
       { label: '비용교환비 (저가 포화위협)', mom: 'MoFE', a: asisG.cost.exchangeSat, b: tobeG.cost.exchangeSat, kind: 'ratio', lower: true,
         tip: '무인기·장사정포 대응에 소모한 개념 요격탄 비용 ÷ 격추 위협가치 (WPN/THR-*-COST-01, 타 전역 공개수치 기반 개념값 — 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모. ' +

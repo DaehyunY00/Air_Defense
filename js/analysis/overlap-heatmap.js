@@ -20,40 +20,55 @@
   var COORD_RISK_FRACTION = 0.5; // 협조지연이 dwellSec의 이 비율 이상이면 "제때 협조 불가"로 판정
 
   /**
-   * fromId → toId 로 가는 협조경로 지연 합의 최단경로 (BFS). 도달 불가면 null.
-   * 원칙적으로 kind='coord' 링크만 따라가지만, JAMDC2(Track Fusion) 허브는 예외로 둔다:
-   * DES 엔진(sim-engine.js _afterC2)에서 각 C2에 도착한 항적은 kind='report' 링크로
-   * JAMDC2에 유입되어 융합·WTA된 뒤 kind='coord' 링크로 각 C2에 재전파된다 — 즉 실제로는
-   * report 유입 + coord 유출 조합이 곧 "통합 협조"다. 이 허브 특례가 없으면 To-Be에서도
-   * JAMDC2를 경유한 협조가 전혀 인정되지 않아 K-JAMDS의 실제 개선 효과가 드러나지 않는다.
+   * 모드별 협조 그래프를 한 번만 만든다. 이전 구현은 root 쌍마다 전체 링크 배열을 다시
+   * 훑으며 양방향 최단경로를 계산해 FULL/SC3 한 번에 수만 회의 그래프 탐색이 발생했다.
+   * 아래 인접목록 + source별 Dijkstra 메모는 같은 정의를 O(root × (V+E)) 수준으로 줄인다.
+   *
+   * 원칙적으로 kind='coord' 링크만 따르되, JAMDC2/IAOC fusion 허브의 report 유입과
+   * coord 유출은 기존과 동일하게 협조경로로 인정한다.
    */
-  function coordDelay(fromId, toId, mode, catalog) {
-    if (fromId === toId) return 0;
-    var queue = [fromId], best = {};
-    best[fromId] = 0;
-    while (queue.length) {
-      var cur = queue.shift();
-      (catalog ? catalog.links : KJ.LINKS).forEach(function (l) {
-        if (l.from !== cur || !l.comm[mode]) return;
-        var isCoordKind = l.kind === 'coord';
-        var fusionId = catalog && catalog.roles ? catalog.roles.fusionC2 : 'JAMDC2';
-        var isFusionHop = l.to === fusionId || cur === fusionId; // 허브 유입/유출 특례
-        if (!isCoordKind && !isFusionHop) return;
-        var nd = best[cur] + l.comm[mode].delaySec;
-        if (best[l.to] === undefined || nd < best[l.to]) {
-          best[l.to] = nd;
-          queue.push(l.to);
+  function coordinationGraph(mode, catalog) {
+    var links = catalog ? catalog.links : KJ.LINKS;
+    var fusionId = catalog && catalog.roles ? catalog.roles.fusionC2 : 'JAMDC2';
+    var adjacency = {};
+    links.forEach(function (l) {
+      if (!l.comm[mode]) return;
+      var isFusionHop = l.to === fusionId || l.from === fusionId;
+      if (l.kind !== 'coord' && !isFusionHop) return;
+      (adjacency[l.from] = adjacency[l.from] || []).push({
+        to: l.to, delaySec: l.comm[mode].delaySec
+      });
+    });
+    return adjacency;
+  }
+
+  /** 양의 링크 지연에 대한 단일-source Dijkstra. 그래프가 작아 단순 frontier가 더 가볍다. */
+  function shortestFrom(source, adjacency) {
+    var best = {}, frontier = [{ id: source, d: 0 }];
+    best[source] = 0;
+    while (frontier.length) {
+      var minIdx = 0;
+      for (var i = 1; i < frontier.length; i++) {
+        if (frontier[i].d < frontier[minIdx].d) minIdx = i;
+      }
+      var cur = frontier.splice(minIdx, 1)[0];
+      if (cur.d !== best[cur.id]) continue;
+      (adjacency[cur.id] || []).forEach(function (edge) {
+        var nd = cur.d + edge.delaySec;
+        if (best[edge.to] === undefined || nd < best[edge.to]) {
+          best[edge.to] = nd;
+          frontier.push({ id: edge.to, d: nd });
         }
       });
     }
-    return best[toId] !== undefined ? best[toId] : null;
+    return best;
   }
 
-  /** 두 노드 간 최단 협조지연(양방향 중 짧은 쪽). 둘 다 도달 불가면 null */
-  function minCoordDelay(a, b, mode, catalog) {
-    var d1 = coordDelay(a, b, mode, catalog), d2 = coordDelay(b, a, mode, catalog);
-    if (d1 === null) return d2;
-    if (d2 === null) return d1;
+  function minCoordDelay(a, b, distances) {
+    var d1 = distances[a] && distances[a][b];
+    var d2 = distances[b] && distances[b][a];
+    if (d1 === undefined) return d2 === undefined ? null : d2;
+    if (d2 === undefined) return d1;
     return Math.min(d1, d2);
   }
 
@@ -65,34 +80,52 @@
     intensity = intensity || 1;
     var catalog = KJ.resolveModelCatalog ? KJ.resolveModelCatalog(modelConfig || {}) : null;
     var nodes = KJ.nodesInMode(mode, catalog);
+    var adjacency = coordinationGraph(mode, catalog);
+    var rootsByType = {}, distances = {}, pairRiskByType = {};
+
+    function rootsFor(type) {
+      if (Object.prototype.hasOwnProperty.call(rootsByType, type)) return rootsByType[type];
+      var roots = [];
+      nodes.forEach(function (n) {
+        if (n.category !== 'shooter' || !n.canEngage[type] || !n.controlledBy ||
+            !(n.controlledBy[mode] || []).length) return;
+        var root = n.controlledBy[mode][0];
+        if (roots.indexOf(root) === -1) roots.push(root);
+      });
+      roots.forEach(function (root) {
+        if (!distances[root]) distances[root] = shortestFrom(root, adjacency);
+      });
+      rootsByType[type] = roots;
+      return roots;
+    }
+
+    function pairRisk(type) {
+      if (Object.prototype.hasOwnProperty.call(pairRiskByType, type)) return pairRiskByType[type];
+      var roots = rootsFor(type), tt = KJ.threatType(type);
+      var riskPairs = 0, totalPairs = 0;
+      for (var i = 0; i < roots.length; i++) {
+        for (var j = i + 1; j < roots.length; j++) {
+          totalPairs++;
+          var d = minCoordDelay(roots[i], roots[j], distances);
+          if (d === null || d >= tt.dwellSec * COORD_RISK_FRACTION) riskPairs++;
+        }
+      }
+      pairRiskByType[type] = { riskPairs: riskPairs, totalPairs: totalPairs };
+      return pairRiskByType[type];
+    }
+
     var results = AXIS_KEYS.map(function (axis) {
       var entries = scenario.mix.filter(function (m) { return m.axis === axis; });
       var raw = 0, details = [];
       entries.forEach(function (entry) {
         var tt = KJ.threatType(entry.type);
-        var shooters = nodes.filter(function (n) {
-          return n.category === 'shooter' && n.canEngage[entry.type] &&
-            n.controlledBy && (n.controlledBy[mode] || []).length > 0;
-        });
-        var roots = [];
-        shooters.forEach(function (sh) {
-          var r = sh.controlledBy[mode][0];
-          if (roots.indexOf(r) === -1) roots.push(r);
-        });
-        var riskPairs = 0, totalPairs = 0;
-        for (var i = 0; i < roots.length; i++) {
-          for (var j = i + 1; j < roots.length; j++) {
-            totalPairs++;
-            var d = minCoordDelay(roots[i], roots[j], mode, catalog);
-            if (d === null || d >= tt.dwellSec * COORD_RISK_FRACTION) riskPairs++;
-          }
-        }
-        if (riskPairs > 0) {
+        var risk = pairRisk(entry.type);
+        if (risk.riskPairs > 0) {
           var weight = KJ.entryRate(entry) * intensity; // burst 항목은 등가 λ 개념값
-          raw += weight * riskPairs;
+          raw += weight * risk.riskPairs;
           details.push({
             type: entry.type, typeName: tt.name,
-            riskPairs: riskPairs, totalPairs: totalPairs, weight: weight
+            riskPairs: risk.riskPairs, totalPairs: risk.totalPairs, weight: weight
           });
         }
       });

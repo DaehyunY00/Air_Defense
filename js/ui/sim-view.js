@@ -2,8 +2,8 @@
  * K-JAMDS 시뮬레이터 — 통합 시뮬레이션 뷰 (실행 → 지도 시각화 → 결과창)
  *
  * 사용 흐름(요구 반영):
- *  1) [시뮬레이션 시작] → DES(trace)를 즉시 실행하고, 동일 seed 반대 모드 DES와
- *     Monte Carlo(양 모드)를 백그라운드로 수행한다.
+   *  1) [시뮬레이션 시작] → DES(trace)를 실행하고, 동일 seed 반대 모드 DES와
+   *     Monte Carlo(양 모드)를 Web Worker에서 수행한다. Worker 불가 환경은 자동 MC를 생략한다.
  *  2) 실행 결과의 위협궤적·노드 재고를 Leaflet 지도 위에 애니메이션으로 재생한다
  *     (위협 = canvas circleMarker, 노드 링 = 재고/용량 비율).
  *  3) 재생 종료(또는 [결과 보기]) 시 결과 모달을 띄워 정량 분석(요약·As-Is↔To-Be 비교·
@@ -62,6 +62,7 @@
     return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
   }
   function pct(x) { return (x * 100).toFixed(0) + '%'; }
+  function rateOf(count, total) { return total > 0 ? count / total : 0; }
 
   /** nodeSeries(t 오름차순)에서 t 이하 최신 재고 n (이진탐색) */
   function countAt(series, t) {
@@ -76,7 +77,7 @@
   }
 
   // ── 모듈 상태 ──
-  var run = null;   // { cfg, res, resOther, threats, nodeMeta, mc:{asis,tobe,pending} }
+  var run = null;   // { cfg, res, resOther, heat, threats, nodeMeta, mc, modalRendered }
   var anim = {
     playing: false, t: 0, speed: 30, lastTs: null, raf: null, done: false,
     lastRenderWall: 0, lastRingWall: 0
@@ -136,6 +137,7 @@
       var btn = el('sim-run');
       btn.disabled = true; btn.textContent = '⏳ DES 실행 중...';
       setStatus('DES 실행 중 (trace 모드)...');
+      setComputeNotice('checking');
 
       var highCfg = modelConfig(cfg);
       var computeCfg = {
@@ -144,7 +146,7 @@
         deploymentId: highCfg.deploymentId, features: highCfg.features
       };
       var t0 = now();
-      KJ.compute.run('desPair', { cfg: computeCfg }, function (stage) {
+      KJ.compute.run('desPair', { cfg: computeCfg, includeHeat: true }, function (stage) {
         if (generation !== computeGeneration) return;
         setStatus(stage === 'comparison-des' ? '비교 체계 DES 계산 중…' : '현재 체계 DES 계산 중…');
       }).then(function (pair) {
@@ -154,43 +156,58 @@
         var other = pair.otherMode;
         var computeLabel = pair.execution === 'web-worker' ? 'Worker' : '메인 스레드 폴백';
         var elapsed = now() - t0;
+        var currentHeat = { axes: pair.heatCurrentAxes || [], total: pair.heatCurrent || 0 };
+        var otherHeat = { axes: pair.heatOtherAxes || [], total: pair.heatOther || 0 };
 
         run = {
           cfg: cfg, res: res, resOther: resOther, otherMode: other,
           elapsedMs: elapsed, execution: pair.execution,
           nodeMeta: {}, threats: buildThreats(res),
-          mc: { pending: true, asis: null, tobe: null }
+          heat: cfg.mode === 'asis'
+            ? { asis: currentHeat, tobe: otherHeat }
+            : { asis: otherHeat, tobe: currentHeat },
+          mc: { pending: pair.execution === 'web-worker', skipped: false, error: null, asis: null, tobe: null },
+          modalRendered: false
         };
+        setComputeNotice(pair.execution, cfg.dep !== 'legacy');
         res.nodes.forEach(function (n) { run.nodeMeta[n.id] = n; });
 
         // 병목 하이라이트를 이번 DES 실행 결과로 갱신 (해석 근사 아님)
         KJ.mapView.render(currentState, { nodes: res.nodes });
 
-        // MC도 동일 Worker에서 실행해 지도 재생·조작을 차단하지 않는다.
-        setStatus('백그라운드 Monte Carlo 수렴 중… (' + computeLabel + ')');
-        KJ.compute.run('mcPair', {
-          cfg: Object.assign({}, computeCfg, { trace: false }),
-          opts: { minReps: 30, maxReps: 200, tol: 0.01, primary: 'leakRate' }
-        }, function (stage) {
-          if (generation !== computeGeneration) return;
-          setStatus((stage === 'comparison-mc' ? '백그라운드 비교 체계 MC 중…' : '백그라운드 현재 체계 MC 중…') +
-            ' (' + computeLabel + ')');
-        }).then(function (mcPair) {
-          if (generation !== computeGeneration || !run) return;
-          if (cfg.mode === 'asis') {
-            run.mc.asis = mcPair.current; run.mc.tobe = mcPair.other;
-          } else {
-            run.mc.tobe = mcPair.current; run.mc.asis = mcPair.other;
-          }
+        // 자동 MC는 실제 Web Worker에서만 실행한다. setTimeout 기반 메인 스레드 폴백은
+        // FULL에서 최소 60회의 DES를 동기 실행해 수분간 UI를 멈추므로 명시적으로 차단한다.
+        if (pair.execution === 'web-worker') {
+          setStatus('백그라운드 Monte Carlo 수렴 중… (' + computeLabel + ')');
+          KJ.compute.run('mcPair', {
+            cfg: Object.assign({}, computeCfg, { trace: false }),
+            opts: { minReps: 30, maxReps: 200, tol: 0.01, primary: 'leakRate' }
+          }, function (stage) {
+            if (generation !== computeGeneration) return;
+            setStatus((stage === 'comparison-mc' ? '백그라운드 비교 체계 MC 중…' : '백그라운드 현재 체계 MC 중…') +
+              ' (' + computeLabel + ')');
+          }).then(function (mcPair) {
+            if (generation !== computeGeneration || !run) return;
+            if (cfg.mode === 'asis') {
+              run.mc.asis = mcPair.current; run.mc.tobe = mcPair.other;
+            } else {
+              run.mc.tobe = mcPair.current; run.mc.asis = mcPair.other;
+            }
+            run.mc.pending = false;
+            setStatus(anim.playing ? '재생 중 — MC 수렴 완료 (' + run.mc.asis.reps + '·' + run.mc.tobe.reps + '복제)' : 'MC 수렴 완료');
+            renderMcSectionIfOpen();
+          }).catch(function (err) {
+            if (generation !== computeGeneration || !run) return;
+            run.mc.pending = false;
+            run.mc.error = err.message;
+            setStatus('MC 계산 실패: ' + err.message);
+            renderMcSectionIfOpen();
+          });
+        } else {
           run.mc.pending = false;
-          setStatus(anim.playing ? '재생 중 — MC 수렴 완료 (' + run.mc.asis.reps + '·' + run.mc.tobe.reps + '복제)' : 'MC 수렴 완료');
-          renderModalIfOpen();
-        }).catch(function (err) {
-          if (generation !== computeGeneration || !run) return;
-          run.mc.pending = false;
-          setStatus('MC 계산 실패: ' + err.message);
-          renderModalIfOpen();
-        });
+          run.mc.skipped = true;
+          setStatus('DES 완료 — 메인 스레드 보호를 위해 자동 MC를 생략했습니다.');
+        }
 
         el('sim-results').disabled = false;
         btn.disabled = false; btn.textContent = '↺ 다시 실행';
@@ -236,7 +253,8 @@
       if (!run) return;
       pause();
       el('result-modal').classList.remove('hidden');
-      renderModal();
+      if (run.modalRendered) renderMcSection();
+      else renderModal();
     },
 
     hideResults: function () {
@@ -280,12 +298,29 @@
       if (body) body.innerHTML = '';
       var playBtn = el('sim-play');
       if (playBtn) { playBtn.disabled = true; playBtn.textContent = '⏸ 일시멈춤'; }
+      setComputeNotice('idle');
     },
 
     onLeave: function () { pause(); }
   };
 
   function setStatus(msg) { var s = el('sim-status'); if (s) s.textContent = msg; }
+  function setComputeNotice(mode, highResolution) {
+    var notice = el('sim-compute-mode');
+    if (!notice) return;
+    notice.className = 'sim-compute-mode';
+    if (mode === 'web-worker') {
+      notice.classList.add('worker');
+      notice.textContent = '계산 모드: Web Worker — 지도·결과 UI와 분리 실행';
+    } else if (mode === 'main-thread-fallback') {
+      notice.classList.add('fallback');
+      notice.textContent = '계산 모드: 메인 스레드 폴백 — 자동 MC 생략. FULL은 ./scripts/serve.sh 실행 권장';
+    } else if (mode === 'checking') {
+      notice.textContent = '계산 실행 경로 확인 중…';
+    } else {
+      notice.textContent = highResolution ? '고해상도 배치: Worker 실행 권장' : '계산 모드: 실행 전';
+    }
+  }
   function now() { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); }
 
   // ── trace → 애니메이션용 위협 목록 ──
@@ -582,8 +617,47 @@
   }
 
   // ── 결과 모달 ──
-  function renderModalIfOpen() {
-    if (!el('result-modal').classList.contains('hidden')) renderModal();
+  function renderMcSectionIfOpen() {
+    if (!el('result-modal').classList.contains('hidden')) renderMcSection();
+  }
+
+  function mcSectionHtml() {
+    if (run.mc.pending) {
+      return '<h3>Monte Carlo 95% 신뢰구간 (백그라운드 다중복제)</h3>' +
+        '<div class="bn-none">⏳ 백그라운드 수렴 중 — 완료되면 이 영역만 갱신됩니다.</div>';
+    }
+    if (run.mc.skipped) {
+      return '<h3>Monte Carlo 95% 신뢰구간</h3>' +
+        '<div class="compute-warning">메인 스레드 정지를 방지하기 위해 자동 MC를 생략했습니다. ' +
+        '<code>./scripts/serve.sh</code> 실행 후 <code>http://127.0.0.1:8000</code>으로 접속하면 ' +
+        'Web Worker에서 MC가 실행됩니다.</div>';
+    }
+    if (run.mc.error) {
+      return '<h3>Monte Carlo 95% 신뢰구간</h3><div class="compute-warning">MC 계산 실패: ' +
+        esc(run.mc.error) + '</div>';
+    }
+    if (!run.mc.asis || !run.mc.tobe) {
+      return '<h3>Monte Carlo 95% 신뢰구간</h3><div class="bn-none">MC 결과 없음</div>';
+    }
+    var ma = run.mc.asis.metrics.leakRate, mb = run.mc.tobe.metrics.leakRate;
+    var overlapCI = ma.lo <= mb.hi && mb.lo <= ma.hi;
+    return '<h3>Monte Carlo 95% 신뢰구간 (백그라운드 다중복제)</h3>' +
+      '<table><thead><tr><th>모드</th><th>해결분 기준 요격 실패율 평균</th><th>95% CI</th><th>복제수</th></tr></thead><tbody>' +
+      '<tr><td>As-Is</td><td class="num">' + (ma.mean * 100).toFixed(1) + '%</td><td class="num">±' +
+      (ma.ci * 100).toFixed(2) + '%p</td><td class="num">' + ma.n + '</td></tr>' +
+      '<tr><td>To-Be</td><td class="num">' + (mb.mean * 100).toFixed(1) + '%</td><td class="num">±' +
+      (mb.ci * 100).toFixed(2) + '%p</td><td class="num">' + mb.n + '</td></tr></tbody></table>' +
+      '<div class="note">관측 종료 시점의 미해결 항적은 이 신뢰구간의 분모에서 제외됩니다. ' + (overlapCI
+        ? '두 CI가 겹칩니다 — 이 조건에서 차이는 표본변동으로 설명될 수 있습니다.'
+        : '✅ 두 95% CI 비중첩 — To-Be 개선이 표본변동으로 설명되지 않는 유의한 차이입니다.') + '</div>';
+  }
+
+  function renderMcSection() {
+    if (!run) return;
+    var section = el('sim-mc-section');
+    if (!section) return;
+    section.innerHTML = mcSectionHtml();
+    if (KJ.tableSort) KJ.tableSort.attachAll(section);
   }
 
   function renderModal() {
@@ -601,8 +675,12 @@
     html += '<h3>결과 요약 (' + esc(modeName) + ')</h3><div class="stat-grid">' +
       statCard('생성 위협', g.spawned + '건') +
       statCard('탐지', g.detected + '건') +
-      statCard('격추', g.killed + '건 (' + pct(g.killRate) + ')') +
-      statCard('요격 실패', g.leaked + '건 (' + pct(g.leakRate) + ')', g.leakRate > 0.3 ? 'crit' : '') +
+      statCard('격추 (전체 생성 기준)', g.killed + '건 (' + pct(rateOf(g.killed, g.spawned)) + ')') +
+      statCard('확정 누출 (전체 생성 기준)', g.leaked + '건 (' + pct(rateOf(g.leaked, g.spawned)) + ')',
+        rateOf(g.leaked, g.spawned) > 0.3 ? 'crit' : '') +
+      statCard('관측 종료 미해결', (g.censoredRaw || 0) + '건 (' +
+        pct(rateOf(g.censoredRaw || 0, g.spawned)) + ')') +
+      statCard('해결분 기준 요격 실패율', pct(g.leakRate), g.leakRate > 0.3 ? 'crit' : '') +
       statCard('평균 격추시간', g.meanTimeToKillSec.toFixed(0) + '초') +
       statCard('결심 지연', g.meanDecisionDelaySec.toFixed(0) + '초') +
       statCard('분권 전환', g.delegation.count + '건' +
@@ -615,24 +693,10 @@
     var asisRes = run.cfg.mode === 'asis' ? run.res : run.resOther;
     var tobeRes = run.cfg.mode === 'asis' ? run.resOther : run.res;
     html += '<h3>As-Is ↔ To-Be 정량 비교 (좌: 분절형 · 우: 통합형, 동일 seed)</h3>' +
-      vsCompare(asisG, tobeG, asisRes, tobeRes);
+      vsCompare(asisG, tobeG, asisRes, tobeRes, run.heat.asis.total, run.heat.tobe.total);
 
     // ③ Monte Carlo 95% CI (백그라운드)
-    html += '<h3>Monte Carlo 95% 신뢰구간 (백그라운드 다중복제)</h3>';
-    if (run.mc.pending) {
-      html += '<div class="bn-none">⏳ 백그라운드 수렴 중 — 완료되면 자동 갱신됩니다.</div>';
-    } else {
-      var ma = run.mc.asis.metrics.leakRate, mb = run.mc.tobe.metrics.leakRate;
-      var overlapCI = ma.lo <= mb.hi && mb.lo <= ma.hi;
-      html += '<table><thead><tr><th>모드</th><th>요격 실패율 평균</th><th>95% CI</th><th>복제수</th></tr></thead><tbody>' +
-        '<tr><td>As-Is</td><td class="num">' + (ma.mean * 100).toFixed(1) + '%</td><td class="num">±' +
-        (ma.ci * 100).toFixed(2) + '%p</td><td class="num">' + ma.n + '</td></tr>' +
-        '<tr><td>To-Be</td><td class="num">' + (mb.mean * 100).toFixed(1) + '%</td><td class="num">±' +
-        (mb.ci * 100).toFixed(2) + '%p</td><td class="num">' + mb.n + '</td></tr></tbody></table>' +
-        '<div class="note">' + (overlapCI
-          ? '두 CI가 겹칩니다 — 이 조건에서 차이는 표본변동으로 설명될 수 있습니다.'
-          : '✅ 두 95% CI 비중첩 — To-Be 개선이 표본변동으로 설명되지 않는 유의한 차이입니다.') + '</div>';
-    }
+    html += '<section id="sim-mc-section">' + mcSectionHtml() + '</section>';
 
     // ④ 도출된 병목
     html += '<h3>🔎 도출된 병목 (관측 통계 기반)</h3>';
@@ -668,9 +732,8 @@
     }).join('');
 
     // ⑦ 중복교전 위험 (As-Is ↔ To-Be, 축선별)
-    var scenario = KJ.scenarioById(run.cfg.sc);
-    var ha = KJ.computeOverlapHeat(scenario, 'asis', run.cfg.x, modelConfig(run.cfg));
-    var hb = KJ.computeOverlapHeat(scenario, 'tobe', run.cfg.x, modelConfig(run.cfg));
+    var ha = run.heat.asis;
+    var hb = run.heat.tobe;
     html += '<h3>축선별 중복교전 위험 (As-Is ↔ To-Be)</h3>' +
       '<div class="pb-heat-legend"><span class="sw" style="background:#e05545"></span>As-Is ' +
       '<span class="sw" style="background:#3d8b40"></span>To-Be</div>' +
@@ -708,6 +771,7 @@
       '정밀 검토는 [분석]·[Monte Carlo] 탭(9단계 파이프라인 지표·민감도 토네이도·임계 전환점 포함)을 이용하세요.</div>';
 
     el('modal-body').innerHTML = html;
+    run.modalRendered = true;
     if (KJ.tableSort) KJ.tableSort.attachAll(el('modal-body')); // 모달 표도 열 정렬 지원
   }
 
@@ -812,12 +876,6 @@
     });
     return n;
   }
-  /** 축선 중복교전 위험도 합 (overlap-heatmap raw 합, MoCE) */
-  function overlapRiskSum(mode) {
-    var h = KJ.computeOverlapHeat(KJ.scenarioById(run.cfg.sc), mode, run.cfg.x, modelConfig(run.cfg));
-    return h.axes.reduce(function (s, a) { return s + a.raw; }, 0);
-  }
-
   // MoM 계층 라벨 (NATO COBP/SAS-026, ENV-MOM-COBP-01): MoP 과정(성능) ·
   // MoCE C2 효과성 · MoFE 전력 효과성. 각 지표에 정의·근거 툴팁을 부착한다.
   var MOM_TIP = {
@@ -831,16 +889,21 @@
    * 우선 대조 지표(결심 지연·누출률·격추율·중복교전 위험·비용교환비)를 상단에 두고,
    * 과정(MoP)·C2 효과성(MoCE)·결과(MoFE) 지표를 MoM 계층 라벨·툴팁과 함께 나란히 보인다.
    */
-  function vsCompare(asisG, tobeG, asisRes, tobeRes) {
+  function vsCompare(asisG, tobeG, asisRes, tobeRes, asisHeatTotal, tobeHeatTotal) {
     var rows = [
       // ── 우선 대조 지표 (상단 강조) ──
       { label: '결심 지연 (탐지→교전개시)', mom: 'MoP', a: asisG.meanDecisionDelaySec, b: tobeG.meanDecisionDelaySec, kind: 'sec', lower: true,
         tip: 'F2T2EA Find→Engage 평균 소요(초). 협조·승인·권한위임 홉과 C2 대기(Wq)가 모두 포함된 관측치 — As-Is 음성 협조(≥180s) 부담이 드러남.' },
-      { label: '요격 실패율 (누출률)', mom: 'MoFE', a: asisG.leakRate, b: tobeG.leakRate, kind: 'rate', lower: true, max: 1,
-        tip: '생성 위협 중 격추하지 못하고 공역을 통과(누수)한 비율.' },
-      { label: '격추율', mom: 'MoFE', a: asisG.killRate, b: tobeG.killRate, kind: 'rate', lower: false, max: 1,
-        tip: '생성 위협 중 격추 비율.' },
-      { label: '중복교전 위험 (축선 합)', mom: 'MoCE', a: overlapRiskSum('asis'), b: overlapRiskSum('tobe'), kind: 'raw', lower: true,
+      { label: '확정 누출률 (전체 생성 기준)', mom: 'MoFE',
+        a: rateOf(asisG.leaked, asisG.spawned), b: rateOf(tobeG.leaked, tobeG.spawned), kind: 'rate', lower: true, max: 1,
+        tip: '전체 생성 위협 중 격추하지 못하고 공역을 통과한 비율. 관측 종료 미해결을 분모에 포함한다.' },
+      { label: '격추율 (전체 생성 기준)', mom: 'MoFE',
+        a: rateOf(asisG.killed, asisG.spawned), b: rateOf(tobeG.killed, tobeG.spawned), kind: 'rate', lower: false, max: 1,
+        tip: '전체 생성 위협 중 격추한 비율. 관측 종료 미해결을 분모에 포함한다.' },
+      { label: '관측 종료 미해결률', mom: 'MoFE',
+        a: rateOf(asisG.censoredRaw || 0, asisG.spawned), b: rateOf(tobeG.censoredRaw || 0, tobeG.spawned), kind: 'rate', lower: true, max: 1,
+        tip: '시뮬레이션 종료 시점까지 격추나 누출로 확정되지 않은 항적. 이를 제외한 해결분 기준 비율과 반드시 구분한다.' },
+      { label: '중복교전 위험 (축선 합)', mom: 'MoCE', a: asisHeatTotal, b: tobeHeatTotal, kind: 'raw', lower: true,
         tip: '서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합.' },
       { label: '비용교환비 (저가 포화위협)', mom: 'MoFE', a: asisG.cost.exchangeSat, b: tobeG.cost.exchangeSat, kind: 'ratio', lower: true,
         tip: '무인기·장사정포 대응에 소모한 개념 요격탄 비용 ÷ 격추 위협가치 (WPN/THR-*-COST-01, 타 전역 공개수치 기반 개념값 — 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모. ' +

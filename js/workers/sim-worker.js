@@ -52,10 +52,12 @@ function execute(id, task, payload) {
     var desOut = { current: current, other: other, otherMode: otherMode, execution: 'web-worker' };
     if (payload.includeHeat) {
       var modelCfg = { deploymentId: cfg.deploymentId, features: cfg.features };
-      desOut.heatCurrent = KJ.computeOverlapHeat(cfg.scenario, cfg.mode, cfg.intensity, modelCfg).axes
-        .reduce(function (sum, axis) { return sum + axis.raw; }, 0);
-      desOut.heatOther = KJ.computeOverlapHeat(cfg.scenario, otherMode, cfg.intensity, modelCfg).axes
-        .reduce(function (sum, axis) { return sum + axis.raw; }, 0);
+      var heatCurrent = KJ.computeOverlapHeat(cfg.scenario, cfg.mode, cfg.intensity, modelCfg);
+      var heatOther = KJ.computeOverlapHeat(cfg.scenario, otherMode, cfg.intensity, modelCfg);
+      desOut.heatCurrentAxes = heatCurrent.axes;
+      desOut.heatOtherAxes = heatOther.axes;
+      desOut.heatCurrent = heatCurrent.axes.reduce(function (sum, axis) { return sum + axis.raw; }, 0);
+      desOut.heatOther = heatOther.axes.reduce(function (sum, axis) { return sum + axis.raw; }, 0);
     }
     return desOut;
   }

@@ -57,7 +57,9 @@ var suites = [
   ,['deployment-adapter.test.js', '배치 호환 어댑터 (토폴로지·DOWN·결정론·보존법칙)']
   ,['high-resolution-connection.test.js', '고해상도 C2 연결 (ICC 상향 승인경로·As-Is 주교전)']
   ,['iads-native-pipeline.test.js', '원본 IADS 파이프라인 (책임 C2·scope WTA·PIP·발사대·실제 중복 BDA)']
+  ,['iads-failure-realism.test.js', '고해상도 요격 실패 현실성 (SHORAD Pk·2발 SLS·무한 재교전 방지·분모 보존)']
   ,['ui-performance.test.js', 'UI 응답성·지도 제어 (Worker·병목배지·C2링크·범례)']
+  ,['overlap-performance.test.js', 'FULL 중복교전 계산 성능·정본 동등성']
 ];
 suites.forEach(function (s) {
   console.log('\n== ' + s[1] + ' ==');

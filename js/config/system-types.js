@@ -99,7 +99,7 @@
     })
   };
 
-  function missile(name, envelope, speed, rounds, pkRef, cost) {
+  function missile(name, envelope, speed, rounds, pkRef, cost, defaultPk) {
     return freeze({
       name: name,
       engagementEnvelope: envelope,
@@ -108,7 +108,10 @@
       launchInterval: 1,
       doctrine: 'shoot-look-shoot',
       interceptMethod: 'conceptual',
-      pssekTable: { default: 0.75 },
+      // 상세 range/aspect 표가 이식되기 전까지 체계 정본 compatibility Pk를 사용한다.
+      // 종전 공통 0.75는 비호·천마(정본 0.30)까지 고성능으로 만들어 반복 재교전 시
+      // UAV 최종 격추확률을 사실상 100%로 올리는 결함이었다.
+      pssekTable: { default: typeof defaultPk === 'number' ? defaultPk : 0.75 },
       bdaDelay: 5,
       costPerShot: cost,
       roundsPerLauncher: rounds,
@@ -146,43 +149,43 @@
   var SUIT_SHORAD = { low: 1.3, medium: 0.5, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' };
   var SHOOTER_TYPES = {
     LSAM: shooter('L-SAM', 1, BALLISTIC, {
-      ABM: missile('L-SAM ABM', { Rmin: 5, Rmax: 150, Hmin: 15, Hmax: 70 }, 1500, 6, 'WPN-LSAM-PK-01', 8)
+      ABM: missile('L-SAM ABM', { Rmin: 5, Rmax: 150, Hmin: 15, Hmax: 70 }, 1500, 6, 'WPN-LSAM-PK-01', 8, 0.75)
     }, { launcherCount: 4, simultaneousEngagement: 10, reloadTime: 900 }, {
       paramRef: 'WPN-LSAM-PK-01', sourceNote: 'IADS_codex_original LSAM', engageTimeSec: 40,
       pk: 0.75, costPerShotM: 8, wtaSuit: SUIT_BALLISTIC
     }),
     CHEONGUNG2: shooter('천궁-II', 2, AIR.concat(BALLISTIC), {
-      AAM: missile('천궁-II', { Rmin: 1, Rmax: 40, Hmin: 0, Hmax: 20 }, 1200, 8, 'WPN-MSAM2-PK-01', 3)
+      AAM: missile('천궁-II', { Rmin: 1, Rmax: 40, Hmin: 0, Hmax: 20 }, 1200, 8, 'WPN-MSAM2-PK-01', 3, 0.75)
     }, { launcherCount: 4, simultaneousEngagement: 10, reloadTime: 900 }, {
       paramRef: 'WPN-MSAM2-PK-01', sourceNote: 'IADS_codex_original CHEONGUNG2', engageTimeSec: 45,
       pk: 0.75, costPerShotM: 3, wtaSuit: SUIT_MULTI
     }),
     PAC3: shooter('한국군 PAC-3', 2, AIR.concat(BALLISTIC), {
-      ABM: missile('PAC-3', { Rmin: 1, Rmax: 40, Hmin: 0, Hmax: 30 }, 1400, 16, 'WPN-PAC3-PK-01', 3)
+      ABM: missile('PAC-3', { Rmin: 1, Rmax: 40, Hmin: 0, Hmax: 30 }, 1400, 16, 'WPN-PAC3-PK-01', 3, 0.75)
     }, { launcherCount: 4, simultaneousEngagement: 9, reloadTime: 900 }, {
       paramRef: 'WPN-PAC3-PK-01', sourceNote: 'IADS_codex_original PAC3', engageTimeSec: 45,
       pk: 0.75, costPerShotM: 3, wtaSuit: SUIT_MULTI
     }),
     BIHO: shooter('비호 중대', 4, LOW, {
-      AAM: missile('비호 탑재탄', { Rmin: 0, Rmax: 7, Hmin: 0, Hmax: 5 }, 700, 4, 'WPN-SHORAD-PK-01', 0.2)
+      AAM: missile('비호 탑재탄', { Rmin: 0, Rmax: 7, Hmin: 0, Hmax: 5 }, 700, 4, 'WPN-SHORAD-PK-01', 0.2, 0.30)
     }, { launcherCount: 6, simultaneousEngagement: 24, reloadTime: 900 }, {
       integratedSensor: 'BIHO_INTEGRATED', paramRef: 'ADR-049', sourceNote: 'ADR-049 company/vehicle aggregation',
       engageTimeSec: 60, pk: 0.3, costPerShotM: 0.2, wtaSuit: SUIT_SHORAD
     }),
     CHUNMA: shooter('천마 중대', 4, LOW, {
-      AAM: missile('천마 탑재탄', { Rmin: 0, Rmax: 9, Hmin: 0, Hmax: 5 }, 700, 8, 'WPN-SHORAD-PK-01', 0.2)
+      AAM: missile('천마 탑재탄', { Rmin: 0, Rmax: 9, Hmin: 0, Hmax: 5 }, 700, 8, 'WPN-SHORAD-PK-01', 0.2, 0.30)
     }, { launcherCount: 6, simultaneousEngagement: 48, reloadTime: 900 }, {
       integratedSensor: 'CHUNMA_INTEGRATED', paramRef: 'ADR-049', sourceNote: 'ADR-049 company/vehicle aggregation',
       engageTimeSec: 60, pk: 0.3, costPerShotM: 0.2, wtaSuit: SUIT_SHORAD
     }),
     THAAD: shooter('USFK THAAD', 1, BALLISTIC, {
-      ABM: missile('THAAD interceptor', { Rmin: 5, Rmax: 200, Hmin: 40, Hmax: 150 }, 2800, 8, 'WPN-THAAD-PK-01', 8)
+      ABM: missile('THAAD interceptor', { Rmin: 5, Rmax: 200, Hmin: 40, Hmax: 150 }, 2800, 8, 'WPN-THAAD-PK-01', 8, 0.75)
     }, { launcherCount: 6, simultaneousEngagement: 6, reloadTime: 900 }, {
       paramRef: 'ADR-036', sourceNote: 'USFK THAAD independent axis; not KAMDOC integrated', engageTimeSec: 40,
       pk: 0.75, costPerShotM: 8, wtaSuit: SUIT_BALLISTIC, simulationEligible: false
     }),
     USFK_PAC3: shooter('USFK Patriot', 2, AIR.concat(BALLISTIC), {
-      ABM: missile('USFK PAC-3', { Rmin: 1, Rmax: 40, Hmin: 0, Hmax: 30 }, 1400, 16, 'WPN-PAC3-PK-01', 3)
+      ABM: missile('USFK PAC-3', { Rmin: 1, Rmax: 40, Hmin: 0, Hmax: 30 }, 1400, 16, 'WPN-PAC3-PK-01', 3, 0.75)
     }, { launcherCount: 4, simultaneousEngagement: 9, reloadTime: 900 }, {
       paramRef: 'ADR-036', sourceNote: 'USFK Patriot independent axis; not Korean C2 integrated', engageTimeSec: 45,
       pk: 0.75, costPerShotM: 3, wtaSuit: SUIT_MULTI, simulationEligible: false

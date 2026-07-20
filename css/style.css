@@ -113,6 +113,17 @@ main { flex: 1; position: relative; overflow: hidden; }
 .sim-clock-row { display: flex; justify-content: space-between; margin-top: 5px; }
 #sim-clock { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 11px; }
 .sim-status { color: #aecbeb; font-size: 11px; text-align: right; max-width: 200px; }
+.sim-compute-mode {
+  margin-top: 6px; padding: 5px 7px; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--muted); background: rgba(12, 18, 27, .78); font-size: 10px; line-height: 1.35;
+}
+.sim-compute-mode.worker { color: #8de0aa; border-color: #3d8b4066; }
+.sim-compute-mode.fallback { color: #ffd08a; border-color: #d8922b88; background: rgba(90, 55, 7, .22); }
+.compute-warning {
+  padding: 10px 12px; border-left: 3px solid #d8922b; background: rgba(216, 146, 43, .1);
+  color: #ffd08a; line-height: 1.6;
+}
+.compute-warning code { color: #fff0c5; }
 .lg-ring { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: -2px; justify-self: center; }
 .lg-ring.sensor { border: 1px dashed #2e6fd8; }
 .lg-ring.shooter { border: 1px solid #3d8b40; }

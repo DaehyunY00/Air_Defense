@@ -38,6 +38,7 @@
 
   var SCAN_SEC = 10;        // 센서 스캔 주기(개념값) — 탐지 재시도 간격
   var MAX_ENGAGE_TRIES = 3; // BDA 실패 시 재교전 상한(무한 폐루프 방지)
+  var MAX_IADS_SHOTS = 2;   // native shoot-look-shoot: 표적당 전 축 합산 최대 발사수
   // Phase 5(⑨, pkCorrelated): 동일 표적 재교전 상관계수 ρ. 종전 모델은 매 발사 pk를 독립 추출해
   // 재교전이 항상 누적 격추확률을 끌어올린다(1−(1−pk)^n) — 2022.12.26 무인기 5대 전량 미격추 같은
   // "체계적 실패(기하·ECM·표적특성이 발사 간 공유)"를 재현 못 한다. ρ=공유잠재(frailty) 가중.
@@ -172,6 +173,10 @@
     this.pkCorrRho = (typeof f.pkCorrelation === 'number') ? Math.max(0, Math.min(1, f.pkCorrelation)) : PK_CORR_RHO;
     // Phase 6: 연발 발수 k(≥1 정수). features.salvoSize로 재정의, 없으면 문서 기본. salvo OFF면 미사용(k=1).
     this.salvoSize = (typeof f.salvoSize === 'number' && f.salvoSize >= 1) ? Math.round(f.salvoSize) : SALVO_SIZE;
+    // Native IADS는 종전 MISS마다 체공창 종료까지 무제한 재발사했다. 교리 선언
+    // shoot-look-shoot에 맞춰 전 C2 축 합산 표적당 최대 2발을 기본으로 한다.
+    this.iadsMaxShots = (typeof f.iadsMaxShots === 'number' && f.iadsMaxShots >= 1)
+      ? Math.round(f.iadsMaxShots) : MAX_IADS_SHOTS;
     // 공통난수(CRN, `claude/c2-simulation-review` 검토 이식): 난수 스트림을 도착·처리로 분리한다.
     //  · rng    — 처리 무작위성(탐지 판정·서비스시간·요격확률·링크지연 분포·중복교전 등)
     //  · arrRng — 위협 도착간격(시나리오 그 자체) 전용. seed에서 독립 파생(황금비 해시)해
@@ -913,6 +918,10 @@
 
   Simulation.prototype._iadsDecide = function (threat, t, commander) {
     if (!threat.alive || threat.pipelineDead) return;
+    if (threat.tries >= this.iadsMaxShots) {
+      if (!threat.leakReason) threat.leakReason = 'missed';
+      return;
+    }
     if (this._iadsPlanBlocks(threat, commander)) {
       this.global.coordAttempts++;
       this.global.deconflicted++;
@@ -961,6 +970,13 @@
   Simulation.prototype._onIadsFire = function (t, d) {
     var threat = d.threat, plan = d.plan, shooter = this._nodeById(d.shooterId);
     if (!threat.alive || plan.released || plan.resolved) return;
+    // 서로 독립인 ROK/local/USFK plan이 같은 시각에 생성돼도 실제 발사는 표적당 교리 상한을
+    // 공유한다. 상한을 넘는 plan은 탄약을 소모하지 않고 해제한다.
+    if (threat.tries >= this.iadsMaxShots) {
+      plan.released = true; plan.resolved = true;
+      if (!threat.leakReason) threat.leakReason = 'missed';
+      return;
+    }
     var ev = this._iadsEvaluate(shooter, threat, t);
     if (!ev.feasible) {
       plan.released = true;
@@ -1026,7 +1042,8 @@
       if (threat._trace) { threat._trace.exitT = t; threat._trace.outcome = 'killed'; }
     } else {
       this._mark(threat, 'BDA:MISS:' + d.shooterId, t);
-      this._scheduleIadsRetry(threat, d.commander, t + 0.5);
+      if (threat.tries < this.iadsMaxShots) this._scheduleIadsRetry(threat, d.commander, t + 0.5);
+      else if (!threat.leakReason) threat.leakReason = 'missed';
     }
   };
 

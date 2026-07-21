@@ -17,6 +17,8 @@ function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fa
 
 assert(index.indexOf('header-bn-count') === -1, '우측 상단 도출 병목 배지 제거');
 assert(index.indexOf('id="toggle-links"') !== -1, 'C2 연결선 표시 토글 노출');
+assert(/id="toggle-links"(?![^>]*checked)/.test(index), '과밀 방지: C2 연결선 기본 OFF');
+assert(index.indexOf('id="map-asset-summary"') !== -1, '현재 배치 자산 수 지도 범례에 상시 표시');
 assert(index.indexOf('js/core/sim-worker-client.js') !== -1, 'Worker client 로드');
 assert(index.indexOf('id="sim-compute-mode"') !== -1, 'Worker/폴백 계산 모드 상시 안내');
 assert(/\.map-legend\s*\{[^}]*right:\s*12px;[^}]*left:\s*auto;/s.test(css), '범례 우측 하단 배치');
@@ -24,6 +26,10 @@ assert(main.indexOf("getElementById('toggle-links')") !== -1, '링크 토글 이
 assert(main.indexOf('header-bn-count') === -1, '헤더 병목 수 갱신 로직 제거');
 assert(map.indexOf('setLinksVisible: function') !== -1, 'Leaflet C2 링크 레이어 토글');
 assert(map.indexOf('linksVisible ? KJ.linksInMode') !== -1, 'SVG fallback 링크 토글');
+assert(map.indexOf('expandedLegacyOffset') !== -1 && map.indexOf('asset-spread-line') !== -1,
+  'legacy 10세트 저배율 표시좌표 방사형 분리');
+assert(map.indexOf('asset-range-ring') !== -1 && map.indexOf('if (fallback)') !== -1,
+  'SVG fallback 탐지·교전 범위 링과 토글 재렌더');
 assert(sim.indexOf("KJ.compute.run('desPair'") !== -1, '주 시뮬레이션 DES Worker 분리');
 assert(sim.indexOf('includeHeat: true') !== -1, '중복교전 위험 Worker 선계산 요청');
 assert(sim.indexOf("KJ.compute.run('mcPair'") !== -1, '백그라운드 MC Worker 분리');

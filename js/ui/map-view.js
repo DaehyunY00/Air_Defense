@@ -23,9 +23,10 @@
   var map = null;
   var markerLayer = null;
   var linkLayer = null;
+  var spreadLayer = null; // 저배율 겹침 방지용 표시좌표 리더선(실제 좌표 불변)
   var ringLayer = null;   // 자산 범위 링 (탐지/교전, 개념값)
   var ringsVisible = true;
-  var linksVisible = true;
+  var linksVisible = false; // legacy 92~132개 선 과밀 방지 — 사용자가 범례에서 활성화
   var markers = {}; // nodeId -> marker
   var fallback = false; // Leaflet 로드 실패(오프라인/폐쇄망) 시 SVG 개념도로 대체
   var containerId = null;
@@ -38,6 +39,36 @@
       deploymentId: state.dep,
       features: { highResolutionDeployment: true }
     } : {});
+  }
+
+  function expandedLegacyOffset(n) {
+    if (!n || !/^(ICC|ECS|MFR|BAT)-(?:CHUNMA-|CHEONGUNG2-)?[WCE]\d$/.test(n.id)) return null;
+    if (n.id.indexOf('ICC-') === 0) return [-25, -22];
+    if (n.id.indexOf('ECS-') === 0) return [25, -22];
+    if (n.id.indexOf('MFR-') === 0) return [-25, 22];
+    return [25, 22];
+  }
+
+  /** 실제 좌표는 유지하고 저배율 표시점만 픽셀 단위로 분리한다. */
+  function leafletDisplayCoord(n) {
+    var off = expandedLegacyOffset(n);
+    if (!off || !map || !map.getZoom || map.getZoom() >= 11 ||
+        !map.latLngToLayerPoint || !map.layerPointToLatLng) return n.coord;
+    var zoom = map.getZoom();
+    var scale = zoom >= 10 ? 0.45 : (zoom === 9 ? 0.7 : 1);
+    var p = map.latLngToLayerPoint(n.coord);
+    return map.layerPointToLatLng(L.point(p.x + off[0] * scale, p.y + off[1] * scale));
+  }
+
+  function updateAssetSummary(state, catalog, nodes) {
+    var el = document.getElementById('map-asset-summary');
+    if (!el) return;
+    var by = { c2: 0, sensor: 0, shooter: 0 };
+    nodes.forEach(function (n) { if (by[n.category] !== undefined) by[n.category]++; });
+    var legacy = !state.dep || state.dep === 'legacy';
+    el.textContent = (legacy ? 'legacy 확장 배치' : state.dep) + ' · 활성 ' + nodes.length + '노드' +
+      ' (C2 ' + by.c2 + ' · 센서 ' + by.sensor + ' · 무기 ' + by.shooter + ')' +
+      (legacy ? ' · ICC–ECS–MFR–포대 10세트 포함' : '');
   }
 
   KJ.mapView = {
@@ -55,8 +86,13 @@
         attribution: '&copy; OpenStreetMap contributors | 좌표는 도시 수준 개념좌표'
       }).addTo(map);
       ringLayer = L.layerGroup().addTo(map);
-      linkLayer = L.layerGroup().addTo(map);
+      spreadLayer = L.layerGroup().addTo(map);
+      linkLayer = L.layerGroup();
+      if (linksVisible) linkLayer.addTo(map);
       markerLayer = L.layerGroup().addTo(map);
+      map.on('zoomend', function () {
+        if (lastState) KJ.mapView.render(lastState, lastAnalysis);
+      });
     },
 
     /** 시뮬레이션 뷰(sim-view)가 애니메이션 레이어를 얹기 위한 접근자 */
@@ -66,6 +102,10 @@
     /** 자산 범위 링 표시 토글 */
     setRingsVisible: function (v) {
       ringsVisible = !!v;
+      if (fallback) {
+        if (lastState) renderFallbackSvg(lastState, lastAnalysis);
+        return;
+      }
       if (!map || !ringLayer) return;
       if (ringsVisible) { if (!map.hasLayer(ringLayer)) map.addLayer(ringLayer); }
       else if (map.hasLayer(ringLayer)) map.removeLayer(ringLayer);
@@ -90,6 +130,8 @@
       if (!map) return;
       var mode = state.mode;
       var catalog = catalogFor(state);
+      var activeNodes = KJ.nodesInMode(mode, catalog);
+      updateAssetSummary(state, catalog, activeNodes);
       var levelById = {};
       if (analysis) {
         analysis.nodes.forEach(function (r) { levelById[r.id] = r; });
@@ -97,7 +139,7 @@
 
       // ── 자산 범위 링 (공개자료 기반 개념값: 센서 탐지범위 / 무기 교전범위) ──
       ringLayer.clearLayers();
-      KJ.nodesInMode(mode, catalog).forEach(function (n) {
+      activeNodes.forEach(function (n) {
         var km = n.category === 'sensor' ? n.rangeKm
           : (n.category === 'shooter' && n.engage ? n.engage.rangeKm : null);
         if (!km) return;
@@ -124,7 +166,7 @@
         if (to.modes && to.modes.indexOf(mode) === -1) return;
         var comm = l.comm[mode];
         var style = COMM_STYLE[comm.type] || COMM_STYLE.datalink;
-        var line = L.polyline([from.coord, to.coord], {
+        var line = L.polyline([leafletDisplayCoord(from), leafletDisplayCoord(to)], {
           color: style.color, weight: style.weight,
           dashArray: style.dashArray, opacity: 0.65
         });
@@ -139,9 +181,17 @@
 
       // ── 노드 마커 ──
       markerLayer.clearLayers();
+      spreadLayer.clearLayers();
       markers = {};
       var self = this;
-      KJ.nodesInMode(mode, catalog).forEach(function (n) {
+      activeNodes.forEach(function (n) {
+        var displayCoord = leafletDisplayCoord(n);
+        if (displayCoord !== n.coord) {
+          spreadLayer.addLayer(L.polyline([n.coord, displayCoord], {
+            color: '#9fb2c7', weight: 1, dashArray: '2 3', opacity: 0.55,
+            interactive: false, className: 'asset-spread-line'
+          }));
+        }
         var res = levelById[n.id];
         var levelClass = res && (res.level === 'bottleneck' || res.level === 'saturated')
           ? ' node-' + res.level : '';
@@ -152,7 +202,7 @@
             '<div class="node-label">' + n.id + '</div>',
           iconSize: [60, 30], iconAnchor: [30, 10]
         });
-        var m = L.marker(n.coord, { icon: icon });
+        var m = L.marker(displayCoord, { icon: icon });
         m.bindPopup(popupHtml(n, res, mode));
         m.on('click', function () {
           if (self._onNodeClick) self._onNodeClick(n.id);
@@ -176,29 +226,55 @@
     if (!el) return;
     var mode = state.mode;
     var catalog = catalogFor(state);
+    var activeNodes = KJ.nodesInMode(mode, catalog);
+    updateAssetSummary(state, catalog, activeNodes);
     var levelById = {};
     if (analysis) analysis.nodes.forEach(function (r) { levelById[r.id] = r; });
 
     var W = 1000, H = 640;
     function px(coord) { return KJ.geo.project(coord, W, H); }
+    function displayPx(n) {
+      var p = px(n.coord), off = expandedLegacyOffset(n);
+      return off ? [p[0] + off[0], p[1] + off[1]] : p;
+    }
     var LINK_COLOR = { datalink: '#2e6fd8', kvmf: '#2eb8c9', link16: '#2e6fd8', voice: '#d32f2f', broadcast: '#ef6c00' };
     var LINK_DASH = { datalink: '', kvmf: '8 3', link16: '6 4', voice: '2 6', broadcast: '1 5' };
 
     var svg = '';
+    if (ringsVisible) {
+      activeNodes.forEach(function (n) {
+        var km = n.category === 'sensor' ? n.rangeKm
+          : (n.category === 'shooter' && n.engage ? n.engage.rangeKm : null);
+        if (!km) return;
+        var p = px(n.coord), latRad = n.coord[0] * Math.PI / 180;
+        var rx = km / (111.32 * Math.max(0.2, Math.cos(latRad))) /
+          (KJ.geo.BOUNDS.lonMax - KJ.geo.BOUNDS.lonMin) * W;
+        var ry = km / 111.32 / (KJ.geo.BOUNDS.latMax - KJ.geo.BOUNDS.latMin) * H;
+        var sensor = n.category === 'sensor';
+        svg += '<ellipse class="asset-range-ring" cx="' + p[0] + '" cy="' + p[1] +
+          '" rx="' + rx + '" ry="' + ry + '" fill="none" stroke="' +
+          (sensor ? CAT_COLOR.sensor : CAT_COLOR.shooter) + '" stroke-width="1" opacity="0.35"' +
+          (sensor ? ' stroke-dasharray="4 6"' : '') + '/>';
+      });
+    }
     (linksVisible ? KJ.linksInMode(mode, catalog) : []).forEach(function (l) {
       var from = KJ.nodeById(l.from, catalog), to = KJ.nodeById(l.to, catalog);
       if (!from || !to) return;
       if (from.modes && from.modes.indexOf(mode) === -1) return;
       if (to.modes && to.modes.indexOf(mode) === -1) return;
       var comm = l.comm[mode];
-      var a = px(from.coord), b = px(to.coord);
+      var a = displayPx(from), b = displayPx(to);
       svg += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] +
         '" stroke="' + (LINK_COLOR[comm.type] || '#888') + '" stroke-width="1.5" opacity="0.6"' +
         (LINK_DASH[comm.type] ? ' stroke-dasharray="' + LINK_DASH[comm.type] + '"' : '') + '>' +
         '<title>' + from.name + ' → ' + to.name + ' | ' + comm.type + ' ' + comm.delaySec + 's</title></line>';
     });
-    KJ.nodesInMode(mode, catalog).forEach(function (n) {
-      var p = px(n.coord);
+    activeNodes.forEach(function (n) {
+      var origin = px(n.coord), p = displayPx(n);
+      if (expandedLegacyOffset(n)) {
+        svg += '<line class="asset-spread-line" x1="' + origin[0] + '" y1="' + origin[1] +
+          '" x2="' + p[0] + '" y2="' + p[1] + '"/>';
+      }
       var res = levelById[n.id];
       var hot = res && (res.level === 'bottleneck' || res.level === 'saturated');
       var c = CAT_COLOR[n.category];

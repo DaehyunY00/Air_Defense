@@ -1,38 +1,38 @@
 {
   "sc1/asis": {
     "spawned": 60,
-    "killed": 40,
-    "leaked": 9,
-    "bn": "gap:responsibility_gap,link:AOC-1C→MCRC"
+    "killed": 27,
+    "leaked": 21,
+    "bn": "gap:responsibility_gap,link:ICC-C1→MCRC,link:ICC-W1→MCRC"
   },
   "sc1/tobe": {
     "spawned": 60,
-    "killed": 53,
-    "leaked": 5,
+    "killed": 37,
+    "leaked": 18,
     "bn": ""
   },
   "sc2/asis": {
     "spawned": 58,
-    "killed": 21,
-    "leaked": 20,
-    "bn": "link:AOC-1C→MCRC,node:FTR"
+    "killed": 29,
+    "leaked": 19,
+    "bn": "link:ICC-C1→MCRC,link:ICC-W1→MCRC"
   },
   "sc2/tobe": {
     "spawned": 58,
-    "killed": 34,
-    "leaked": 13,
-    "bn": "node:FTR"
+    "killed": 39,
+    "leaked": 15,
+    "bn": ""
   },
   "sc3/asis": {
     "spawned": 307,
-    "killed": 56,
-    "leaked": 213,
-    "bn": "gap:responsibility_gap,link:AOC-1C→MCRC,node:FTR,node:KAMDOC,node:MCRC"
+    "killed": 50,
+    "leaked": 214,
+    "bn": "gap:responsibility_gap,link:ICC-C1→MCRC,link:ICC-C2→MCRC,link:ICC-E1→MCRC,link:ICC-W1→MCRC,link:ICC-W2→MCRC,link:MCRC→KAMDOC,node:KAMDOC,node:MCRC"
   },
   "sc3/tobe": {
     "spawned": 307,
-    "killed": 149,
-    "leaked": 129,
-    "bn": "node:FTR"
+    "killed": 177,
+    "leaked": 102,
+    "bn": ""
   }
 }

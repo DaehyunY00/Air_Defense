@@ -52,13 +52,17 @@ var suites = [
   ['reengage.test.js', '⑨ BDA·재교전 (되돌리기 플래그·무기별 pk 차등·폴백 경계·결정론)'],
   ['deadcode.test.js', '死 코드 레지스트리 (Gate 3 — 부활/영구死 정본·정직한 미부활)'],
   ['resource.test.js', '자원 최적화 (원칙 5 — As-Is불변·MDU-L생존·제약유지·SC2보호·되돌리기)']
+  ,['legacy-deployment-expansion.test.js', 'legacy 배치 확장 (서4·중3·동3 ICC–ECS–MFR–포대 10세트)']
   ,['baseline.test.js', 'Phase 0 legacy 기준선 (SC1–SC3·양모드·SHA-256·OFF bit-exact)']
   ,['deployment.test.js', '고해상도 배치 선언 (6개 ID·수량·참조·SHORAD·USFK·MDL)']
   ,['deployment-adapter.test.js', '배치 호환 어댑터 (토폴로지·DOWN·결정론·보존법칙)']
   ,['high-resolution-connection.test.js', '고해상도 C2 연결 (ICC 상향 승인경로·As-Is 주교전)']
   ,['iads-native-pipeline.test.js', '원본 IADS 파이프라인 (책임 C2·scope WTA·PIP·발사대·실제 중복 BDA)']
+  ,['c2a-asis.test.js', 'FULL As-Is 군단 AOC C2A (MCRC+국지 융합·우선순위·제한형 현황공유)']
   ,['iads-failure-realism.test.js', '고해상도 요격 실패 현실성 (SHORAD Pk·2발 SLS·무한 재교전 방지·분모 보존)']
+  ,['failure-classification.test.js', '실패 분류 v2 (주원인·기여원인·구조성·PIP 세분화·사수부하)']
   ,['ui-performance.test.js', 'UI 응답성·지도 제어 (Worker·병목배지·C2링크·범례)']
+  ,['map-visualization.test.js', '지도 시각화 (legacy 10세트 Leaflet/SVG·저배율 분리·범위 링)']
   ,['overlap-performance.test.js', 'FULL 중복교전 계산 성능·정본 동등성']
 ];
 suites.forEach(function (s) {

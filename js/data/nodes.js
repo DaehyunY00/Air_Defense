@@ -294,6 +294,78 @@
     }
   ];
 
+  // ── legacy 대표 배치 확장: 서4·중3·동3, 총 10개 ICC–ECS–MFR–포대 세트 ──
+  // 좌표는 도시·권역 수준 개념점이며 실제 군사시설 위치가 아니다.
+  // 천마 5개·천궁-II 5개를 권역별로 교차 배치해 한 축선에 특정 체계가
+  // 편중되지 않도록 한다. 실제 포대 수·위치를 의미하지 않는 정책연구용 배치다.
+  KJ.LEGACY_AIR_DEFENSE_SITES = Object.freeze([
+    { key: 'W1', region: 'west', label: '서부 1', coord: [37.70, 126.85], weapon: 'CHUNMA' },
+    { key: 'W2', region: 'west', label: '서부 2', coord: [37.45, 126.70], weapon: 'CHEONGUNG2' },
+    { key: 'W3', region: 'west', label: '서부 3', coord: [36.95, 126.85], weapon: 'CHUNMA' },
+    { key: 'W4', region: 'west', label: '서부 4', coord: [37.25, 127.05], weapon: 'CHEONGUNG2' },
+    { key: 'C1', region: 'central', label: '중부 1', coord: [38.00, 127.30], weapon: 'CHUNMA' },
+    { key: 'C2', region: 'central', label: '중부 2', coord: [37.55, 127.55], weapon: 'CHEONGUNG2' },
+    { key: 'C3', region: 'central', label: '중부 3', coord: [36.90, 127.50], weapon: 'CHUNMA' },
+    { key: 'E1', region: 'east', label: '동부 1', coord: [38.05, 128.40], weapon: 'CHEONGUNG2' },
+    { key: 'E2', region: 'east', label: '동부 2', coord: [37.65, 128.75], weapon: 'CHUNMA' },
+    { key: 'E3', region: 'east', label: '동부 3', coord: [37.15, 129.00], weapon: 'CHEONGUNG2' }
+  ].map(function (s) { return Object.freeze(s); }));
+
+  KJ.LEGACY_AIR_DEFENSE_SITES.forEach(function (site) {
+    var key = site.key, coord = site.coord.slice();
+    var axes = site.region === 'west' ? ['west', 'seoul']
+      : (site.region === 'central' ? ['central', 'seoul'] : ['east', 'central']);
+    var note = site.label + ' 권역 도시 수준 개념좌표(실제 군사시설 위치 아님)';
+    var cheongung = site.weapon === 'CHEONGUNG2';
+    KJ.NODES.push({
+      id: 'ICC-' + key, name: '정보통합센터 ICC (' + site.label + ')',
+      category: 'c2', service: 'joint', echelon: 'battalion', coord: coord.slice(), coordNote: note,
+      role: '권역 MFR·ECS 항적정보 통합, MCRC 협조·상향 승인경로.',
+      deploymentRegion: site.region, pairedEcsId: 'ECS-' + key,
+      queue: { servers: 5, serviceTimeSec: { asis: 9, tobe: 5 }, capacity: 25, paramRef: 'C2-LEGACY-ICC-SVC-01' }
+    });
+    KJ.NODES.push({
+      id: 'ECS-' + key, name: '교전통제소 ECS (' + site.label + ')',
+      category: 'c2', service: cheongung ? 'af' : 'army', echelon: 'battery',
+      coord: [coord[0] - 0.015, coord[1] + 0.015], coordNote: note,
+      role: '포대 MFR 항적접수, ICC 협조·승인, 사수 교전명령.',
+      deploymentRegion: site.region, pairedIccId: 'ICC-' + key, pairedShooterId: 'BAT-' + site.weapon + '-' + key,
+      queue: { servers: 8, serviceTimeSec: { asis: 3, tobe: 2 }, capacity: 24, paramRef: 'C2-LEGACY-ECS-SVC-01' }
+    });
+    KJ.NODES.push({
+      id: 'MFR-' + key, name: (cheongung ? '천궁-II' : '천마') + ' MFR (' + site.label + ')',
+      category: 'sensor', service: cheongung ? 'af' : 'army', echelon: 'battery',
+      coord: [coord[0] + 0.012, coord[1] - 0.012], coordNote: note,
+      role: '포대 전속 다기능레이더. 탐지·추적·화력통제 항적을 ECS에 제공.',
+      deploymentRegion: site.region, pairedEcsId: 'ECS-' + key,
+      detects: cheongung
+        ? ['fighter', 'ac_low', 'heli', 'cruise', 'srbm', 'mrl_large']
+        : ['uav_small', 'ac_low', 'heli', 'cruise'],
+      coverage: axes, detectProb: { value: cheongung ? 0.85 : 0.65, paramRef: cheongung ? 'WPN-MSAM2-RADAR-01' : 'WPN-CHUNMA-RADAR-01' },
+      rangeKm: cheongung ? 100 : 20, rangeNote: '공개자료 기반 개념 탐지범위'
+    });
+    KJ.NODES.push({
+      id: 'BAT-' + site.weapon + '-' + key,
+      name: (cheongung ? '천궁-II' : '천마') + ' 포대 (' + site.label + ')',
+      category: 'shooter', service: cheongung ? 'af' : 'army', echelon: 'battery',
+      coord: [coord[0] - 0.025, coord[1] - 0.020], coordNote: note,
+      role: (cheongung ? '중·저고도 항공·하층 탄도탄 요격' : '저고도 국지방공') + ' 개념 포대.',
+      deploymentRegion: site.region, weaponType: site.weapon,
+      pairedIccId: 'ICC-' + key, pairedEcsId: 'ECS-' + key, pairedMfrId: 'MFR-' + key,
+      coverage: axes,
+      controlledBy: { asis: ['ECS-' + key], tobe: ['ECS-' + key] },
+      canEngage: cheongung
+        ? { fighter: true, ac_low: true, heli: true, cruise: true, uav_small: false, srbm: true, mrl_large: true }
+        : { fighter: false, ac_low: true, heli: true, cruise: true, uav_small: true, srbm: false, mrl_large: false },
+      wtaSuit: cheongung
+        ? { low: 0.7, medium: 0.9, ballistic: 1.2, paramRef: 'C2-WTA-SUIT-01' }
+        : { low: 1.3, medium: 0.3, ballistic: 0, paramRef: 'C2-WTA-SUIT-01' },
+      engage: cheongung
+        ? { rangeKm: 40, channels: 10, engageTimeSec: 45, pk: { default: { kind: 'triangular', min: 0.65, mode: 0.75, max: 0.85 }, paramRef: 'WPN-MSAM2-PK-01' }, costPerShotM: 3, costRef: 'WPN-MSAM-COST-01', magazine: 32, magRef: 'WPN-MSAM-MAG-01' }
+        : { rangeKm: 9, channels: 6, engageTimeSec: 60, pk: { default: { kind: 'triangular', min: 0.2, mode: 0.3, max: 0.4 }, paramRef: 'WPN-SHORAD-PK-01' }, costPerShotM: 0.2, costRef: 'WPN-SHORAD-COST-01', magazine: 48, magRef: 'WPN-CHUNMA-MAG-01' }
+    });
+  });
+
   // Phase 0 compatibility boundary: keep the representative deployment's exact
   // public object shape while exposing type/instance declarations separately.
   // Key order is retained during reconstruction so legacy JSON/result hashes do

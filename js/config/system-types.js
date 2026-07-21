@@ -211,7 +211,11 @@
     ECS: c2('교전통제소', 'battery', 8, { system: [1, 2], operator: { high: 1, mid: 2, low: 3 } }, 'battery'),
     IAOC: c2('통합공중작전통제소', 'killweb_central', 20, { system: [1, 2], operator: { high: 0.5, mid: 1, low: 1.5 } }, 'global'),
     EOC: c2('교전운영센터', 'killweb_engagement', 10, { system: [0.5, 1], operator: { high: 0.5, mid: 1, low: 2 } }, 'global'),
-    ARMY_LOCAL_AD: c2('육군·해병 국지방공', 'local_ad', 8, { system: [1, 2], operator: { high: 1, mid: 2, low: 3 } }, 'local', { integrated: false }),
+    ARMY_LOCAL_AD: c2('육군 군단·권역 방공 C2A/AOC', 'corps_aoc', 8, { system: [1, 2], operator: { high: 1, mid: 2, low: 3 } }, 'corps_local', {
+      integrated: false,
+      paramRef: 'C2-CORPS-AOC-01',
+      sourceNote: '군단 AOC의 MCRC+국지레이더 항적융합·자체 자동교전을 모사하는 공개자료 기반 개념 C2A'
+    }),
     USFK_THAAD_C2: c2('USFK THAAD C2', 'usfk_independent', 6, { system: [1, 2], operator: { high: 1, mid: 2, low: 3 } }, 'usfk_thaad', { integrated: false }),
     USFK_PATRIOT_C2: c2('USFK Patriot C2', 'usfk_independent', 12, { system: [1, 2], operator: { high: 1, mid: 2, low: 3 } }, 'usfk_patriot', { integrated: false })
   };

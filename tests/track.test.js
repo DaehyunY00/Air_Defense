@@ -20,7 +20,9 @@ var KJ = global.KJ;
 
 var fail = 0;
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
-var ARMY_DIRECT = ['ADC2A-W', 'LLR-1C', 'LLR-CD'];
+var BASE_DIRECT = ['ADC2A-W', 'LLR-1C', 'LLR-CD'];
+var MFR_DIRECT = (KJ.LEGACY_AIR_DEFENSE_SITES || []).map(function (s) { return 'MFR-' + s.key; });
+var DIRECT_SENSORS = BASE_DIRECT.concat(MFR_DIRECT);
 
 console.log('# Phase 3 — 센서→JAMDC2 직결: ①②(탐지·라우팅) 독립성');
 
@@ -29,7 +31,7 @@ function withDirect(hasDirect, fn) {
   var saved = KJ.LINKS;
   if (!hasDirect) {
     KJ.LINKS = saved.filter(function (l) {
-      return !(l.to === 'JAMDC2' && ARMY_DIRECT.indexOf(l.from) !== -1);
+      return !(l.to === 'JAMDC2' && DIRECT_SENSORS.indexOf(l.from) !== -1);
     });
   }
   try { return fn(); } finally { KJ.LINKS = saved; }
@@ -40,13 +42,16 @@ function detectedSeq(scn) {
   return out;
 }
 
-// 대조군: 육군센서가 커버하지 않는 위협(fighter@east — ACR-E·E737·AEGIS-E만 커버) →
-// 직결 규칙이 발동하지 않으므로 직결 링크 유무와 무관하게 tobe detected가 bitwise 동일해야 한다.
-var ctrl = { id: 'ctrl', name: '독립성 대조(육군센서 무커버)', mix: [{ type: 'fighter', axis: 'east', ratePerMin: 1 }] };
-var ctrlOff = withDirect(false, function () { return detectedSeq(ctrl); });
-var ctrlOn = withDirect(true, function () { return detectedSeq(ctrl); });
-assert(JSON.stringify(ctrlOff) === JSON.stringify(ctrlOn),
-  '①②독립성: 육군센서 무커버 시 직결 유무와 무관하게 tobe detected bitwise 동일 (' + JSON.stringify(ctrlOn) + ')');
+// 확장 MFR이 전 축선에 있으므로 종전의 "직결 센서 무커버" E2E 대조군은 사라졌다.
+// 대신 같은 센서 집합의 per-scan 탐지확률이 링크 토글과 무관함을 직접 고정한다.
+var probThreat = { type: 'uav_small', _sensors: [KJ.nodeById('LAR-C'), KJ.nodeById('MFR-C1')] };
+var probOff = withDirect(false, function () {
+  return new KJ.Simulation({ scenario: KJ.scenarioById('sc2'), mode: 'tobe', intensity: 1, seed: 3, endTimeSec: 1800 })._scanProb(probThreat);
+});
+var probOn = withDirect(true, function () {
+  return new KJ.Simulation({ scenario: KJ.scenarioById('sc2'), mode: 'tobe', intensity: 1, seed: 3, endTimeSec: 1800 })._scanProb(probThreat);
+});
+assert(probOff === probOn, '①②독립성: 직결 링크 토글은 동일 센서집합의 per-scan 탐지확률을 변경하지 않음');
 
 // 토글이 실제로 무언가를 바꾼다는 것을 보장(대조 어서션이 vacuous가 아님을 증명):
 // 육군센서 커버 위협(uav_small@seoul)에서는 직결 링크가 켜지면 라우팅이 달라진다.
@@ -54,7 +59,7 @@ var seoul = { id: 'seoul', name: '육군센서 커버', mix: [{ type: 'uav_small
 var routeOff = withDirect(false, function () { return KJ.runDES({ scenario: seoul, mode: 'tobe', intensity: 1.5, seed: 3, endTimeSec: 1800 }); });
 var routeOn = withDirect(true, function () { return KJ.runDES({ scenario: seoul, mode: 'tobe', intensity: 1.5, seed: 3, endTimeSec: 1800 }); });
 function hasDirectLink(res) {
-  return res.links.some(function (l) { return l.to === 'JAMDC2' && ARMY_DIRECT.indexOf(l.from) !== -1; });
+  return res.links.some(function (l) { return l.to === 'JAMDC2' && DIRECT_SENSORS.indexOf(l.from) !== -1; });
 }
 assert(hasDirectLink(routeOn) && !hasDirectLink(routeOff),
   '직결 발동 확인: 육군센서 커버 위협은 켜짐에서만 센서→JAMDC2 직결 링크가 발화(토글 유효 — 대조군 non-vacuous)');
@@ -62,10 +67,10 @@ assert(hasDirectLink(routeOn) && !hasDirectLink(routeOff),
 var asisRun = KJ.runDES({ scenario: seoul, mode: 'asis', intensity: 1.5, seed: 3, endTimeSec: 1800 });
 assert(!hasDirectLink(asisRun), 'As-Is에서는 센서→JAMDC2 직결 링크 미발화 (To-Be 전용 comm)');
 
-// 직결 대상이 육군 3개로 한정됨(공/해군 광역센서는 직결 제외 — 설계 근거 회귀 고정)
+// 기존 육군 3개 + 신규 포대 MFR 10개가 To-Be JAMDC2에 직접 보고한다.
 var directDefs = KJ.LINKS.filter(function (l) { return l.to === 'JAMDC2' && l.kind === 'report' && KJ.nodeById(l.from) && KJ.nodeById(l.from).category === 'sensor'; });
-assert(directDefs.length === 3 && directDefs.every(function (l) { return ARMY_DIRECT.indexOf(l.from) !== -1 && !l.comm.asis && l.comm.tobe; }),
-  '센서→JAMDC2 직결 = 육군 3개(ADC2A-W·LLR-1C·LLR-CD) 한정 · To-Be 전용(asis 키 없음)');
+assert(directDefs.length === 13 && directDefs.every(function (l) { return DIRECT_SENSORS.indexOf(l.from) !== -1 && !l.comm.asis && l.comm.tobe; }),
+  '센서→JAMDC2 직결 = 기존 3개 + 신규 MFR 10개 · To-Be 전용');
 
 console.log('# Phase 4 — 중복항적(dup) 팬아웃: 부활·보존');
 // 4E JAOC-CD 死노드 부활: As-Is 팬아웃으로 LLR-CD→JAOC-CD 중복항적이 발화 → ρ>0

@@ -34,7 +34,7 @@
 | # | 지표 | MoM | 계산 위치(파일:라인) | 결과 필드 | 시각화 요소 | As-Is↔To-Be 방향 검증 | 판정 |
 |---|---|---|---|---|---|---|---|
 | 6 | 중복교전 위험(축선 합) | MoCE | `overlap-heatmap.js`(`computeOverlapHeat`), 합산은 `sim-view.js:726-729`(`overlapRiskSum`) | `computeOverlapHeat().axes[]` | 축선별 상세: `sim-view.js:586-601`(섹션⑦, 히트맵 바) · 합산: `sim-view.js:753`(vsCompare, MoCE 태그) | `overlap.test.js`(축선별 To-Be≤As-Is, JAMDC2 허브 완전해소) + `metrics-verification.test.js`(overlapRiskSum이 축선 합과 정확히 일치함을 재현, 3개 시나리오 To-Be=0 고정) | **PASS** (단, To-Be가 항상 정확히 0 — §3 참고사항) |
-| 7 | 구조적 실패(공백·포화·지연) 합 | MoCE | `sim-view.js:717-724`(`structuralLeaks`), taxonomy는 `sim-engine.js:720-736`(`LEAK_TAXONOMY.structural`) | UI 계산 함수 | `sim-view.js:762`(vsCompare, MoCE 태그) | `refine.test.js` C-2(sc2/sc3, 5시드 집계: To-Be 구조적 비율 < As-Is, 명중실패 비중 이동) | **PASS** |
+| 7 | 확정 구조적 주원인 합 + 조건부 후보 | MoCE | `failureSummary.byStructurality`, `LEAK_TAXONOMY.structurality`, `classifyFailure(code,evidence)` | 고해상도 주원인 집계 / legacy 호환 taxonomy | `sim-view.js` As-Is↔To-Be 대조에 구조·조건부 별도 표시 | `failure-classification.test.js`(주원인 보존·조건부 승격·PIP 세분화) | **PASS** |
 | 8 | 도출 병목 수 | MoCE | `sim-engine.js` `_results` 내 `bottlenecks` 배열(§ "병목 종합") | `res.bottlenecks` | `sim-view.js:526`(statCard) · `sim-view.js:554-560`(섹션④ 목록) · `sim-view.js:764`(vsCompare, MoCE 태그) | `engine.test.js` "To-Be 병목 ≤ As-Is" | **PASS** |
 | 9 | 분권 전환(중앙↔분권) | (MoCE 성격, MoM 미태그) | `sim-engine.js:52,83,336-339,657-659` | `global.delegation.{count,firstT,byNode}` | `sim-view.js:524-525`(statCard, **현재 실행 모드 1개만**) — **vsCompare 9행에 비교행 없음, byNode 어디에도 미표시** | `refine.test.js` B-2(합성 시나리오로 매커니즘 검증) + `metrics-verification.test.js`(공식 SC1-3×UI 강도 0.5~3.0×에서 **To-Be 0건 고정**, As-Is는 SC3 x≥2.0에서만 발생) | **발견 2** (As-Is↔To-Be 비교 UI 없음 + 실사용 시나리오에서 To-Be 관측 불가) |
 
@@ -50,7 +50,7 @@
 
 | # | 지표 | 계산 위치(파일:라인) | 결과 필드 | 시각화 요소 | 판정 |
 |---|---|---|---|---|---|
-| 13 | 원인 taxonomy 8종 | `sim-engine.js:720-736`(`KJ.LEAK_TAXONOMY`/`leakTaxonomy`) | 정적 딕셔너리 | 원인 대조표(14)·실패 타임라인(15)에서 **암묵적으로만** 사용 — 8종 전체를 나열하는 독립 참조표는 `근거자료` 탭(`panels.js:103-128`)에도 없음 | **PASS**(기능) / 저심각도 문서화 공백(§3 참고) |
+| 13 | 원인 taxonomy v2 | `KJ.LEAK_TAXONOMY`/`classifyFailure` | family·structurality·stage + 증거 기반 조건부 승격 | 결과 원인 대조표·파이프라인 taxonomy 참조표 | `failure-classification.test.js` | **PASS** |
 | 14 | As-Is↔To-Be 원인 대조표 | `sim-view.js:637-663`(`leakCompareTable`) | 렌더 함수 | `sim-view.js:563-564`(섹션⑤) | **PASS** |
 | 15 | 개별 실패 항적 타임라인 | `sim-view.js:669-703`(`failedTimelineSection`) | 렌더 함수 | `sim-view.js:566-567`(섹션⑤-2), `<details>` 접이식, 상한 40건 명시 | **PASS** |
 
@@ -151,13 +151,11 @@ DES 결과 노드표(`sim-view.js:604-621`)와 해석 탭 노드표(`panels.js:4
 - **영향**: 낮음~중간(오인 가능성) — **임의 수정 여부**: 하지 않음, 툴팁에 "항상 개선되는
   지표가 아님"을 명시할지 질문으로 남김(§5)
 
-### 참고 (최저 심각도) — 원인 taxonomy 8종의 독립 참조표 부재
+### 해결 — 원인 taxonomy v2 참조표·구조성 표시
 
-`KJ.LEAK_TAXONOMY`(`sim-engine.js:720-731`) 8개 코드 전체를 한눈에 보여주는 화면이 없다.
-원인 대조표(14)·실패 타임라인(15)은 **실제로 발생한 코드만** 보여주므로(설계상 정상 —
-발생하지 않은 코드를 나열할 필요는 없음), 사용자가 전체 분류체계를 이해하려면 `docs/params.md`
-또는 소스코드를 읽어야 한다. 기능 결함이 아니라 문서화 편의성 문제이므로 판정에는 반영하지 않되
-참고로 남긴다.
+[분석] 탭 taxonomy 표와 결과 대조표가 `family`·`structurality`·발생단계를 표시한다.
+고정 구조/비구조 이분법 대신 구조·조건부·비구조·미분해를 보여주며, 세부 판정과
+반사실 기준은 `docs/adr/ADR-050-failure-classification-v2.md`에서 정본화한다.
 
 ---
 
@@ -192,4 +190,4 @@ node scripts/capture-metrics.mjs http://localhost:8000
    `js/ui/sim-view.js:756`의 `tip` 문구에 "다른 지표와 달리 To-Be가 항상 개선되는 지표가
    아님 — Best-Shooter 배정·재교전 횟수 차이로 시나리오·강도에 따라 악화되는 경우도 실재함
    (docs/metrics-verification.md 참조)"을 추가(계산 로직 변경 없음, 툴팁 텍스트만 수정).
-4. **원인 taxonomy 8종 참조표 추가 — 논의되지 않음(보류).** 최저 우선순위 항목으로 남겨둠.
+4. **원인 taxonomy v2 참조표 추가 — 해결.** 원인 계열·구조성·발생단계와 구조/조건부 뽃지를 [분석]·결과 화면에 표시.

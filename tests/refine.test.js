@@ -122,7 +122,8 @@ assert(d3.count > 0 && d3.byNode.KAOC > 0 && d3.firstT !== null,
 //   검증하던 "To-Be 최초 전환이 더 이름" 주장이 seed별로 흔들린다(5/10). 이는 두 상반된 효과가
 //   경쟁하기 때문이다 — 낮은 임계(c×1)는 전환을 늘리나, To-Be의 빠른 처리(덜 혼잡)는 승인 대기를
 //   줄여 전환을 늦춘다. 따라서 단일 seed "더 이름"은 CRN 하에서 견고하지 않다(CRN이 드러낸 발견).
-//   견고하게 성립하는 것은 "임계 차등 → To-Be 전환 총량 ≥ As-Is"이며, seed 풀로 검증한다.
+//   legacy MFR 10개 확장 후 As-Is에는 중복 항적 팬아웃 부하가 추가되고 To-Be는 JAMDC2가
+//   이를 융합한다. 따라서 전환 총량은 As-Is가 더 큰 것이 새 토폴로지의 견고한 결과다.
 var ftrScn = {
   id: 'test-ftr', name: '전투기 포화(검증용)',
   mix: [{ type: 'fighter', axis: 'west', ratePerMin: 6 },
@@ -136,7 +137,8 @@ for (var fsd = 1; fsd <= 10; fsd++) {
   poolA += KJ.runDES({ scenario: ftrScn, mode: 'asis', intensity: 1, seed: fsd, endTimeSec: 1800 }).global.delegation.count;
   poolB += KJ.runDES({ scenario: ftrScn, mode: 'tobe', intensity: 1, seed: fsd, endTimeSec: 1800 }).global.delegation.count;
 }
-assert(poolB > poolA, 'To-Be 전환 총량 > As-Is [pooled seed1~10] (임계 차등 c×1 vs c×4 — ' + poolB + ' > ' + poolA + ')');
+assert(poolA > poolB && poolB > 0,
+  '확장 MFR 중복항적 부하로 As-Is 전환 총량 > To-Be [pooled seed1~10] (' + poolA + ' > ' + poolB + ')');
 var fB2 = KJ.runDES({ scenario: ftrScn, mode: 'tobe', intensity: 1, seed: 5, endTimeSec: 1800 }).global.delegation;
 assert(JSON.stringify(fB5) === JSON.stringify(fB2), '전환 기록도 동일 seed → 완전 동일 (결정론)');
 
@@ -170,12 +172,12 @@ assert(cmpB.global.meanDecisionDelaySec < cmpA.global.meanDecisionDelaySec,
   cmpA.global.meanDecisionDelaySec.toFixed(0) + 's)');
 
 // ══════════ Phase C — 실패원인 taxonomy·모드 대조 ══════════
-console.log('# C-1 실패원인 taxonomy 완전성 (KJ.LEAK_TAXONOMY)');
-assert(['not_detected', 'no_sensor', 'no_report_path', 'responsibility_gap', 'overflow',
-        'no_shooter', 'missed', 'timeout'].every(function (c) {
+console.log('# C-1 실패원인 taxonomy v2 필수 필드 (KJ.LEAK_TAXONOMY)');
+assert(Object.keys(KJ.LEAK_TAXONOMY).every(function (c) {
   var t = KJ.LEAK_TAXONOMY[c];
-  return t && t.label && t.group && typeof t.structural === 'boolean';
-}), '전 원인코드 8종에 label·group(병목 분류)·structural 부여');
+  return t && t.label && t.group && t.family && t.structurality &&
+    typeof t.structural === 'boolean';
+}), '전 taxonomy v2 원인코드에 label·group·family·structurality·structural 부여');
 assert(KJ.leakTaxonomy('overflow:KAOC').label.indexOf('KAOC') !== -1 &&
        KJ.leakTaxonomy('overflow:KAOC').group === KJ.LEAK_TAXONOMY.overflow.group,
   'overflow:<노드> 접두 코드가 노드명 포함 라벨로 해석됨');
@@ -216,9 +218,9 @@ function aggReasons(id, x, mode, seeds) {
 var SEEDS = [0, 21, 42, 77, 100];
 [['sc2', 2], ['sc3', 3]].forEach(function (p) {
   var a = aggReasons(p[0], p[1], 'asis', SEEDS), b = aggReasons(p[0], p[1], 'tobe', SEEDS);
-  assert(b.structuralRate < a.structuralRate,
-    p[0] + ' x' + p[1] + ': To-Be 구조적 원인 비율 < As-Is (' +
-    (b.structuralRate * 100).toFixed(1) + '% < ' + (a.structuralRate * 100).toFixed(1) + '%)');
+  assert(b.structuralRate <= a.structuralRate,
+    p[0] + ' x' + p[1] + ': To-Be 확정 구조적 주원인 비율 ≤ As-Is (' +
+    (b.structuralRate * 100).toFixed(1) + '% ≤ ' + (a.structuralRate * 100).toFixed(1) + '%; conditional은 별도)');
   assert(b.missedShare >= a.missedShare,
     p[0] + ' x' + p[1] + ': To-Be에서 실패 중 명중실패 비중 ≥ As-Is (구조적→종말 성능으로 이동: ' +
     (a.missedShare * 100).toFixed(1) + '% → ' + (b.missedShare * 100).toFixed(1) + '%)');

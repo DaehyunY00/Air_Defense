@@ -103,6 +103,17 @@
     <td>다중센서 융합 단일 항적, 데이터링크(~2초), 위협별 사전승인 자동교전, Best-Shooter 무기배정</td></tr>
 </table>
 
+<h3>1.1.1 Legacy 대표 배치</h3>
+<div class="box blue"><b class="t">기본 배치: 64노드</b>
+기존 24노드에 ICC–ECS–MFR–포대 10세트(서부 4·중부 3·동부 3)를 추가했습니다.
+천마 5개와 천궁-II 5개이며, 각 세트는 전속 MFR→ECS→ICC와 ECS→포대 명령 경로를
+가집니다. As-Is ICC↔MCRC는 180초 음성/VTC, To-Be MFR·ICC↔JAMDC2는 2초
+데이터링크입니다. 모든 위치와 수량은 실제 부대가 아닌 정책연구용 개념 배치입니다.</div>
+<div class="box"><b class="t">지도에서 수정본 확인</b>
+범례 상단에 <code>legacy 확장 배치 · 활성 63/64노드 · 10세트 포함</code>이 표시되어야 합니다.
+저배율에서는 같은 사이트의 네 자산을 리더선으로 벌려 표시하고 zoom 11 이상에서는 실제
+개념좌표로 모입니다. 연결선은 화면 과밀 방지를 위해 기본 OFF이므로 범례의 표시 토글로 켜십시오.</div>
+
 <h3>1.2 핵심 원칙 — 병목은 "도출"된다</h3>
 <div class="box blue"><b class="t">이 도구의 정체성</b>
 어느 노드가 병목인지는 데이터 어디에도 미리 정해져 있지 않습니다. 병목은
@@ -163,7 +174,7 @@
   <tr><th style="width:22%">컨트롤</th><th>의미</th><th style="width:34%">사용 팁</th></tr>
   <tr><td><b>시나리오</b></td><td>위협 구성(어떤 위협이 어느 축선으로 분당 몇 건 도착하는지)을 결정</td><td>목적에 맞는 시나리오 선택(§1.3)</td></tr>
   <tr><td><b>체계 모드</b></td><td>As-Is 분절형 ↔ To-Be 통합형 토글</td><td>결과창·분석 탭은 두 모드를 자동으로 함께 계산해 비교해 주므로, 이 토글은 "지도에 어느 구조를 그릴지"에 가깝습니다</td></tr>
-  <tr><td><b>위협 강도 ×</b></td><td>모든 위협 도착률에 곱하는 배수(0.5~3.0)</td><td>×1.5~×2.0부터 병목이 잘 드러나고, SC3는 ×1.75 부근에서 임계 돌파(기본 seed 기준)</td></tr>
+  <tr><td><b>위협 강도 ×</b></td><td>모든 위협 도착률에 곱하는 배수(0.5~3.0)</td><td>×1.5~×2.0부터 병목이 잘 드러나고, 확장 legacy SC3는 ×1.5 부근에서 임계 돌파(기본 seed 기준)</td></tr>
   <tr><td><b>seed</b></td><td>난수 시드 — 같은 seed·설정이면 결과가 항상 동일(결정론)</td><td>보고서에 인용할 결과는 seed를 기록해 두세요</td></tr>
   <tr><td><b>시간(초)</b></td><td>시뮬레이션 길이(기본 1800초=30분)</td><td>짧으면 표본이 적어 흔들립니다. 통계 주장은 MC 탭으로</td></tr>
 </table>
@@ -235,16 +246,24 @@ As-Is/To-Be를 각 1회씩 결정론 실행해 나란히 비교한 값입니다.
 <table>
   <tr><th style="width:20%">단계</th><th style="width:33%">병목(무엇이 막히나)</th><th>관측 지표 / 실패코드</th></tr>
   <tr><td>① 탐지</td><td>저고도·저피탐 탐지 실패, 센서 커버리지 공백</td><td>탐지율 / <code>not_detected</code>·<code>no_sensor</code></td></tr>
-  <tr><td>② 추적생성(보고)</td><td>항적 비융합, 보고경로 부재</td><td>통신지연 부하 / <code>no_report_path</code></td></tr>
+  <tr><td>② 추적생성(보고)</td><td>책임 C2 부재, 항적 비융합, 보고경로 부재</td><td>통신지연 부하 / <code>no_responsible_c2</code>·<code>no_report_path</code></td></tr>
   <tr><td>③④⑤ C2 처리<br>(식별·평가·무기배정)</td><td>C2 대기행렬 포화</td><td>C2 최대 ρ·드롭·병목 수 / <code>overflow:&lt;C2노드&gt;</code></td></tr>
   <tr><td><b>⑥⑦ 결심·교전협조</b> ★</td><td><b>한국군 이원화 C2의 최대 병목</b> — 음성 협조 지연·책임공백·중복교전</td><td>결심 지연·중복교전 위험·분권 전환 / <code>responsibility_gap</code></td></tr>
-  <tr><td>⑧ 교전명령</td><td>교전수단 제약(신궁·천마↔탄도탄), 교전채널 포화</td><td>무기 ρ·드롭 / <code>no_shooter</code>·<code>overflow:&lt;무기&gt;</code></td></tr>
+  <tr><td>⑧ 교전명령</td><td>무기·PIP·화력통제·채널·탄약 제약</td><td>사수 실제 ρ·피크활성 / <code>no_capable_weapon</code>·<code>engagement_geometry_gap</code>·<code>no_fire_control</code>·<code>capacity_full</code>·<code>ammo_depleted</code></td></tr>
   <tr><td>⑨ BDA·재교전</td><td>명중 실패(낮은 요격확률), 체공창 소진</td><td>격추율·평균 격추시간·비용교환비 / <code>missed</code>·<code>timeout</code></td></tr>
-  <tr><td>결과 종합</td><td>전 단계의 귀결</td><td>요격 실패율(누출률)·구조적 실패 합</td></tr>
+  <tr><td>결과 종합</td><td>전 단계의 귀결</td><td>요격 실패율·주원인·기여원인·구조/조건부 합</td></tr>
 </table>
 
+<div class="box blue"><b class="t">FULL As-Is 군단 AOC 방공 C2A</b>
+FULL 고해상도 As-Is에서 군단·수방사·해병 권역 AOC는 MCRC 공중항적과 자체
+TPS-880K·MFR 항적을 융합하고, 위협군·잔여 방어시간으로 우선순위를 판단한 뒤
+자체 통제자산을 자동 할당·승인합니다. 교전현황은 MCRC로 음성/VTC 전파되며,
+채널 1개·수용 4건·지연 90~270초 개념 제약으로 대기·드롭이 발생합니다.
+결과의 <b>군단 AOC 방공 C2A 정보상태</b> 표에서 복수출처 융합, 현황 전송·수신·대기·드롭,
+상태 지연·드롭에서 유래한 실제 중복교전을 확인할 수 있습니다.</div>
+
 <h3>5.2 하단 상세(정상상태 해석)</h3>
-<p>파이프라인 아래에는 병목 taxonomy 8종 표(§8.2와 동일), 정책적 읽기(어느 단계에 투자할
+<p>파이프라인 아래에는 실패 taxonomy v2 표(원인 계열·구조성·단계), 정책적 읽기(어느 단계에 투자할
 것인가), 그리고 수식 기반(M/M/c) 정상상태 근사로 계산한 노드 이용률 표·통신 링크 부하표·
 위협별 타임라인이 이어집니다. 링크 표에서는 유형(voice/kvmf/link16/datalink)별 지연과
 통신병목 판정을 볼 수 있습니다.</p>
@@ -303,29 +322,28 @@ As-Is/To-Be를 각 1회씩 결정론 실행해 나란히 비교한 값입니다.
   <tr><td>F2T2EA / OODA / TEWA</td><td>표적처리 킬체인(Find-Fix-Track-Target-Engage-Assess) / 결심 루프(관측-판단-결심-행동) / 위협평가·무기할당. 엔진 9단계가 이들과 1:1 매핑됩니다([분석] 탭 카드에 표기).</td></tr>
   <tr><td>MoP / MoCE / MoFE</td><td>NATO 지표 계층 — <span class="tag mop">MoP</span> 과정 성능(결심 지연·통신지연·격추시간) / <span class="tag moce">MoCE</span> C2 효과성(중복교전 위험·구조적 실패·병목 수) / <span class="tag mofe">MoFE</span> 전력 효과(누출률·격추율·비용교환비).</td></tr>
   <tr><td>95% CI · 수렴</td><td>신뢰구간 — "참값이 이 범위에 있을 것"의 통계적 표현. 두 모드의 CI가 겹치지 않으면 차이가 유의합니다.</td></tr>
-  <tr><td>임계 전환점</td><td>As-Is C2 최대 ρ가 0.9를 처음 넘는 위협 강도. 이 이후 구간에서 To-Be 개선폭이 비선형으로 커집니다.</td></tr>
+  <tr><td>임계 전환점</td><td>As-Is C2 최대 ρ가 0.9를 처음 넘는 위협 강도. 전·후 개선폭과 최대격차를 계산하지만 어느 구간이 더 커야 한다고 강제하지 않습니다.</td></tr>
   <tr><td>비용교환비</td><td>저가 포화위협(무인기·방사포) 대응에 소모한 요격탄 개념비용 ÷ 격추한 위협의 개념가치. &gt;1이면 아군이 더 비싼 자원을 소모. <b>주의: To-Be가 항상 개선되는 지표가 아닙니다</b>(시나리오·강도에 따라 반전 가능).</td></tr>
   <tr><td>누출률(요격 실패율)</td><td>생성 위협 중 격추하지 못하고 공역을 통과한 비율 — 모든 단계 병목의 최종 귀결.</td></tr>
   <tr><td>KVMF / Link-16 / SAWS</td><td>육군 계열 데이터링크(~30초) / 합동·공군·해군 전술데이터링크(~12초) / 일방향 위성 경보방송(교전용 항적으로 사용 불가).</td></tr>
 </table>
 
-<h3>8.2 실패코드 8종 (병목 taxonomy)</h3>
+<h3>8.2 실패 분류 taxonomy v2</h3>
 <table>
-  <tr><th>코드</th><th>라벨</th><th>발생 단계</th><th>구조적?</th><th>해결 주체</th></tr>
-  <tr><td><code>not_detected</code></td><td>미탐지</td><td>① 탐지</td><td>✅</td><td>센서·융합</td></tr>
-  <tr><td><code>no_sensor</code></td><td>탐지 공백(센서 부재)</td><td>① 탐지</td><td>✅</td><td>센서 배치</td></tr>
-  <tr><td><code>no_report_path</code></td><td>보고경로 부재(항적 비융합)</td><td>② 추적생성</td><td>✅</td><td>To-Be 융합</td></tr>
-  <tr><td><code>responsibility_gap</code></td><td>책임공백(협조경로 부재)</td><td>⑥⑦ 결심·협조 ★</td><td>✅</td><td><b>To-Be 통합 C2</b></td></tr>
-  <tr><td><code>overflow:&lt;노드&gt;</code></td><td>포화손실</td><td>③④⑤ C2 / ⑧ 교전</td><td>✅</td><td>처리용량·자동화</td></tr>
-  <tr><td><code>no_shooter</code></td><td>교전수단 부재(제약)</td><td>⑧ 교전명령</td><td>❌</td><td>무기체계 능력</td></tr>
-  <tr><td><code>missed</code></td><td>명중 실패(기회소진)</td><td>⑨ BDA</td><td>❌</td><td>무기 Pk·재교전</td></tr>
-  <tr><td><code>timeout</code></td><td>처리지연 초과(공역이탈)</td><td>⑨ 종합</td><td>✅</td><td>전 단계 지연</td></tr>
+  <tr><th>대표 코드</th><th>원인 계열</th><th>발생 단계</th><th>판정</th><th>해석</th></tr>
+  <tr><td><code>not_detected</code></td><td>확률적 미탐지</td><td>① 탐지</td><td>비구조</td><td>센서가 있는 상태의 Pd 시행 실패</td></tr>
+  <tr><td><code>no_sensor</code></td><td>탐지 아키텍처</td><td>① 탐지</td><td><b>구조</b></td><td>교전 가능 센서 부재</td></tr>
+  <tr><td><code>no_responsible_c2</code><br><code>no_report_path</code><br><code>responsibility_gap</code></td><td>책임·연결 아키텍처</td><td>②·⑥⑦</td><td><b>구조</b></td><td>책임 C2 부재, 보고/협조경로 단절</td></tr>
+  <tr><td><code>no_shooter</code><br><code>no_capable_weapon</code><br><code>engagement_geometry_gap</code></td><td>전력·기하 아키텍처</td><td>⑧ 교전</td><td><b>구조</b></td><td>통제 가능 사수, 능력 또는 전 비행경로 PIP 창 부재</td></tr>
+  <tr><td><code>window_lost_due_to_c2</code></td><td>C2가 소진한 교전창</td><td>⑥~⑧</td><td><b>구조</b></td><td>명령 도착 전 유효 PIP 창 소진</td></tr>
+  <tr><td><code>overflow:&lt;노드&gt;</code><br><code>timeout:c2</code><br><code>capacity_full</code><br><code>no_fire_control</code></td><td>용량·시간</td><td>③~⑨</td><td>조건부</td><td>단일 실행만으로 구조라 단정하지 않음</td></tr>
+  <tr><td><code>ammo_depleted</code><br><code>no_ammo</code></td><td>자원 소진</td><td>⑧ 교전</td><td>비구조</td><td>해당 실행의 탄약 소진</td></tr>
+  <tr><td><code>missed</code><br><code>timeout:engage</code></td><td>확률·교전 결과</td><td>⑨ BDA</td><td>비구조</td><td>발사 후 Pk 실패 또는 교전 기회 소진</td></tr>
 </table>
 <div class="box green"><b class="t">읽는 법</b>
-✅ <b>구조적</b> 원인은 C2 통합(To-Be)으로 감소가 기대되는 병목입니다. ❌ 비구조
-(<code>no_shooter</code>·<code>missed</code>)는 C2가 아니라 무기체계 능력·요격확률의 문제라
-통합해도 줄지 않는 것이 정상입니다. To-Be에서 구조적 원인이 줄고 그 일부가
-<code>missed</code>로 옮겨가는 것이 <b>구조 개선의 정상 경로</b>입니다.</div>
+<b>구조</b>는 배치·연결·권한·무기 능력을 바꾸지 않으면 해소되지 않는 주원인입니다.
+<b>조건부</b>는 부하·시드·상태에 따라 발생하므로 paired-seed 반복 지속성 또는 아키텍처 개입 반사실 증거가 있어야 구조로 승격합니다.
+병목 수는 최종 누출의 <b>주원인(primary cause)</b> 중 구조로 판정된 코드만 집계하며, 기여원인·조건부 실패는 별도로 표시합니다.</div>
 
 <!-- ═══════════ 9 ═══════════ -->
 <h2 class="pb">9. 결과 해석 방법 — 목적별 분석 레시피</h2>
@@ -373,7 +391,7 @@ As-Is/To-Be를 각 1회씩 결정론 실행해 나란히 비교한 값입니다.
   <tr><th style="width:12%">시나리오</th><th>주목할 화면</th><th>기대되는 패턴</th></tr>
   <tr><td><b>SC1</b></td><td>축선별 중복교전 위험, 링크 표의 voice 협조</td><td>As-Is에서 서부·수도권·중부 경계 위험&gt;0, To-Be에서 0으로 해소. 결심 지연 대폭 단축</td></tr>
   <tr><td><b>SC2</b></td><td>실패 타임라인(명중 실패 다수), 비용교환비</td><td>구조 개선 후에도 <code>missed</code>가 남음(저Pk는 무기 문제) — 비용교환비 수십 배(고가 요격탄 소모 구조)</td></tr>
-  <tr><td><b>SC3</b></td><td>노드 ρ표(KAMDOC·KAOC·AOC), 임계 전환점</td><td>×1.75 부근 임계 돌파(기본 seed) 후 As-Is 급증 — 임계 이후 개선폭 확대가 핵심 논증</td></tr>
+  <tr><td><b>SC3</b></td><td>노드 ρ표(KAMDOC·MCRC·ICC), 임계 전환점</td><td>확장 legacy 기준 ×1.5 부근 임계 돌파. 임계 전·후 격차와 관측 종료 미해결을 함께 비교하며 특정 확대 방향을 전제하지 않음</td></tr>
 </table>
 
 <h3>9.6 해석 시 주의사항</h3>

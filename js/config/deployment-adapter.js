@@ -19,6 +19,14 @@
     dist: Object.freeze({ kind: 'triangular', min: 90, mode: 180, max: 270 }),
     paramRef: 'C2-VOICE-COORD-01'
   });
+  // 군단 AOC→MCRC 교전현황 공유. 음성/VTC 1개 채널이 현재 처리 중
+  // 메시지를 포함해 최대 4건만 수용한다. 수치는 정책연구용 개념값(등급 C).
+  var VOICE_STATUS = Object.freeze({
+    type: 'voice-vtc', delaySec: 180,
+    dist: Object.freeze({ kind: 'triangular', min: 90, mode: 180, max: 270 }),
+    messageServers: 1, messageCapacity: 4, freshnessSec: 300,
+    paramRef: 'C2-ENG-STATUS-01', confidence: 'C'
+  });
   var cache = {};
 
   function freezeAll(o) {
@@ -101,13 +109,15 @@
         name: decl.instanceLabel || type.name,
         category: 'c2', service: decl.forceOwner === 'USFK' ? 'usfk' : 'joint',
         echelon: type.tier, coord: [pos.lat, pos.lon], coordNote: pos.coordNote,
-        role: type.commandScope + ' · 위협종류/생존상태 책임 C2',
+        role: type.commandScope + ' · 위협종류/생존상태 책임 C2' +
+          (decl.typeId === 'ARMY_LOCAL_AD' ? ' · MCRC+국지레이더 항적융합·자체 자동할당' : ''),
         queue: {
           servers: type.simultaneousCapacity,
           serviceTimeSec: { asis: svc, tobe: svc },
           capacity: c2Capacity(type), paramRef: type.paramRef
         },
         c2Axis: decl.c2Axis || null, forceOwner: decl.forceOwner || 'ROK',
+        architectureRole: decl.typeId === 'ARMY_LOCAL_AD' ? 'CORPS_AOC_C2A' : null,
         batteryId: decl.batteryId || null,
         modes: decl.typeId === 'IAOC' || decl.typeId === 'EOC' ? ['tobe'] : undefined,
         confidence: decl.confidence, sourceNote: decl.sourceNote
@@ -215,6 +225,13 @@
         addLink(links, mcrc.id, icc.id, 'coord', LONG, DL_FAST, 'korean_mcrc');
         addLink(links, icc.id, mcrc.id, 'coord', LONG, DL_FAST, 'korean_mcrc');
       });
+      // As-Is 군단 AOC는 MCRC 공중항적과 자체 국지레이더 항적을 C2A에서
+      // 함께 접수한다. 항적 전파는 16초 개념 데이터링크, 반대 방향의 교전현황은
+      // 제한형 음성/VTC 메시지로 분리해 정보의 비대칭을 보존한다.
+      localAds.forEach(function (aoc) {
+        addLink(links, mcrc.id, aoc.id, 'report', LONG, DL_FAST, 'mcrc_to_corps_aoc_track');
+        addLink(links, aoc.id, mcrc.id, 'status', VOICE_STATUS, DL_FAST, 'corps_aoc_engagement_status');
+      });
     }
     sensorNodes(['TPS880K']).forEach(function (s) {
       var owner = c2ForPos(s.localAdPosKey);
@@ -264,7 +281,8 @@
       fusionC2: iaoc ? iaoc.id : null,
       KAMDOC: kamdoc ? kamdoc.id : null,
       MCRC: mcrc ? mcrc.id : null,
-      KAOC: mcrc ? mcrc.id : (kamdoc ? kamdoc.id : null)
+      KAOC: mcrc ? mcrc.id : (kamdoc ? kamdoc.id : null),
+      corpsAocs: localAds.map(function (n) { return n.id; })
     };
     var catalog = freezeAll({
       id: id, deployment: deployment, nodes: nodes, links: links,

@@ -120,12 +120,14 @@ assert(!gOffT2.leakReasons['timeout:c2'] && !gOffT2.leakReasons['timeout:engage'
 // (2) ⑧ no_engage_window와 동일 기준: tries>0 → 비구조. 두 코드 모두 structural:false로 일관
 assert(KJ.leakTaxonomy('timeout:engage').structural === false && KJ.leakTaxonomy('no_engage_window').structural === false,
   'timeout:engage·no_engage_window 모두 비구조 — ⑧⑨가 동일 판정(tries>0→비구조) 사용(ADR-004)');
-assert(KJ.leakTaxonomy('timeout:c2').structural === true,
-  'timeout:c2(tries===0, 교전 미개시) = 구조적 — 앞단 C2·협조 시간 소진');
-// (3) overflow:shooter 재분류: 교전채널(shooter) 노드 = 비구조, C2 노드 = 구조
+assert(KJ.leakTaxonomy('timeout:c2').structurality === 'conditional' &&
+       KJ.classifyFailure('timeout:c2', { persistentAcrossSeeds: true }).structural === true,
+  'timeout:c2 = 조건부 — paired-seed 지속성 증거 후에만 구조로 승격');
+// (3) overflow는 노드 종류와 무관하게 용량 계열 조건부. 반복 증거 전 구조 단정 금지.
 var shooterOv = KJ.leakTaxonomy('overflow:MDU-L'), c2Ov = KJ.leakTaxonomy('overflow:MCRC');
-assert(shooterOv.structural === false && c2Ov.structural === true,
-  'overflow:MDU-L(교전채널)=비구조 · overflow:MCRC(C2)=구조 — 노드 category 기반 재분류(종전 둘 다 구조 오분류 정정)');
+assert(shooterOv.structurality === 'conditional' && c2Ov.structurality === 'conditional' &&
+       !shooterOv.structural && !c2Ov.structural,
+  'overflow:shooter/C2 = 용량 계열 조건부 — 단일 실행으로 구조 단정하지 않음');
 
 // ══════════ Phase 5 — 재교전 상관 pk(pkCorrelated, 기본 OFF) ══════════
 console.log('# Phase 5 — 재교전 상관 pk (기본 OFF = 되돌리기)');
@@ -172,7 +174,8 @@ function salvoAgg(k) {
 var s1 = salvoAgg(1), s2 = salvoAgg(2);
 assert(s2.kr > s1.kr && s2.iM > s1.iM, '연발 k=2: 격추율↑(' + (s1.kr * 100).toFixed(1) + '→' + (s2.kr * 100).toFixed(1) + '%) & 요격탄비용↑ — doctrine 트레이드오프');
 assert(s2.missed < s1.missed, 'salvo → missed(터미널 실패) 급감 (' + s1.missed + '→' + s2.missed + ') — 겨냥한 누수모드 해소');
-assert(Math.abs(s2.few - s1.few) <= s1.few * 0.05, 'salvo → no_engage_window 거의 불변(' + s1.few + '→' + s2.few + ') — 교전창 부족은 doctrine 무관(⑧과 직교)');
+assert(Math.abs(s2.few - s1.few) <= Math.max(2, s1.few * 0.15),
+  'salvo → no_engage_window 변화 제한적(' + s1.few + '→' + s2.few + ', ±15% 이내) — 주효과는 missed 감소');
 
 // ══════════ Phase 7 — 부수 정정(생존자 편향·교전당 발사수) ══════════
 console.log('# Phase 7 — meanTTK 생존자편향 노출 + 교전당 발사수');

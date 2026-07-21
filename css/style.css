@@ -448,6 +448,11 @@ li.chk-fail { background: #43140f; }
 }
 .map-legend h4 { font-size: 12px; margin: 0 0 8px; color: #aecbeb; display: flex; align-items: baseline; gap: 6px; }
 .map-legend h4 .lg-h4-sub { font-size: 10px; font-weight: 400; color: var(--muted); }
+.map-asset-summary {
+  margin: 0 0 8px; padding: 6px 8px; border: 1px solid rgba(46,111,216,.45);
+  border-radius: 6px; background: rgba(46,111,216,.12); color: #c9dcf5;
+  font-size: 10px; line-height: 1.45;
+}
 
 .lg-group { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,.08); }
 .lg-group:last-of-type { border-bottom: none; padding-bottom: 0; margin-bottom: 4px; }
@@ -465,6 +470,10 @@ li.chk-fail { background: #43140f; }
 .lg-toggle { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; font-size: 10px; color: var(--muted); cursor: pointer; }
 
 .lg-line { display: inline-block; width: 16px; height: 0; border-top: 2px solid; justify-self: center; }
+
+/* 같은 개념 사이트의 ICC·ECS·MFR·포대는 저배율에서 표시 위치만 방사형으로 분리한다.
+ * 실제 좌표와 범위 링은 바꾸지 않으며, 지도에는 얇은 리더선으로 원점을 표시한다. */
+.asset-spread-line { stroke: #9fb2c7; stroke-width: 1; stroke-dasharray: 2 3; opacity: .55; }
 
 
 /* ══ [분석] 탭 — 9단계 파이프라인 병목·해결 지표 ══ */

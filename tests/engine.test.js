@@ -53,12 +53,15 @@ var sig = {};
   });
 });
 assert(new Set(Object.values(sig)).size > 3, '시나리오·강도·모드별 병목 다양 (' + new Set(Object.values(sig)).size + '종)');
-// SC1 저강도: 노드·링크 병목(부하 함수)은 0. 단 책임공백(responsibility_gap)은 구조적 실패라
-// 부하와 무관하게 발화할 수 있다(팬아웃된 항적이 잔여 체공창 내 협조 불가 시) — Phase 2(⑥⑦)에서
-// 死 코드가 부활했다. 따라서 부하 함수성 주장은 node/link 병목으로 한정해 검증한다.
-assert(run('sc1', 'asis', 0.5, 5).bottlenecks.filter(function (b) {
-  return b.kind === 'node' || b.kind === 'link';
-}).length === 0, 'SC1 저강도(0.5×): 노드·링크 병목 0 (부하의 함수 — gap은 구조적이라 별개)');
+// legacy ICC 확장 후에도 저강도에서 처리 노드는 포화되지 않아야 한다. 다만 ICC→MCRC의
+// 180초 음성/VTC 경로는 메시지가 1건만 체류해도 통신병목 기준을 충족하므로 링크 신호는
+// 저강도에서도 정상적으로 나타날 수 있다(용량 포화와 구조적 지연을 구분).
+var sc1Low = run('sc1', 'asis', 0.5, 5);
+assert(sc1Low.bottlenecks.filter(function (b) { return b.kind === 'node'; }).length === 0,
+  'SC1 저강도(0.5×): 처리 노드 용량 병목 0');
+assert(sc1Low.bottlenecks.some(function (b) {
+  return b.kind === 'link' && /^ICC-[WCE]\d→MCRC$/.test(b.id);
+}), 'SC1 저강도(0.5×): legacy ICC→MCRC 음성협조 지연은 통신병목으로 관측');
 ['sc2', 'sc3'].forEach(function (id) {
   assert(run(id, 'asis', 2.5, 100).bottlenecks.length >= run(id, 'asis', 1, 100).bottlenecks.length,
     id + ': 강도↑ 병목 비감소');

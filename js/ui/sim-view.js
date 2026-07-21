@@ -38,6 +38,13 @@
     if (name === '탐지') return '② 탐지';
     if (name.indexOf('C2도착:') === 0) return '③ 항적보고 → ' + name.slice(5);
     if (name.indexOf('C2처리완료:') === 0) return '④⑤ 식별·평가·WTA (' + name.slice(7) + ')';
+    if (name.indexOf('항적정보접수:') === 0) return '② ' + name;
+    if (name.indexOf('항적융합:') === 0) return '③ ' + name;
+    if (name.indexOf('위협우선순위:') === 0 || name.indexOf('위협판단·표적할당준비:') === 0) return '④⑤ ' + name;
+    if (name.indexOf('사수선정·표적할당:') === 0) return '⑤ ' + name;
+    if (name.indexOf('자체교전승인:') === 0) return '⑥⑦ ' + name;
+    if (name.indexOf('교전현황') === 0 || name.indexOf('사격직전중복해소:') === 0 ||
+        name.indexOf('교전중복해소:') === 0) return '⑦ ' + name;
     if (name === '융합경유') return '③ JAMDC2 융합 경유';
     if (name === '융합처리완료') return '④⑤ 융합·AI식별·WTA (JAMDC2)';
     if (name.indexOf('협조개시:') === 0) return '⑥⑦ 결심·교전협조 (' + name.slice(5) + ')';
@@ -711,6 +718,18 @@
     html += '<h3>요격 실패 원인 분해 — As-Is ↔ To-Be 대조 (동일 seed·강도)</h3>' +
       leakCompareTable(asisG, tobeG);
 
+    var c2a = g.coordination && g.coordination.trackFusion ? g.coordination : null;
+    if (c2a) {
+      var tf = c2a.trackFusion, ss = c2a.statusSharing;
+      html += '<h3>군단 AOC 방공 C2A 정보상태</h3>' +
+        '<table><thead><tr><th>MCRC+국지 복수출처 융합</th><th>현황 전송</th><th>수신</th><th>대기</th><th>드롭</th><th>지연·드롭 중복교전</th></tr></thead><tbody><tr>' +
+        '<td class="num">' + tf.multiSourceTracks + '</td><td class="num">' + ss.sent + '</td>' +
+        '<td class="num">' + ss.delivered + '</td><td class="num">' + ss.queued + '</td>' +
+        '<td class="num">' + ss.dropped + '</td><td class="num">' + ss.duplicatesDueToStaleState + '</td>' +
+        '</tr></tbody></table><div class="note">군단 AOC는 MCRC 공중항적과 국지레이더 항적을 융합해 자체 할당·교전합니다. ' +
+        'As-Is 교전현황은 음성/VTC 1채널·4건 제한으로 MCRC에 전파되며, 지연·드롭으로 상태 원장이 달라지면 중복교전이 발생합니다.</div>';
+    }
+
     // ⑤-2 실패 항적 타임라인 (Phase C: 개별 항적이 9단계 중 어디서 왜 멈췄는지)
     html += failedTimelineSection(run.res);
 
@@ -798,18 +817,22 @@
       var bp = tobeG.spawned ? (b / tobeG.spawned * 100) : 0;
       var d = bp - ap; // 비율 기준 Δ(%p) — 모드 간 생성 수 차이를 보정
       var cls = Math.abs(d) < 0.05 ? 'vs-flat' : (tax.structural ? (d < 0 ? 'vs-good' : 'vs-bad') : 'vs-flat');
-      return '<tr><td>' + esc(tax.group) + (tax.structural ? ' <span class="badge badge-warn" title="C2 구조 개선(To-Be)으로 감소가 기대되는 원인">구조</span>' : '') +
+      var causeBadge = tax.structurality === 'structural'
+        ? ' <span class="badge badge-warn" title="반사실 판정상 구조·능력 개입이 필요한 주원인">구조</span>'
+        : (tax.structurality === 'conditional'
+          ? ' <span class="badge" title="paired-seed 반복·지속성 증거 후 구조로 승격">조건부</span>'
+          : (tax.structurality === 'unknown' ? ' <span class="badge">미분해</span>' : ''));
+      return '<tr><td>' + esc(tax.family || 'unknown') + ' / ' + esc(tax.group) + causeBadge +
         '</td><td>' + esc(tax.label) + '</td>' +
         '<td>' + esc(tax.stage || '—') + '</td>' +
         '<td class="num">' + a + ' (' + ap.toFixed(1) + '%)</td>' +
         '<td class="num">' + b + ' (' + bp.toFixed(1) + '%)</td>' +
         '<td class="num"><span class="' + cls + '">' + (d > 0 ? '+' : '') + d.toFixed(1) + '%p</span></td></tr>';
     }).join('');
-    return '<table><thead><tr><th>병목 분류</th><th>원인</th><th>발생 단계</th><th>As-Is 건수(비율)</th>' +
+    return '<table><thead><tr><th>원인 계열 / 분류</th><th>주원인</th><th>발생 단계</th><th>As-Is 건수(비율)</th>' +
       '<th>To-Be 건수(비율)</th><th>Δ%p</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<div class="note">비율 = 각 모드 생성 위협 대비. 발생 단계는 9단계 파이프라인 기준([분석] 탭과 동일 정본). ' +
-      '[구조] 표시 원인(공백·포화·지연)은 To-Be에서 감소하고, ' +
-      '그중 일부가 순수 명중 실패로 이동하는 것이 구조적 개선의 정상 경로입니다.</div>';
+      '<div class="note">비율 = 각 모드 생성 위협 대비. [구조]는 배치·권한·경로·능력 개입으로만 해결되는 주원인, ' +
+      '[조건부]는 단일 실행으로 단정하지 않고 paired-seed 반복·지속성 증거가 필요한 용량·화력통제 원인입니다.</div>';
   }
 
   /**
@@ -870,11 +893,15 @@
   }
   /** 구조적 실패(공백·포화·지연) 건수 — taxonomy structural 합 (MoCE) */
   function structuralLeaks(g) {
+    if (g.failureSummary) return g.failureSummary.structuralPrimary || 0;
     var n = 0;
     Object.keys(g.leakReasons).forEach(function (r) {
       if (KJ.leakTaxonomy(r).structural) n += g.leakReasons[r];
     });
     return n;
+  }
+  function conditionalLeaks(g) {
+    return g.failureSummary ? (g.failureSummary.conditionalPrimary || 0) : 0;
   }
   // MoM 계층 라벨 (NATO COBP/SAS-026, ENV-MOM-COBP-01): MoP 과정(성능) ·
   // MoCE C2 효과성 · MoFE 전력 효과성. 각 지표에 정의·근거 툴팁을 부착한다.
@@ -917,7 +944,9 @@
       { label: 'report 링크 전달지연 (전달 1건 평균)', mom: 'MoP', a: commMeanDelay(asisRes, 'report'), b: commMeanDelay(tobeRes, 'report'), kind: 'sec', lower: true,
         tip: 'report(센서→담당 C2) 링크 전달의 평균 지연만 집계(coord·command 제외). As-Is도 이 경로는 대부분 데이터링크/KVMF라 음성 180s는 여기서 발화하지 않음 — 음성 협조 180s는 ⑥⑦(coord)단계다.' },
       { label: '구조적 실패 (공백·포화·지연)', mom: 'MoCE', a: structuralLeaks(asisG), b: structuralLeaks(tobeG), kind: 'cnt', lower: true,
-        tip: '실패 원인 중 구조적 원인(탐지공백·보고경로·책임공백·포화·처리지연) 합 — 원인 대조표의 요약 지표.' },
+        tip: '구조·능력 개입으로만 해결되는 최종 주원인 합. 고해상도는 failureSummary.primary 기준.' },
+      { label: '조건부 구조 후보 (반복증거 필요)', mom: 'MoCE', a: conditionalLeaks(asisG), b: conditionalLeaks(tobeG), kind: 'cnt', lower: true,
+        tip: '용량·화력통제·세부원인 미분해 지연. paired-seed 반복 또는 구조 개입 반사실에서 지속되어야 구조적으로 승격.' },
       { label: '도출 병목 수', mom: 'MoCE', a: asisRes.bottlenecks.length, b: tobeRes.bottlenecks.length, kind: 'cnt', lower: true,
         tip: '관측 통계(ρ≥0.9·드롭·공백)에서 도출된 병목 수 (ENV-RHO-THRESH-01).' }
     ];

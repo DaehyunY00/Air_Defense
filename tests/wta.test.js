@@ -65,16 +65,18 @@ var nw = 0, nsh = 0;
 });
 assert(nw > 0, 'no_engage_window 발화 > 0 (⑧ 신규 실패코드 — 종전 timeout에 은폐되던 교전창 부족, ' + nw + '건)');
 assert(nsh === 0, 'no_shooter = 0 (grounded coverage에선 FTR·MDU-L이 universal backstop이라 절대 공백 없음 — 억지 부활 안 함)');
-// coverage 취약 지도: 단일무기 취약 조합이 실재
+// coverage 지도: 신규 천마/천궁 포대가 종전 단일무기 취약 조합을 보강한다.
 function capableOf(type, axis) {
   return KJ.nodesInMode('tobe').filter(function (n) {
     return n.category === 'shooter' && n.canEngage[type] && (!n.coverage || n.coverage.indexOf(axis) !== -1);
   }).map(function (n) { return n.id; });
 }
-assert(capableOf('uav_small', 'central').join() === 'FTR',
-  'uav_small@central 단일무기 취약: FTR 단독 (중부축 무인기용 단거리 방공 부재 — 정책 취약점)');
-assert(capableOf('mrl_large', 'east').join() === 'MDU-L',
-  'mrl_large@east 단일무기 취약: MDU-L 단독 (병목 이동 신호와 일치)');
+var uavCentral = capableOf('uav_small', 'central');
+var mrlEast = capableOf('mrl_large', 'east');
+assert(uavCentral.indexOf('FTR') !== -1 && uavCentral.filter(function (id) { return /^BAT-CHUNMA-/.test(id); }).length === 3,
+  'uav_small@central: FTR 단독 취약을 천마 포대 3개가 보강 (' + uavCentral.join(',') + ')');
+assert(mrlEast.indexOf('MDU-L') !== -1 && mrlEast.filter(function (id) { return /^BAT-CHEONGUNG2-/.test(id); }).length === 2,
+  'mrl_large@east: MDU-L 단독 취약을 천궁-II 포대 2개가 보강 (' + mrlEast.join(',') + ')');
 
 // ══════════ canEngage 제약 유지 (신궁·천마 탄도탄 불가) ══════════
 console.log('# canEngage 제약 유지');
@@ -96,7 +98,8 @@ function wsig(id, mode, x, sd) {
 assert(wsig('sc3', 'tobe', 2.5, 7) === wsig('sc3', 'tobe', 2.5, 7), '동일 seed → 동일 무기 선택·이용률 (동점 통일 결정론)');
 function shArr(res) { return res.nodes.filter(function (n) { return n.category === 'shooter'; }).reduce(function (s, n) { return s + n.arrivals; }, 0); }
 var a25 = shArr(run('sc3', 'asis', 2.5, 3)), b25 = shArr(run('sc3', 'tobe', 2.5, 3));
-assert(b25 > a25, 'SC3 x2.5: To-Be 무기 총 도착 > As-Is (병목 이동 신호 유지 — ' + b25 + ' > ' + a25 + ')');
+assert(a25 > b25 && b25 > 0,
+  'SC3 x2.5: As-Is 다중 MFR 중복항적 때문에 무기 총 도착 > To-Be 융합경로 (' + a25 + ' > ' + b25 + ')');
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

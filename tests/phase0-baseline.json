@@ -1,42 +1,43 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "description": "Legacy 10개 ICC–ECS–MFR–포대 확장 후 기준선",
   "config": { "intensity": 1.5, "seed": 42, "endTimeSec": 1800, "highResolutionDeployment": false },
   "cases": [
     {
-      "scenario": "sc1", "mode": "asis", "sha256": "54ec454a3fc2b401220753dceaf582b779a290e899b532ca491f30a8c742f2d1",
-      "flow": { "spawned": 60, "detected": 60, "reachedC2": 59, "everEngaged": 51, "killed": 40, "leaked": 9, "leakReasons": { "responsibility_gap": 3, "timeout:c2": 3, "missed": 2, "timeout:engage": 1 } },
-      "global": { "spawned": 60, "detected": 60, "reachedC2": 59, "everEngaged": 51, "killed": 40, "leaked": 9, "censoredRaw": 11, "killRate": 0.8163265306122449, "leakRate": 0.1836734693877551 },
-      "eventCount": 800
+      "scenario": "sc1", "mode": "asis", "sha256": "f7a02d8c2d1bdc44e85c24de2fb5a77599d7d877bc12aaccce439429b32efcba",
+      "flow": { "spawned": 60, "detected": 59, "reachedC2": 59, "everEngaged": 41, "killed": 27, "leaked": 21, "leakReasons": { "responsibility_gap": 14, "timeout:c2": 2, "missed": 5 } },
+      "global": { "spawned": 60, "detected": 59, "reachedC2": 59, "everEngaged": 41, "killed": 27, "leaked": 21, "censoredRaw": 12, "killRate": 0.5625, "leakRate": 0.4375 },
+      "eventCount": 1596
     },
     {
-      "scenario": "sc1", "mode": "tobe", "sha256": "06fe57c49259f637f8b3633626e4a32ccc41503cac3aa9f01396565c676161c1",
-      "flow": { "spawned": 60, "detected": 60, "reachedC2": 59, "everEngaged": 59, "killed": 53, "leaked": 5, "leakReasons": { "timeout:c2": 3, "missed": 2 } },
-      "global": { "spawned": 60, "detected": 60, "reachedC2": 59, "everEngaged": 59, "killed": 53, "leaked": 5, "censoredRaw": 2, "killRate": 0.9137931034482759, "leakRate": 0.08620689655172414 },
-      "eventCount": 560
+      "scenario": "sc1", "mode": "tobe", "sha256": "92b35f13483f6013b673fe104c67905772631469781a098a232b8e81708b9a3f",
+      "flow": { "spawned": 60, "detected": 60, "reachedC2": 59, "everEngaged": 59, "killed": 37, "leaked": 18, "leakReasons": { "timeout:engage": 2, "timeout:c2": 1, "missed": 15 } },
+      "global": { "spawned": 60, "detected": 60, "reachedC2": 59, "everEngaged": 59, "killed": 37, "leaked": 18, "censoredRaw": 5, "killRate": 0.6727272727272727, "leakRate": 0.32727272727272727 },
+      "eventCount": 605
     },
     {
-      "scenario": "sc2", "mode": "asis", "sha256": "3f2d95faf49c00f649a977b103410990a0cd76d3efcdd47852177c91f035c432",
-      "flow": { "spawned": 58, "detected": 58, "reachedC2": 57, "everEngaged": 54, "killed": 21, "leaked": 20, "leakReasons": { "missed": 13, "timeout:engage": 3, "timeout:c2": 2, "overflow:FTR": 2 } },
-      "global": { "spawned": 58, "detected": 58, "reachedC2": 57, "everEngaged": 54, "killed": 21, "leaked": 20, "censoredRaw": 17, "killRate": 0.5121951219512195, "leakRate": 0.4878048780487805 },
-      "eventCount": 802
+      "scenario": "sc2", "mode": "asis", "sha256": "2ad8bdd85916c1af44a7df822d2cf46cfccb58447dfe80b086e232ec29050a9e",
+      "flow": { "spawned": 58, "detected": 58, "reachedC2": 58, "everEngaged": 56, "killed": 29, "leaked": 19, "leakReasons": { "missed": 17, "timeout:engage": 2 } },
+      "global": { "spawned": 58, "detected": 58, "reachedC2": 58, "everEngaged": 56, "killed": 29, "leaked": 19, "censoredRaw": 10, "killRate": 0.6041666666666666, "leakRate": 0.3958333333333333 },
+      "eventCount": 1113
     },
     {
-      "scenario": "sc2", "mode": "tobe", "sha256": "38256aed437a1ce2e470fb7994d92c77f8daca367c81d8de375a10030c4fa729",
-      "flow": { "spawned": 58, "detected": 57, "reachedC2": 57, "everEngaged": 57, "killed": 34, "leaked": 13, "leakReasons": { "missed": 9, "timeout:engage": 2, "overflow:FTR": 2 } },
-      "global": { "spawned": 58, "detected": 57, "reachedC2": 57, "everEngaged": 57, "killed": 34, "leaked": 13, "censoredRaw": 11, "killRate": 0.723404255319149, "leakRate": 0.2765957446808511 },
-      "eventCount": 664
+      "scenario": "sc2", "mode": "tobe", "sha256": "988a6761be73abb58795dd6aa94ce83c3f51c6e0bb16f5605c662815024558bd",
+      "flow": { "spawned": 58, "detected": 58, "reachedC2": 58, "everEngaged": 58, "killed": 39, "leaked": 15, "leakReasons": { "missed": 15 } },
+      "global": { "spawned": 58, "detected": 58, "reachedC2": 58, "everEngaged": 58, "killed": 39, "leaked": 15, "censoredRaw": 4, "killRate": 0.7222222222222222, "leakRate": 0.2777777777777778 },
+      "eventCount": 525
     },
     {
-      "scenario": "sc3", "mode": "asis", "sha256": "e1fb50c8e8a1a1c4b3f31b5feb5df4e99352fea703b5fa26711fb4d56817f4a3",
-      "flow": { "spawned": 307, "detected": 304, "reachedC2": 269, "everEngaged": 103, "killed": 56, "leaked": 213, "leakReasons": { "timeout:c2": 87, "missed": 19, "no_engage_window": 82, "responsibility_gap": 20, "timeout:engage": 3, "overflow:FTR": 2 } },
-      "global": { "spawned": 307, "detected": 304, "reachedC2": 269, "everEngaged": 103, "killed": 56, "leaked": 213, "censoredRaw": 38, "killRate": 0.20817843866171004, "leakRate": 0.79182156133829 },
-      "eventCount": 2830
+      "scenario": "sc3", "mode": "asis", "sha256": "e4dc299cf3e5f80faea8ce7d14fcfb1d996abcbe79a3cce41e86c1c8bf40897e",
+      "flow": { "spawned": 307, "detected": 302, "reachedC2": 302, "everEngaged": 92, "killed": 50, "leaked": 214, "leakReasons": { "responsibility_gap": 198, "missed": 15, "timeout:engage": 1 } },
+      "global": { "spawned": 307, "detected": 302, "reachedC2": 302, "everEngaged": 92, "killed": 50, "leaked": 214, "censoredRaw": 43, "killRate": 0.1893939393939394, "leakRate": 0.8106060606060606 },
+      "eventCount": 5460
     },
     {
-      "scenario": "sc3", "mode": "tobe", "sha256": "da6cc98174d4ed0606b936fde99cbfd017dc9408c45f297eb3efe1ac8e36f3d5",
-      "flow": { "spawned": 307, "detected": 303, "reachedC2": 301, "everEngaged": 247, "killed": 149, "leaked": 129, "leakReasons": { "timeout:c2": 44, "no_engage_window": 46, "missed": 32, "timeout:engage": 7 } },
-      "global": { "spawned": 307, "detected": 303, "reachedC2": 301, "everEngaged": 247, "killed": 149, "leaked": 129, "censoredRaw": 29, "killRate": 0.5359712230215827, "leakRate": 0.46402877697841727 },
-      "eventCount": 2816
+      "scenario": "sc3", "mode": "tobe", "sha256": "b2800365a5cda619187e3941ffe12df221d4a524f9e668a6d153fcb854115800",
+      "flow": { "spawned": 307, "detected": 304, "reachedC2": 304, "everEngaged": 299, "killed": 177, "leaked": 102, "leakReasons": { "timeout:c2": 48, "missed": 37, "no_engage_window": 4, "timeout:engage": 13 } },
+      "global": { "spawned": 307, "detected": 304, "reachedC2": 304, "everEngaged": 299, "killed": 177, "leaked": 102, "censoredRaw": 28, "killRate": 0.6344086021505376, "leakRate": 0.3655913978494624 },
+      "eventCount": 2365
     }
   ]
 }

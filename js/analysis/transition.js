@@ -3,13 +3,13 @@
  *
  * 계획서 Recommendations 6: "이용률 ρ가 0.9를 넘는 위협 도착률 구간에서 As-Is 대비
  * To-Be(Track Fusion·자동 WTA·통신 30초)의 평균 대기시간·누수율 개선폭을 핵심 산출물로
- * 제시하라. 이 구간이 K-JAMDS 투자정당화의 정책적 핵심이다."
+ * 제시하라. 이 구간의 결과는 배치·절단시점에 따라 달라지며 특정 방향을 강제하지 않는다."
  *
  * 방법: 위협 강도(intensity)를 스윕하면서 각 점에서 As-Is/To-Be를 동일 파생시드로
  * 다중복제(DES) 실행 → 강도별 [누수율·격추율·C2 최대 이용률·평균 격추시간] 곡선을 얻고,
  *  - As-Is C2 최대 ρ가 임계(0.9)를 최초로 넘는 강도(rho09CrossX),
  *  - As-Is·To-Be 누수율 격차가 최대인 강도(maxGapX)
- * 를 도출한다. 임계 초과 구간에서 격차가 벌어지는 것이 "포화 시 통합 C2의 가치" 논증이다.
+ * 를 도출한다. 임계 전·후 격차는 관측 결과로 보고하며, 격차 확대를 코드나 테스트로 강제하지 않는다.
  *
  * 병목·전환점은 여기서도 하드코딩되지 않는다 — 시나리오·강도·토폴로지에서 관측된다.
  */
@@ -85,7 +85,7 @@
       if (p.gap > maxGap) { maxGap = p.gap; maxGapX = p.x; }
     });
 
-    // 임계 이후 구간의 평균 개선폭 (정책 논증의 핵심 수치)
+    // 임계 전·후 구간의 평균 개선폭. 어느 쪽이 커야 한다는 가정 없이 결과를 그대로 반환한다.
     var post = points.filter(function (p) { return rho09CrossX !== null && p.x >= rho09CrossX; });
     var postGapMean = post.length
       ? post.reduce(function (s2, p) { return s2 + p.gap; }, 0) / post.length : null;

@@ -52,7 +52,7 @@
     var high = state.dep !== 'legacy';
     depWarning.classList.toggle('hidden', !high);
     depWarning.textContent = high
-      ? '⚠️ ' + state.dep + ': 원본의 위협종류·아키텍처·C2 생존상태 책임결정, scope WTA, 개념 PIP, 발사대별 탄약·900초 재장전을 실행합니다. 좌표·운동학·센서 상태·PSSEK는 공개자료 기반 개념 근사이며 전술적 절대값으로 해석하면 안 됩니다.'
+      ? '⚠️ ' + state.dep + ': 원본의 위협종류·아키텍처·C2 생존상태 책임결정, scope WTA, 개념 PIP, 발사대별 탄약·900초 재장전을 실행합니다. FULL As-Is는 군단 AOC의 MCRC+국지항적 융합·자체 자동할당과 제한형 음성/VTC 교전현황 공유를 추가 실행합니다. 좌표·운동학·센서 상태·PSSEK는 공개자료 기반 개념 근사이며 전술적 절대값으로 해석하면 안 됩니다.'
       : '';
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';

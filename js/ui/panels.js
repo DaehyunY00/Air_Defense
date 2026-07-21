@@ -87,11 +87,16 @@
   }
   /** 구조적 실패(공백·포화·지연) 합 — KJ.LEAK_TAXONOMY.structural 기준 */
   function structuralLeaks(g) {
+    if (g.failureSummary) return g.failureSummary.structuralPrimary || 0;
     var n = 0;
     Object.keys(g.leakReasons).forEach(function (r) {
       if (KJ.leakTaxonomy(r).structural) n += g.leakReasons[r];
     });
     return n;
+  }
+  function c2aMetric(g, section, field) {
+    var c = g.coordination && g.coordination[section];
+    return c && typeof c[field] === 'number' ? c[field] : 0;
   }
   /** 카테고리별 최대 관측 ρ / 드롭 합 */
   function maxRho(res, cat) {
@@ -156,9 +161,9 @@
   }
   // 단계 귀속용 확장 코드(overflow 분리)의 라벨·구조성 — 기본 코드는 KJ.LEAK_TAXONOMY 참조
   var CODE_META = {
-    overflow_c2: { label: '포화손실(C2 처리)', structural: true },
+    overflow_c2: { label: '포화손실(C2 처리)', structurality: 'conditional', structural: false },
     // Phase 4(⑨) 재분류: 교전채널 포화는 유도탄·발사대 수 문제(no_shooter 계열) → 비구조.
-    overflow_shooter: { label: '포화손실(교전채널)', structural: false }
+    overflow_shooter: { label: '포화손실(교전채널)', structurality: 'conditional', structural: false }
   };
   function codeMeta(code) { return CODE_META[code] || KJ.leakTaxonomy(code); }
 
@@ -232,7 +237,8 @@
     return '<span class="pl-code' + (zero ? ' pl-code-zero' : '') + trend + '">' +
       '<code>' + esc(code.replace(/_((c2)|(shooter))$/, ':$1')) + '</code> ' + esc(meta.label) +
       ' <b class="asis">' + a + '</b>→<b class="tobe">' + b + '</b>' +
-      (meta.structural ? ' <span class="badge badge-warn" title="C2 구조 개선(To-Be)으로 감소가 기대되는 원인">구조</span>' : '') +
+      (meta.structurality === 'structural' ? ' <span class="badge badge-warn">구조</span>' :
+        (meta.structurality === 'conditional' ? ' <span class="badge">조건부</span>' : '')) +
       '</span>';
   }
 
@@ -294,7 +300,7 @@
         no: '②', name: '추적생성 (Track) — 보고 링크', fn: '_onDetected',
         bottleneck: '항적 비융합(중복항적), 보고경로 부재',
         fix: 'JAMDC2 융합 허브로 단일 연속 항적 생성',
-        codes: ['no_report_path'],
+        codes: ['no_responsible_c2', 'no_report_path'],
         metrics: [
           { label: 'report 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
             a: commMeanDelay(a, 'report'), b: commMeanDelay(b, 'report'),
@@ -357,6 +363,15 @@
           { label: 'coord 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
             a: commMeanDelay(a, 'coord'), b: commMeanDelay(b, 'coord'),
             tip: '⑥⑦단계 coord(교전협조) 링크 전달의 평균 지연만 집계 — As-Is 육↔공 음성 협조(≥180s)가 실제로 발화하는 곳.' },
+          { label: 'MCRC+국지 복수출처 항적융합', mom: 'MoP', kind: 'cnt', lower: null,
+            a: c2aMetric(ga, 'trackFusion', 'multiSourceTracks'), b: c2aMetric(gb, 'trackFusion', 'multiSourceTracks'),
+            tip: 'FULL 고해상도에서 군단 AOC/C2A가 MCRC 공중항적과 자체 TPS-880K·MFR 항적을 동일 위협으로 상관·융합한 건수.' },
+          { label: '교전현황 음성/VTC 드롭', mom: 'MoP', kind: 'cnt', lower: true,
+            a: c2aMetric(ga, 'statusSharing', 'dropped'), b: c2aMetric(gb, 'statusSharing', 'dropped'),
+            tip: '군단 AOC→MCRC 교전현황 채널(1채널, 처리 중 포함 4건)이 포화되어 전파되지 못한 메시지 수.' },
+          { label: '지연·드롭 상태정보로 인한 중복교전', mom: 'MoCE', kind: 'cnt', lower: true,
+            a: c2aMetric(ga, 'statusSharing', 'duplicatesDueToStaleState'), b: c2aMetric(gb, 'statusSharing', 'duplicatesDueToStaleState'),
+            tip: 'MCRC와 군단 AOC가 서로 다른 교전상태 원장을 보유한 상태에서 동일 위협에 실제 발사한 건수. 중복교전의 인과 지표.' },
           { label: '중복교전 위험 (축선 합, 정적)', mom: 'MoCE', kind: 'raw', lower: true,
             a: d.heatA, b: d.heatB,
             tip: '[정적 사전 예측] 서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합. ' +
@@ -473,19 +488,25 @@
     if (!body) return;
     // 발생 단계(stage)는 엔진 정본 KJ.LEAK_TAXONOMY에서 읽는다 — 결과 모달 대조표와 동일 출처
     // 엔진이 실제 방출하는 코드와 1:1 정합(⑧ no_engage_window · ⑨ timeout 분해 반영).
-    // overflow는 노드 카테고리로 C2/교전 분리, timeout은 tries로 c2(구조)/engage(비구조) 분리.
+    // overflow와 timeout:c2는 세부·반복 증거 전 conditional, timeout:engage는 비구조.
     var rows = [
       { code: 'not_detected', fixer: '센서·융합' },
       { code: 'no_sensor', fixer: '센서 배치' },
+      { code: 'no_responsible_c2', fixer: '책임·권한 설계' },
       { code: 'no_report_path', fixer: 'To-Be 융합' },
       { code: 'responsibility_gap', fixer: 'To-Be 통합 C2', core: true },
       { code: 'overflow', fixer: '처리용량·자동화',
         count: function (c) { return (c.overflow_c2 || 0) + (c.overflow_shooter || 0); } },
       { code: 'no_shooter', fixer: '무기체계 능력' },
+      { code: 'engagement_geometry_gap', fixer: '배치·사거리·고도 능력' },
+      { code: 'window_lost_due_to_c2', fixer: 'C2·명령 지연' },
+      { code: 'no_fire_control', fixer: '추적·화통 전환' },
+      { code: 'capacity_full', fixer: '동시교전 용량' },
+      { code: 'ammo_depleted', fixer: '탄약·재장전' },
       { code: 'no_engage_window', fixer: '무기 교전창·체공(⑧)' },
       { code: 'missed', fixer: '무기 Pk·재교전' },
       { code: 'timeout:c2', fixer: '전 단계 지연(교전 미개시)',
-        count: function (c) { return (c['timeout:c2'] || 0) + (c['timeout'] || 0); } }, // legacy timeout 흡수(구조)
+        count: function (c) { return (c['timeout:c2'] || 0) + (c['timeout'] || 0); } }, // legacy timeout 흡수(조건부)
       { code: 'timeout:engage', fixer: '무기 체공·교전(⑨)' }
     ];
     body.innerHTML = rows.map(function (r, i) {
@@ -501,7 +522,9 @@
         '<td><code>' + esc(r.code) + (r.code === 'overflow' ? ':&lt;노드&gt;' : '') + '</code></td>' +
         '<td>' + esc(meta.label) + '</td>' +
         '<td>' + esc(r.stage) + (r.core ? ' <b>★</b>' : '') + '</td>' +
-        '<td>' + (meta.structural ? '✅ 구조' : '❌ 비구조') + '</td>' +
+        '<td>' + (meta.structurality === 'structural' ? '✅ 구조' :
+          (meta.structurality === 'conditional' ? '⚠️ 조건부' :
+            (meta.structurality === 'unknown' ? '❓ 미분해' : '❌ 비구조'))) + '</td>' +
         '<td>' + esc(r.fixer) + '</td>' +
         '<td class="num">' + a + '</td><td class="num">' + b + '</td>' +
         '<td class="num"><span class="' + dcls + '">' + (d > 0 ? '+' : '') + d + '</span></td></tr>';

@@ -9,8 +9,8 @@
  *   responsibility_gap : 부활 ✓ (W3 교전협조) — 이 프로젝트 핵심 개념
  *   JAOC-CD(수방사)     : 부활 ✓ (W2 팬아웃)
  *   no_report_path      : 영구 死 ✓ (구조적으로 발화 불가 — 커버 센서가 있으면 보고경로 존재)
- *   not_detected        : 여전히 0 — 계획은 W6 후 >0 예측했으나 재스캔 모델상 구조적 near-dead.
- *                         2022.12.26 정박점("무인기 탐지는 성공, 격추 실패")과 정합 → 강제하지 않음.
+ *   not_detected        : legacy MFR 확장 후 극희소 발화 — 낮은 Pd·짧은 체공 조합이 늘어 near-dead에서 전환.
+ *                         전 풀링 6만여 표적 중 1건 수준이며 주 실패원인은 여전히 요격·협조다.
  *   no_shooter          : 여전히 0 — 계획은 W4 후 >0 예측했으나 커버리지 매트릭스에 (위협×축선)
  *                         공백이 없음(모든 셀 ≥1). 능력·타이밍 공백은 no_engage_window가 포착.
  *                         공백을 인위로 만들면 데이터 조작 → 강제하지 않음(정직한 0).
@@ -57,12 +57,12 @@ assert((leak['timeout:c2'] || 0) > 0 && (leak['timeout:engage'] || 0) > 0,
 assert((leak['overflow'] || 0) >= 0 && (leak['missed'] || 0) > 0,
   'missed 발화 (W5 BDA 기회소진) — ' + (leak['missed'] || 0) + '건');
 
-console.log('# 여전히 0인 코드 (정직한 미부활 — 강제하지 않음, 이유 고정)');
+console.log('# 영구 0 코드와 극희소 부활 코드');
 assert((leak['no_report_path'] || 0) === 0,
   'no_report_path 영구 死 ✓ — 구조적으로 발화 불가(커버 센서가 있으면 보고경로가 항상 존재)');
-assert((leak['not_detected'] || 0) === 0,
-  'not_detected = 0 (구조적 near-dead) — _onDetect가 EXIT까지 10초 주기 재스캔 → 누적탐지 1−(1−p)^scans≈1. ' +
-  '최악 셀(중부 uav_small·LAR-C 단독·90스캔) 미탐지확률 1.9e-9. 2022.12.26 정박점(탐지성공·격추실패)과 정합');
+assert((leak['not_detected'] || 0) > 0 && (leak['not_detected'] || 0) <= 5,
+  'not_detected 극희소 부활 — 확장 센서·위협 조합 풀링에서 ' + (leak['not_detected'] || 0) +
+  '건(주 실패원인이 되지 않으며 재스캔 누적탐지 구조 유지)');
 assert((leak['no_shooter'] || 0) === 0,
   'no_shooter = 0 (커버리지 공백 없음) — 모든 (위협×축선) 셀에 능력·담당 무기 ≥1. ' +
   '능력·타이밍 공백은 no_engage_window가 포착. 공백을 인위 생성하지 않음(데이터 조작 방지)');

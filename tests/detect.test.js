@@ -53,13 +53,14 @@ var sim = new KJ.Simulation({ scenario: KJ.scenarioById('sc2'), mode: 'asis', in
 assert(sim._scanProb({ type: 'cruise', _sensors: [{ detectProb: {} }] }) === 0.5,
   'value 누락 센서 → 폴백 Pd=1.0 (cruise detectFactor 0.5 그대로)');
 
-console.log('# 축2 — 단일센서 대조군: 융합 대상 없으면 To-Be ≡ As-Is (정확성 핵심)');
-// 데이터 가드: uav_small@central 은 LAR-C 하나만 커버 (융합 무대상 대조군)
+console.log('# 축2 — legacy 확장 다센서 융합 + 합성 단일센서 대조군');
+// 데이터 가드: legacy 확장으로 중앙축 UAV에도 LAR-C + 천마 MFR 3개가 겹친다.
 var covCentral = KJ.NODES.filter(function (n) {
   return n.category === 'sensor' && n.detects.indexOf('uav_small') !== -1 && n.coverage.indexOf('central') !== -1;
 }).map(function (n) { return n.id; });
-assert(covCentral.length === 1 && covCentral[0] === 'LAR-C',
-  'uav_small@central 커버 센서 = [LAR-C] 단독 (대조군 성립: ' + JSON.stringify(covCentral) + ')');
+assert(covCentral.length === 4 && ['LAR-C', 'MFR-C1', 'MFR-C3', 'MFR-E2'].every(function (id) {
+  return covCentral.indexOf(id) !== -1;
+}), 'uav_small@central 커버 = LAR-C + 확장 천마 MFR 3개 (' + JSON.stringify(covCentral) + ')');
 // 단일센서: 두 모드 per-scan 확률 동일 (융합 이득 없음)
 var single = KJ.nodeById('LAR-C').detectProb.value;
 assert(Math.abs(sp('asis', 'uav_small', [single]) - sp('tobe', 'uav_small', [single])) < EPS,
@@ -68,7 +69,7 @@ assert(Math.abs(sp('asis', 'uav_small', [single]) - sp('tobe', 'uav_small', [sin
 assert(sp('tobe', 'uav_small', [0.35, 0.6]) - sp('asis', 'uav_small', [0.35, 0.6]) > 1e-3,
   '다센서 uav_small: To-Be > As-Is (융합이 획득확률을 실제로 향상)');
 
-console.log('# 축3 — 탐지 시점(latency): 다센서에서 To-Be 단축, 단일센서에서 불변 (20 seed pooled median)');
+console.log('# 축3 — 탐지 시점(latency): 서부·중앙 다센서에서 To-Be 단축 (20 seed pooled median)');
 function pooledLatMedian(id, mode, cls) {
   var lat = [];
   for (var s = 1; s <= 20; s++) {
@@ -90,8 +91,8 @@ var centB = pooledLatMedian('sc2', 'tobe', 'uav_small@central');
 assert(seoulA.n > 100 && centA.n > 100, '표본 충분 (seoul n=' + seoulA.n + ', central n=' + centA.n + ')');
 assert(seoulB.med <= seoulA.med - 10,
   '다센서 uav_small@seoul(3센서): To-Be 중위 탐지시점 ≥1스캔 단축 (' + seoulA.med + 's → ' + seoulB.med + 's)');
-assert(Math.abs(centB.med - centA.med) <= 10,
-  '단일센서 uav_small@central(1센서): To-Be ≈ As-Is (유의미한 단축 없음, ' + centA.med + 's vs ' + centB.med + 's)');
+assert(centB.med <= centA.med - 10,
+  '다센서 uav_small@central(4센서): To-Be 중위 탐지시점 ≥1스캔 단축 (' + centA.med + 's → ' + centB.med + 's)');
 
 console.log('# 재현성 — 탐지 경로 결정론 유지');
 function detCount(mode, seed) {

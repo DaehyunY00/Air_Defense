@@ -2,6 +2,25 @@
 
 > **디스클레이머: 본 문서의 모든 수치·좌표·확률은 공개자료(오픈소스) 기반의 정책연구용 개념값이며, 실제 작전자료가 아님. 모든 좌표는 도시·권역 수준 개념좌표임. KP-SAM(신궁)·천마(K-31)는 탄도탄 요격 불가로 모델링함. FULL의 USFK THAAD/Patriot은 KAMDOC·한국군 WTA와 연동하지 않고 독립 C2/WTA 축에서만 교전함.**
 
+## Legacy 대표 배치 확장
+
+### [DEP-LEGACY-IADS-10-01] ICC–ECS–MFR–포대 10세트
+- **값/분포**: 서부 4·중부 3·동부 3세트. 천마 5·천궁-II 5. 세트마다 ICC 1, ECS 1,
+  전속 MFR 1, 포대 1을 두어 기존 24노드에 40노드를 추가(총 64노드). 여기서 MFR은
+  다기능레이더(Multi-Function Radar)의 코드 표기이며 사용자 표현 `MRF`와 같은 대상을 뜻함.
+- **좌표**: 도시·권역 수준 개념점. 실제 군사시설 위치·실제 전력 수량을 의미하지 않음.
+- **연결**: MFR→ECS, ECS↔ICC, ECS→포대. As-Is ICC↔MCRC는 음성/VTC 180초,
+  To-Be MFR·ICC↔JAMDC2 및 ICC↔MCRC는 데이터링크 2초.
+- **처리용량**: ICC c=5, K=25, 서비스 As-Is 9초/To-Be 5초;
+  ECS c=8, K=24, 서비스 As-Is 3초/To-Be 2초.
+- **무기 개념값**: 천마 사거리 9km·6채널·48발·Pk Tri(0.2,0.3,0.4), 탄도탄 교전 불가;
+  천궁-II 사거리 40km·10채널·32발·Pk Tri(0.65,0.75,0.85), 하층 탄도 위협 교전 가능.
+- **출처/신뢰도**: 기존 공개자료 파라미터를 재사용한 정책연구용 구성, 배치 메타 신뢰도 C.
+- **적용범위**: `js/data/nodes.js`, `js/data/links.js`, legacy DES·정적 분석·지도.
+- **MC 적용방식**: 노드/링크 수와 권역은 고정, 기존 서비스·Pd·Pk 민감도 배수 적용.
+- **비고**: 다중 MFR이 As-Is에서 중복항적을 생성하므로 ICC 음성협조 병목·책임공백이
+  늘 수 있다. To-Be는 JAMDC2 Track Fusion으로 동일 항적을 융합한다.
+
 ## 파라미터 ID 체계
 `도메인-객체-속성-일련번호` — 도메인: WPN(아군무기) / THR(위협) / C2(지휘통제) / SEN(센서) / ENV(환경)
 
@@ -51,6 +70,21 @@
 - **적용범위**: `js/data/links.js` DL_FAST (To-Be 전 연동 + 일부 As-Is 자동화 링크)
 - **신뢰도 등급**: **C** (근거 없는 개념 추정)
 - **MC 적용방식**: 고정
+
+### [C2-ENG-STATUS-01] 군단 AOC→MCRC 교전현황 제한형 음성/VTC
+- **값/분포**: 서버 1개, 처리 중 포함 수용 4건, 지연 Triangular(90, 180, 270) s, 신선도 300 s
+- **단위**: 메시지 건·초
+- **출처**: 육군과 공군의 교전상황이 실시간 공유되지 않고 음성/VTC에 의존한다는 문제상황을 정책연구용 유한 메시지 채널로 구체화
+- **적용범위**: FULL As-Is `ARMY_LOCAL_AD(CORPS_AOC_C2A)→MCRC` `status` 링크. `assigned/fired/released/resolved_hit` 상태
+- **신뢰도 등급**: C(공개자료 기반 개념 용량·신선도)
+- **MC 적용방식**: 전달지연 삼각분포 샘플링, 채널 대기·드롭은 DES 상태로 직접 전개
+- **비고**: `coordination.statusSharing`에 전송·수신·대기·드롭·신선도 초과·중복 해소·상태 불일치 기인 중복교전을 노출한다. ADR-051.
+
+### [C2-CORPS-AOC-01] FULL As-Is 군단 AOC/C2A 항적융합·우선순위
+- **값/분포**: 최속 국지 출처 1개 + MCRC 유래 출처 1개 결정론적 융합. 위협군(srbm→uav)과 잔여 방어시간 순으로 우선순위
+- **적용범위**: FULL 5개 `ARMY_LOCAL_AD` 권역 C2. MCRC DOWN이면 MCRC 유래 출처 자동 제거
+- **신뢰도 등급**: C(권역·축선 기반 개념 상관)
+- **비고**: 오상관·항적 분리 확률과 실제 군단 AOR은 미구현. `coordination.trackFusion` 지표로 관측. ADR-051.
 
 ### [C2-KVMF-DLY-01] 육군 계열 데이터링크(KVMF) 지연
 - **값/분포**: 30 s (고정 개념)
@@ -364,7 +398,7 @@
 - **적용범위**: DES `_doEngage` 후보 필터(coverage가 위협 axis 미포함이면 제외). 센서와 동일 스키마. coverage 미지정 노드는 전축선 폴백(현재 전 무기 지정됨). **canEngage 제약과 독립**(canEngage는 능력, coverage는 지리)
 - **신뢰도 등급**: C
 - **MC 적용방식**: 고정
-- **비고 (방공 공백/취약 지도 — Phase 2 실측)**: 이 coverage로 시나리오 (위협@축선) 조합을 검사하면 **절대 공백(no_shooter)은 없다**(FTR이 기동 전축선 공중 backstop, MDU-L이 전축선 탄도탄 backstop). 단 **단일무기 취약** 2건: `mrl_large@east → MDU-L 단독`(병목 이동 신호와 일치, MDU-L ρ≈0.93), `uav_small@central → FTR 단독`(중부축엔 무인기용 단거리 방공 부재 → 전투기 스크램블뿐, 실제적 정책 취약점). 축선 필터 도입으로 FTR이 중부축 저가위협 backstop이 되며 **FTR이 새 병목으로 출현**(스냅샷 node:FTR)
+- **비고 (방공 공백/취약 지도 — legacy 10세트 확장 후)**: 절대 공백(no_shooter)은 없다. 종전 단일무기 취약 2건은 `uav_small@central → FTR+천마 3개`, `mrl_large@east → MDU-L+천궁-II 2개`로 보강됐다. 이는 개념 배치의 구조 효과이며 실제 전력밀도를 뜻하지 않는다.
 
 ### [WPN-*-CHAN-01] 무기별 교전채널 수 (`js/data/nodes.js` engage.channels)
 - **값/분포**: FTR 4 · SHORAD-1C 6 · SHORAD-CD 4 · MSAM-1C 2 · MDU-M 4 · MDU-L 3 · SM2 2 (동시 교전 가능 표적 수 = M/M/c의 c). 대기실 K = c×2 (`[ENV-DES-SHOOTERK-01]`)
@@ -575,12 +609,12 @@ launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한
 - **비고**: 실측 절단율 SC3 x2.5 As-Is 15.3% · To-Be 10.0%. 보정 시 격추율 As-Is 9.3→11.0%·To-Be 42.0→46.7%(개선폭 +9.2% 상대, 에스컬레이션 미달)
 
 ### [ENV-DES-TIMEOUT-01] timeout 분해 + overflow:shooter 재분류 (Phase 4 ⑨, `js/engine/sim-engine.js`)
-- **값/분포**: 누수 사유 `timeout`을 `tries` 기준 분해 — `tries===0`(교전 미개시)=`timeout:c2`(구조, ②~⑦ 파이프라인 시간 소진) · `tries>0`(교전했으나 체공창 소진)=`timeout:engage`(비구조, ⑧⑨ 물리 한계). `features.timeoutSplit`(기본 ON). 별도로 `leakTaxonomy`가 `overflow:<노드>`를 노드 category로 재분류 — shooter=비구조(유도탄·발사대 수 한계), C2=구조(처리 포화)
+- **값/분포**: 누수 사유 `timeout`을 `tries` 기준 분해 — `tries===0`(교전 미개시)=`timeout:c2`(조건부, 세부원인 필요) · `tries>0`(교전 후 체공창 소진)=`timeout:engage`(비구조). `overflow:<노드>`도 용량 계열 조건부로 분류하고 paired-seed 지속성 또는 구조 개입 반사실 증거가 있을 때만 구조로 승격한다. 고해상도는 `failureSummary` 주원인 기준으로 책임·경로·PIP·FC·용량·탄약을 추가 분해한다.
 - **출처**: 사실 (e)(동일 물리현상 구조/비구조 혼재) 해소. 분해 기준은 ⑧ `no_engage_window`와 동일(`threat.tries > 0 → 비구조`) — 두 단계 판정 일관성(ADR-004). 재분류 근거: 무기 교전채널 = 유도탄·발사대 수 = [WPN-*-CHAN-01]
 - **적용범위**: `_onExit`(코드 방출, timeoutSplit 게이트) · `KJ.leakTaxonomy`(overflow 재분류, 무조건 — UI·테스트·원장 공유 단일 분류원). 동역학·rng·이벤트·지문(sp/k/l/iM/ex) **완전 불변**(순수 보고/분류)
 - **신뢰도 등급**: B(방법론·문서 채널 수)
 - **MC 적용방식**: 고정. timeoutSplit OFF → 단일 timeout(구조) = legacy 코드 분포
-- **비고**: ⚠️ 과제 예측(구조적 −97%)과 불일치. 실측 To-Be 개선폭 25.09p→26.85p(**+7.0%**, 20% 미달, 🔴 아님). 이유: ⑧ 교전창 필터가 tries===0 위협을 교전 전 `no_engage_window`로 선점 → To-Be 잔여 timeout은 대부분 `timeout:c2`(구조 유지). 상세 ADR-004
+- **비고**: 과거 실측의 합 보존값은 유효하지만 `timeout:c2`를 전부 구조로 계산한 해석은 폐기한다. 상세 ADR-004·ADR-050.
 
 ### [ENV-DES-PKCORR-01] 재교전 요격확률 상관 ρ (Phase 5 ⑨, `js/engine/sim-engine.js`) — **기본 OFF**
 - **값/분포**: 표적별 공유 잠재 `frailty`(최초 교전 1회 추출)와 발사별 신규 추출을 `u = ρ·frailty + (1−ρ)·raw()`로 혼합, `u<pk`면 격추. `PK_CORR_RHO=0.7`(기본), `features.pkCorrelation`로 재정의(스윕). `features.pkCorrelated` 기본 **false**
@@ -680,7 +714,9 @@ launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한
 - **적용범위**: `js/analysis/transition.js` — As-Is C2 최대 ρ의 0.9 돌파 강도, 임계 전/후 평균 개선폭, 최대 격차 지점 도출
 - **신뢰도 등급**: B(방법론)
 - **MC 적용방식**: 스윕(각 점 baseSeed 파생 독립시드, 결정론적)
-- **비고**: 대표 결과(SC3, seed=12345): ρ≥0.9 돌파 ×1.75, 임계 이전 개선폭 10.3%p → 이후 18.9%p (docs/vv-report.md §3.4)
+- **비고**: legacy 10세트 확장 후 대표 결과(SC3, seed=12345): ρ≥0.9 돌파 ×1.5,
+  임계 이전 개선폭 50.6%p, 이후 32.4%p, 최대 격차 ×0.75. 개선폭 확대 방향은
+  배치·절단시점의 결과이며 코드에서 강제하지 않음(`docs/vv-report.md` §3.4).
 
 ### [ENV-OVERLAP-RISK-01] 중복교전 위험 판정 임계
 - **값/분포**: 두 통제계통 간 최단 협조지연이 해당 위협 dwellSec의 50% 이상(또는 협조경로 자체가 없음)이면 "제때 협조 불가"로 판정

@@ -112,6 +112,24 @@
     { from: 'JAOC-CD', to: 'SHORAD-CD', kind: 'command', comm: { asis: KVMF, tobe: DL_FAST } }
   ];
 
+  // legacy 10개 ICC–ECS–MFR–포대 세트. As-Is는 포대 내부·KVMF·음성 협조,
+  // To-Be는 MFR→JAMDC2 직결과 2초 데이터링크를 사용한다.
+  (KJ.LEGACY_AIR_DEFENSE_SITES || []).forEach(function (site) {
+    var key = site.key, icc = 'ICC-' + key, ecs = 'ECS-' + key;
+    var mfr = 'MFR-' + key, shooter = 'BAT-' + site.weapon + '-' + key;
+    KJ.LINKS.push(
+      { from: mfr, to: ecs, kind: 'report', comm: { asis: DL_FAST, tobe: DL_FAST }, axis: site.region },
+      { from: mfr, to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST }, axis: site.region },
+      { from: ecs, to: icc, kind: 'coord', comm: { asis: KVMF, tobe: DL_FAST }, axis: site.region },
+      { from: icc, to: ecs, kind: 'coord', comm: { asis: KVMF, tobe: DL_FAST }, axis: site.region },
+      { from: icc, to: 'MCRC', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST }, axis: site.region },
+      { from: 'MCRC', to: icc, kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST }, axis: site.region },
+      { from: icc, to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST }, axis: site.region },
+      { from: 'JAMDC2', to: icc, kind: 'coord', comm: { tobe: DL_FAST }, axis: site.region },
+      { from: ecs, to: shooter, kind: 'command', comm: { asis: KVMF, tobe: DL_FAST }, axis: site.region }
+    );
+  });
+
   /** 해당 모드에서 활성인 링크만 반환 */
   KJ.linksInMode = function (mode) {
     return KJ.LINKS.filter(function (l) { return !!l.comm[mode]; });

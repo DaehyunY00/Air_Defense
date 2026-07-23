@@ -86,7 +86,7 @@ main { flex: 1; position: relative; overflow: hidden; }
 
 /* ── 시뮬레이션 HUD (지도 오버레이) ── */
 .sim-hud {
-  position: absolute; top: 12px; right: 12px; z-index: 1000; width: 320px;
+  position: absolute; top: 12px; right: 12px; z-index: 1100; width: 320px;
   background: rgba(16, 20, 26, .94); border: 1px solid var(--border);
   border-radius: 10px; padding: 12px 14px; font-size: 12px;
 }
@@ -237,8 +237,21 @@ th.th-sort.sorted-desc::after { content: ' ▼'; opacity: 1; color: var(--accent
 .modal-bn { list-style: none; }
 
 /* ── 지도 노드 아이콘 ── */
-.node-icon { background: none; border: none; }
+.node-icon { background: none; border: none; overflow: visible !important; }
 .node-mark { width: 14px; height: 14px; margin: 0 auto; }
+.node-site-stack { position: relative; width: 22px; height: 18px; margin: 0 auto; }
+.node-site-stack .node-mark {
+  position: absolute; left: 50%; top: 50%; margin: 0;
+  transform: translate(-50%, -50%); opacity: .9;
+}
+.node-site-stack .shape-square { width: 18px; height: 18px; }
+.node-site-stack .shape-circle { width: 13px; height: 13px; }
+.node-site-stack .shape-triangle { top: 45%; }
+.node-site-count {
+  position: absolute; right: -8px; top: -8px; min-width: 14px; height: 14px;
+  padding: 0 3px; border-radius: 8px; background: #10141a; border: 1px solid #aecbeb;
+  color: #fff; font: 700 9px/13px sans-serif; text-align: center;
+}
 .shape-square { background: var(--svc); border: 2px solid #fff3; }
 .shape-circle { background: var(--svc); border-radius: 50%; border: 2px solid #fff3; }
 .shape-triangle {
@@ -247,6 +260,8 @@ th.th-sort.sorted-desc::after { content: ' ▼'; opacity: 1; color: var(--accent
   border-bottom: 14px solid var(--svc);
 }
 .node-label {
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  width: max-content; min-width: 60px;
   text-align: center; font-size: 9px; color: #cfd8e3; text-shadow: 0 1px 2px #000;
   margin-top: 1px; white-space: nowrap;
 }
@@ -255,7 +270,10 @@ th.th-sort.sorted-desc::after { content: ' ▼'; opacity: 1; color: var(--accent
 .node-saturated { box-shadow: 0 0 0 5px rgba(255, 45, 26, .7); }
 @keyframes pulse { 50% { box-shadow: 0 0 0 9px rgba(224, 85, 69, .12); } }
 
-.popup { font-size: 12px; max-width: 260px; }
+.popup { font-size: 12px; max-width: 320px; }
+.popup-site-head { color: #325f8e; margin-bottom: 5px; }
+.popup-site-asset { border-top: 1px solid #d7dde5; margin-top: 7px; padding-top: 7px; }
+.popup-site-asset:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
 .popup-meta { color: #666; font-size: 10px; margin: 2px 0; }
 .popup-coord { color: #a06000; font-size: 10px; margin-bottom: 4px; }
 .popup-metrics { background: #eef4fb; padding: 4px 6px; border-radius: 4px; margin-top: 4px; }
@@ -436,18 +454,34 @@ li.chk-fail { background: #43140f; }
 .map-legend {
   position: absolute; bottom: 20px; right: 12px; left: auto; z-index: 1000;
   background: rgba(16, 20, 26, .94); border: 1px solid var(--border);
-  border-radius: 8px; padding: 10px 12px; font-size: 11px; color: var(--text);
+  border-radius: 8px; padding: 0; font-size: 11px; color: var(--text);
   /* 폭을 넉넉히 잡아 각 항목(칩·행)이 줄바꿈 없이 한 줄에 들어오게 함 */
   width: 400px; max-width: calc(100vw - 40px);
-  max-height: min(62vh, 460px); overflow-y: auto;
+  overflow: hidden;
   word-break: keep-all; overflow-wrap: break-word;
+}
+.map-legend:not([open]) { width: 230px; }
+.map-legend-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 12px; cursor: pointer; list-style: none; color: #aecbeb;
+  font-size: 12px; font-weight: 700; user-select: none;
+}
+.map-legend-toggle::-webkit-details-marker { display: none; }
+.map-legend-toggle:hover, .map-legend-toggle:focus-visible { background: rgba(46,111,216,.14); outline: none; }
+.map-legend-chevron { transition: transform .16s ease; }
+.map-legend:not([open]) .map-legend-chevron { transform: rotate(-90deg); }
+.map-legend-body { max-height: min(56vh, 420px); overflow-y: auto; padding: 0 12px 10px; }
+
+/* 낮은 데스크톱 뷰포트에서는 상단 HUD와 긴 우하단 범례가 수직으로 겹친다.
+ * 범례 위치는 유지하고 HUD만 범례 폭만큼 이동해 모든 실행 제어의 적중 영역을 보존한다. */
+@media (max-height: 820px) and (min-width: 900px) {
+  #panel-sim:has(.map-legend[open]) .sim-hud { right: 424px; }
 }
 
 @media (max-width: 760px) {
   .map-legend { right: 8px; bottom: 8px; width: min(400px, calc(100vw - 16px)); }
 }
-.map-legend h4 { font-size: 12px; margin: 0 0 8px; color: #aecbeb; display: flex; align-items: baseline; gap: 6px; }
-.map-legend h4 .lg-h4-sub { font-size: 10px; font-weight: 400; color: var(--muted); }
+.map-legend .lg-h4-sub { font-size: 10px; font-weight: 400; color: var(--muted); }
 .map-asset-summary {
   margin: 0 0 8px; padding: 6px 8px; border: 1px solid rgba(46,111,216,.45);
   border-radius: 6px; background: rgba(46,111,216,.12); color: #c9dcf5;
@@ -470,11 +504,6 @@ li.chk-fail { background: #43140f; }
 .lg-toggle { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; font-size: 10px; color: var(--muted); cursor: pointer; }
 
 .lg-line { display: inline-block; width: 16px; height: 0; border-top: 2px solid; justify-self: center; }
-
-/* 같은 개념 사이트의 ICC·ECS·MFR·포대는 저배율에서 표시 위치만 방사형으로 분리한다.
- * 실제 좌표와 범위 링은 바꾸지 않으며, 지도에는 얇은 리더선으로 원점을 표시한다. */
-.asset-spread-line { stroke: #9fb2c7; stroke-width: 1; stroke-dasharray: 2 3; opacity: .55; }
-
 
 /* ══ [분석] 탭 — 9단계 파이프라인 병목·해결 지표 ══ */
 .pl-headrow { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; margin: 8px 0 6px; }

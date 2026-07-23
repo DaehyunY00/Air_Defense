@@ -19,7 +19,7 @@ function walk(dir) {
   return fs.readdirSync(dir).reduce(function (acc, name) {
     var p = path.join(dir, name);
     if (fs.statSync(p).isDirectory()) return acc.concat(walk(p));
-    if (name.slice(-3) === '.js') acc.push(p);
+    if (/\.m?js$/.test(name)) acc.push(p);
     return acc;
   }, []);
 }
@@ -62,8 +62,10 @@ var suites = [
   ,['iads-failure-realism.test.js', '고해상도 요격 실패 현실성 (SHORAD Pk·2발 SLS·무한 재교전 방지·분모 보존)']
   ,['failure-classification.test.js', '실패 분류 v2 (주원인·기여원인·구조성·PIP 세분화·사수부하)']
   ,['ui-performance.test.js', 'UI 응답성·지도 제어 (Worker·병목배지·C2링크·범례)']
-  ,['map-visualization.test.js', '지도 시각화 (legacy 10세트 Leaflet/SVG·저배율 분리·범위 링)']
+  ,['map-visualization.test.js', '지도 시각화 (접이식 범례·공동 포대 중첩 마커·Leaflet/SVG·범위 링)']
   ,['overlap-performance.test.js', 'FULL 중복교전 계산 성능·정본 동등성']
+  ,['iads-kernel.test.mjs', 'IADS_C2 공통 커널 (ES module·이벤트 큐·도메인 RNG·SNR/RCS/수평선 센서)']
+  ,['c2-analysis.test.js', 'C2 구조화 계측·병목 귀속·동일 seed paired Monte Carlo']
 ];
 suites.forEach(function (s) {
   console.log('\n== ' + s[1] + ' ==');

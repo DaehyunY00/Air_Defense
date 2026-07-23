@@ -111,7 +111,17 @@
     var ll = KJ.axisPosition(threat.axis, progress);
     var cat = iadsThreatCategory(threat.type);
     var altKm;
-    if (cat === 'ballistic') {
+    if (threat._iadsPhysical && KJ.IADS) {
+      var axis = KJ.AXES[threat.axis];
+      var distanceKm = threat._iadsAxisDistanceKm;
+      if (!Number.isFinite(distanceKm) && axis) {
+        distanceKm = haversineKm(
+          { lat: axis.entry[0], lon: axis.entry[1], altKm: 0 },
+          { lat: axis.target[0], lon: axis.target[1], altKm: 0 });
+        threat._iadsAxisDistanceKm = distanceKm;
+      }
+      altKm = KJ.IADS.threatPhysics(threat.type, progress, distanceKm).altitude / 1000;
+    } else if (cat === 'ballistic') {
       var apex = threat.type === 'srbm' ? 70 : 45;
       altKm = Math.max(0, apex * Math.sin(Math.PI * progress));
     } else {
@@ -133,6 +143,25 @@
           roles: { fusionC2: 'JAMDC2', KAMDOC: 'KAMDOC', MCRC: 'MCRC', KAOC: 'KAOC' } };
     this.highResolutionDeployment = !!(cfg.features && cfg.features.highResolutionDeployment);
     this.nativeIads = this.highResolutionDeployment;
+    this.modelFidelity = cfg.modelFidelity || 'compat';
+    if (this.modelFidelity !== 'compat' && this.modelFidelity !== 'iads-c2') {
+      throw new Error('Unsupported modelFidelity: ' + this.modelFidelity);
+    }
+    if (this.modelFidelity === 'iads-c2' && !this.highResolutionDeployment) {
+      throw new Error('modelFidelity=iads-c2 requires a high-resolution deployment');
+    }
+    if (this.modelFidelity === 'iads-c2' && (!KJ.IADS || !KJ.createIadsEventQueue)) {
+      throw new Error('IADS_C2 module kernel is not loaded; use the module worker over HTTP');
+    }
+    this.iadsSensorPhysics = this.modelFidelity === 'iads-c2';
+    this.jammingLevel = Math.max(0, Math.min(1, Number(cfg.jammingLevel) || 0));
+    this.ecmActive = cfg.ecmActive === true;
+    this.iadsSensorStats = this.iadsSensorPhysics
+      ? { scans: 0, gated: 0, detections: 0, tracks: 0, fireControl: 0, losses: 0 }
+      : null;
+    this.iadsCorrelationStates = {};
+    this.iadsOrderSeq = 0;
+    this.engagementSeq = 0;
     this.deploymentId = this.highResolutionDeployment ? this.catalog.id : null;
     this.fusionC2Id = this.catalog.roles ? this.catalog.roles.fusionC2 : 'JAMDC2';
     this.intensity = cfg.intensity === undefined ? 1 : cfg.intensity; // 강도 0 허용
@@ -170,6 +199,11 @@
       reserveFloor: ff('reserveFloor', false),        // Step 2: 보존 최소수량(magazine 의존) — 기본 OFF
       thresholdReweight: ff('thresholdReweight', false) // Step 3: 임계 재가중 — 기본 OFF
     };
+    // 명령 계층 내부 플래그는 legacy `global.features` wire shape에 넣지 않는다(Phase 0 SHA 보존).
+    // 비상교전 교리는 별도 명시 플래그 없이는 활성화하지 않아 "명령 부재=자동 발사"가 되지 않는다.
+    this.commandLifecycle = ff('commandLifecycle', this.modelFidelity === 'iads-c2');
+    this.commandReceptionQueue = ff('commandReceptionQueue', this.modelFidelity === 'iads-c2');
+    this.emergencyEngagement = ff('emergencyEngagement', false);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
     if (this.highResolutionDeployment) this.features.highResolutionDeployment = true;
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
@@ -192,7 +226,7 @@
     // 위협표본이 아니라 오직 C2 구조 차이에서만 비롯됨을 보장한다(공통난수 분산감소·짝지은 비교).
     this.rng = KJ.makeRng(this.seed);
     this.arrRng = KJ.makeRng((Math.imul(this.seed ^ 0x9E3779B9, 0x85EBCA6B) >>> 0));
-    this.heap = new KJ.MinHeap();
+    this.heap = this.iadsSensorPhysics ? KJ.createIadsEventQueue() : new KJ.MinHeap();
     this.now = 0;
     this.seq = 0;
     this.threatSeq = 0;
@@ -211,6 +245,12 @@
       commanderAssignments: {}, realDuplicateEngagements: 0,
       // 군단 AOC C2A 정보상태: MCRC+국지항적 접수/융합과 제한형 교전현황 공유.
       trackFusion: { reportsReceived: 0, fusedTracks: 0, multiSourceTracks: 0, prioritizedTracks: 0 },
+      trackQuality: { correct: 0, mis: 0, failed: 0, stale: 0, identified: 0 },
+      c2Orders: {
+        created: 0, received: 0, acknowledged: 0, committed: 0, fired: 0,
+        hit: 0, miss: 0, released: 0, expired: 0, cancelled: 0,
+        expiryByReason: {}, fireByCause: {}
+      },
       statusSharing: {
         sent: 0, delivered: 0, dropped: 0, stale: 0, queued: 0,
         queueWaitSec: 0, deconflicted: 0, duplicatesDueToStaleState: 0
@@ -256,6 +296,12 @@
     this._seriesCount = 0;
     this.traceTruncated = false;
     this.nodeSeriesTruncated = false;
+    // C2 분석용 구조화 이벤트. 일반 DES/MC에서는 완전히 비활성화해 기존 wire shape와
+    // 성능을 보존하고, 결과 화면의 paired DES에서만 Worker가 활성화한다.
+    this.c2Analysis = cfg.c2Analysis === true;
+    this.c2EventCap = Math.max(1000, Number(cfg.c2EventCap) || 50000);
+    this.c2Events = [];
+    this.c2EventsTruncated = false;
 
     this._initNodes();
     if (this.nativeIads) this._initIadsResources();
@@ -383,6 +429,35 @@
     }
   };
 
+  /** 분석 이벤트 기록은 선택적·결정론적이며 시뮬레이션 동역학/RNG에 관여하지 않는다. */
+  Simulation.prototype._metricEvent = function (type, t, threat, detail) {
+    if (!this.c2Analysis) return;
+    if (this.c2Events.length >= this.c2EventCap) {
+      this.c2EventsTruncated = true;
+      return;
+    }
+    var event = { type: type, t: +t, threatId: threat && threat.id ? threat.id : null };
+    if (detail) Object.keys(detail).forEach(function (key) { event[key] = detail[key]; });
+    this.c2Events.push(event);
+  };
+
+  /** C2 작업 이벤트 공통 필드. 항적 갱신시각은 관측만 하며 RNG·동역학에는 관여하지 않는다. */
+  Simulation.prototype._c2JobMetricDetail = function (nsId, job) {
+    var detail = { nodeId: nsId, kind: job.kind, jobId: job.jobId || null };
+    var track = job.track;
+    if (track) {
+      var updates = (track.sources || []).map(function (source) { return source.lastUpdateAt; })
+        .filter(Number.isFinite);
+      detail.trackReceivedAt = Number.isFinite(track.receivedAt) ? track.receivedAt : null;
+      detail.trackLastUpdateAt = updates.length ? Math.max.apply(null, updates) : null;
+      detail.trackSourceCount = (track.sources || []).length;
+      detail.trackFused = !!track.fused;
+      detail.commanderAxis = job.commander && job.commander.axis;
+      detail.threatCategory = job.threat ? iadsThreatCategory(job.threat.type) : null;
+    }
+    return detail;
+  };
+
   // ── 스케줄러 ──
   Simulation.prototype.schedule = function (t, pri, type, data) {
     this.heap.push({ t: t, pri: pri, seq: this.seq++, type: type, data: data });
@@ -421,8 +496,12 @@
   /** 작업을 노드에 투입. 서버 여유→즉시 서비스, 대기실 여유→큐, 초과(K)→드롭(누수). */
   Simulation.prototype._nodeArrive = function (nsId, t, job, onDone) {
     var ns = this.nodeState[nsId];
-    if (!ns) return;
+    if (!ns) return 'missing';
+    var disposition;
     this._advance(ns, t);
+    if (ns.node.category === 'c2') {
+      this._metricEvent('C2_ARRIVED', t, job.threat, this._c2JobMetricDetail(nsId, job));
+    }
     ns.arrivals++;
     var bk = bucket(ns, job.kind); bk.arrivals++;
     var inSystem = ns.busy + ns.queue.length;
@@ -432,6 +511,7 @@
       ns.waitAccum += 0; ns.waitCount++;
       bk.waitAccum += 0; bk.waitCount++;   // 즉시 서비스 = 대기 0 (kind별 Wq 표본에도 계상)
       this._startService(ns, t, job, onDone);
+      disposition = 'started';
     } else if (inSystem < ns.K) {
       var queued = { job: job, onDone: onDone, enqT: t };
       if (job.kind === 'iads_track' && typeof job.priority === 'number') {
@@ -442,18 +522,36 @@
       } else {
         ns.queue.push(queued);
       }
+      disposition = 'queued';
     } else {
       ns.drops++; bk.drops++;     // M/M/c/K 포화 → 항적/교전기회 상실
+      if (ns.node.category === 'c2') {
+        this._metricEvent('C2_DROPPED', t, job.threat, this._c2JobMetricDetail(nsId, job));
+      }
       // Native IADS may have several mutually unaware ICC/USFK branches for the
       // same real threat.  Saturating one branch must not kill the other branch.
-      if (job.kind !== 'iads_track') job.threat.pipelineDead = true;
-      if (!job.threat.leakReason) job.threat.leakReason = 'overflow:' + nsId;
+      var branchLocalFailure = job.kind === 'iads_track' || job.kind === 'directive_reception';
+      if (!branchLocalFailure) job.threat.pipelineDead = true;
+      if (!branchLocalFailure && !job.threat.leakReason) job.threat.leakReason = 'overflow:' + nsId;
+      disposition = 'dropped';
     }
     ns.maxInSystem = Math.max(ns.maxInSystem, ns.busy + ns.queue.length);
     this._sample(nsId, t);
+    return disposition;
   };
 
   Simulation.prototype._startService = function (ns, t, job, onDone) {
+    if (job.onServiceStart) job.onServiceStart(t, job);
+    if (ns.node.category === 'c2') {
+      this._metricEvent('C2_PROCESSING', t, job.threat, this._c2JobMetricDetail(ns.node.id, job));
+    } else if (job.kind === 'engage') {
+      this._metricEvent('ENGAGEMENT_FIRED', t, job.threat, {
+        shooterId: ns.node.id,
+        cause: job.launchCause || job.threat._commandCause || 'unattributed',
+        directiveId: job.directiveId || null,
+        engagementId: job.engagementId || null
+      });
+    }
     var svc = this.rng.exponential(ns.mean);   // ← RNG 소비: kind 분리와 무관하게 draw 1회 유지
     this.schedule(t + svc, PRI.SERVICE_END, 'SERVICE_END', { nsId: ns.node.id, job: job, onDone: onDone });
   };
@@ -461,6 +559,9 @@
   Simulation.prototype._onServiceEnd = function (t, d) {
     var ns = this.nodeState[d.nsId];
     this._advance(ns, t);
+    if (ns.node.category === 'c2') {
+      this._metricEvent('C2_DONE', t, d.job.threat, this._c2JobMetricDetail(d.nsId, d.job));
+    }
     ns.busy--;
     if (ns.busyByKind[d.job.kind] > 0) ns.busyByKind[d.job.kind]--; // kind별 서버 점유 해제
     ns.completions++;
@@ -470,6 +571,17 @@
     while (ns.queue.length > 0) {
       var nx = ns.queue.shift();
       if (!nx.job.threat.alive || nx.job.threat.pipelineDead) continue; // 재고에서 폐기
+      if (Number.isFinite(nx.job.validUntil) && t > nx.job.validUntil) {
+        ns.drops++;
+        bucket(ns, nx.job.kind).drops++;
+        if (ns.node.category === 'c2') {
+          var expiredDetail = this._c2JobMetricDetail(ns.node.id, nx.job);
+          expiredDetail.reason = 'queue_deadline';
+          this._metricEvent('C2_DROPPED', t, nx.job.threat, expiredDetail);
+        }
+        if (nx.job.onAbandon) nx.job.onAbandon(t, nx.job);
+        continue;
+      }
       ns.busy++;
       ns.busyByKind[nx.job.kind] = (ns.busyByKind[nx.job.kind] || 0) + 1;
       ns.waitAccum += (t - nx.enqT); ns.waitCount++;
@@ -515,6 +627,7 @@
   };
 
   Simulation.prototype._resolveIadsCommanders = function (threat) {
+    var self = this;
     var nodes = this._nodesInMode(), shooters = nodes.filter(function (n) { return n.category === 'shooter'; });
     var c2s = nodes.filter(function (n) { return n.category === 'c2'; });
     var category = iadsThreatCategory(threat.type);
@@ -525,7 +638,7 @@
     function c2ByType(typeId) { return c2s.find(function (n) { return n.typeId === typeId; }) || null; }
     function add(node, scope, batteries, axis) {
       var capable = batteries.filter(function (b) {
-        return !!b.canEngage[threat.type] && (!b.coverage || b.coverage.indexOf(threat.axis) !== -1);
+        return self._iadsCanEngage(b, threat) && (!b.coverage || !b.coverage.length || b.coverage.indexOf(threat.axis) !== -1);
       });
       if (node && capable.length) out.push({ id: node.id, typeId: node.typeId, scope: scope, batteryIds: capable.map(function (b) { return b.id; }), axis: axis });
     }
@@ -567,17 +680,45 @@
     return out;
   };
 
+  Simulation.prototype._iadsCanEngage = function (shooter, threat) {
+    if (!shooter || !threat) return false;
+    if (!this.iadsSensorPhysics) return !!(shooter.canEngage && shooter.canEngage[threat.type]);
+    var type = KJ.SHOOTER_TYPES[shooter.typeId];
+    var allowed = type && type.iadsEngageableThreats;
+    return Array.isArray(allowed) && allowed.indexOf(threat.type) !== -1;
+  };
+
   Simulation.prototype._iadsReportBundle = function (threat, commander) {
     var self = this, candidates = [], mcrcId = this.catalog.roles && this.catalog.roles.MCRC;
-    (threat._sensors || []).forEach(function (sensor) {
+    var reportSensors = (threat._sensors || []).filter(function (sensor) {
+      if (!self.iadsSensorPhysics) return true;
+      var track = threat._sensorTracks && threat._sensorTracks[sensor.id];
+      return track && KJ.IADS.trackFreshness(track, self.now, 120).fresh;
+    });
+    reportSensors.forEach(function (sensor) {
       if (commander.axis.indexOf('USFK') === 0 && sensor.forceOwner !== 'USFK') return;
       if (commander.axis !== 'LOCAL_AD' && commander.axis.indexOf('USFK') !== 0 && sensor.forceOwner === 'USFK') return;
       var path = self._iadsShortestPath(sensor.id, commander.id, ['report', 'coord']);
       if (path === null) return;
+      var trackReport = null;
+      if (self.iadsSensorPhysics) {
+        trackReport = KJ.IADS.createTrackReport({
+          physicalTrack: threat._sensorTracks[sensor.id], simTime: self.now, maxAgeSeconds: 120,
+          cache: self.iadsCorrelationStates, seed: self.seed, sensorId: sensor.id,
+          sensorTypeId: sensor.typeId, threatId: threat.id,
+          architecture: self.mode === 'tobe' ? 'killweb' : 'linear'
+        });
+        if (!trackReport) {
+          self.global.trackQuality.failed++;
+          threat._iadsCorrelationFailedAt = self.now;
+          return;
+        }
+        self.global.trackQuality[trackReport.correlationType]++;
+      }
       var delay = path.reduce(function (sum, l) { return sum + l.comm[self.mode].delaySec; }, 0);
       var viaMcrc = !!mcrcId && path.some(function (l) { return l.from === mcrcId || l.to === mcrcId; });
       candidates.push({ sensorId: sensor.id, sensorTypeId: sensor.typeId, path: path, delay: delay,
-        sourceClass: viaMcrc ? 'mcrc' : 'local' });
+        sourceClass: viaMcrc ? 'mcrc' : 'local', trackReport: trackReport });
     });
     candidates.sort(function (a, b) { return a.delay - b.delay || (a.sensorId < b.sensorId ? -1 : 1); });
     if (!candidates.length) return null;
@@ -619,6 +760,7 @@
       var report = self._iadsReportBundle(threat, commander);
       if (!report) return;
       threat._iadsCommanderKeys[key] = true;
+      threat._iadsCorrelationFailedAt = null;
       threat._iadsCommandersById[commander.id] = commander;
       var delay = 0, sources = [];
       report.reports.forEach(function (entry) {
@@ -629,10 +771,19 @@
         });
         delay = Math.max(delay, pathDelay);
         sources.push({ sensorId: entry.sensorId, sensorTypeId: entry.sensorTypeId,
-          sourceClass: entry.sourceClass, arrivedAt: t + pathDelay });
+          sourceClass: entry.sourceClass, arrivedAt: t + pathDelay,
+          state: entry.trackReport && entry.trackReport.state,
+          lastUpdateAt: entry.trackReport && entry.trackReport.lastUpdateAt,
+          staleness: entry.trackReport && entry.trackReport.staleness,
+          confidence: entry.trackReport && entry.trackReport.confidence,
+          correlationType: entry.trackReport && entry.trackReport.correlationType,
+          identity: entry.trackReport && entry.trackReport.identity });
       });
-      threat._c2TrackLedger[commander.id] = { sources: sources, fused: sources.length > 1,
-        receivedAt: t + delay, priority: iadsThreatPriority(threat, t + delay) };
+      var fused = self.iadsSensorPhysics ? KJ.IADS.fuseTrackReports(sources) : { fused: sources.length > 1 };
+      threat._c2TrackLedger[commander.id] = Object.assign({}, fused, {
+        sources: sources, receivedAt: t + delay, priority: iadsThreatPriority(threat, t + delay),
+        freshUntil: t + delay + 120
+      });
       self.global.trackFusion.reportsReceived += sources.length;
       self.global.trackFusion.fusedTracks++;
       if (sources.length > 1) self.global.trackFusion.multiSourceTracks++;
@@ -643,21 +794,101 @@
       });
     });
     if (!Object.keys(threat._iadsCommanderKeys).length) {
-      threat.leakReason = 'no_report_path';
-      this._recordFailureEvidence(threat, 'no_report_path', { commanderCount: commanders.length });
+      if (this.iadsSensorPhysics && threat._iadsCorrelationFailedAt != null) {
+        threat.leakReason = 'correlation_failed';
+        threat._nextIadsCorrelationRetry = Math.floor(t / KJ.IADS.CORRELATION_RETRY_SECONDS + 1) * KJ.IADS.CORRELATION_RETRY_SECONDS;
+        this._recordFailureEvidence(threat, 'correlation_failed', { commanderCount: commanders.length });
+      } else {
+        threat.leakReason = 'no_report_path';
+        this._recordFailureEvidence(threat, 'no_report_path', { commanderCount: commanders.length });
+      }
     }
   };
 
   /** 1 탐지: 축선·클래스 커버 센서 선별 후 첫 스캔 예약 */
   Simulation.prototype._beginDetect = function (threat, t) {
-    var mode = this.mode, type = threat.type, axis = threat.axis;
+    var mode = this.mode, type = threat.type, axis = threat.axis, physical = this.iadsSensorPhysics;
     var sensors = this._nodesInMode().filter(function (n) {
       return n.category === 'sensor' &&
-        n.detects.indexOf(type) !== -1 && n.coverage.indexOf(axis) !== -1;
+        n.detects.indexOf(type) !== -1 && (physical || n.coverage.indexOf(axis) !== -1);
     });
     if (sensors.length === 0) { threat.leakReason = 'no_sensor'; return; } // 탐지 공백
     threat._sensors = sensors;
+    if (this.iadsSensorPhysics) {
+      threat._sensorTracks = {};
+      sensors.forEach(function (sensor) {
+        var track = KJ.IADS.createTrackState();
+        track.rng = KJ.IADS.deriveStream(this.seed, KJ.IADS.RNG_DOMAIN.SENSOR_SCAN, threat.id, sensor.id);
+        threat._sensorTracks[sensor.id] = track;
+      }, this);
+      this.schedule(t + KJ.IADS.SENSOR_SCAN_CADENCE_SECONDS, PRI.DETECT, 'IADS_SENSOR_SCAN', { threat: threat });
+      return;
+    }
     this.schedule(t + SCAN_SEC, PRI.DETECT, 'DETECT', { threat: threat });
+  };
+
+  /** IADS_C2 sensor layer: per-sensor geometry/SNR/RCS state with domain RNG. */
+  Simulation.prototype._onIadsSensorScan = function (t, d) {
+    var threat = d.threat;
+    if (!threat.alive || threat.pipelineDead) return;
+    var dt = KJ.IADS.SENSOR_SCAN_CADENCE_SECONDS;
+    var pos = iadsThreatPosition(threat, t);
+    var progress = Math.max(0, Math.min(1, (t - threat.spawnT) / threat.dwellSec));
+    var physical = KJ.IADS.threatPhysics(threat.type, progress);
+    var target = {
+      type: threat.type,
+      position: { lon: pos.lon, lat: pos.lat, alt: pos.altKm * 1000 },
+      rcs: physical.rcs,
+      ecmFactor: threat.ecmActive ? physical.ecmFactor : 0
+    };
+    var acquiredNow = false;
+    (threat._sensors || []).forEach(function (sensor) {
+      var track = threat._sensorTracks[sensor.id];
+      if (!track) return;
+      var type = KJ.SENSOR_TYPES[sensor.typeId];
+      var pFinal = KJ.IADS.computeScanPFinal({
+        id: sensor.id,
+        position: sensor.position || { lon: sensor.coord[1], lat: sensor.coord[0], alt: 0 },
+        azimuthCenter: 0
+      }, target, type, { jammingLevel: this.jammingLevel });
+      this.iadsSensorStats.scans++;
+      if (pFinal == null) this.iadsSensorStats.gated++;
+      else pFinal = Math.max(0, Math.min(0.99, pFinal * this.mult.detect));
+      var before = track.state;
+      var stepped = KJ.IADS.stepSensorTrack(track, pFinal, dt, track.rng, t);
+      var transitionEvent = KJ.IADS.advanceTransitions(track, type, t, threat.type);
+      var eventName = transitionEvent || stepped.event;
+      if (before === KJ.IADS.SENSOR_STATE.UNDETECTED && track.state !== before) acquiredNow = true;
+      if (eventName === 'SENSOR_DETECTED') this.iadsSensorStats.detections++;
+      else if (eventName === 'SENSOR_TRACKED') this.iadsSensorStats.tracks++;
+      else if (eventName === 'SENSOR_FIRE_CONTROL') this.iadsSensorStats.fireControl++;
+      else if (eventName === 'SENSOR_TRACK_LOST' || eventName === 'SENSOR_FC_DEGRADED') this.iadsSensorStats.losses++;
+      if (eventName && threat._trace) this._mark(threat, eventName + ':' + sensor.id, t);
+    }, this);
+
+    if (!threat.detected && Object.keys(threat._sensorTracks).some(function (id) {
+      return threat._sensorTracks[id].state !== KJ.IADS.SENSOR_STATE.UNDETECTED;
+    })) {
+      threat.detected = true;
+      threat._detectT = t;
+      this.global.detected++;
+      this._mark(threat, '탐지', t);
+      this._metricEvent('SENSOR_DETECTED', t, threat, { source: 'iads-physics' });
+      acquiredNow = true;
+    }
+    var noCommanderTrack = !threat._iadsCommanderKeys || !Object.keys(threat._iadsCommanderKeys).length;
+    var retryCorrelation = threat.detected && noCommanderTrack && threat.leakReason === 'correlation_failed' &&
+      t >= (threat._nextIadsCorrelationRetry || Infinity);
+    if (threat.detected && (acquiredNow || retryCorrelation)) {
+      this._routeIadsDetected(threat, t);
+      if (threat._iadsCommanderKeys && Object.keys(threat._iadsCommanderKeys).length &&
+          (threat.leakReason === 'no_report_path' || threat.leakReason === 'correlation_failed')) {
+        threat.leakReason = null;
+      }
+    }
+    if (t + dt < threat.spawnT + threat.dwellSec) {
+      this.schedule(t + dt, PRI.DETECT, 'IADS_SENSOR_SCAN', { threat: threat });
+    }
   };
 
   /**
@@ -701,6 +932,7 @@
       threat._detectT = t; // 결심 지연(MoP) 기준 시각
       this.global.detected++;
       this._mark(threat, '탐지', t);
+      this._metricEvent('SENSOR_DETECTED', t, threat, { source: 'legacy-scan' });
       this._onDetected(threat, t);
     } else {
       // 항적 소실 → 재획득 시도 (공역 이탈 전까지 반복, EXIT가 상한)
@@ -721,7 +953,11 @@
       else if (comm.dist.kind === 'lognormal') base = this.rng.lognormal(comm.dist.mean, comm.dist.stddev);
       else if (comm.dist.kind === 'normal') base = this.rng.normal(comm.dist.mean, comm.dist.stddev);
     }
-    return Math.max(0, base) * this.mult.delay;
+    base = Math.max(0, base);
+    if (this.iadsSensorPhysics && this.jammingLevel > 0) {
+      base += base * this.jammingLevel * (.5 + this.rng.raw());
+    }
+    return base * this.mult.delay;
   };
 
   /**
@@ -853,6 +1089,10 @@
     // ── 책임공백: 협조 경로 부재 또는 잔여 체공창 내 협조 불가 → 중복교전 ──
     this.global.coordGaps++;
     real._hadCoordGap = true;
+    this._metricEvent('COORDINATION_FAILED', t, real, {
+      phase: 'deconfliction', fromC2Id: ghostC2, toC2Id: mainC2,
+      reason: path ? 'deadline_exceeded' : 'no_coordination_path'
+    });
     this._mark(real, '책임공백:' + ghostC2 + '↮' + mainC2 +
       (path ? '(협조' + coordSec.toFixed(0) + 's≥잔여' + Math.max(0, remaining).toFixed(0) + 's)' : '(협조경로없음)'), t);
     this._dupEngage(t, ghost, ghostC2, shooters);
@@ -912,13 +1152,45 @@
     var self = this, threat = d.threat, commander = d.commander;
     if (!threat.alive || threat.pipelineDead || !this.nodeState[commander.id]) return;
     var track = d.track || { sources: [], fused: false, priority: iadsThreatPriority(threat, t) };
+    if (this.iadsSensorPhysics && (track.freshUntil < t || track.sources.every(function (source) {
+      return !Number.isFinite(source.lastUpdateAt) || t - source.lastUpdateAt > 120;
+    }))) {
+      this.global.trackQuality.stale++;
+      this._mark(threat, '항적폐기:STALE:' + commander.typeId, t);
+      return;
+    }
     this._mark(threat, '항적정보접수:' + commander.typeId + '(' + track.sources.length + '출처)', t);
+    var reportUpdates = (track.sources || []).map(function (source) { return source.lastUpdateAt; })
+      .filter(Number.isFinite);
+    this._metricEvent('TRACK_REPORT_RECEIVED', t, threat, {
+      reportId: 'REPORT_' + threat.id + '_' + commander.id,
+      nodeId: commander.id,
+      commanderAxis: commander.axis,
+      threatCategory: iadsThreatCategory(threat.type),
+      trackReceivedAt: Number.isFinite(track.receivedAt) ? track.receivedAt : t,
+      trackLastUpdateAt: reportUpdates.length ? Math.max.apply(null, reportUpdates) : null,
+      trackSourceCount: (track.sources || []).length,
+      trackFused: !!track.fused
+    });
     this._mark(threat, '항적융합:' + commander.typeId + (track.fused ? '(MCRC+국지)' : '(단일출처)'), t);
     this._mark(threat, '위협우선순위:' + commander.typeId + '/' + Math.floor(track.priority), t);
     this._nodeArrive(commander.id, t, {
-      threat: threat, kind: 'iads_track', commander: commander, priority: track.priority, track: track
+      threat: threat, kind: 'iads_track', commander: commander, priority: track.priority, track: track,
+      jobId: 'TRACK_' + threat.id + '_' + commander.id
     }, function (done, job) {
       if (!job.threat._countedC2) { job.threat._countedC2 = true; self.global.reachedC2++; }
+      if (self.iadsSensorPhysics) {
+        var architecture = self.mode === 'tobe' ? 'killweb' : 'linear';
+        track.sources.forEach(function (source) {
+          KJ.IADS.overrideCorrelationCorrect(self.iadsCorrelationStates, source.sensorId, threat.id, architecture);
+          source.correlationType = KJ.IADS.TRACK_CORRELATION.CORRECT;
+          source.identity = KJ.IADS.TRACK_IDENTITY.HOSTILE;
+        });
+        track.correlationType = KJ.IADS.TRACK_CORRELATION.CORRECT;
+        track.identity = KJ.IADS.TRACK_IDENTITY.HOSTILE;
+        self.global.trackQuality.identified++;
+        self._mark(job.threat, '식별확정:' + commander.typeId, done);
+      }
       self.global.commanderAssignments[commander.typeId] = (self.global.commanderAssignments[commander.typeId] || 0) + 1;
       self._mark(job.threat, '위협판단·표적할당준비:' + commander.typeId, done);
       self._iadsDecide(job.threat, done, commander);
@@ -944,10 +1216,23 @@
 
   Simulation.prototype._iadsFireControlState = function (shooter, threat, t) {
     if (!shooter.mfrSensorId) return { ready: true, readyAt: t, state: 'FIRE_CONTROL' };
+    if (this.iadsSensorPhysics) {
+      var physicalTrack = threat._sensorTracks && threat._sensorTracks[shooter.mfrSensorId];
+      var state = physicalTrack ? physicalTrack.state : KJ.IADS.SENSOR_STATE.UNDETECTED;
+      var freshness = KJ.IADS.trackFreshness(physicalTrack, t, 3);
+      return {
+        ready: state === KJ.IADS.SENSOR_STATE.FIRE_CONTROL && freshness.fresh,
+        readyAt: t + KJ.IADS.SENSOR_SCAN_CADENCE_SECONDS,
+        state: state,
+        staleness: freshness.age,
+        confidence: freshness.confidence
+      };
+    }
     var sensor = this._nodeById(shooter.mfrSensorId);
     var spec = sensor && KJ.SENSOR_TYPES[sensor.typeId];
     if (!sensor || !spec) return { ready: false, readyAt: t + 1, state: 'UNDETECTED' };
-    var fcRange = spec.ranges && spec.ranges.fireControl;
+    var compatRanges = spec.compatibilityRanges || spec.ranges;
+    var fcRange = compatRanges && compatRanges.fireControl;
     if (!fcRange) return { ready: false, readyAt: t + 1, state: 'TRACKED' };
     var firstInside = null;
     for (var at = threat.spawnT; at <= t; at += 1) {
@@ -961,7 +1246,7 @@
   };
 
   Simulation.prototype._iadsEvaluate = function (shooter, threat, t) {
-    if (!shooter || !shooter.canEngage[threat.type]) return { feasible: false, reason: 'no_missile_for_threat' };
+    if (!this._iadsCanEngage(shooter, threat)) return { feasible: false, reason: 'no_missile_for_threat' };
     var resource = this.iadsResources[shooter.id];
     if (!resource) return { feasible: false, reason: 'not_operational' };
     var ammo = this._iadsAmmo(shooter.id, t);
@@ -978,32 +1263,165 @@
 
     var missiles = shooter.engage.missiles || {}, shooterPos = { lat: shooter.coord[0], lon: shooter.coord[1], altKm: 0 };
     var remaining = Math.max(0, threat.spawnT + threat.dwellSec - t), best = null, earliest = Infinity;
+    if (!this.iadsSensorPhysics) {
+      Object.keys(missiles).forEach(function (missileType) {
+        var m = missiles[missileType], compat = m.compatibility || {};
+        if (compat.enabled === false) return;
+        var env = compat.engagementEnvelope || m.engagementEnvelope;
+        var compatSpeed = compat.missileSpeed || m.missileSpeed;
+        for (var dt = 1; dt <= Math.min(300, Math.floor(remaining)); dt++) {
+          var pos = iadsThreatPosition(threat, t + dt);
+          var range = haversineKm(shooterPos, pos), alt = pos.altKm;
+          if (range < env.Rmin || range > env.Rmax || alt < env.Hmin || alt > env.Hmax) continue;
+          var flyout = range * 1000 / compatSpeed;
+          if (flyout > dt) continue;
+          var wait = Math.max(0, dt - flyout - 3);
+          var candidate = {
+            feasible: wait <= 0.000001, reason: wait > 0 ? 'too_early' : null,
+            readyAt: t + wait, missileType: missileType, missile: m,
+            pip: { position: pos, timeToReach: dt, flyout: flyout, rangeKm: range },
+            pk: Math.max(0, Math.min(0.99, ((m.pssekTable && m.pssekTable.default) || 0.75) * this.mult.pk)),
+            ammo: ammo, fcState: fc.state
+          };
+          if (wait < earliest) { earliest = wait; best = candidate; }
+          break;
+        }
+      }, this);
+      return best || { feasible: false, reason: 'no_feasible_pip', readyAt: remaining > 1 ? t + 1 : Infinity };
+    }
+    var canonicalType = KJ.IADS.canonicalThreatType(threat.type);
     Object.keys(missiles).forEach(function (missileType) {
-      var m = missiles[missileType], env = m.engagementEnvelope;
-      for (var dt = 1; dt <= Math.min(300, Math.floor(remaining)); dt++) {
-        var pos = iadsThreatPosition(threat, t + dt);
-        var range = haversineKm(shooterPos, pos), alt = pos.altKm;
-        if (range < env.Rmin || range > env.Rmax || alt < env.Hmin || alt > env.Hmax) continue;
-        var flyout = range * 1000 / m.missileSpeed;
-        if (flyout > dt) continue;
-        var wait = Math.max(0, dt - flyout - 3);
-        var candidate = {
-          feasible: wait <= 0.000001, reason: wait > 0 ? 'too_early' : null,
-          readyAt: t + wait, missileType: missileType, missile: m,
-          pip: { position: pos, timeToReach: dt, flyout: flyout, rangeKm: range },
-          pk: Math.max(0, Math.min(0.99, ((m.pssekTable && m.pssekTable.default) || 0.75) * this.mult.pk)),
-          ammo: ammo, fcState: fc.state
-        };
-        if (wait < earliest) { earliest = wait; best = candidate; }
-        break;
+      var m = missiles[missileType], table = m.pssekTable || {};
+      var detailed = Object.keys(table).some(function (key) { return key !== 'default'; });
+      if (detailed && !table[canonicalType]) return;
+      var pip = KJ.IADS.findEarliestPip({
+        now: t, remainingSeconds: remaining, missile: m,
+        positionAt: function (at) { return iadsThreatPosition(threat, at); },
+        rangeTo: function (position) { return haversineKm(shooterPos, position); }
+      });
+      if (!pip) return;
+      var launchWait = pip.timeToReach - pip.flyout - 3;
+      var nextPos = iadsThreatPosition(threat, Math.min(threat.spawnT + threat.dwellSec, t + 1));
+      var aspect = KJ.IADS.classifyAspect(shooterPos, iadsThreatPosition(threat, t), nextPos);
+      var basePk = KJ.IADS.lookupPssek(table, threat.type, pip.rangeKm, aspect);
+      if (basePk == null) return;
+      var mfr = shooter.mfrSensorId ? this._nodeById(shooter.mfrSensorId) : null;
+      var mfrType = mfr && KJ.SENSOR_TYPES[mfr.typeId];
+      var threatPhysical = KJ.IADS.threatPhysics(threat.type,
+        Math.max(0, Math.min(1, (t - threat.spawnT) / threat.dwellSec)), threat._iadsAxisDistanceKm);
+      var correctedPk = KJ.IADS.applyEngagementProbabilityCorrections(basePk, {
+        jammingLevel: this.jammingLevel,
+        jammingSusceptibility: mfrType ? mfrType.jammingSusceptibility : .5,
+        ecmActive: threat.ecmActive,
+        ecmFactor: threatPhysical.ecmFactor,
+        pkMultiplier: this.mult.pk
+      });
+      var candidate = {
+        feasible: launchWait <= 0, reason: launchWait > 0 ? 'too_early' : null,
+        readyAt: t + Math.max(0, launchWait), missileType: missileType, missile: m,
+        pip: pip, aspect: aspect,
+        pk: correctedPk,
+        ammo: ammo, fcState: fc.state, trackStaleness: fc.staleness
+      };
+      if (m.fuelTime && pip.flyout > m.fuelTime) {
+        candidate.feasible = false; candidate.reason = 'fuel_insufficient'; candidate.readyAt = Infinity;
       }
+      if (candidate.pk < KJ.IADS.MIN_ENGAGEMENT_PK) {
+        candidate.feasible = false; candidate.reason = 'pk_too_low'; candidate.readyAt = Infinity;
+      }
+      var rank = candidate.feasible ? -1 : Math.max(0, launchWait);
+      if (rank < earliest) { earliest = rank; best = candidate; }
     }, this);
     return best || { feasible: false, reason: 'no_feasible_pip', readyAt: remaining > 1 ? t + 1 : Infinity };
   };
 
+  Simulation.prototype._iadsCreatePlan = function (commander, shooterId, t, threat, options) {
+    options = options || {};
+    var id = 'ORDER_' + (++this.iadsOrderSeq);
+    var plan;
+    if (this.iadsSensorPhysics) {
+      plan = KJ.IADS.createEngagementOrder(id, commander, shooterId, t, {
+        threatId: threat && threat.id,
+        targetEcsId: options.targetEcsId,
+        authorityLevel: commander && commander.typeId,
+        delegationLevel: options.delegationLevel,
+        launchCause: options.launchCause,
+        trackLastUpdateAt: options.trackLastUpdateAt,
+        trackReceivedAt: options.trackReceivedAt,
+        validUntil: options.validUntil,
+        engagementId: 'ENG_' + (++this.engagementSeq)
+      });
+    } else {
+      plan = {
+        id: id, directiveId: id, threatId: threat && threat.id,
+        commander: commander, shooterId: shooterId, createdAt: t,
+        issuedByC2Id: commander && commander.id,
+        targetEcsId: options.targetEcsId || null,
+        authorityLevel: commander && commander.typeId,
+        delegationLevel: options.delegationLevel || null,
+        launchCause: options.launchCause || 'commanded',
+        trackLastUpdateAt: Number.isFinite(options.trackLastUpdateAt) ? options.trackLastUpdateAt : null,
+        trackReceivedAt: Number.isFinite(options.trackReceivedAt) ? options.trackReceivedAt : null,
+        validUntil: options.validUntil == null ? null : options.validUntil,
+        engagementId: 'ENG_' + (++this.engagementSeq),
+        released: false, resolved: false, fired: false
+      };
+    }
+    if (this.commandLifecycle) {
+      this._metricEvent('DIRECTIVE_CREATED', t, threat, {
+        directiveId: plan.directiveId, directiveType: 'ENGAGE',
+        issuedByC2Id: commander && commander.id, targetEcsId: plan.targetEcsId || null,
+        targetBatteryId: shooterId, authorityLevel: plan.authorityLevel || (commander && commander.typeId),
+        delegationLevel: plan.delegationLevel || null, cause: plan.launchCause,
+        validUntil: plan.validUntil, engagementId: plan.engagementId
+      });
+    }
+    return plan;
+  };
+
+  Simulation.prototype._iadsTransitionPlan = function (plan, state, t, claimState, reason) {
+    if (this.iadsSensorPhysics) KJ.IADS.transitionOrder(plan, state, t, claimState, reason);
+    else {
+      if (claimState === 'fired' || claimState === 'bda_pending') plan.fired = true;
+      if (claimState === 'released' || state === 'released') plan.released = true;
+      if (state === 'hit' || state === 'miss' || state === 'cancelled' || state === 'expired') {
+        plan.resolved = true; plan.released = true;
+      }
+      if (state === 'expired') plan.expiryReason = reason || 'unknown';
+      if (state === 'cancelled') plan.cancellationReason = reason || 'unknown';
+    }
+    if (this.commandLifecycle) {
+      var eventType = {
+        in_transit: 'DIRECTIVE_SENT',
+        received: 'DIRECTIVE_RECEIVED',
+        acknowledged: 'DIRECTIVE_PROCESSING',
+        active: 'DIRECTIVE_ACTIVE',
+        expired: 'DIRECTIVE_EXPIRED',
+        cancelled: 'DIRECTIVE_CANCELLED'
+      }[state];
+      if (eventType) {
+        this._metricEvent(eventType, t, { id: plan.threatId }, {
+          directiveId: plan.directiveId, directiveType: plan.directiveType || 'ENGAGE',
+          issuedByC2Id: plan.issuedByC2Id || (plan.commander && plan.commander.id),
+          targetEcsId: plan.targetEcsId || null, targetBatteryId: plan.shooterId,
+          authorityLevel: plan.authorityLevel || (plan.commander && plan.commander.typeId),
+          delegationLevel: plan.delegationLevel || null, cause: plan.launchCause,
+          reason: reason || null, validUntil: plan.validUntil,
+          engagementId: plan.engagementId
+        });
+      }
+    }
+    return plan;
+  };
+
+  Simulation.prototype._iadsActivePlan = function (plan) {
+    return this.iadsSensorPhysics ? KJ.IADS.isActiveClaim(plan) : !(plan.released || plan.resolved);
+  };
+
   Simulation.prototype._iadsPlanBlocks = function (threat, commander) {
+    var self = this;
     return (threat._iadsPlans || []).some(function (p) {
-      if (p.released || p.resolved) return false;
+      if (!self._iadsActivePlan(p)) return false;
       if (p.commander.axis !== commander.axis) return false; // ROK↔USFK/local axes do not share engagement state.
       if (commander.scope === 'global') return true;
       if (commander.scope === 'icc') return p.commander.id === commander.id;
@@ -1088,10 +1506,13 @@
     var ev = threat._failureEvidence || {};
     if (threat.leakReason === 'no_responsible_c2' || ev.no_responsible_c2) return 'no_responsible_c2';
     if (threat.leakReason === 'no_report_path' || ev.no_report_path) return 'no_report_path';
+    if (threat.leakReason === 'correlation_failed' || ev.correlation_failed) return 'correlation_failed';
     if (threat.tries > 0) return threat.leakReason || 'timeout:engage';
     if (ev.ammo_depleted) return 'ammo_depleted';
     if (ev.capacity_full) return 'capacity_full';
     if (ev.no_fire_control) return 'no_fire_control';
+    if (ev.fuel_insufficient) return 'fuel_insufficient';
+    if (ev.pk_too_low) return 'pk_too_low';
     if (ev.no_missile_for_threat) return 'no_capable_weapon';
     if (ev.no_feasible_pip) {
       return threat._hadIadsPlan || ev.too_early ? 'window_lost_due_to_c2' : 'engagement_geometry_gap';
@@ -1102,7 +1523,7 @@
 
   /** 탄약·채널·FC를 정상화한 반사실에서 전 비행창 중 PIP가 한 번이라도 가능한지 검사한다. */
   Simulation.prototype._iadsGeometryWindow = function (shooter, threat) {
-    if (!shooter || !shooter.canEngage[threat.type]) return null;
+    if (!this._iadsCanEngage(shooter, threat)) return null;
     var cacheKey = shooter.id + '|' + threat.type + '|' + threat.axis + '|' + threat.dwellSec;
     var cached = this._geometryWindowCache[cacheKey];
     if (cached !== undefined) {
@@ -1118,10 +1539,13 @@
       var pos = iadsThreatPosition(threat, threat.spawnT + elapsed);
       var keys = Object.keys(missiles);
       for (var i = 0; i < keys.length; i++) {
-        var m = missiles[keys[i]], env = m.engagementEnvelope;
+        var m = missiles[keys[i]], compat = m.compatibility || {};
+        if (!this.iadsSensorPhysics && compat.enabled === false) continue;
+        var env = !this.iadsSensorPhysics && compat.engagementEnvelope ? compat.engagementEnvelope : m.engagementEnvelope;
+        var speed = !this.iadsSensorPhysics && compat.missileSpeed ? compat.missileSpeed : m.missileSpeed;
         var range = haversineKm(shooterPos, pos), alt = pos.altKm;
         if (range < env.Rmin || range > env.Rmax || alt < env.Hmin || alt > env.Hmax) continue;
-        var flyout = range * 1000 / m.missileSpeed;
+        var flyout = range * 1000 / speed;
         if (flyout <= elapsed) {
           var fireAt = elapsed - flyout;
           firstFire = Math.min(firstFire, fireAt);
@@ -1142,12 +1566,15 @@
     var ev = threat._failureEvidence || {};
     if (threat.leakReason === 'no_responsible_c2' || ev.no_responsible_c2) return 'no_responsible_c2';
     if (threat.leakReason === 'no_report_path' || ev.no_report_path) return 'no_report_path';
+    if (threat.leakReason === 'correlation_failed' || ev.correlation_failed) return 'correlation_failed';
     if (threat.tries > 0) return threat.leakReason === 'missed' ? 'missed' : 'timeout:engage';
+    if (ev.fuel_insufficient) return 'fuel_insufficient';
+    if (ev.pk_too_low) return 'pk_too_low';
 
     var eligibleIds = threat._eligibleShooterIds || {};
     var capable = this._nodesInMode().filter(function (n) {
-      return n.category === 'shooter' && eligibleIds[n.id] && n.canEngage && n.canEngage[threat.type];
-    });
+      return n.category === 'shooter' && eligibleIds[n.id] && this._iadsCanEngage(n, threat);
+    }, this);
     if (!capable.length) return 'no_capable_weapon';
     var geometryWindows = capable.map(function (n) {
       var window = this._iadsGeometryWindow(n, threat);
@@ -1219,10 +1646,52 @@
       return;
     }
     var chosen = candidates[0], path = this._iadsShortestPath(commander.id, chosen.shooter.id, ['coord', 'command']);
-    if (path === null) { if (!threat.leakReason) threat.leakReason = 'responsibility_gap'; return; }
-    var plan = { commander: commander, shooterId: chosen.shooter.id, createdAt: t, released: false, resolved: false, fired: false };
+    if (path === null) {
+      if (!threat.leakReason) threat.leakReason = 'responsibility_gap';
+      this._metricEvent('RESPONSIBILITY_UNRESOLVED', t, threat, {
+        commanderId: commander.id, shooterId: chosen.shooter.id, reason: 'no_command_path'
+      });
+      return;
+    }
+    var ledger = threat._c2TrackLedger && threat._c2TrackLedger[commander.id];
+    var updates = ledger ? (ledger.sources || []).map(function (source) { return source.lastUpdateAt; })
+      .filter(Number.isFinite) : [];
+    var lastUpdateAt = updates.length ? Math.max.apply(null, updates) : null;
+    var cause = 'commanded', delegationLevel = null;
+    if (commander.axis === 'MCRC') cause = 'mcrc_commanded';
+    else if (commander.scope === 'icc') { cause = 'delegated_icc'; delegationLevel = 'ICC'; }
+    else if (commander.scope === 'self_battery') {
+      cause = commander.axis === 'LOCAL_AD' ? 'autonomous' : 'delegated_ecs';
+      delegationLevel = 'ECS';
+    }
+    var geometryWindow = this._iadsGeometryWindow(chosen.shooter, threat);
+    if (this.emergencyEngagement && commander.axis === 'LOCAL_AD' && geometryWindow &&
+        geometryWindow.lastFire - t <= 30) {
+      cause = 'emergency';
+    }
+    var plan = this._iadsCreatePlan(commander, chosen.shooter.id, t, threat, {
+      targetEcsId: chosen.shooter.ecsC2Id || null,
+      delegationLevel: delegationLevel,
+      launchCause: cause,
+      trackLastUpdateAt: lastUpdateAt,
+      trackReceivedAt: ledger && ledger.receivedAt,
+      validUntil: geometryWindow ? geometryWindow.lastFire + 3 : null
+    });
     threat._iadsPlans.push(plan);
+    this.global.c2Orders.created++;
     threat._hadIadsPlan = true;
+    threat._commandCause = cause; // 구 trace/UI 호환. 실제 발사 귀속은 plan.launchCause가 권위값.
+    this._metricEvent('COMMAND_DECIDED', t, threat, {
+      nodeId: commander.id, shooterId: chosen.shooter.id, cause: cause,
+      directiveId: plan.directiveId, engagementId: plan.engagementId,
+      authorityLevel: plan.authorityLevel, delegationLevel: plan.delegationLevel,
+      commanderAxis: commander.axis, threatCategory: iadsThreatCategory(threat.type),
+      trackLastUpdateAt: lastUpdateAt,
+      trackReceivedAt: ledger && Number.isFinite(ledger.receivedAt) ? ledger.receivedAt : null,
+      trackAgeSec: Number.isFinite(lastUpdateAt) ? Math.max(0, t - lastUpdateAt) : null,
+      trackSourceCount: ledger ? (ledger.sources || []).length : 0,
+      trackFused: !!(ledger && ledger.fused)
+    });
     this._mark(threat, '사수선정·표적할당:' + commander.typeId + '→' + chosen.shooter.id, t);
     this._mark(threat, '자체교전승인:' + commander.typeId, t);
     this._sendIadsStatus(threat, commander, 'assigned', t);
@@ -1231,6 +1700,7 @@
       delay += self._linkDelay(l.comm[self.mode]);
       self._recordLink(l.from, l.to, l.comm[self.mode], l.kind);
     });
+    this._iadsTransitionPlan(plan, 'in_transit', t);
     this.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_FIRE', { threat: threat, commander: commander, shooterId: chosen.shooter.id, plan: plan });
   };
 
@@ -1243,10 +1713,89 @@
     var threat = d.threat, plan = d.plan, shooter = this._nodeById(d.shooterId);
     if (!threat.alive || plan.released || plan.resolved) return;
     var resource = this.iadsResources[shooter.id];
+    if (!d.receptionComplete && this.commandReceptionQueue &&
+        plan.targetEcsId && this.nodeState[plan.targetEcsId]) {
+      var self = this;
+      this._iadsTransitionPlan(plan, 'received', t);
+      this.global.c2Orders.received++;
+      var disposition = this._nodeArrive(plan.targetEcsId, t, {
+        threat: threat,
+        kind: 'directive_reception',
+        jobId: plan.directiveId,
+        directiveId: plan.directiveId,
+        validUntil: plan.validUntil,
+        onServiceStart: function (startedAt) {
+          self._iadsTransitionPlan(plan, 'acknowledged', startedAt);
+          self.global.c2Orders.acknowledged++;
+        },
+        onAbandon: function (abandonedAt) {
+          if (plan.released || plan.resolved) return;
+          self._iadsTransitionPlan(plan, 'expired', abandonedAt, 'released', 'queue_deadline');
+          self.global.c2Orders.expired++;
+          self.global.c2Orders.released++;
+          self.global.c2Orders.expiryByReason.queue_deadline =
+            (self.global.c2Orders.expiryByReason.queue_deadline || 0) + 1;
+          self._recordFailureEvidence(threat, 'window_lost_due_to_c2', {
+            commanderId: d.commander.id, shooterId: shooter.id, phase: 'directive-queue'
+          });
+          self._sendIadsStatus(threat, d.commander, 'released', abandonedAt);
+          self._scheduleIadsRetry(threat, d.commander, abandonedAt + 0.5);
+        }
+      }, function (done) {
+        if (!threat.alive || plan.released || plan.resolved) {
+          if (!plan.resolved) {
+            self._iadsTransitionPlan(plan, 'cancelled', done, 'released', 'threat_resolved_before_activation');
+            self.global.c2Orders.cancelled++;
+            self.global.c2Orders.released++;
+          }
+          return;
+        }
+        self._iadsTransitionPlan(plan, 'active', done);
+        self._onIadsFire(done, Object.assign({}, d, { receptionComplete: true }));
+      });
+      if (disposition === 'dropped') {
+        this._iadsTransitionPlan(plan, 'expired', t, 'released', 'queue_capacity');
+        this.global.c2Orders.expired++;
+        this.global.c2Orders.released++;
+        this.global.c2Orders.expiryByReason.queue_capacity =
+          (this.global.c2Orders.expiryByReason.queue_capacity || 0) + 1;
+        this._recordFailureEvidence(threat, 'capacity_full', {
+          commanderId: d.commander.id, shooterId: shooter.id, phase: 'directive-queue'
+        });
+        this._sendIadsStatus(threat, d.commander, 'released', t);
+        this._scheduleIadsRetry(threat, d.commander, t + 0.5);
+      }
+      return;
+    }
+    if (!d.receptionComplete) {
+      this._iadsTransitionPlan(plan, 'received', t);
+      this.global.c2Orders.received++;
+      this._iadsTransitionPlan(plan, 'acknowledged', t);
+      this.global.c2Orders.acknowledged++;
+      this._iadsTransitionPlan(plan, 'active', t);
+    }
     if (resource) resource.commandArrivals++;
+    if (Number.isFinite(plan.validUntil) && t > plan.validUntil) {
+      this._iadsTransitionPlan(plan, 'expired', t, 'released', 'window_closed');
+      this.global.c2Orders.expired++;
+      this.global.c2Orders.released++;
+      this.global.c2Orders.expiryByReason.window_closed =
+        (this.global.c2Orders.expiryByReason.window_closed || 0) + 1;
+      this._recordFailureEvidence(threat, 'window_lost_due_to_c2', {
+        commanderId: d.commander.id, shooterId: shooter.id, phase: 'directive-arrival'
+      });
+      this._sendIadsStatus(threat, d.commander, 'released', t);
+      return;
+    }
+    if (this.iadsSensorPhysics && shooter.mfrSensorId) {
+      KJ.IADS.overrideCorrelationCorrect(this.iadsCorrelationStates, shooter.mfrSensorId, threat.id,
+        this.mode === 'tobe' ? 'killweb' : 'linear');
+    }
     var shared = this._iadsSharedLocalEngagement(threat, d.commander, t);
     if (shared) {
-      plan.released = true; plan.resolved = true;
+      this._iadsTransitionPlan(plan, 'cancelled', t, 'released', 'coordination_deconflicted');
+      this.global.c2Orders.cancelled++;
+      this.global.c2Orders.released++;
       this.global.coordAttempts++;
       this.global.deconflicted++;
       this.global.statusSharing.deconflicted++;
@@ -1257,7 +1806,11 @@
     // 서로 독립인 ROK/local/USFK plan이 같은 시각에 생성돼도 실제 발사는 표적당 교리 상한을
     // 공유한다. 상한을 넘는 plan은 탄약을 소모하지 않고 해제한다.
     if (threat.tries >= this.iadsMaxShots) {
-      plan.released = true; plan.resolved = true;
+      this._iadsTransitionPlan(plan, 'expired', t, 'released', 'shot_limit');
+      this.global.c2Orders.expired++;
+      this.global.c2Orders.expiryByReason.shot_limit =
+        (this.global.c2Orders.expiryByReason.shot_limit || 0) + 1;
+      this.global.c2Orders.released++;
       this._sendIadsStatus(threat, d.commander, 'released', t);
       if (!threat.leakReason) threat.leakReason = 'missed';
       return;
@@ -1267,7 +1820,8 @@
       this._recordFailureEvidence(threat, ev.reason, { commanderId: d.commander.id, shooterId: shooter.id, phase: 'fire-command' });
       if (ev.reason === 'no_feasible_pip') threat._windowLostAtFire = true;
       if (resource && ev.reason === 'capacity_full') resource.capacityBlocks++;
-      plan.released = true;
+      this._iadsTransitionPlan(plan, 'released', t, 'released');
+      this.global.c2Orders.released++;
       this._sendIadsStatus(threat, d.commander, 'released', t);
       this._scheduleIadsRetry(threat, d.commander, ev.readyAt || t + 1);
       return;
@@ -1275,7 +1829,8 @@
     var launcher = resource.launchers.filter(function (l) { return l.reloadCompleteAt === null && l.remaining > 0; })
       .sort(function (a, b) { return b.remaining - a.remaining || (a.id < b.id ? -1 : 1); })[0];
     if (!launcher) {
-      plan.released = true;
+      this._iadsTransitionPlan(plan, 'released', t, 'released');
+      this.global.c2Orders.released++;
       this._sendIadsStatus(threat, d.commander, 'released', t);
       this._scheduleIadsRetry(threat, d.commander, t + 1);
       return;
@@ -1286,6 +1841,10 @@
     if (otherFired) {
       this.global.coordAttempts++;
       this.global.coordGaps++;
+      this._metricEvent('COORDINATION_FAILED', t, threat, {
+        phase: 'fire_commit', commanderAxis: d.commander.axis,
+        otherCommanderAxis: otherFiredPlan.commander.axis, reason: 'stale_or_unshared_engagement_state'
+      });
       this.global.duplicateEngagements++;
       this.global.realDuplicateEngagements++;
       var axes = [d.commander.axis, otherFiredPlan.commander.axis];
@@ -1293,7 +1852,33 @@
         this.global.statusSharing.duplicatesDueToStaleState++;
       }
     }
-    plan.fired = true;
+    this._iadsTransitionPlan(plan, 'committed', t);
+    this.global.c2Orders.committed++;
+    this._iadsTransitionPlan(plan, 'executing', t, 'fired');
+    this.global.c2Orders.fired++;
+    var fireControlTrack = shooter.mfrSensorId && threat._sensorTracks
+      ? threat._sensorTracks[shooter.mfrSensorId] : null;
+    var fireControlTrackAge = fireControlTrack && Number.isFinite(fireControlTrack.lastUpdateAt)
+      ? Math.max(0, t - fireControlTrack.lastUpdateAt) : null;
+    this._metricEvent('ENGAGEMENT_FIRED', t, threat, {
+      shooterId: shooter.id,
+      launcherId: launcher.id,
+      cause: plan.launchCause || 'commanded',
+      directiveId: plan.directiveId,
+      engagementId: plan.engagementId,
+      authorityLevel: plan.authorityLevel,
+      delegationLevel: plan.delegationLevel,
+      commanderAxis: d.commander.axis,
+      threatCategory: iadsThreatCategory(threat.type),
+      trackLastUpdateAt: plan.trackLastUpdateAt,
+      trackReceivedAt: plan.trackReceivedAt,
+      trackAgeSec: Number.isFinite(plan.trackLastUpdateAt) ? Math.max(0, t - plan.trackLastUpdateAt) : null,
+      fireControlTrackAgeSec: fireControlTrackAge,
+      fireControlState: fireControlTrack && fireControlTrack.state,
+      fireControlConfidence: fireControlTrack && fireControlTrack.confidence
+    });
+    this.global.c2Orders.fireByCause[plan.launchCause || 'unattributed'] =
+      (this.global.c2Orders.fireByCause[plan.launchCause || 'unattributed'] || 0) + 1;
     this._sendIadsStatus(threat, d.commander, 'fired', t);
     this._advanceIadsResource(resource, t);
     resource.active++;
@@ -1321,6 +1906,7 @@
     threat.tries++;
     var hit = this.rng.raw() < ev.pk;
     this._mark(threat, '발사:' + shooter.id + '/' + launcher.id + '/PIP' + ev.pip.rangeKm.toFixed(1) + 'km', t);
+    this._iadsTransitionPlan(plan, 'bda_pending', t, 'bda_pending');
     this.schedule(t + ev.pip.flyout, PRI.SERVICE_END, 'IADS_BDA', {
       threat: threat, commander: d.commander, shooterId: shooter.id, plan: plan,
       hit: hit, pk: ev.pk, launcherId: launcher.id
@@ -1334,9 +1920,15 @@
       resource.active = Math.max(0, resource.active - 1);
       resource.completions++;
     }
-    plan.resolved = true; plan.released = true;
-    if (!threat.alive) return;
+    if (!threat.alive) {
+      this._iadsTransitionPlan(plan, 'released', t, 'released');
+      this.global.c2Orders.released++;
+      return;
+    }
     if (d.hit) {
+      this._iadsTransitionPlan(plan, 'hit', t, 'hit');
+      this.global.c2Orders.hit++;
+      this.global.c2Orders.released++;
       threat.alive = false; threat.killed = true;
       this.global.killed++;
       this.global.timeToKill.push(t - threat.spawnT);
@@ -1344,10 +1936,19 @@
       this.cost.killedThreatM += value;
       if (SAT_THREATS[threat.type]) this.cost.killedThreatSatM += value;
       this._mark(threat, 'BDA:HIT:' + d.shooterId, t);
+      this._metricEvent('INTERCEPT_HIT', t, threat, {
+        shooterId: d.shooterId, directiveId: plan.directiveId, engagementId: plan.engagementId
+      });
       this._sendIadsStatus(threat, d.commander, 'resolved_hit', t);
       if (threat._trace) { threat._trace.exitT = t; threat._trace.outcome = 'killed'; }
     } else {
+      this._iadsTransitionPlan(plan, 'miss', t, 'miss');
+      this.global.c2Orders.miss++;
+      this.global.c2Orders.released++;
       this._mark(threat, 'BDA:MISS:' + d.shooterId, t);
+      this._metricEvent('INTERCEPT_MISS', t, threat, {
+        shooterId: d.shooterId, directiveId: plan.directiveId, engagementId: plan.engagementId
+      });
       this._sendIadsStatus(threat, d.commander, 'released', t);
       if (threat.tries < this.iadsMaxShots) this._scheduleIadsRetry(threat, d.commander, t + 0.5);
       else if (!threat.leakReason) threat.leakReason = 'missed';
@@ -1401,6 +2002,7 @@
     var auto = tt.automation ? tt.automation[this.mode] : null;
     var approvalId = tt.approvalLevel ? this._resolveRole(tt.approvalLevel[this.mode]) : null;
     if (auto === 'auto-preauth' || !approvalId || approvalId === controlC2 || !this.nodeState[approvalId]) {
+      threat._commandCause = auto === 'auto-preauth' ? 'autonomous' : 'local_authority';
       this._doEngage(threat, t);       // 승인 불필요(사전승인 자동교전) 또는 동일 노드 승인
       return;
     }
@@ -1412,6 +2014,7 @@
       if (this.deleg.firstT === null) this.deleg.firstT = t;
       this.deleg.byNode[approvalId] = (this.deleg.byNode[approvalId] || 0) + 1;
       this._mark(threat, '권한위임:' + approvalId, t);
+      threat._commandCause = 'delegated';
       this._doEngage(threat, t);
       return;
     }
@@ -1422,7 +2025,13 @@
       return;
     }
     var path = coordPath(controlC2, approvalId, this.mode, this.catalog.links);
-    if (!path) { threat.leakReason = 'responsibility_gap'; return; } // 책임공백(협조 경로 부재)
+    if (!path) {
+      threat.leakReason = 'responsibility_gap';
+      this._metricEvent('RESPONSIBILITY_UNRESOLVED', t, threat, {
+        fromC2Id: controlC2, toC2Id: approvalId, reason: 'no_coordination_path'
+      });
+      return;
+    } // 책임공백(협조 경로 부재)
     var self = this, delay = 0;
     path.forEach(function (l) {
       delay += self._linkDelay(l.comm[self.mode]); // 홉별 실제 전달시각 샘플링(경로는 대표값으로 이미 선택됨)
@@ -1441,6 +2050,7 @@
     if (!threat.alive || threat.pipelineDead) return;
     this._nodeArrive(d.appr, t, { threat: threat, kind: 'approval' }, function (tt2, job) {
       self._mark(job.threat, '승인완료:' + d.appr, tt2);
+      job.threat._commandCause = 'commanded';
       self._doEngage(job.threat, tt2);
     });
   };
@@ -1561,6 +2171,9 @@
     }
     var shooter = best.sh;
     var controlC2 = shooter.controlledBy[mode][0];
+    this._metricEvent('COMMAND_DECIDED', t, threat, {
+      nodeId: controlC2, shooterId: shooter.id, cause: threat._commandCause || 'commanded'
+    });
     var comm = this._link(controlC2, shooter.id, 'command');
     var delay = comm ? this._linkDelay(comm) : 0;
     if (comm) this._recordLink(controlC2, shooter.id, comm, 'command');
@@ -1588,8 +2201,12 @@
   Simulation.prototype._onShooterArrive = function (t, d) {
     var self = this, threat = d.threat;
     if (!threat.alive || threat.pipelineDead) return;
-    this._nodeArrive(d.shooter, t, { threat: threat, kind: 'engage' }, function (tt2, job) {
-      self._onEngageEnd(tt2, job.threat, d.shooter);
+    var engagementId = 'ENG_' + (++this.engagementSeq);
+    this._nodeArrive(d.shooter, t, {
+      threat: threat, kind: 'engage', engagementId: engagementId,
+      launchCause: threat._commandCause || 'unattributed'
+    }, function (tt2, job) {
+      self._onEngageEnd(tt2, job.threat, d.shooter, job.engagementId);
     });
   };
 
@@ -1597,7 +2214,7 @@
   var SAT_THREATS = { uav_small: true, mrl_large: true };
 
   /** 9 BDA: 요격확률 판정 → 실패 시 재교전 피드백(폐루프) */
-  Simulation.prototype._onEngageEnd = function (t, threat, shooterId) {
+  Simulation.prototype._onEngageEnd = function (t, threat, shooterId, engagementId) {
     if (!threat.alive) return;
     var shooter = this._nodeById(shooterId);
     threat.tries++;
@@ -1639,13 +2256,16 @@
       this.cost.killedThreatM += tv;
       if (SAT_THREATS[threat.type]) this.cost.killedThreatSatM += tv;
       this._mark(threat, '격추성공#' + threat.tries, t);
+      this._metricEvent('INTERCEPT_HIT', t, threat, { shooterId: shooterId, engagementId: engagementId || null });
       if (threat._trace) { threat._trace.exitT = t; threat._trace.outcome = 'killed'; }
     } else if (threat.tries < MAX_ENGAGE_TRIES && t < threat.spawnT + threat.dwellSec) {
       this._mark(threat, '교전실패#' + threat.tries, t);
+      this._metricEvent('INTERCEPT_MISS', t, threat, { shooterId: shooterId, engagementId: engagementId || null });
       this._doEngage(threat, t);          // 재교전
     } else if (!threat.leakReason) {
       threat.leakReason = 'missed';       // 요격 실패(기회 소진)
       this._mark(threat, '교전실패#' + threat.tries + '(기회소진)', t);
+      this._metricEvent('INTERCEPT_MISS', t, threat, { shooterId: shooterId, engagementId: engagementId || null });
     }
   };
 
@@ -1690,8 +2310,11 @@
       detected: false, pipelineDead: false, tries: 0, leakReason: null,
       _frailty: null, // Phase 5(pkCorrelated): 표적별 공유 잠재(재교전 상관) — ON일 때 최초 교전에서 지연 추출
       _trace: null, _countedC2: false, _countedEngaged: false, _detectT: null, _coordDelay: 0,
-      _failureEvidence: {}, _hadIadsPlan: false
+      _failureEvidence: {}, _hadIadsPlan: false,
+      _iadsPhysical: this.iadsSensorPhysics, ecmActive: this.iadsSensorPhysics && this.ecmActive,
+      _iadsAxisDistanceKm: null
     };
+    this._metricEvent('THREAT_SPAWNED', t, threat, { threatType: threat.type, axis: threat.axis });
     if (this.trace) {
       if (this.threatTraces.length < this.traceCap) {
         threat._trace = {
@@ -1737,6 +2360,15 @@
     var threat = d.threat;
     if (!threat.alive) return; // 이미 격추
     threat.alive = false;
+    if (this.nativeIads) {
+      (threat._iadsPlans || []).forEach(function (plan) {
+        if (!plan.fired && !plan.released && !plan.resolved) {
+          this._iadsTransitionPlan(plan, 'cancelled', t, 'released', 'threat_exited_before_activation');
+          this.global.c2Orders.cancelled++;
+          this.global.c2Orders.released++;
+        }
+      }, this);
+    }
     this.global.leaked++;
     // Phase 4(⑨, timeoutSplit): timeout을 tries로 분해. tries===0(한 번도 교전 못 함)=timeout:c2
     // (앞단 C2·협조가 시간을 소진 → 구조적), tries>0(교전했으나 체공창 소진)=timeout:engage(교전·BDA
@@ -1749,6 +2381,25 @@
     // 구조적 원인(responsibility_gap)이 근본 원인이다 → 사유 승격(死 코드 부활, taxonomy 정합).
     if (threat._hadCoordGap && (reason === 'missed' || reason.indexOf('timeout') === 0)) reason = 'responsibility_gap';
     this.global.leakReasons[reason] = (this.global.leakReasons[reason] || 0) + 1;
+    if (this.c2Analysis) {
+      var evidenceCodes = Object.keys(threat._failureEvidence || {});
+      var hadGeometryWindow = false;
+      if (this.nativeIads) {
+        var eligible = threat._eligibleShooterIds || {};
+        hadGeometryWindow = this._nodesInMode().some(function (node) {
+          return node.category === 'shooter' && eligible[node.id] &&
+            !!this._iadsGeometryWindow(node, threat);
+        }, this);
+      }
+      this._metricEvent('THREAT_LEAKED', t, threat, {
+        reason: reason,
+        detected: !!threat.detected,
+        tries: threat.tries,
+        hadDirective: !!threat._hadIadsPlan,
+        hadGeometryWindow: hadGeometryWindow,
+        failureContributors: evidenceCodes
+      });
+    }
     if (this.nativeIads) this._recordFinalFailure(threat, reason);
     // Phase 2(⑨, leakCost): 누수 위협의 가치를 계상 → defenseEfficiency 분모. 순수 관측(rng·이벤트 불변).
     // "안 쏘면 exchange=0 최적"의 함정을 반전: 누수가 많으면 방어효율이 낮아진다.
@@ -1810,6 +2461,7 @@
     switch (ev.type) {
       case 'SPAWN': this._spawn(ev.t, ev.data); break;
       case 'DETECT': this._onDetect(ev.t, ev.data); break;
+      case 'IADS_SENSOR_SCAN': this._onIadsSensorScan(ev.t, ev.data); break;
       case 'C2_ARRIVE': this._onC2Arrive(ev.t, ev.data); break;
       case 'IADS_C2_ARRIVE': this._onIadsC2Arrive(ev.t, ev.data); break;
       case 'IADS_RETRY': this._onIadsRetry(ev.t, ev.data); break;
@@ -1950,6 +2602,8 @@
     var censored = this.features.censorFix ? censoredRaw : 0;
     this.global.censored = censored;
     var denom = this.global.spawned - censored; // censorFix ON → killed+leaked(해결분), OFF → spawned(legacy)
+    var spawnedDenom = this.global.spawned;
+    var resolvedDenom = this.global.killed + this.global.leaked;
 
     var resultConfig = {
         scenario: this.scenario.id, mode: this.mode,
@@ -1958,6 +2612,12 @@
     if (this.highResolutionDeployment) {
       resultConfig.deploymentId = this.deploymentId;
       resultConfig.compatibilityMode = this.catalog.compatibilityMode;
+    }
+    if (this.iadsSensorPhysics) {
+      resultConfig.modelFidelity = this.modelFidelity;
+      resultConfig.modelRevision = KJ.IADS.MODEL_REVISION;
+      resultConfig.jammingLevel = this.jammingLevel;
+      resultConfig.ecmActive = this.ecmActive;
     }
     var result = {
       config: resultConfig,
@@ -2056,11 +2716,26 @@
         conditionalPrimary: this.global.failureStructurality.conditional || 0
       };
     }
+    if (this.iadsSensorPhysics) {
+      result.global.sensorPhysics = this.iadsSensorStats;
+      result.global.trackQuality = this.global.trackQuality;
+      result.global.c2Orders = this.global.c2Orders;
+    }
     if (this.trace) {
       result.threatTraces = this.threatTraces;
       result.nodeSeries = this.nodeSeries;
       result.traceTruncated = this.traceTruncated;
       result.nodeSeriesTruncated = this.nodeSeriesTruncated;
+    }
+    if (this.c2Analysis) {
+      // 비교 가능한 명시적 분모 지표. 기본 API wire shape는 보존하고 분석 실행에서만 확장한다.
+      result.global.killRateSpawn = spawnedDenom ? this.global.killed / spawnedDenom : 0;
+      result.global.leakRateSpawn = spawnedDenom ? this.global.leaked / spawnedDenom : 0;
+      result.global.censoredRate = spawnedDenom ? censoredRaw / spawnedDenom : 0;
+      result.global.killRateResolved = resolvedDenom ? this.global.killed / resolvedDenom : 0;
+      result.global.leakRateResolved = resolvedDenom ? this.global.leaked / resolvedDenom : 0;
+      result.c2Events = this.c2Events;
+      result.c2EventsTruncated = this.c2EventsTruncated;
     }
     return result;
   };
@@ -2120,6 +2795,7 @@
     no_sensor: { label: '탐지 공백(센서·커버리지 부재)', group: '탐지 공백', family: 'architecture', structurality: 'structural', structural: true, stage: '① 탐지' },
     no_responsible_c2: { label: '책임 C2·권한 부재', group: '책임 공백', family: 'architecture', structurality: 'structural', structural: true, stage: '②~⑦ 책임·결심' },
     no_report_path: { label: '책임 C2로의 보고경로 부재', group: '항적 비융합·보고경로 부재', family: 'architecture', structurality: 'structural', structural: true, stage: '② 추적생성' },
+    correlation_failed: { label: '항적 상관·식별 실패', group: '항적 품질', family: 'stochastic', structurality: 'nonstructural', structural: false, stage: '②~④ 상관·식별' },
     responsibility_gap: { label: '책임공백(협조·명령경로 부재)', group: '책임 공백', family: 'architecture', structurality: 'structural', structural: true, stage: '⑥⑦ 결심·협조' },
     overflow: { label: '처리용량 포화', group: '처리 포화', family: 'capacity', structurality: 'conditional', structural: false, stage: '③④⑤ C2 / ⑧ 교전' }, // 'overflow:<노드>' 접두 코드
     no_shooter: { label: '교전가능 수단 부재', group: '교전수단 공백', family: 'capability', structurality: 'structural', structural: true, stage: '⑧ 교전명령' },
@@ -2127,6 +2803,8 @@
     engagement_geometry_gap: { label: '전 교전창 PIP·기하 미형성', group: '교전기하 공백', family: 'capability', structurality: 'structural', structural: true, stage: '⑧ PIP·교전' },
     window_lost_due_to_c2: { label: 'C2 지연으로 PIP·교전창 상실', group: '결심·교전창 상실', family: 'architecture', structurality: 'structural', structural: true, stage: '⑥~⑧ 결심·교전' },
     no_fire_control: { label: '화력통제 상태 미형성', group: '추적·화력통제', family: 'capability', structurality: 'conditional', structural: false, stage: '②~⑧ 추적·교전' },
+    fuel_insufficient: { label: '요격탄 PIP 도달 연료 부족', group: '교전 운동학', family: 'kinematic', structurality: 'nonstructural', structural: false, stage: '⑧ PIP·교전' },
+    pk_too_low: { label: '보정 후 최소 교전확률 미달', group: '요격 성능', family: 'stochastic', structurality: 'nonstructural', structural: false, stage: '⑧ PSSEK·교전' },
     capacity_full: { label: '동시교전 채널 포화', group: '교전 처리용량', family: 'capacity', structurality: 'conditional', structural: false, stage: '⑧ 교전' },
     ammo_depleted: { label: '요격탄 소진·재장전 대기', group: '자원·군수', family: 'resource', structurality: 'nonstructural', structural: false, stage: '⑧ 교전' },
     not_operational: { label: '사수 비가용', group: '자원·생존', family: 'resource', structurality: 'conditional', structural: false, stage: '⑧ 교전' },

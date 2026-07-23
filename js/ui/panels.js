@@ -17,7 +17,7 @@
   function el(id) { return document.getElementById(id); }
   function modelConfig(state) {
     var high = state && state.dep && state.dep !== 'legacy';
-    return high ? { deploymentId: state.dep, features: { highResolutionDeployment: true } } : {};
+    return high ? { deploymentId: state.dep, features: { highResolutionDeployment: true }, modelFidelity: state.fid || 'compat' } : {};
   }
   function catalogFor(state) {
     return KJ.resolveModelCatalog ? KJ.resolveModelCatalog(modelConfig(state)) : null;
@@ -39,7 +39,7 @@
   // DES 양모드 캐시 (설정이 같으면 재계산하지 않음 — 탭 전환·재렌더 대비)
   var desCache = { key: null, data: null, pendingKey: null, requestId: 0, error: null, errorKey: null };
   function pipelineData(state, onReady) {
-    var key = [state.sc, state.x, state.seed, state.dur, state.dep || 'legacy'].join('|');
+    var key = [state.sc, state.x, state.seed, state.dur, state.dep || 'legacy', state.fid || 'compat'].join('|');
     if (desCache.key === key) return desCache.data;
     if (desCache.errorKey === key) return null;
     if (desCache.pendingKey === key) return null;
@@ -51,7 +51,8 @@
       cfg: {
         scenarioId: state.sc, mode: 'asis', intensity: state.x,
         seed: state.seed, endTimeSec: state.dur,
-        deploymentId: highCfg.deploymentId, features: highCfg.features
+        deploymentId: highCfg.deploymentId, features: highCfg.features,
+        modelFidelity: highCfg.modelFidelity
       },
       includeHeat: true
     }).then(function (pair) {

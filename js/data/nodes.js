@@ -327,7 +327,7 @@
     KJ.NODES.push({
       id: 'ECS-' + key, name: '교전통제소 ECS (' + site.label + ')',
       category: 'c2', service: cheongung ? 'af' : 'army', echelon: 'battery',
-      coord: [coord[0] - 0.015, coord[1] + 0.015], coordNote: note,
+      coord: coord.slice(), coordNote: note + ' · 포대·ECS·MFR 공동 개념 사이트',
       role: '포대 MFR 항적접수, ICC 협조·승인, 사수 교전명령.',
       deploymentRegion: site.region, pairedIccId: 'ICC-' + key, pairedShooterId: 'BAT-' + site.weapon + '-' + key,
       queue: { servers: 8, serviceTimeSec: { asis: 3, tobe: 2 }, capacity: 24, paramRef: 'C2-LEGACY-ECS-SVC-01' }
@@ -335,7 +335,7 @@
     KJ.NODES.push({
       id: 'MFR-' + key, name: (cheongung ? '천궁-II' : '천마') + ' MFR (' + site.label + ')',
       category: 'sensor', service: cheongung ? 'af' : 'army', echelon: 'battery',
-      coord: [coord[0] + 0.012, coord[1] - 0.012], coordNote: note,
+      coord: coord.slice(), coordNote: note + ' · 포대·ECS·MFR 공동 개념 사이트',
       role: '포대 전속 다기능레이더. 탐지·추적·화력통제 항적을 ECS에 제공.',
       deploymentRegion: site.region, pairedEcsId: 'ECS-' + key,
       detects: cheongung
@@ -348,7 +348,7 @@
       id: 'BAT-' + site.weapon + '-' + key,
       name: (cheongung ? '천궁-II' : '천마') + ' 포대 (' + site.label + ')',
       category: 'shooter', service: cheongung ? 'af' : 'army', echelon: 'battery',
-      coord: [coord[0] - 0.025, coord[1] - 0.020], coordNote: note,
+      coord: coord.slice(), coordNote: note + ' · 포대·ECS·MFR 공동 개념 사이트',
       role: (cheongung ? '중·저고도 항공·하층 탄도탄 요격' : '저고도 국지방공') + ' 개념 포대.',
       deploymentRegion: site.region, weaponType: site.weapon,
       pairedIccId: 'ICC-' + key, pairedEcsId: 'ECS-' + key, pairedMfrId: 'MFR-' + key,

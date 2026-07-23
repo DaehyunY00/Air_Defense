@@ -108,7 +108,7 @@
         id: decl.id, instanceId: decl.id, typeId: decl.typeId,
         name: decl.instanceLabel || type.name,
         category: 'c2', service: decl.forceOwner === 'USFK' ? 'usfk' : 'joint',
-        echelon: type.tier, coord: [pos.lat, pos.lon], coordNote: pos.coordNote,
+        echelon: type.tier, coord: [pos.lat, pos.lon], position: { lon: pos.lon, lat: pos.lat, alt: pos.alt || 0 }, coordNote: pos.coordNote,
         role: type.commandScope + ' · 위협종류/생존상태 책임 C2' +
           (decl.typeId === 'ARMY_LOCAL_AD' ? ' · MCRC+국지레이더 항적융합·자체 자동할당' : ''),
         queue: {
@@ -132,12 +132,12 @@
       var type = KJ.SENSOR_TYPES[decl.typeId];
       if (!type) throw new Error(id + ': unknown sensor type ' + decl.typeId);
       var pos = positions[decl.posKey];
-      var rangeKm = maxRange(type.ranges.detect);
+      var rangeKm = maxRange((type.compatibilityRanges || type.ranges).detect);
       var node = {
         id: decl.id, instanceId: decl.id, typeId: decl.typeId,
         name: type.name + ' (' + decl.posKey + ')', category: 'sensor',
         service: decl.forceOwner === 'USFK' ? 'usfk' : 'joint', echelon: 'sensor',
-        coord: [pos.lat, pos.lon], coordNote: pos.coordNote,
+        coord: [pos.lat, pos.lon], position: { lon: pos.lon, lat: pos.lat, alt: pos.alt || 0 }, coordNote: pos.coordNote,
         role: type.role + ' · 개념 기하 탐지·화력통제 상태',
         detects: type.detectableThreats.slice(), coverage: axesFor(pos, rangeKm),
         detectProb: { value: type.detectionProbability, paramRef: type.paramRef },
@@ -167,7 +167,7 @@
         id: decl.id, instanceId: decl.id, typeId: decl.shooterTypeId,
         name: type.name + ' (' + decl.posKey + ')', category: 'shooter',
         service: decl.forceOwner === 'USFK' ? 'usfk' : (decl.forceOwner === 'ROK_LOCAL_AD' ? 'army' : 'af'),
-        echelon: 'battery', coord: [pos.lat, pos.lon], coordNote: pos.coordNote,
+        echelon: 'battery', coord: [pos.lat, pos.lon], position: { lon: pos.lon, lat: pos.lat, alt: pos.alt || 0 }, coordNote: pos.coordNote,
         role: '원본 책임 C2·PIP·발사대 자원 모델 실행',
         coverage: axesFor(pos, rangeKm),
         controlledBy: { asis: controller ? [controller.id] : [], tobe: controller ? [controller.id] : [] },

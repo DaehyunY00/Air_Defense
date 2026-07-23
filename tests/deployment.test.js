@@ -72,6 +72,12 @@ KJ.DEPLOYMENT_IDS.forEach(function (id) {
   assert(batteryRefsOk, id + ' 모든 포대·MFR 참조');
   assert(c2RefsOk, id + ' 모든 C2·ECS 참조');
   assert(new Set(ids).size === ids.length, id + ' 전역 인스턴스 ID 유일');
+  assert(d.batteries.every(function (b) {
+    if (!b.mfrSensorPosKey) return true;
+    var batteryPos = d.positions[b.posKey], sensorPos = d.positions[b.mfrSensorPosKey];
+    return batteryPos.lon === sensorPos.lon && batteryPos.lat === sensorPos.lat &&
+      sensorPos.coLocatedWith === b.posKey;
+  }), id + ' 포대·ECS·MFR/레이더 동일 위·경도');
   assert(Object.keys(d.positions).every(function (key) {
     var p = d.positions[key];
     return typeof p.lon === 'number' && typeof p.lat === 'number' && typeof p.alt === 'number' && p.confidence && p.sourceNote && /(개념|공개)/.test(p.coordNote);

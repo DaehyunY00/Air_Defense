@@ -6,7 +6,7 @@
   <title>K-JAMDS C2 시뮬레이터 — KJADS 3대 문제 상황</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20260724a">
 </head>
 <body>
   <!-- 제약 (c): 디스클레이머 상시 표출 -->
@@ -26,6 +26,11 @@
     <select id="scenario-select"></select>
     <label>배치</label>
     <select id="deployment-select"></select>
+    <label>모델 충실도</label>
+    <select id="fidelity-select">
+      <option value="compat">현행 DES 호환</option>
+      <option value="iads-c2">IADS_C2 물리 (보정)</option>
+    </select>
     <label>체계 모드</label>
     <label class="mode-switch" title="As-Is 분절형 ↔ To-Be K-JAMDS 통합형">
       <span class="ms-side ms-asis">As-Is 분절형</span>
@@ -86,9 +91,13 @@
         <div id="sim-compute-mode" class="sim-compute-mode">계산 모드: 실행 전</div>
       </div>
 
-      <div class="map-legend">
-        <h4>범례 <span class="lg-h4-sub">(개념좌표·개념범위)</span></h4>
-        <div id="map-asset-summary" class="map-asset-summary">배치 자산 불러오는 중…</div>
+      <details class="map-legend" id="map-legend" open>
+        <summary class="map-legend-toggle">
+          <span>범례 <span class="lg-h4-sub">(개념좌표·개념범위)</span></span>
+          <span class="map-legend-chevron" aria-hidden="true">▾</span>
+        </summary>
+        <div class="map-legend-body">
+          <div id="map-asset-summary" class="map-asset-summary">배치 자산 불러오는 중…</div>
 
         <div class="lg-group">
           <div class="lg-group-label">아군 (기능별 색)</div>
@@ -131,11 +140,12 @@
           </div>
         </div>
 
-        <div class="lg-row lg-note">
-          <span class="lg-blink-dot">🔴</span>
-          <span>점멸 테두리 = 이번 실행에서 <b>도출된</b> 병목/포화 노드</span>
+          <div class="lg-row lg-note">
+            <span class="lg-blink-dot">🔴</span>
+            <span>점멸 테두리 = 이번 실행에서 <b>도출된</b> 병목/포화 노드</span>
+          </div>
         </div>
-      </div>
+      </details>
     </section>
 
     <!-- ── 분석 탭: 9단계 파이프라인 병목·해결 지표 + 정상상태 해석 상세 ── -->
@@ -320,31 +330,33 @@
     // 폐쇄망/SVG fallback 재현 스모크: ?svgFallback=1 (기본 실행에는 영향 없음).
     if (new URLSearchParams(window.location.search).get('svgFallback') === '1') window.L = undefined;
   </script>
-  <script src="js/config/system-types.js"></script>
+  <script type="module" src="js/model/iads/bootstrap.js?v=20260723b"></script>
+  <script src="js/config/system-types.js?v=20260724a"></script>
   <script src="js/config/geo-mdl.js"></script>
-  <script src="js/config/deployments.js"></script>
-  <script src="js/data/nodes.js"></script>
+  <script src="js/config/deployments.js?v=20260724a"></script>
+  <script src="js/data/nodes.js?v=20260724a"></script>
   <script src="js/data/links.js"></script>
   <script src="js/data/threats.js"></script>
   <script src="js/data/scenarios.js"></script>
   <script src="js/data/axes.js"></script>
-  <script src="js/config/deployment-adapter.js"></script>
-  <script src="js/core/router.js"></script>
+  <script src="js/config/deployment-adapter.js?v=20260724a"></script>
+  <script src="js/core/router.js?v=20260724a"></script>
   <script src="js/core/constraints.js"></script>
   <script src="js/core/rng.js"></script>
   <script src="js/core/heap.js"></script>
   <script src="js/analysis/bottleneck.js"></script>
-  <script src="js/engine/sim-engine.js"></script>
-  <script src="js/analysis/mc-runner.js"></script>
-  <script src="js/analysis/transition.js"></script>
+  <script src="js/analysis/c2-report.js?v=20260724a"></script>
+  <script src="js/engine/sim-engine.js?v=20260724a"></script>
+  <script src="js/analysis/mc-runner.js?v=20260724a"></script>
+  <script src="js/analysis/transition.js?v=20260724a"></script>
   <script src="js/analysis/overlap-heatmap.js"></script>
-  <script src="js/core/sim-worker-client.js"></script>
+  <script src="js/core/sim-worker-client.js?v=20260724a"></script>
   <script src="js/ui/geo.js"></script>
   <script src="js/ui/table-sort.js"></script>
-  <script src="js/ui/map-view.js"></script>
-  <script src="js/ui/panels.js"></script>
-  <script src="js/ui/sim-view.js"></script>
-  <script src="js/ui/mc-panel.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/ui/map-view.js?v=20260724a"></script>
+  <script src="js/ui/panels.js?v=20260724a"></script>
+  <script src="js/ui/sim-view.js?v=20260724a"></script>
+  <script src="js/ui/mc-panel.js?v=20260724a"></script>
+  <script src="js/main.js?v=20260724a"></script>
 </body>
 </html>

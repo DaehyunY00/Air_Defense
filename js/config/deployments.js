@@ -696,7 +696,7 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
     return Object.freeze(o);
   }
 
-  function normalizePositions(raw) {
+  function normalizePositions(raw, batteries) {
     if (positionMemo.has(raw)) return positionMemo.get(raw);
     var out = {};
     Object.keys(raw).forEach(function (key) {
@@ -708,6 +708,18 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
         coordNote: p.coordNote || (confidence === 'public'
           ? '공개자료 기반 도시·권역 수준 개념좌표'
           : '연구용 추정·도시·권역 수준 개념좌표')
+      }));
+    });
+    // 포대의 ECS는 이미 posKey를 공유한다. 포대 전속 MFR/Patriot radar도 같은
+    // 공동 사이트의 위·경도를 사용하고, 안테나 고도와 출처 메타만 유지한다.
+    (batteries || []).forEach(function (b) {
+      if (!b.mfrSensorPosKey || !out[b.posKey] || !out[b.mfrSensorPosKey]) return;
+      var batteryPos = out[b.posKey], sensorPos = out[b.mfrSensorPosKey];
+      out[b.mfrSensorPosKey] = Object.freeze(Object.assign({}, sensorPos, {
+        lon: batteryPos.lon,
+        lat: batteryPos.lat,
+        coLocatedWith: b.posKey,
+        coordNote: '포대·ECS·MFR/레이더 공동 개념 사이트(동일 위·경도)'
       }));
     });
     out = Object.freeze(out);
@@ -791,7 +803,7 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
   }
 
   function normalizeDeployment(raw) {
-    var positions = normalizePositions(raw.positions);
+    var positions = normalizePositions(raw.positions, raw.batteries);
     var batteries = normalizeBatteries(raw.batteries, positions);
     var sensors = normalizeSensors(raw.sensors, positions);
     return freezeAll({

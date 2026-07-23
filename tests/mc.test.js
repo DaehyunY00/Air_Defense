@@ -96,10 +96,10 @@ var intensityRow = sw.rows.find(function (r) { return r.factor === 'intensity'; 
 // global.leakRate는 해결분(killed+leaked) 기준이라 강도와 단조 관계를 보장하지 않는다.
 // 방향을 강제하면 평가 분모 편향을 회귀 규칙으로 굳히므로, 유한하고 실질적인 민감도만 고정한다.
 assert(Number.isFinite(intensityRow.low) && Number.isFinite(intensityRow.high) && intensityRow.swing > 0.01,
-  '위협 강도 변화가 해결분 기준 누수율에 유한·실질적 영향 (방향은 절단분모에 종속)');
+  '위협 강도 변화가 전체 생성 기준 누수율에 유한·실질적 영향');
 var serviceRow = sw.rows.find(function (r) { return r.factor === 'service'; });
 assert(Number.isFinite(serviceRow.low) && Number.isFinite(serviceRow.high) && serviceRow.swing > 0.01,
-  '처리시간 변화가 해결분 기준 누수율에 유한·실질적 영향 (방향은 절단분모에 종속)');
+  '처리시간 변화가 전체 생성 기준 누수율에 유한·실질적 영향');
 // 포화(SC3)에서 탐지확률은 병목이 아니므로 영향 미미 — 그 자체가 유의미한 인사이트.
 // SC2(무인기 동시 남파)의 결정적 제약은 요격확률이다: uav 체공 900s ≫ 스캔 10s라 시행횟수
 // N=dwell/10이 커서 센서 Pd 융합(feat/sensor-pd-fusion) 이후에도 누적 탐지는 As-Is·To-Be

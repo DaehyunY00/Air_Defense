@@ -97,7 +97,7 @@
 
   function modelConfig(cfg) {
     var high = cfg && cfg.dep && cfg.dep !== 'legacy';
-    return high ? { deploymentId: cfg.dep, features: { highResolutionDeployment: true } } : {};
+    return high ? { deploymentId: cfg.dep, features: { highResolutionDeployment: true }, modelFidelity: cfg.fid || 'compat' } : {};
   }
 
   function runCatalog() {
@@ -108,6 +108,7 @@
     return KJ.scenarioById(cfg.sc).name + ' · ' +
       (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형') +
       ' · ' + (cfg.dep === 'legacy' ? '기존 대표 배치' : cfg.dep) +
+      ' · ' + (cfg.fid === 'iads-c2' ? 'IADS_C2 물리' : '현행 DES') +
       ' · 강도 ×' + Number(cfg.x).toFixed(1) + ' · seed ' + cfg.seed;
   }
 
@@ -140,7 +141,7 @@
       var generation = ++computeGeneration;
       var seed = Math.max(0, Math.floor(parseFloat(el('sim-seed').value) || 0));
       var dur = Math.min(7200, Math.max(60, Math.floor(parseFloat(el('sim-dur').value) || 1800)));
-      var cfg = { sc: state.sc, mode: state.mode, dep: state.dep || 'legacy', x: state.x, seed: seed, dur: dur };
+      var cfg = { sc: state.sc, mode: state.mode, dep: state.dep || 'legacy', fid: state.fid || 'compat', x: state.x, seed: seed, dur: dur };
       var btn = el('sim-run');
       btn.disabled = true; btn.textContent = '⏳ DES 실행 중...';
       setStatus('DES 실행 중 (trace 모드)...');
@@ -150,7 +151,8 @@
       var computeCfg = {
         scenarioId: cfg.sc, mode: cfg.mode, intensity: cfg.x,
         seed: cfg.seed, endTimeSec: cfg.dur, trace: true, traceCap: 300,
-        deploymentId: highCfg.deploymentId, features: highCfg.features
+        deploymentId: highCfg.deploymentId, features: highCfg.features,
+        modelFidelity: highCfg.modelFidelity
       };
       var t0 = now();
       KJ.compute.run('desPair', { cfg: computeCfg, includeHeat: true }, function (stage) {
@@ -161,7 +163,8 @@
         var res = pair.current;
         var resOther = pair.other;
         var other = pair.otherMode;
-        var computeLabel = pair.execution === 'web-worker' ? 'Worker' : '메인 스레드 폴백';
+        var computeLabel = pair.execution === 'web-worker'
+          ? (pair.workerLoader === 'module' ? 'Module Worker' : 'Classic Worker') : '메인 스레드 폴백';
         var elapsed = now() - t0;
         var currentHeat = { axes: pair.heatCurrentAxes || [], total: pair.heatCurrent || 0 };
         var otherHeat = { axes: pair.heatOtherAxes || [], total: pair.heatOther || 0 };
@@ -173,7 +176,7 @@
           heat: cfg.mode === 'asis'
             ? { asis: currentHeat, tobe: otherHeat }
             : { asis: otherHeat, tobe: currentHeat },
-          mc: { pending: pair.execution === 'web-worker', skipped: false, error: null, asis: null, tobe: null },
+          mc: { pending: pair.execution === 'web-worker', skipped: false, error: null, asis: null, tobe: null, paired: null },
           modalRendered: false
         };
         setComputeNotice(pair.execution, cfg.dep !== 'legacy');
@@ -184,11 +187,11 @@
 
         // 자동 MC는 실제 Web Worker에서만 실행한다. setTimeout 기반 메인 스레드 폴백은
         // FULL에서 최소 60회의 DES를 동기 실행해 수분간 UI를 멈추므로 명시적으로 차단한다.
-        if (pair.execution === 'web-worker') {
+        if (pair.execution === 'web-worker' && cfg.fid !== 'iads-c2') {
           setStatus('백그라운드 Monte Carlo 수렴 중… (' + computeLabel + ')');
           KJ.compute.run('mcPair', {
             cfg: Object.assign({}, computeCfg, { trace: false }),
-            opts: { minReps: 30, maxReps: 200, tol: 0.01, primary: 'leakRate' }
+            opts: { minReps: 30, maxReps: 200, tol: 0.01, primary: 'leakRateSpawn' }
           }, function (stage) {
             if (generation !== computeGeneration) return;
             setStatus((stage === 'comparison-mc' ? '백그라운드 비교 체계 MC 중…' : '백그라운드 현재 체계 MC 중…') +
@@ -200,6 +203,7 @@
             } else {
               run.mc.tobe = mcPair.current; run.mc.asis = mcPair.other;
             }
+            run.mc.paired = mcPair.paired || null;
             run.mc.pending = false;
             setStatus(anim.playing ? '재생 중 — MC 수렴 완료 (' + run.mc.asis.reps + '·' + run.mc.tobe.reps + '복제)' : 'MC 수렴 완료');
             renderMcSectionIfOpen();
@@ -213,7 +217,9 @@
         } else {
           run.mc.pending = false;
           run.mc.skipped = true;
-          setStatus('DES 완료 — 메인 스레드 보호를 위해 자동 MC를 생략했습니다.');
+          setStatus(cfg.fid === 'iads-c2'
+            ? 'IADS_C2 물리 DES 완료 — 고비용 물리 프로파일은 자동 MC를 생략합니다.'
+            : 'DES 완료 — 메인 스레드 보호를 위해 자동 MC를 생략했습니다.');
         }
 
         el('sim-results').disabled = false;
@@ -634,6 +640,11 @@
         '<div class="bn-none">⏳ 백그라운드 수렴 중 — 완료되면 이 영역만 갱신됩니다.</div>';
     }
     if (run.mc.skipped) {
+      if (run.cfg.fid === 'iads-c2') {
+        return '<h3>Monte Carlo 95% 신뢰구간</h3>' +
+          '<div class="compute-warning">IADS_C2 물리 프로파일은 센서별 0.2초 스캔과 PIP 후보 평가 비용이 커 자동 MC를 생략합니다. ' +
+          '단일 DES 결과의 절대값보다 동일 seed의 As-Is/To-Be 파이프라인 차이를 확인하십시오.</div>';
+      }
       return '<h3>Monte Carlo 95% 신뢰구간</h3>' +
         '<div class="compute-warning">메인 스레드 정지를 방지하기 위해 자동 MC를 생략했습니다. ' +
         '<code>./scripts/serve.sh</code> 실행 후 <code>http://127.0.0.1:8000</code>으로 접속하면 ' +
@@ -646,17 +657,20 @@
     if (!run.mc.asis || !run.mc.tobe) {
       return '<h3>Monte Carlo 95% 신뢰구간</h3><div class="bn-none">MC 결과 없음</div>';
     }
-    var ma = run.mc.asis.metrics.leakRate, mb = run.mc.tobe.metrics.leakRate;
-    var overlapCI = ma.lo <= mb.hi && mb.lo <= ma.hi;
-    return '<h3>Monte Carlo 95% 신뢰구간 (백그라운드 다중복제)</h3>' +
-      '<table><thead><tr><th>모드</th><th>해결분 기준 요격 실패율 평균</th><th>95% CI</th><th>복제수</th></tr></thead><tbody>' +
+    var ma = run.mc.asis.metrics.leakRateSpawn, mb = run.mc.tobe.metrics.leakRateSpawn;
+    var delta = run.mc.paired && run.mc.paired.delta ? run.mc.paired.delta.leakRateSpawn : null;
+    var separated = delta && delta.lo != null && delta.hi != null && (delta.lo > 0 || delta.hi < 0);
+    return '<h3>Monte Carlo 95% 신뢰구간 (동일 seed 쌍대비교)</h3>' +
+      '<table><thead><tr><th>모드</th><th>전체 생성 기준 요격 실패율 평균</th><th>95% CI</th><th>복제수</th></tr></thead><tbody>' +
       '<tr><td>As-Is</td><td class="num">' + (ma.mean * 100).toFixed(1) + '%</td><td class="num">±' +
       (ma.ci * 100).toFixed(2) + '%p</td><td class="num">' + ma.n + '</td></tr>' +
       '<tr><td>To-Be</td><td class="num">' + (mb.mean * 100).toFixed(1) + '%</td><td class="num">±' +
       (mb.ci * 100).toFixed(2) + '%p</td><td class="num">' + mb.n + '</td></tr></tbody></table>' +
-      '<div class="note">관측 종료 시점의 미해결 항적은 이 신뢰구간의 분모에서 제외됩니다. ' + (overlapCI
-        ? '두 CI가 겹칩니다 — 이 조건에서 차이는 표본변동으로 설명될 수 있습니다.'
-        : '✅ 두 95% CI 비중첩 — To-Be 개선이 표본변동으로 설명되지 않는 유의한 차이입니다.') + '</div>';
+      '<div class="note">모든 생성 위협을 분모에 포함하며 미해결은 별도 censoredRate로 보존합니다. ' +
+      (delta ? '쌍대 Δ(To-Be−As-Is)=' + (delta.mean * 100).toFixed(2) + '%p [95% CI ' +
+        (delta.lo * 100).toFixed(2) + ', ' + (delta.hi * 100).toFixed(2) + '] — ' +
+        (separated ? '✅ 0을 제외해 구조 차이가 통계적으로 분리됩니다.' : '0을 포함해 구조 차이를 단정할 수 없습니다.')
+        : '쌍대 Δ 결과가 없습니다.') + '</div>';
   }
 
   function renderMcSection() {
@@ -713,6 +727,7 @@
           ' <b>' + esc(b.name) + '</b><br><span class="bn-detail">' + esc(b.detail) + '</span></li>';
       }).join('') + '</ul>'
       : '<div class="bn-none">이 실행에서 도출된 병목 없음 (병목은 부하의 함수 — 강도·시나리오를 바꿔보세요)</div>';
+    html += c2AnalysisSection(asisRes, tobeRes, run.res);
 
     // ⑤ 요격 실패 원인 분해 — As-Is ↔ To-Be 대조표 (Phase C: 원인코드 × 모드 건수/비율)
     html += '<h3>요격 실패 원인 분해 — As-Is ↔ To-Be 대조 (동일 seed·강도)</h3>' +
@@ -728,6 +743,19 @@
         '<td class="num">' + ss.dropped + '</td><td class="num">' + ss.duplicatesDueToStaleState + '</td>' +
         '</tr></tbody></table><div class="note">군단 AOC는 MCRC 공중항적과 국지레이더 항적을 융합해 자체 할당·교전합니다. ' +
         'As-Is 교전현황은 음성/VTC 1채널·4건 제한으로 MCRC에 전파되며, 지연·드롭으로 상태 원장이 달라지면 중복교전이 발생합니다.</div>';
+    }
+
+    if (g.trackQuality && g.c2Orders) {
+      var tq = g.trackQuality, co = g.c2Orders, sp = g.sensorPhysics || {};
+      html += '<h3>IADS_C2 추적·식별·명령 충실도</h3>' +
+        '<table><thead><tr><th>MFR FC 전이</th><th>상관 정상</th><th>오상관</th><th>상관 실패</th><th>신선도 폐기</th><th>식별 확정</th><th>명령 생성</th><th>발사</th><th>HIT/MISS</th></tr></thead><tbody><tr>' +
+        '<td class="num">' + (sp.fireControl || 0) + '</td><td class="num">' + tq.correct + '</td>' +
+        '<td class="num">' + tq.mis + '</td><td class="num">' + tq.failed + '</td>' +
+        '<td class="num">' + tq.stale + '</td><td class="num">' + tq.identified + '</td>' +
+        '<td class="num">' + co.created + '</td><td class="num">' + co.fired + '</td>' +
+        '<td class="num">' + co.hit + ' / ' + co.miss + '</td></tr></tbody></table>' +
+        '<div class="note">MFR은 3회 연속 miss에서만 추적을 잃고, FIRE_CONTROL은 TRACKED로 강등될 수 있습니다. ' +
+        '교전은 신선한 FC 트랙, 거리·접근각 PSSEK, 최초 도달 가능 PIP, 탄약·동시교전 조건과 명시적 C2 명령을 모두 통과해야 합니다.</div>';
     }
 
     // ⑤-2 실패 항적 타임라인 (Phase C: 개별 항적이 9단계 중 어디서 왜 멈췄는지)
@@ -795,6 +823,97 @@
   }
 
   function leakLabel(r) { return KJ.leakTaxonomy(r).label; }
+
+  function c2AnalysisSection(asisRes, tobeRes, currentRes) {
+    var a = asisRes.c2Analysis, b = tobeRes.c2Analysis, current = currentRes.c2Analysis;
+    if (!a || !b || !a.available || !b.available) {
+      return '<h3>C2 병목 귀속·해결 증거</h3><div class="bn-none">구조화 C2 계측 없음 — 0건으로 해석하지 않습니다.</div>';
+    }
+    function maxPeak(report) {
+      var vals = Object.keys(report.c2Load.nodes).map(function (id) {
+        var n = report.c2Load.nodes[id];
+        return n.peakRho == null ? n.rho : n.peakRho;
+      }).filter(function (v) { return v != null && isFinite(v); });
+      return vals.length ? Math.max.apply(null, vals) : null;
+    }
+    function p90(report, key) {
+      var q = report.killchainDelays[key];
+      return q && q.p90 != null ? q.p90 : null;
+    }
+    function num(v, digits) {
+      return v == null || !isFinite(v) ? '—' : Number(v).toFixed(digits == null ? 1 : digits);
+    }
+    var rows = [
+      ['C2 대기·처리 중 누출', a.c2Attribution.byState.queued + a.c2Attribution.byState.processing,
+        b.c2Attribution.byState.queued + b.c2Attribution.byState.processing, '건'],
+      ['C2 미도달 누출', a.c2Attribution.byState.noC2Contact, b.c2Attribution.byState.noC2Contact, '건'],
+      ['탐지→결심 p90', p90(a, 'detectToDecision'), p90(b, 'detectToDecision'), '초'],
+      ['결심→발사 p90', p90(a, 'decisionToFire'), p90(b, 'decisionToFire'), '초'],
+      ['C2 최대 60초 피크 ρ', maxPeak(a), maxPeak(b), 'ρ'],
+      ['동시 중복교전 위협', a.duplicateEngagement.concurrent, b.duplicateEngagement.concurrent, '건']
+    ];
+    var mechanismRows = [
+      ['명령 활성 성공률',
+        a.c2Command.directives && a.c2Command.directives.activationRate != null ? a.c2Command.directives.activationRate * 100 : null,
+        b.c2Command.directives && b.c2Command.directives.activationRate != null ? b.c2Command.directives.activationRate * 100 : null, '%'],
+      ['명령 만료율',
+        a.c2Command.directives && a.c2Command.directives.expiryRate != null ? a.c2Command.directives.expiryRate * 100 : null,
+        b.c2Command.directives && b.c2Command.directives.expiryRate != null ? b.c2Command.directives.expiryRate * 100 : null, '%'],
+      ['비상발사 비율',
+        a.emergencyFire.ratio != null ? a.emergencyFire.ratio * 100 : null,
+        b.emergencyFire.ratio != null ? b.emergencyFire.ratio * 100 : null, '%'],
+      ['결심 항적 age p50',
+        a.trackFreshness.decisionTrackAge.p50, b.trackFreshness.decisionTrackAge.p50, '초'],
+      ['결심 항적 age p90',
+        a.trackFreshness.decisionTrackAge.p90, b.trackFreshness.decisionTrackAge.p90, '초'],
+      ['탐지→C2 보고 p50',
+        a.trackFreshness.detectToReport.p50, b.trackFreshness.detectToReport.p50, '초'],
+      ['교전 기회 손실률',
+        a.lostOpportunity.lossRate != null ? a.lostOpportunity.lossRate * 100 : null,
+        b.lostOpportunity.lossRate != null ? b.lostOpportunity.lossRate * 100 : null, '%'],
+      ['발사 전 교전공백 p50',
+        a.engagementGap.preFire.p50, b.engagementGap.preFire.p50, '초'],
+      ['누출 전 교전공백 p50',
+        a.engagementGap.beforeLeak.p50, b.engagementGap.beforeLeak.p50, '초'],
+      ['미교전 누출',
+        a.engagementGap.neverEngagedLeaked, b.engagementGap.neverEngagedLeaked, '건']
+    ];
+    var evidence = (current.bottleneckEvidence || []).slice(0, 10);
+    var evidenceHtml = evidence.length ? '<table><thead><tr><th>C2 노드</th><th>평균/피크 ρ</th><th>대기 p90</th>' +
+      '<th>드롭</th><th>귀속 누출</th><th>검증할 해결안</th></tr></thead><tbody>' +
+      evidence.map(function (e) {
+        return '<tr class="row-' + esc(e.level) + '"><td><code>' + esc(e.nodeId) + '</code></td>' +
+          '<td class="num">' + num(e.rho, 2) + ' / ' + num(e.peakRho, 2) + '</td>' +
+          '<td class="num">' + num(e.queueP90Sec, 1) + 's</td><td class="num">' + e.drops + '</td>' +
+          '<td class="num">' + e.attributedLeaks + '</td><td>' + esc(e.recommendation) + '</td></tr>';
+      }).join('') + '</tbody></table>'
+      : '<div class="bn-none">현재 모드에서 C2 직접 병목 증거 없음 — 누출이 C2 완료 후인지 미도달인지 아래 귀속표로 구분하십시오.</div>';
+    return '<h3>🧭 C2 병목 귀속·해결 증거 (구조화 이벤트)</h3>' +
+      '<table><thead><tr><th>지표</th><th>As-Is</th><th>To-Be</th><th>Δ(To-Be−As-Is)</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        var delta = (r[1] == null || r[2] == null) ? null : r[2] - r[1];
+        return '<tr><td>' + esc(r[0]) + '</td><td class="num">' + num(r[1], r[3] === 'ρ' ? 2 : 1) + r[3] +
+          '</td><td class="num">' + num(r[2], r[3] === 'ρ' ? 2 : 1) + r[3] +
+          '</td><td class="num">' + (delta == null ? '—' : (delta > 0 ? '+' : '') +
+            num(delta, r[3] === 'ρ' ? 2 : 1) + r[3]) + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      '<div class="note">위 표는 동일 seed 단일 DES의 구조 차이입니다. 해결 확정은 아래 Monte Carlo의 paired Δ 95% CI로 판단합니다. ' +
+      '누출 귀속은 발생 시점의 C2 상태를 나타내며 단독으로 인과를 확정하지 않습니다.</div>' +
+      '<h4>명령 수명주기·항적 신선도·교전 기회</h4>' +
+      '<table><thead><tr><th>지표</th><th>As-Is</th><th>To-Be</th><th>Δ(To-Be−As-Is)</th></tr></thead><tbody>' +
+      mechanismRows.map(function (r) {
+        var delta = (r[1] == null || r[2] == null) ? null : r[2] - r[1];
+        var av = r[1] == null ? '—' : num(r[1], 1) + r[3];
+        var bv = r[2] == null ? '—' : num(r[2], 1) + r[3];
+        return '<tr><td>' + esc(r[0]) + '</td><td class="num">' + av +
+          '</td><td class="num">' + bv + '</td><td class="num">' +
+          (delta == null ? '—' : (delta > 0 ? '+' : '') + num(delta, 1) + r[3]) + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      '<div class="note">‘—’는 0이 아니라 해당 실행에서 명령/항적 표본이 없음을 뜻합니다. 비상발사는 명시적 교리 플래그와 ' +
+      '교전창 임박 조건을 모두 만족할 때만 분류하며, 명령 부재만으로 발사하지 않습니다.</div>' +
+      '<h4>현재 선택 모드의 병목 증거와 검증할 해결안</h4>' + evidenceHtml +
+      (current.truncated ? '<div class="compute-warning">구조화 이벤트 상한 절삭 — 표시된 분포의 coverage가 불완전합니다.</div>' : '');
+  }
 
   /**
    * Phase C — 요격 실패 원인 대조표: 원인코드 × 모드(As-Is/To-Be) 건수·비율(생성 대비)·Δ.

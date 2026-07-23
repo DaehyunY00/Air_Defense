@@ -33,10 +33,13 @@
         scenario: scenario, mode: mode, intensity: x,
         seed: repSeed(baseSeed, i), endTimeSec: endTimeSec,
         deploymentId: modelConfig && modelConfig.deploymentId,
-        features: modelConfig && modelConfig.features
+        features: modelConfig && modelConfig.features,
+        modelFidelity: modelConfig && modelConfig.modelFidelity
       });
-      leak.push(r.global.leakRate);
-      kill.push(r.global.killRate);
+      // 전환점도 MC·결과모달과 같은 전체 생성 분모를 사용한다. 관측 종료 미해결을
+      // 조용히 제외하면 강도에 따른 절단률 변화가 구조 효과로 오인될 수 있다.
+      leak.push(r.global.spawned ? r.global.leaked / r.global.spawned : 0);
+      kill.push(r.global.spawned ? r.global.killed / r.global.spawned : 0);
       var m = 0;
       r.nodes.forEach(function (n) { if (n.category === 'c2' && n.rho > m) m = n.rho; });
       maxRho.push(m);
@@ -62,7 +65,7 @@
     var reps = opts.reps || 30;
     var seed = opts.seed === undefined ? 12345 : (opts.seed >>> 0);
     var endTimeSec = opts.endTimeSec || 1800;
-    var modelConfig = { deploymentId: opts.deploymentId, features: opts.features };
+    var modelConfig = { deploymentId: opts.deploymentId, features: opts.features, modelFidelity: opts.modelFidelity };
 
     var points = [];
     // 부동소수 누적 오차 방지: 정수 스텝 카운트로 순회

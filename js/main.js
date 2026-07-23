@@ -16,7 +16,7 @@
 
   function modelConfig() {
     var high = state.dep && state.dep !== 'legacy';
-    return high ? { deploymentId: state.dep, features: { highResolutionDeployment: true } } : {};
+    return high ? { deploymentId: state.dep, features: { highResolutionDeployment: true }, modelFidelity: state.fid } : {};
   }
 
   function analyze() {
@@ -48,11 +48,15 @@
     // 공통 컨트롤 동기화
     document.getElementById('scenario-select').value = state.sc;
     document.getElementById('deployment-select').value = state.dep;
+    document.getElementById('fidelity-select').value = state.fid;
     var depWarning = document.getElementById('deployment-warning');
     var high = state.dep !== 'legacy';
     depWarning.classList.toggle('hidden', !high);
     depWarning.textContent = high
-      ? '⚠️ ' + state.dep + ': 원본의 위협종류·아키텍처·C2 생존상태 책임결정, scope WTA, 개념 PIP, 발사대별 탄약·900초 재장전을 실행합니다. FULL As-Is는 군단 AOC의 MCRC+국지항적 융합·자체 자동할당과 제한형 음성/VTC 교전현황 공유를 추가 실행합니다. 좌표·운동학·센서 상태·PSSEK는 공개자료 기반 개념 근사이며 전술적 절대값으로 해석하면 안 됩니다.'
+      ? '⚠️ ' + state.dep + ': ' + (state.fid === 'iads-c2'
+        ? 'IADS_C2식 모듈 Worker·이벤트 큐·도메인 RNG와 SNR/RCS/수평선/센서상태 물리를 실행합니다. PIP·PSSEK·상관/식별·명령 에이전트의 완전 공통화는 후속 이식 중입니다.'
+        : '현행 9단계 DES 호환 실행입니다. 책임 C2·개념 PIP·발사대별 탄약을 사용하지만 센서·PSSEK는 과도기 근사입니다.') +
+        ' 좌표와 수치는 공개자료 기반 정책연구용 개념값이며 전술적 절대값이 아닙니다.'
       : '';
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
@@ -90,6 +94,11 @@
     document.getElementById('deployment-select').addEventListener('change', function (e) {
       setState({ dep: e.target.value, open: '' });
     });
+    document.getElementById('fidelity-select').addEventListener('change', function (e) {
+      var patch = { fid: e.target.value, open: '' };
+      if (patch.fid === 'iads-c2' && state.dep === 'legacy') patch.dep = 'HANBANDO_MINI_NORMAL';
+      setState(patch);
+    });
     document.getElementById('intensity-slider').addEventListener('input', function (e) {
       var value = parseFloat(e.target.value);
       document.getElementById('intensity-value').textContent = '×' + value.toFixed(1);
@@ -99,34 +108,6 @@
     document.getElementById('intensity-slider').addEventListener('change', function (e) {
       clearTimeout(intensityTimer);
       setState({ x: parseFloat(e.target.value) });
-    });
-
-    // 시뮬레이션 패널: seed/dur → 상태 반영(+재실행 필요 안내), 실행·결과·속도·링 토글
-    document.getElementById('sim-seed').addEventListener('change', function (e) {
-      setState({ seed: Math.max(0, Math.floor(parseFloat(e.target.value) || 0)) });
-      KJ.simView.notePendingConfig();
-    });
-    document.getElementById('sim-dur').addEventListener('change', function (e) {
-      setState({ dur: Math.min(7200, Math.max(60, Math.floor(parseFloat(e.target.value) || 1800))) });
-      KJ.simView.notePendingConfig();
-    });
-    document.getElementById('sim-run').addEventListener('click', function () {
-      KJ.simView.start(state);
-    });
-    document.getElementById('sim-play').addEventListener('click', function () {
-      KJ.simView.togglePlay();
-    });
-    document.getElementById('sim-results').addEventListener('click', function () {
-      KJ.simView.showResults();
-    });
-    document.getElementById('sim-speed').addEventListener('change', function (e) {
-      KJ.simView.setSpeed(e.target.value);
-    });
-    document.getElementById('toggle-rings').addEventListener('change', function (e) {
-      KJ.simView.toggleRings(e.target.checked);
-    });
-    document.getElementById('toggle-links').addEventListener('change', function (e) {
-      KJ.simView.toggleLinks(e.target.checked);
     });
 
     // 결과 모달 닫기 (배경 클릭 포함)
@@ -148,6 +129,42 @@
     });
   }
 
+  // 실행 제어는 독립적으로 먼저 바인딩한다. 모듈 로더와 지도 초기화 중 일부가
+  // 실패하더라도 시뮬레이션 버튼·지도 토글의 기본 조작 계약을 잃지 않게 한다.
+  function bindSimulationEvents() {
+    document.getElementById('sim-seed').addEventListener('change', function (e) {
+      setState({ seed: Math.max(0, Math.floor(parseFloat(e.target.value) || 0)) });
+      KJ.simView.notePendingConfig();
+    });
+    document.getElementById('sim-dur').addEventListener('change', function (e) {
+      setState({ dur: Math.min(7200, Math.max(60, Math.floor(parseFloat(e.target.value) || 1800))) });
+      KJ.simView.notePendingConfig();
+    });
+    document.getElementById('sim-run').addEventListener('click', function () {
+      try {
+        KJ.simView.start(state);
+      } catch (err) {
+        document.getElementById('sim-status').textContent = 'DES 실행 초기화 실패: ' + err.message;
+      }
+    });
+    document.getElementById('sim-play').addEventListener('click', function () {
+      KJ.simView.togglePlay();
+    });
+    document.getElementById('sim-results').addEventListener('click', function () {
+      KJ.simView.showResults();
+    });
+    document.getElementById('sim-speed').addEventListener('change', function (e) {
+      KJ.simView.setSpeed(e.target.value);
+    });
+    document.getElementById('toggle-rings').addEventListener('change', function (e) {
+      KJ.simView.toggleRings(e.target.checked);
+    });
+    document.getElementById('toggle-links').addEventListener('change', function (e) {
+      KJ.simView.toggleLinks(e.target.checked);
+    });
+    document.getElementById('sim-run').dataset.eventsBound = 'true';
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     state = KJ.router.parse();
 
@@ -162,6 +179,8 @@
       KJ.DEPLOYMENT_IDS.map(function (id) {
         return '<option value="' + id + '">' + KJ.deploymentById(id).name + '</option>';
       }).join('');
+
+    bindSimulationEvents();
 
     KJ.mapView.init('map', function (nodeId) {
       state.open = nodeId;

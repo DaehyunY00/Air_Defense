@@ -49,20 +49,23 @@ var mapModule = path.join(root, 'js', 'ui', 'map-view.js');
 require(mapModule);
 KJ.mapView.init('map', function () {});
 KJ.mapView.render({ dep: 'legacy', mode: 'asis', open: '' }, null);
-assert(groups[3].items.length === 63 && groups[0].items.length === 38,
-  'Leaflet As-Is: 활성 마커 63·범위 링 38');
-assert(groups[1].items.length === 40, 'Leaflet 저배율: 신규 40개 자산 리더선으로 분리');
-assert(expandedIds.every(function (id) { return icons.some(function (h) { return h.indexOf('>' + id + '<') !== -1; }); }),
-  'Leaflet 신규 40개 자산 마커 ID 누락 없음');
-assert(!attached.has(groups[2]) && groups[2].items.length === 92, 'Leaflet 연결선 92개 준비·기본 레이어 OFF');
-assert(/legacy 확장 배치.*활성 63노드.*10세트/.test(summaryEl.textContent), '지도 범례에 legacy 확장 배치·활성 노드·10세트 표시');
+assert(groups[2].items.length === 33 && groups[0].items.length === 38,
+  'Leaflet As-Is: 동일 좌표 자산을 합친 33사이트 마커·범위 링 38');
+assert(KJ.LEGACY_AIR_DEFENSE_SITES.every(function (s) {
+  return icons.some(function (h) {
+    return h.indexOf('BAT-' + s.weapon + '-' + s.key + ' · 4자산') !== -1 &&
+      h.indexOf('node-site-count">4<') !== -1;
+  });
+}), 'Leaflet legacy 10개 포대 사이트에 ICC·ECS·MFR·사수 중첩 마커');
+assert(!attached.has(groups[1]) && groups[1].items.length === 92, 'Leaflet 연결선 92개 준비·기본 레이어 OFF');
+assert(/legacy 확장 배치.*활성 63노드.*지도 33사이트 \(중첩 10\).*10세트/.test(summaryEl.textContent),
+  '지도 범례에 활성 노드·표시 사이트·중첩 사이트 수 표시');
 KJ.mapView.setLinksVisible(true);
-assert(attached.has(groups[2]), '연결선 토글 ON 시 Leaflet 링크 레이어 활성화');
-fakeMap.zoom = 11; zoomHandler();
-assert(groups[1].items.length === 0, 'zoom 11 이상에서는 표시좌표 분리 해제·실제 좌표 사용');
+assert(attached.has(groups[1]), '연결선 토글 ON 시 Leaflet 링크 레이어 활성화');
 icons.length = 0;
 KJ.mapView.render({ dep: 'legacy', mode: 'tobe', open: '' }, null);
-assert(groups[3].items.length === 64 && groups[2].items.length === 132, 'Leaflet To-Be: 활성 마커 64·연결선 132');
+assert(groups[2].items.length === 34 && groups[1].items.length === 132,
+  'Leaflet To-Be: 동일 좌표 기준 34사이트 마커·연결선 132');
 
 // ── SVG fallback 경로 모의 실행 ──
 delete global.L;
@@ -74,13 +77,14 @@ KJ.mapView.init('map', function () {});
 KJ.mapView.render({ dep: 'legacy', mode: 'asis', open: '' }, null);
 assert((svgEl.innerHTML.match(/class="asset-range-ring"/g) || []).length === 38,
   'SVG fallback 범위 링 38개 표시');
-assert((svgEl.innerHTML.match(/class="asset-spread-line"/g) || []).length === 40,
-  'SVG fallback 신규 자산 리더선 40개 표시');
-assert(expandedIds.every(function (id) { return svgEl.innerHTML.indexOf('>' + id + '</text>') !== -1; }),
-  'SVG fallback 신규 40개 라벨 누락 없음');
+assert((svgEl.innerHTML.match(/data-site-assets="4"/g) || []).length === 10,
+  'SVG fallback legacy 10개 공동 사이트에 4자산 중첩 표시');
+assert(KJ.LEGACY_AIR_DEFENSE_SITES.every(function (s) {
+  return svgEl.innerHTML.indexOf('>BAT-' + s.weapon + '-' + s.key + ' · 4자산</text>') !== -1;
+}), 'SVG fallback 공동 포대 사이트 라벨 누락 없음');
 KJ.mapView.setLinksVisible(true);
-assert((svgEl.innerHTML.match(/<line /g) || []).length === 132,
-  'SVG fallback 연결선 ON: 리더선 40 + As-Is 링크 92');
+assert((svgEl.innerHTML.match(/<line /g) || []).length === 92,
+  'SVG fallback 연결선 ON: As-Is 링크 92개');
 KJ.mapView.setRingsVisible(false);
 assert(svgEl.innerHTML.indexOf('asset-range-ring') === -1, 'SVG fallback 범위 링 토글 OFF 반영');
 

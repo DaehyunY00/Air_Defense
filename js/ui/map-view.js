@@ -23,7 +23,6 @@
   var map = null;
   var markerLayer = null;
   var linkLayer = null;
-  var spreadLayer = null; // 저배율 겹침 방지용 표시좌표 리더선(실제 좌표 불변)
   var ringLayer = null;   // 자산 범위 링 (탐지/교전, 개념값)
   var ringsVisible = true;
   var linksVisible = false; // legacy 92~132개 선 과밀 방지 — 사용자가 범례에서 활성화
@@ -41,23 +40,50 @@
     } : {});
   }
 
-  function expandedLegacyOffset(n) {
-    if (!n || !/^(ICC|ECS|MFR|BAT)-(?:CHUNMA-|CHEONGUNG2-)?[WCE]\d$/.test(n.id)) return null;
-    if (n.id.indexOf('ICC-') === 0) return [-25, -22];
-    if (n.id.indexOf('ECS-') === 0) return [25, -22];
-    if (n.id.indexOf('MFR-') === 0) return [-25, 22];
-    return [25, 22];
+  function coordKey(n) {
+    return Number(n.coord[0]).toFixed(6) + '|' + Number(n.coord[1]).toFixed(6);
   }
 
-  /** 실제 좌표는 유지하고 저배율 표시점만 픽셀 단위로 분리한다. */
-  function leafletDisplayCoord(n) {
-    var off = expandedLegacyOffset(n);
-    if (!off || !map || !map.getZoom || map.getZoom() >= 11 ||
-        !map.latLngToLayerPoint || !map.layerPointToLatLng) return n.coord;
-    var zoom = map.getZoom();
-    var scale = zoom >= 10 ? 0.45 : (zoom === 9 ? 0.7 : 1);
-    var p = map.latLngToLayerPoint(n.coord);
-    return map.layerPointToLatLng(L.point(p.x + off[0] * scale, p.y + off[1] * scale));
+  /** 동일 위·경도의 포대·ECS·MFR/레이더를 하나의 지도 사이트로 묶는다. */
+  function groupBySite(nodes) {
+    var by = {}, groups = [];
+    nodes.forEach(function (n) {
+      var key = coordKey(n);
+      if (!by[key]) { by[key] = []; groups.push(by[key]); }
+      by[key].push(n);
+    });
+    return groups;
+  }
+
+  function siteLabel(group) {
+    if (group.length === 1) return group[0].id;
+    var shooter = group.find(function (n) { return n.category === 'shooter'; });
+    return (shooter ? shooter.id : group[0].id) + ' · ' + group.length + '자산';
+  }
+
+  function siteLevelClass(group, levelById) {
+    var levels = group.map(function (n) { return levelById[n.id] && levelById[n.id].level; });
+    if (levels.indexOf('saturated') !== -1) return ' node-saturated';
+    return levels.indexOf('bottleneck') !== -1 ? ' node-bottleneck' : '';
+  }
+
+  function siteIconHtml(group, levelById) {
+    if (group.length === 1) {
+      var n = group[0];
+      return '<div class="node-mark ' + CAT_SHAPE[n.category] + siteLevelClass(group, levelById) +
+        '" style="--svc:' + CAT_COLOR[n.category] + '"></div>' +
+        '<div class="node-label">' + n.id + '</div>';
+    }
+    var seen = {};
+    var marks = group.map(function (n) {
+      if (seen[n.category]) return '';
+      seen[n.category] = true;
+      return '<div class="node-mark ' + CAT_SHAPE[n.category] + '" style="--svc:' +
+        CAT_COLOR[n.category] + '"></div>';
+    }).join('');
+    return '<div class="node-site-stack' + siteLevelClass(group, levelById) + '">' + marks +
+      '<span class="node-site-count">' + group.length + '</span></div>' +
+      '<div class="node-label">' + siteLabel(group) + '</div>';
   }
 
   function updateAssetSummary(state, catalog, nodes) {
@@ -65,9 +91,11 @@
     if (!el) return;
     var by = { c2: 0, sensor: 0, shooter: 0 };
     nodes.forEach(function (n) { if (by[n.category] !== undefined) by[n.category]++; });
+    var sites = groupBySite(nodes), stacked = sites.filter(function (g) { return g.length > 1; }).length;
     var legacy = !state.dep || state.dep === 'legacy';
     el.textContent = (legacy ? 'legacy 확장 배치' : state.dep) + ' · 활성 ' + nodes.length + '노드' +
       ' (C2 ' + by.c2 + ' · 센서 ' + by.sensor + ' · 무기 ' + by.shooter + ')' +
+      ' · 지도 ' + sites.length + '사이트' + (stacked ? ' (중첩 ' + stacked + ')' : '') +
       (legacy ? ' · ICC–ECS–MFR–포대 10세트 포함' : '');
   }
 
@@ -86,7 +114,6 @@
         attribution: '&copy; OpenStreetMap contributors | 좌표는 도시 수준 개념좌표'
       }).addTo(map);
       ringLayer = L.layerGroup().addTo(map);
-      spreadLayer = L.layerGroup().addTo(map);
       linkLayer = L.layerGroup();
       if (linksVisible) linkLayer.addTo(map);
       markerLayer = L.layerGroup().addTo(map);
@@ -166,7 +193,7 @@
         if (to.modes && to.modes.indexOf(mode) === -1) return;
         var comm = l.comm[mode];
         var style = COMM_STYLE[comm.type] || COMM_STYLE.datalink;
-        var line = L.polyline([leafletDisplayCoord(from), leafletDisplayCoord(to)], {
+        var line = L.polyline([from.coord, to.coord], {
           color: style.color, weight: style.weight,
           dashArray: style.dashArray, opacity: 0.65
         });
@@ -181,34 +208,23 @@
 
       // ── 노드 마커 ──
       markerLayer.clearLayers();
-      spreadLayer.clearLayers();
       markers = {};
       var self = this;
-      activeNodes.forEach(function (n) {
-        var displayCoord = leafletDisplayCoord(n);
-        if (displayCoord !== n.coord) {
-          spreadLayer.addLayer(L.polyline([n.coord, displayCoord], {
-            color: '#9fb2c7', weight: 1, dashArray: '2 3', opacity: 0.55,
-            interactive: false, className: 'asset-spread-line'
-          }));
-        }
-        var res = levelById[n.id];
-        var levelClass = res && (res.level === 'bottleneck' || res.level === 'saturated')
-          ? ' node-' + res.level : '';
+      groupBySite(activeNodes).forEach(function (group) {
+        var primary = group.find(function (n) { return n.category === 'shooter'; }) || group[0];
         var icon = L.divIcon({
           className: 'node-icon',
-          html: '<div class="node-mark ' + CAT_SHAPE[n.category] + levelClass +
-            '" style="--svc:' + CAT_COLOR[n.category] + '"></div>' +
-            '<div class="node-label">' + n.id + '</div>',
-          iconSize: [60, 30], iconAnchor: [30, 10]
+          html: siteIconHtml(group, levelById),
+          // 긴 라벨은 CSS로 클릭영역 밖에 표시하고 실제 hit target은 기호 주변만 유지한다.
+          iconSize: [28, 24], iconAnchor: [14, 10]
         });
-        var m = L.marker(displayCoord, { icon: icon });
-        m.bindPopup(popupHtml(n, res, mode));
+        var m = L.marker(primary.coord, { icon: icon });
+        m.bindPopup(sitePopupHtml(group, levelById, mode));
         m.on('click', function () {
-          if (self._onNodeClick) self._onNodeClick(n.id);
+          if (self._onNodeClick) self._onNodeClick(primary.id);
         });
         markerLayer.addLayer(m);
-        markers[n.id] = m;
+        group.forEach(function (n) { markers[n.id] = m; });
       });
 
       // 딥링크 open= 복원
@@ -233,10 +249,6 @@
 
     var W = 1000, H = 640;
     function px(coord) { return KJ.geo.project(coord, W, H); }
-    function displayPx(n) {
-      var p = px(n.coord), off = expandedLegacyOffset(n);
-      return off ? [p[0] + off[0], p[1] + off[1]] : p;
-    }
     var LINK_COLOR = { datalink: '#2e6fd8', kvmf: '#2eb8c9', link16: '#2e6fd8', voice: '#d32f2f', broadcast: '#ef6c00' };
     var LINK_DASH = { datalink: '', kvmf: '8 3', link16: '6 4', voice: '2 6', broadcast: '1 5' };
 
@@ -263,38 +275,42 @@
       if (from.modes && from.modes.indexOf(mode) === -1) return;
       if (to.modes && to.modes.indexOf(mode) === -1) return;
       var comm = l.comm[mode];
-      var a = displayPx(from), b = displayPx(to);
+      var a = px(from.coord), b = px(to.coord);
       svg += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] +
         '" stroke="' + (LINK_COLOR[comm.type] || '#888') + '" stroke-width="1.5" opacity="0.6"' +
         (LINK_DASH[comm.type] ? ' stroke-dasharray="' + LINK_DASH[comm.type] + '"' : '') + '>' +
         '<title>' + from.name + ' → ' + to.name + ' | ' + comm.type + ' ' + comm.delaySec + 's</title></line>';
     });
-    activeNodes.forEach(function (n) {
-      var origin = px(n.coord), p = displayPx(n);
-      if (expandedLegacyOffset(n)) {
-        svg += '<line class="asset-spread-line" x1="' + origin[0] + '" y1="' + origin[1] +
-          '" x2="' + p[0] + '" y2="' + p[1] + '"/>';
-      }
-      var res = levelById[n.id];
-      var hot = res && (res.level === 'bottleneck' || res.level === 'saturated');
-      var c = CAT_COLOR[n.category];
+    groupBySite(activeNodes).forEach(function (group) {
+      var p = px(group[0].coord);
+      var levelClass = siteLevelClass(group, levelById);
+      var hot = !!levelClass;
       if (hot) {
         svg += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="13" fill="none" stroke="' +
-          (res.level === 'saturated' ? '#ff2d1a' : '#e05545') + '" stroke-width="3" opacity="0.8"/>';
+          (levelClass.indexOf('saturated') !== -1 ? '#ff2d1a' : '#e05545') + '" stroke-width="3" opacity="0.8"/>';
       }
-      if (n.category === 'c2') {
-        svg += '<rect x="' + (p[0] - 6) + '" y="' + (p[1] - 6) + '" width="12" height="12" fill="' + c + '"/>';
-      } else if (n.category === 'sensor') {
-        svg += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="6" fill="' + c + '"/>';
-      } else {
-        svg += '<polygon points="' + p[0] + ',' + (p[1] - 7) + ' ' + (p[0] - 7) + ',' + (p[1] + 6) +
-          ' ' + (p[0] + 7) + ',' + (p[1] + 6) + '" fill="' + c + '"/>';
+      var seen = {};
+      group.forEach(function (n) {
+        if (seen[n.category]) return;
+        seen[n.category] = true;
+        var c = CAT_COLOR[n.category];
+        if (n.category === 'c2') {
+          svg += '<rect x="' + (p[0] - 8) + '" y="' + (p[1] - 8) + '" width="16" height="16" fill="' + c + '" opacity=".9"/>';
+        } else if (n.category === 'sensor') {
+          svg += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="6" fill="' + c + '" opacity=".9"/>';
+        } else {
+          svg += '<polygon points="' + p[0] + ',' + (p[1] - 7) + ' ' + (p[0] - 7) + ',' + (p[1] + 6) +
+            ' ' + (p[0] + 7) + ',' + (p[1] + 6) + '" fill="' + c + '" opacity=".9"/>';
+        }
+      });
+      if (group.length > 1) {
+        svg += '<circle cx="' + (p[0] + 10) + '" cy="' + (p[1] - 10) + '" r="7" fill="#10141a" stroke="#aecbeb"/>' +
+          '<text x="' + (p[0] + 10) + '" y="' + (p[1] - 7) + '" font-size="8" fill="#fff" text-anchor="middle">' + group.length + '</text>';
       }
       svg += '<text x="' + p[0] + '" y="' + (p[1] + 18) + '" font-size="9" fill="#cfd8e3" text-anchor="middle">' +
-        n.id + '</text>' +
-        '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="14" fill="transparent"><title>' + n.name +
-        '\n' + n.coordNote + (res && res.lambda > 0 ? '\nλ=' + res.lambda.toFixed(2) +
-          '/분, ρ=' + (isFinite(res.rho) ? res.rho.toFixed(2) : '∞') : '') + '</title></circle>';
+        siteLabel(group) + '</text>' +
+        '<circle data-site-assets="' + group.length + '" cx="' + p[0] + '" cy="' + p[1] + '" r="14" fill="transparent"><title>' +
+        group.map(function (n) { return n.name + ' | ' + n.coordNote; }).join('\n') + '</title></circle>';
     });
 
     el.innerHTML =
@@ -304,9 +320,9 @@
       svg + '</svg>';
   }
 
-  function popupHtml(n, res, mode) {
+  function popupAssetHtml(n, res, mode) {
     var CAT_LABEL = { c2: '지휘통제(C2)', sensor: '탐지(센서)', shooter: '요격(무기)' };
-    var h = '<div class="popup"><b>' + n.name + '</b>' +
+    var h = '<b>' + n.name + '</b>' +
       '<div class="popup-meta">' + (CAT_LABEL[n.category] || n.category) + ' · ' +
       (SERVICE_LABEL[n.service] || n.service) + ' · ' + n.echelon + '</div>' +
       '<div class="popup-coord">📍 ' + n.coordNote + '</div>' +
@@ -331,6 +347,18 @@
         }).join(', ') + '</div>';
       }
     }
-    return h + '</div>';
+    return h;
+  }
+
+  function popupHtml(n, res, mode) {
+    return '<div class="popup">' + popupAssetHtml(n, res, mode) + '</div>';
+  }
+
+  function sitePopupHtml(group, levelById, mode) {
+    if (group.length === 1) return popupHtml(group[0], levelById[group[0].id], mode);
+    return '<div class="popup"><div class="popup-site-head"><b>공동 포대 사이트 · ' + group.length +
+      '개 자산</b><br>동일 위·경도에 중첩 표시</div>' + group.map(function (n) {
+        return '<div class="popup-site-asset">' + popupAssetHtml(n, levelById[n.id], mode) + '</div>';
+      }).join('') + '</div>';
   }
 })();

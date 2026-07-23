@@ -43,6 +43,12 @@ assert(sites.every(function (s) {
     shooter.pairedEcsId === ecs.id && mfr.pairedEcsId === ecs.id;
 }), '10개 세트의 ICC↔ECS↔MFR↔포대 참조 완전성');
 assert(sites.every(function (s) {
+  var ecs = node('ECS-' + s.key), mfr = node('MFR-' + s.key);
+  var shooter = node('BAT-' + s.weapon + '-' + s.key);
+  return JSON.stringify(ecs.coord) === JSON.stringify(shooter.coord) &&
+    JSON.stringify(mfr.coord) === JSON.stringify(shooter.coord);
+}), '10개 포대의 ECS·MFR·사수 위·경도 동일');
+assert(sites.every(function (s) {
   var k = s.key, shooter = 'BAT-' + s.weapon + '-' + k;
   return link('MFR-' + k, 'ECS-' + k, 'asis') && link('MFR-' + k, 'ECS-' + k, 'tobe') &&
     link('ECS-' + k, 'ICC-' + k, 'asis') && link('ICC-' + k, 'ECS-' + k, 'asis') &&

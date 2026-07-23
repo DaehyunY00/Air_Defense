@@ -24,24 +24,25 @@
 
 ### 2.1 회귀 스위트 (단일 진입점: `node tests/run-all.js`)
 
-2026-07-22 현재 단일 실행기는 **JS 27개 구문검증 + 28개 스위트·664개 어서션**을 실행한다. 아래 기존 표는 초기 Phase 1–5 주요 스위트 요약이며, 현재 수량 정본은 `tests/run-all.js`와 추가 게이트이다.
+2026-07-24 현재 단일 실행기는 **JS/ESM 39개 구문검증 + 30개 스위트·735개 어서션**을 실행한다. 아래 기존 표는 초기 Phase 1–5 주요 스위트 요약이며, 현재 수량 정본은 `tests/run-all.js`와 추가 게이트이다.
 
 | 추가 스위트 | 어서션 | 검증 내용 |
 |---|---:|---|
 | `baseline.test.js` | 18 | SC1–SC3 양모드 전체 결과 SHA-256, 플래그 생략=OFF bit-exact, 핵심 flow |
-| `legacy-deployment-expansion.test.js` | 21 | 서4·중3·동3 10세트, 천마/천궁 5:5, 참조·링크·제약·결정론·실제 파이프라인 참여 |
-| `map-visualization.test.js` | 13 | Leaflet/SVG 활성 마커·신규 40개 ID·저배율 분리·링·연결선 기본 OFF/토글·배치 요약 |
-| `deployment.test.js` | 54 | 6개 배치 수량·불변 참조·전역 ID/참조·SHORAD 차량 스키마·USFK·MDL |
+| `legacy-deployment-expansion.test.js` | 22 | 서4·중3·동3 10세트, 천마/천궁 5:5, 참조·링크·공동 사이트 좌표·결정론·실제 파이프라인 참여 |
+| `map-visualization.test.js` | 11 | Leaflet/SVG 공동 포대 중첩 마커·사이트 수·범위 링·연결선 기본 OFF/토글·배치 요약 |
+| `deployment.test.js` | 60 | 6개 배치 수량·불변 참조·전역 ID/참조·포대/ECS/MFR 동일 좌표·SHORAD 차량 스키마·USFK·MDL |
 | `deployment-adapter.test.js` | 55 | 토폴로지 종점·DOWN 링크·USFK 분리·6×2 결정론/보존법칙/유한 지표 |
 | `high-resolution-connection.test.js` | 3 | ICC 상향 승인경로·As-Is 주교전 연결 |
 | `iads-native-pipeline.test.js` | 12 | 책임 C2 생존대체·scope WTA·PIP/FC·발사대별 탄약/재장전·실제 중복 BDA·결정론 |
 | `failure-classification.test.js` | 9 | 주원인·기여원인 보존, 구조/조건부 반사실, PIP 세분화, 책임 C2 부재 분리, native 사수 실제 부하 |
-| `ui-performance.test.js` | 15 | Worker 연산 분리·단일본 폴백·FULL 적응형 지도 프레임률·병목 배지 제거·C2 링크 토글·범례 우측 하단 배치 |
+| `ui-performance.test.js` | 34 | Worker 연산 분리·Module→Classic 전환·단일본 폴백·C2 MOP 선택 계측·FULL 적응형 지도 프레임률·병목 배지 제거·C2 링크 토글·접이식 범례·중첩 마커 |
 
 | 스위트 | 어서션 | 검증 내용 |
 |---|---|---|
 | `engine.test.js` | 49 | 결정론(동일 seed→완전 동일, seed 0 보존), 극한값(위협 0/강도 0/포화 시 ρ≤1·드롭·무한루프 없음), 시나리오·강도·모드별 병목 상이성(고정 아님), 강도 단조성, To-Be 개선, 보존 항등식(생성≥격추+누수), 흐름 카운터 부등식, trace 모드 무부수효과·절삭 플래그·타임스탬프 단조성·exitT 이후 단계 부재 |
-| `mc.test.js` | 23 | Welford=나이브 일치(Δ<1e-9), 분포 샘플러 이론값 수렴(지수·삼각·정규·로그정규·포아송, N=20만), CI의 1/√n 축소, MC 재현성·수렴판정, As-Is↔To-Be CI 비중첩 유의성, 민감도 단조성(탐지 제약 시나리오 vs 포화 시나리오 구분), 성능(200복제 <15s, 실측 ~0.5s) |
+| `mc.test.js` | 23 | Welford=나이브 일치(Δ<1e-9), 분포 샘플러 이론값 수렴(지수·삼각·정규·로그정규·포아송, N=20만), CI의 1/√n 축소, 기존 단일-arm MC 재현성·수렴, 민감도 단조성, 성능 |
+| `c2-analysis.test.js` | 24 | 구조화 계측 opt-in·legacy wire 보존, 명시적 분모 보존법칙, 복수 job C2 상태 누출 귀속, 명령·항적 신선도·교전기회, 지연 분위수·큐 불변식, 동일 seed paired MC와 Δ 산술·재현성 |
 | `overlap.test.js` | 17 | 히트맵 순수함수 결정론, 무(無)시나리오 축선 위험 0, 강도 선형 스케일링, 축선별 To-Be≤As-Is, JAMDC2 융합허브 특례 효과 |
 | `transition.test.js` | 10 | 전환점 분석 결정론, ρ≥0.9 돌파점·시나리오 의존성, 전 구간 gap>0, 임계 전·후 평균 산식·최대격차 도출 정확성, ρ 약단조, 확장 64노드 성능 |
 | `constraints.test.js` | 16 | 계획서 Rec.5 (a)~(e) — 아래 2.3 |
@@ -151,6 +152,7 @@ legacy 10세트 확장 후)에서 As-Is C2 ρ≥0.9 최초 돌파는 **×1.5**, 
 - **항적 연속성(track continuity) 미구현**: `detected=true`가 영구 유지되어 "탐지 후 반복 소실"이 미모사(옵션 C). 재획득 dup(`config.dupReacquire`)은 기본 off로 예약만 되어 있고, 켜려면 **배수가 아닌 이벤트로 구현**해야 함(근거 없는 `1/detectFactor` 배수는 스캔 재시도와 이중계상 위험 — 실측: 켜면 SC3 killed 78% 붕괴). → 범위 밖.
 - **음성 지연 분포의 독립성 가정**: `_linkDelay`의 삼각분포 샘플링은 홉·항적 간 **독립**을 가정한다. 실제로는 통신 폭주 시 지연이 **상관**되어 As-Is 병목이 과소평가될 수 있음.
 - **책임 C2 부재·보고경로 부재 분리**: legacy 정형 토폴로지에서 `no_report_path`는 대부분 발화하지 않지만, 고해상도에서는 교전 가능 책임자 자체가 없는 `no_responsible_c2`와 책임자는 있지만 센서 보고경로가 없는 `no_report_path`를 별도 관측한다. `not_detected`는 센서가 있는 상태의 확률적 미탐지로 비구조 분류한다.
+- **IADS_C2 물리·확률 보정**: `fid=iads-c2`는 0.02초 기준 Pd를 0.2초 스캔으로 변환한 탐지·추적상실 hazard, 기하 게이트 시 track/RNG 보존, `lastUpdateAt` 신선도, 센서별 detect/track/FC 거리·전이시간·RCS 기준·재밍 감수성, 센서급 상관 실패/오상관과 5초 재시도, C2 식별 정정, 최초 도달 가능 PIP, 위협×거리×접근각 PSSEK와 보수적 표 경계 fallback, 재밍/ECM·최소 Pk·연료·탄약·채널 게이트, 명령/claim/BDA 수명주기를 단일 교전 경로에서 검증한다. 기본 `compat` 경로에는 적용하지 않는다.
 - **Phase 5 死링크 재측정(전 시나리오·모드·강도·seed 누계)**:
   - `ADC2A-W→AOC-1C`(음성 report): 종전 0 → **부활 316건**. 팬아웃 후 cruise@west·seoul는 LLR(무인기/저속기/헬기만 커버)이 못 봐 AOC-1C로 가는 최속 링크가 ADC2A-W가 되어 발화한다.
   - `LLR-CD→JAOC-CD`: 종전 0 → **부활 1,704건**(팬아웃). JAOC-CD 死노드 탈출.

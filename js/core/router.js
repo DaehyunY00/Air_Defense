@@ -1,7 +1,7 @@
 /**
  * K-JAMDS 시뮬레이터 — 딥링크 라우터 (Phase 1, Phase 4에서 t= 실제 활용)
  *
- * URL 해시 스킴: #tab=<탭ID>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<legacy|배치ID>&t=<재생시각(초)>&open=<노드ID>&x=<강도>&seed=&dur=
+ * URL 해시 스킴: #tab=<탭ID>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<legacy|배치ID>&fid=<compat|iads-c2>&t=<재생시각(초)>&open=<노드ID>&x=<강도>&seed=&dur=
  *   - t    : [playback 탭] 재생 스크러버 시각(초). 다른 탭에서는 보존만 됨
  *   - open : 지도에서 팝업을 열 노드 ID
  *   - x    : 위협 강도 배수
@@ -12,7 +12,7 @@
   'use strict';
   window.KJ = window.KJ || {};
 
-  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'legacy', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
+  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'legacy', fid: 'compat', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
   var VALID_TABS = ['sim', 'analysis', 'mc', 'data'];
   // 구 딥링크 호환: 지도/시나리오/DES/재생 탭은 통합 [시뮬레이션] 탭으로 흡수
   var LEGACY_TAB = { map: 'sim', scenario: 'sim', des: 'sim', playback: 'sim' };
@@ -40,6 +40,7 @@
       if (LEGACY_TAB[state.tab]) state.tab = LEGACY_TAB[state.tab];
       if (VALID_TABS.indexOf(state.tab) === -1) state.tab = DEFAULTS.tab;
       if (state.mode !== 'asis' && state.mode !== 'tobe') state.mode = DEFAULTS.mode;
+      if (state.fid !== 'compat' && state.fid !== 'iads-c2') state.fid = DEFAULTS.fid;
       if (state.dep !== 'legacy' && (!KJ.DEPLOYMENT_IDS || KJ.DEPLOYMENT_IDS.indexOf(state.dep) === -1)) {
         state.dep = DEFAULTS.dep;
       }

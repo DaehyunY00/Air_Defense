@@ -18,7 +18,7 @@
   function pp(x) { return (x * 100).toFixed(2) + '%p'; }
   function modelConfig(state) {
     var high = state && state.dep && state.dep !== 'legacy';
-    return high ? { deploymentId: state.dep, features: { highResolutionDeployment: true } } : {};
+    return high ? { deploymentId: state.dep, features: { highResolutionDeployment: true }, modelFidelity: state.fid || 'compat' } : {};
   }
 
   // MoM 계층 라벨(NATO COBP/SAS-026, ENV-MOM-COBP-01) — 결과 모달·[분석] 탭과 동일 분류
@@ -34,6 +34,9 @@
   var METRIC_META = {
     killRate: { label: '격추율', mom: 'MoFE', fmt: pct, kind: 'rate' },
     leakRate: { label: '요격 실패율', mom: 'MoFE', fmt: pct, kind: 'rate' },
+    killRateSpawn: { label: '격추율(전체 생성 기준)', mom: 'MoFE', fmt: pct, kind: 'rate' },
+    leakRateSpawn: { label: '요격 실패율(전체 생성 기준)', mom: 'MoFE', fmt: pct, kind: 'rate' },
+    censoredRate: { label: '관측 종료 미해결률', mom: 'MoFE', fmt: pct, kind: 'rate' },
     detectRate: { label: '탐지율', mom: 'MoP', fmt: pct, kind: 'rate' },
     meanTimeToEngageSec: { label: '평균 교전지연(생성→교전)', mom: 'MoP', fmt: function (x) { return x.toFixed(0) + '초'; }, kind: 'sec' },
     meanTimeToKillSec: { label: '평균 격추시간', mom: 'MoP', fmt: function (x) { return x.toFixed(0) + '초'; }, kind: 'sec' },
@@ -70,20 +73,21 @@
         cfg: {
           scenarioId: state.sc, mode: state.mode, intensity: state.x,
           seed: state.seed, endTimeSec: state.dur,
-          deploymentId: highCfg.deploymentId, features: highCfg.features
+          deploymentId: highCfg.deploymentId, features: highCfg.features,
+          modelFidelity: highCfg.modelFidelity
         },
-        opts: { minReps: 30, maxReps: maxReps, tol: tol },
+        opts: { minReps: 30, maxReps: maxReps, tol: tol, primary: 'leakRateSpawn', c2Mop: true },
         sensitivityOpts: { reps: Math.min(60, maxReps), deltaPct: 0.2 }
       }, function (stage) {
         var labels = {
-          'current-mc': '⏳ 현재 체계 Monte Carlo 중…',
-          'comparison-mc': '⏳ 비교 체계 Monte Carlo 중…',
+          'paired-mc': '⏳ 동일 seed As-Is↔To-Be 쌍대 Monte Carlo 중…',
           sensitivity: '⏳ 민감도 스윗 중…'
         };
         btn.textContent = labels[stage] || '⏳ Monte Carlo 실행 중…';
       }).then(function (result) {
         last = {
           cur: result.current, oth: result.other,
+          paired: result.paired || null,
           otherMode: result.otherMode, mode: state.mode,
           sens: result.sensitivity, elapsed: now() - t0
         };
@@ -101,18 +105,22 @@
       var otherName = res.otherMode === 'asis' ? 'As-Is' : 'To-Be';
 
       // ── 수렴 상태 ──
-      var lr = cur.metrics.leakRate;
+      var lr = res.paired && res.paired.delta
+        ? res.paired.delta[res.paired.primary] : cur.metrics.leakRateSpawn;
       el('mc-converge').innerHTML =
         '<div class="mc-conv ' + (cur.converged ? 'conv-ok' : 'conv-no') + '">' +
         (cur.converged
-          ? '✅ 수렴: ' + cur.convergedAt + '회 복제에서 요격 실패율 95% 신뢰구간 반폭 ≤ 허용오차 ' + pp(cur.tol)
+          ? '✅ 수렴: ' + cur.convergedAt + '회 쌍대복제에서 Δ요격 실패율 95% 신뢰구간 반폭 ≤ 허용오차 ' + pp(cur.tol)
           : '⚠️ 미수렴: 상한 ' + cur.reps + '회까지 허용오차 ' + pp(cur.tol) + ' 미달 (반폭 ' + pp(lr.ci) + ')') +
         '</div>' +
-        '<div class="note">' + modeName + ' · ' + cur.reps + '회 복제 · 각 복제 독립 시드(baseSeed=' +
+        '<div class="note">' + modeName + ' · ' + cur.reps + '회 복제 · As-Is/To-Be가 동일 seed를 공유(baseSeed=' +
         cur.config.seed + ' 파생) · 벽시계 ' + (res.elapsed || 0).toFixed(0) + 'ms</div>';
 
       // ── 지표별 통계 (현재 모드) ──
-      el('mc-metrics-body').innerHTML = Object.keys(METRIC_META).map(function (k) {
+      el('mc-metrics-body').innerHTML = [
+        'killRateSpawn', 'leakRateSpawn', 'censoredRate', 'detectRate',
+        'meanTimeToEngageSec', 'meanTimeToKillSec', 'bottleneckCount'
+      ].map(function (k) {
         var m = cur.metrics[k], meta = METRIC_META[k];
         return '<tr><td>' + momChip(meta.mom) + meta.label + '</td>' +
           '<td class="num">' + meta.fmt(m.mean) + '</td>' +
@@ -123,7 +131,8 @@
       }).join('');
 
       // ── As-Is ↔ To-Be 유의성 비교 ──
-      el('mc-compare').innerHTML = this._compareTable(cur, oth, modeName, otherName);
+      el('mc-compare').innerHTML = this._compareTable(cur, oth, modeName, otherName, res.paired) +
+        this._c2MopTable(res.paired);
 
       // ── 민감도 토네이도 ──
       el('mc-tornado').innerHTML = this._tornado(res.sens);
@@ -134,16 +143,15 @@
       if (KJ.tableSort) KJ.tableSort.attachAll(el('panel-mc')); // 숫자열 헤더 우측정렬 동기화
     },
 
-    _compareTable: function (cur, oth, curName, othName) {
+    _compareTable: function (cur, oth, curName, othName, paired) {
       function row(key) {
         var meta = METRIC_META[key];
         var a = cur.metrics[key], b = oth.metrics[key];
-        var overlap = a.lo <= b.hi && b.lo <= a.hi;
-        var better;
-        if (key === 'leakRate' || key === 'meanTimeToEngageSec' || key === 'meanTimeToKillSec' || key === 'bottleneckCount') better = cur.metrics[key].mean < oth.metrics[key].mean;
-        else better = cur.metrics[key].mean > oth.metrics[key].mean;
-        var sig = overlap ? '<span class="badge badge-idle">유의차 없음</span>'
-          : '<span class="badge badge-ok">유의(95% CI 비중첩)</span>';
+        var d = paired && paired.delta ? paired.delta[key] : null;
+        var separated = d && d.lo != null && d.hi != null && (d.lo > 0 || d.hi < 0);
+        var sig = !d ? '<span class="badge badge-idle">쌍대값 없음</span>'
+          : (separated ? '<span class="badge badge-ok">유의(쌍대 Δ CI)</span>'
+            : '<span class="badge badge-idle">유의차 없음</span>');
         return '<tr><td>' + momChip(meta.mom) + meta.label + '</td>' +
           '<td class="num">' + meta.fmt(a.mean) + ' ± ' + (meta.kind === 'rate' ? pp(a.ci) : (a.ci != null ? a.ci.toFixed(2) : '—')) + '</td>' +
           '<td class="num">' + meta.fmt(b.mean) + ' ± ' + (meta.kind === 'rate' ? pp(b.ci) : (b.ci != null ? b.ci.toFixed(2) : '—')) + '</td>' +
@@ -151,10 +159,46 @@
       }
       return '<table><thead><tr><th>지표</th><th>' + curName + ' (현재)</th><th>' + othName +
         '</th><th>통계적 유의성</th></tr></thead><tbody>' +
-        ['killRate', 'leakRate', 'detectRate', 'meanTimeToEngageSec', 'meanTimeToKillSec', 'bottleneckCount'].map(row).join('') +
+        ['killRateSpawn', 'leakRateSpawn', 'censoredRate', 'detectRate',
+          'meanTimeToEngageSec', 'meanTimeToKillSec', 'bottleneckCount'].map(row).join('') +
         '</tbody></table>' +
-        '<div class="note">동일 시나리오·강도·baseSeed에서 체계 모드만 교체해 각각 독립 복제. 95% 신뢰구간이 ' +
-        '겹치지 않으면 두 체계의 차이가 표본변동으로 설명되지 않는(통계적으로 유의한) 개선임을 뜻한다.</div>';
+        '<div class="note">양 체계는 정확히 같은 seed 집합을 사용합니다. 유의성은 팔별 CI 비중첩이 아니라 ' +
+        'seed별 Δ(To-Be−As-Is)의 95% CI가 0을 제외하는지로 판정합니다.</div>';
+    },
+
+    _c2MopTable: function (paired) {
+      var mop = paired && paired.c2Mop;
+      if (!mop || !mop.enabled) {
+        return '<h3>C2 MOP 쌍체 비교</h3><div class="bn-none">C2 MOP 계측 비활성 — 0으로 해석하지 않습니다.</div>';
+      }
+      var meta = KJ.C2_MOP_META || {};
+      function fmt(value, kind) {
+        if (value == null || !isFinite(value)) return '—';
+        if (kind === 'rate') return (value * 100).toFixed(2) + '%';
+        if (kind === 'sec') return value.toFixed(2) + '초';
+        return value.toFixed(3);
+      }
+      var rows = Object.keys(meta).map(function (key) {
+        var a = mop.asis[key], b = mop.tobe[key], d = mop.delta[key], m = meta[key];
+        if (!d || !d.available) {
+          return '<tr><td>' + esc(m.label) + '</td><td colspan="5" class="bn-none">계측 없음</td>' +
+            '<td class="num">0 / ' + mop.requestedSeedCount + '</td></tr>';
+        }
+        var significant = d.lo != null && d.hi != null && (d.lo > 0 || d.hi < 0);
+        return '<tr><td>' + esc(m.label) + '</td><td class="num">' + fmt(a.mean, m.kind) +
+          '</td><td class="num">' + fmt(b.mean, m.kind) + '</td><td class="num">' +
+          fmt(d.mean, m.kind) + '</td><td class="num">[' + fmt(d.lo, m.kind) + ', ' +
+          fmt(d.hi, m.kind) + ']</td><td>' +
+          (significant ? '<span class="badge badge-ok">0 제외</span>' :
+            '<span class="badge badge-idle">0 포함</span>') + '</td><td class="num">' +
+          d.n + ' / ' + mop.requestedSeedCount + '</td></tr>';
+      }).join('');
+      return '<h3>C2 MOP 쌍체 비교 (동일 seed 교집합)</h3>' +
+        '<table><thead><tr><th>C2 MOP</th><th>As-Is</th><th>To-Be</th><th>Δ mean</th>' +
+        '<th>Δ 95% CI</th><th>판정</th><th>nPaired / 요청</th></tr></thead><tbody>' +
+        rows + '</tbody></table><div class="note">' + esc(mop.note) +
+        '. 분위수 행은 각 seed 내부 분위수의 쌍체 평균이며 전체 이벤트 pooled 분위수가 아닙니다. ' +
+        '여러 MOP를 동시에 탐색하므로 개별 0 제외 판정은 탐색적 증거로 해석하십시오.</div>';
     },
 
     _tornado: function (sens) {
@@ -198,7 +242,8 @@
       opts: {
         reps: 20, seed: state.seed, endTimeSec: Math.min(state.dur, 1800),
         deploymentId: highCfg.deploymentId,
-        features: highCfg.features
+        features: highCfg.features,
+        modelFidelity: highCfg.modelFidelity
       }
     }, function () {
       btn.textContent = '⏳ 임계 전환점 Worker 계산 중…';

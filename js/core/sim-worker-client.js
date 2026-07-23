@@ -10,7 +10,10 @@
   window.KJ = window.KJ || {};
 
   var worker = null;
+  var workerReady = false;
+  var workerQueue = [];
   var workerDisabled = false;
+  var classicAttempted = false;
   var nextId = 1;
   var pending = {};
 
@@ -23,8 +26,11 @@
       endTimeSec: raw.endTimeSec,
       deploymentId: raw.deploymentId,
       features: raw.features,
+      modelFidelity: raw.modelFidelity,
       trace: raw.trace,
       traceCap: raw.traceCap,
+      c2Analysis: raw.c2Analysis,
+      c2EventCap: raw.c2EventCap,
       mult: raw.mult
     };
   }
@@ -32,11 +38,17 @@
   function runLocal(task, payload) {
     var cfg, otherMode, base;
     if (task === 'desPair') {
-      cfg = scenarioConfig(payload.cfg);
+      cfg = Object.assign(scenarioConfig(payload.cfg), { c2Analysis: true });
       otherMode = cfg.mode === 'asis' ? 'tobe' : 'asis';
+      var currentDes = KJ.runDES(cfg);
+      var otherDes = KJ.runDES(Object.assign({}, cfg, { mode: otherMode, trace: false }));
+      currentDes.c2Analysis = KJ.buildC2Analysis(currentDes.c2Events, currentDes);
+      otherDes.c2Analysis = KJ.buildC2Analysis(otherDes.c2Events, otherDes);
+      delete currentDes.c2Events;
+      delete otherDes.c2Events;
       var desOut = {
-        current: KJ.runDES(cfg),
-        other: KJ.runDES(Object.assign({}, cfg, { mode: otherMode, trace: false })),
+        current: currentDes,
+        other: otherDes,
         otherMode: otherMode,
         execution: 'main-thread-fallback'
       };
@@ -55,9 +67,11 @@
       cfg = scenarioConfig(payload.cfg);
       otherMode = cfg.mode === 'asis' ? 'tobe' : 'asis';
       base = Object.assign({}, cfg, { trace: false });
-      var current = KJ.runMonteCarlo(base, payload.opts);
-      var other = KJ.runMonteCarlo(Object.assign({}, base, { mode: otherMode }), payload.opts);
-      var out = { current: current, other: other, otherMode: otherMode, execution: 'main-thread-fallback' };
+      var paired = KJ.runPairedMonteCarlo(base, payload.opts);
+      var current = cfg.mode === 'asis' ? paired.asis : paired.tobe;
+      var other = cfg.mode === 'asis' ? paired.tobe : paired.asis;
+      var out = { current: current, other: other, otherMode: otherMode,
+        paired: paired, execution: 'main-thread-fallback' };
       if (task === 'mcBundle') out.sensitivity = KJ.sensitivitySweep(base, payload.sensitivityOpts);
       return out;
     }
@@ -83,6 +97,8 @@
     workerDisabled = true;
     if (worker) worker.terminate();
     worker = null;
+    workerReady = false;
+    workerQueue = [];
     Object.keys(pending).forEach(function (id) {
       var p = pending[id];
       delete pending[id];
@@ -91,12 +107,31 @@
     if (window.console && console.warn) console.warn('Simulation worker disabled:', reason);
   }
 
-  function ensureWorker() {
-    if (worker || workerDisabled || typeof Worker === 'undefined') return worker;
+  function queuePendingMessages() {
+    workerQueue = Object.keys(pending).map(function (id) {
+      var p = pending[id];
+      return { id: Number(id), task: p.task, payload: p.payload };
+    });
+  }
+
+  function startWorker(kind) {
+    var instance;
     try {
-      worker = new Worker('js/workers/sim-worker.js');
+      instance = kind === 'module'
+        ? new Worker('js/workers/sim-worker.mjs?v=20260722b', { type: 'module' })
+        : new Worker('js/workers/sim-worker.js?v=20260724a');
+      worker = instance;
+      workerReady = false;
       worker.onmessage = function (ev) {
+        if (worker !== instance) return;
         var msg = ev.data || {};
+        if (msg.type === 'worker-ready') {
+          workerReady = true;
+          var queued = workerQueue;
+          workerQueue = [];
+          queued.forEach(function (item) { worker.postMessage(item); });
+          return;
+        }
         var p = pending[msg.id];
         if (!p) return;
         if (msg.progress) {
@@ -108,12 +143,32 @@
         else p.reject(new Error(msg.error || 'Worker computation failed'));
       };
       worker.onerror = function (ev) {
+        if (worker !== instance) return;
+        if (kind === 'module' && !classicAttempted) {
+          classicAttempted = true;
+          instance.terminate();
+          worker = null;
+          workerReady = false;
+          queuePendingMessages();
+          startWorker('classic');
+          return;
+        }
         disableWorker((ev && ev.message) || 'worker initialization failed');
       };
     } catch (err) {
+      if (kind === 'module' && !classicAttempted) {
+        classicAttempted = true;
+        queuePendingMessages();
+        return startWorker('classic');
+      }
       disableWorker(err.message || String(err));
     }
     return worker;
+  }
+
+  function ensureWorker() {
+    if (worker || workerDisabled || typeof Worker === 'undefined') return worker;
+    return startWorker('module');
   }
 
   KJ.compute = {
@@ -126,7 +181,9 @@
           task: task, payload: payload, onProgress: onProgress,
           resolve: resolve, reject: reject
         };
-        w.postMessage({ id: id, task: task, payload: payload });
+        var message = { id: id, task: task, payload: payload };
+        if (workerReady) w.postMessage(message);
+        else workerQueue.push(message);
       });
     },
     mode: function () {
@@ -135,6 +192,9 @@
     terminate: function () {
       if (worker) worker.terminate();
       worker = null;
+      workerReady = false;
+      classicAttempted = false;
+      workerQueue = [];
       Object.keys(pending).forEach(function (id) {
         pending[id].reject(new Error('Computation cancelled'));
         delete pending[id];

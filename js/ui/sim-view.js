@@ -1001,7 +1001,9 @@
   function signed(n) { return (n > 0 ? '+' : '') + n; }
 
   /** 링크 전달 1건당 평균 통신지연(초) — panels.js의 MoP 지표와 동일 정의.
-   * kind 지정 시 그 종류(report/coord/command)만 집계. 생략 시 전 링크(하위호환). */
+   * kind 지정 시 그 종류(report/coord/command)만 집계. 생략 시 전 링크(하위호환).
+   * ⚠️ 대표값(delaySec) 기반 — 현재 분포(삼각·균등)가 대칭이라 평균=대표값이나,
+   * 비대칭 분포 도입 시 샘플 합 집계로 교체 필요(panels.js 동일 주석 참조). */
   function commMeanDelay(res, kind) {
     var num = 0, den = 0;
     res.links.forEach(function (l) {

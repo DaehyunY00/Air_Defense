@@ -42,7 +42,7 @@
 
 | # | 지표 | MoM | 계산 위치(파일:라인) | 결과 필드 | 시각화 요소 | As-Is↔To-Be 방향 검증 | 판정 |
 |---|---|---|---|---|---|---|---|
-| 10 | 요격 실패율(누출률) | MoFE | `sim-engine.js` `global.leakRate`(spawned/leaked 비) | `global.leakRate` | `sim-view.js:521`(statCard) · `sim-view.js:749`(vsCompare) · `sim-view.js:543-547`(MC CI 표) · `mc-panel.js:22`(METRIC_META) | 다수 기존 테스트(`engine.test.js`,`mc.test.js`,`transition.test.js`) | **PASS** |
+| 10 | 요격 실패율(누출률) | MoFE | `sim-engine.js` `global.leakRate` = leaked ÷ (spawned − censored) — censorFix(기본 ON) 절단 보정 분모(해결분 기준). 전체 생성 기준은 `leakRateSpawn`(leaked/spawned)로 별도 노출 | `global.leakRate` | `sim-view.js:521`(statCard) · `sim-view.js:749`(vsCompare) · `sim-view.js:543-547`(MC CI 표) · `mc-panel.js:22`(METRIC_META) | 다수 기존 테스트(`engine.test.js`,`mc.test.js`,`transition.test.js`) | **PASS** |
 | 11 | 격추율 | MoFE | `global.killRate` | `global.killRate` | `sim-view.js:520`(statCard) · `sim-view.js:751`(vsCompare) · `mc-panel.js:21` | 기존 다수 테스트 | **PASS** |
 | 12 | 비용교환비(저가 포화위협) | MoFE | `sim-engine.js:89,441-442,449-450,662-668`(`SAT_THREATS`=uav_small·mrl_large) | `global.cost.exchangeSat` | `sim-view.js:755`(vsCompare, MoFE 태그, 유일한 노출 지점) | `refine.test.js` D-2(SC2만) + `metrics-verification.test.js`(SC1·SC3 포함 전수 확인) → **SC2는 항상 개선, SC1·SC3는 강도에 따라 악화로 반전** | **PASS**(계산·표시 정확) / **특이사항 3**(방향 비단조, §3) |
 
@@ -191,3 +191,64 @@ node scripts/capture-metrics.mjs http://localhost:8000
    아님 — Best-Shooter 배정·재교전 횟수 차이로 시나리오·강도에 따라 악화되는 경우도 실재함
    (docs/metrics-verification.md 참조)"을 추가(계산 로직 변경 없음, 툴팁 텍스트만 수정).
 4. **원인 taxonomy v2 참조표 추가 — 해결.** 원인 계열·구조성·발생단계와 구조/조건부 뽃지를 [분석]·결과 화면에 표시.
+
+---
+
+## 6. 2026-07-27 전수 재검토 — 지표 계정 결함 3건 시정
+
+§1의 18개 지표 매트릭스는 "계산·시각화·방향성"을 감사했으나, **계산 경로가 실행 모드(legacy /
+native 고해상도)와 집계 범위(주 계통 / 중복교전 ghost)에 따라 갈리는 지점**은 다루지 않았다.
+이번 재검토는 그 축을 대상으로 엔진·UI·MC·C2 리포트의 지표 산출식을 전수 대조했고, 결함 3건과
+라벨·주석 문제 3건을 발견해 모두 시정했다. 회귀는 신설 스위트
+**`tests/metrics-accounting.test.js`(어서션 15건)**로 고정했다.
+
+### 시정 1 (높음) — 고가유도탄 보존율이 native 경로에서 항상 100%
+
+- **증상**: `global.highValueInterceptM`이 legacy 교전 종료 경로(`_onEngageEnd`)에만 누적되고
+  native 발사 경로(`_onIadsFire`)에는 배선되지 않아, MINI/FULL 고해상도 실행에서 L-SAM($8M)을
+  아무리 소모해도 `highValuePreservation = 1 − 0/interceptM = 1.0`(100%)로 고정 표시.
+  분석 탭 ⑨ 카드가 배치 구분 없이 이 값을 보여주므로 **무의미한 값이 정상처럼 보였다.**
+  같은 자리의 `engagedThreatValueM`은 native에도 배선되어 있어 비대칭이 명확했다.
+- **시정**: `_onIadsFire`의 비용 계상부에 legacy와 동일 임계·정의로
+  `if (cps >= HIGH_VALUE_COST_M) highValueInterceptM += cps` 추가.
+- **검증**: MINI_NORMAL·SC3 ×1.5 seed 42에서 보존율 1.0000 → **0.5294**(고가 $24M / 전체 $51M),
+  `보존율 = 1 − 고가/전체` 항등 성립. legacy 경로는 종전 값 유지(회귀 안전).
+
+### 시정 2 (중간) — 중복교전(ghost) 발사가 C2 리포트에서 누락 / 범위 오염
+
+- **증상**: legacy As-Is 중복교전은 ghost 프록시로 발사되는데 ghost에 `id`가 없어
+  `ENGAGEMENT_FIRED`의 `threatId`가 null이 되고, `c2-report.js`가 threatId 없는 발사를 버렸다.
+  결과적으로 결과 모달의 "동시 중복교전 위협" 행이 엔진 카운터 `coordination.duplicates`보다
+  체계적으로 작게 나왔다(SC1 ×2 seed 12345: 엔진 150건 vs 리포트 0건).
+- **시정**: 발사 이벤트를 실제 위협(`_real`)으로 귀속하고 `duplicate: true` 플래그를 부여.
+  **집계 범위는 분리한다** — ghost는 설계상 BDA 결과와 명령 수명주기가 없으므로(실제 격추/누수는
+  주 계통 소유) `firesByThreat`(중복 판정)에만 넣고, 원인 분포(`byCause`)·최초발사 시각·
+  교전공백 구간에서는 제외한다. 그대로 넣으면 `unattributed`가 부풀고(141건 유입 확인),
+  미해결 발사가 공백 구간을 덮어 `engagementGap`이 왜곡된다.
+- **검증**: 리포트 `duplicateThreats` 0 → **46건**(concurrent 28), 동시에
+  `byCause` 합 = 주 계통 발사 103건과 정확히 일치하고 `unattributed` 0건.
+
+### 시정 3 (중간) — MC 시간지표에 표본 없는 복제의 0이 누산
+
+- **증상**: `mc-runner.js`의 `metricsOf`가 격추 0건·교전 0건 복제에서도 엔진이 반환하는
+  `meanTimeToKillSec = 0` / `meanTimeToEngageSec = 0`을 그대로 누산해 MC 평균이 하향 편향.
+  `transition.js`는 `killed > 0`인 복제만 누산하고 있어 **두 모듈이 서로 불일치**했다.
+- **시정**: 표본 없음을 0이 아니라 `null`로 반환하고 누산에서 제외(c2Mop과 동일 원칙).
+  쌍대 MC의 Δ는 **양팔 모두 표본이 있는 복제에서만** 누산해 쌍대 정합을 유지.
+- **검증**: SC2 ×0.5·300초 12복제에서 비율 지표 n=12(전 복제) / `meanTimeToKillSec` n=8
+  (격추 발생 복제만), Δ 표본 수 ≤ 양팔 표본 수의 최솟값.
+
+### 시정 4~6 (낮음) — 라벨·주석·정리
+
+| # | 문제 | 시정 |
+|---|---|---|
+| 4 | 분석 탭 ⑨ "격추율"·⑨+ "요격 실패율"이 `global.killRate/leakRate`(censorFix 해결분 분모)를 쓰면서 툴팁은 "생성 위협 중 …"이라 설명 — 결과 모달의 "전체 생성 기준"과 같은 이름·다른 값 | 라벨에 **(해결분 기준)** 명시, 툴팁에 분모 정의와 결과 모달과의 차이 안내. §1 #10 서술도 갱신 |
+| 5 | "그중 협조 홉 지연"이 native 경로에서 항상 0초(`coordDelaySum`은 legacy `_doEngage`에만 누적)인데 주석 없어 "협조 지연 없음"으로 오독 가능 | 툴팁에 native는 협조를 상태공유·plan 차단으로 모델링해 0으로 표시된다는 안내 추가 |
+| 6 | "교전당 발사수"는 ghost 발사를 분자·분모에서 제외하나 비용교환비는 요격탄 비용에 포함 — 집계 범위 상이 | 툴팁에 범위 차이 명시. 아울러 `_results`의 중복 `censored` 키 제거, `commMeanDelay`가 샘플이 아닌 대표값 가중평균임을 양 UI 주석에 기록(비대칭 분포 도입 시 교체 필요) |
+
+### 테스트 러너 거짓 실패 시정
+
+`tests/run-all.js`의 스위트 타임아웃이 120초 고정이라, 정상 통과하는
+`iads-native-pipeline.test.js`(이 컨테이너에서 약 3분 50초)가 강제 종료되어 **어서션 실패 0건인데
+"실패 1건 — 커밋 금지"**로 보고됐다. 상한을 900초로 올리고(`SUITE_TIMEOUT_MS` 환경변수로 재정의
+가능), 타임아웃·크래시를 어서션 실패와 구분해 표시하도록 했다. 행(hang) 감지 목적은 유지된다.

@@ -113,12 +113,17 @@
         decisionCause[cause] = (decisionCause[cause] || 0) + 1;
         tr.decisions.push(event);
       } else if (event.type === 'ENGAGEMENT_FIRED' && tr) {
-        tr.fire = first(tr.fire, event.t);
-        tr.fires.push(event);
-        cause = event.cause || 'unattributed';
-        fireCause[cause] = (fireCause[cause] || 0) + 1;
+        // 중복교전(ghost) 발사는 중복 판정에만 쓴다. 이 발사는 설계상 BDA 결과와 명령
+        // 수명주기가 없으므로(실제 격추/누수는 주 계통 소유), 원인 분포·최초발사 시각·
+        // 교전공백 구간에 넣으면 unattributed를 부풀리고 미해결 발사가 공백을 덮어버린다.
         if (!firesByThreat[event.threatId]) firesByThreat[event.threatId] = [];
         firesByThreat[event.threatId].push(event);
+        if (!event.duplicate) {
+          tr.fire = first(tr.fire, event.t);
+          tr.fires.push(event);
+          cause = event.cause || 'unattributed';
+          fireCause[cause] = (fireCause[cause] || 0) + 1;
+        }
       } else if (event.type === 'INTERCEPT_HIT' && tr) {
         tr.kill = first(tr.kill, event.t);
         tr.results.push(event);

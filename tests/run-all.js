@@ -66,11 +66,16 @@ var suites = [
   ,['overlap-performance.test.js', 'FULL 중복교전 계산 성능·정본 동등성']
   ,['iads-kernel.test.mjs', 'IADS_C2 공통 커널 (ES module·이벤트 큐·도메인 RNG·SNR/RCS/수평선 센서)']
   ,['c2-analysis.test.js', 'C2 구조화 계측·병목 귀속·동일 seed paired Monte Carlo']
+  ,['metrics-accounting.test.js', '지표 계정 (native 고가유도탄·중복교전 귀속 범위·MC 시간지표 표본)']
 ];
+// 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
+// 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).
+// 행(hang) 감지 목적은 유지하면서 상한만 넉넉히 둔다. SUITE_TIMEOUT_MS로 재정의 가능.
+var SUITE_TIMEOUT_MS = Number(process.env.SUITE_TIMEOUT_MS) || 900000;
 suites.forEach(function (s) {
   console.log('\n== ' + s[1] + ' ==');
   var r = cp.spawnSync(process.execPath, [path.join(__dirname, s[0])], {
-    encoding: 'utf8', cwd: root, timeout: 120000
+    encoding: 'utf8', cwd: root, timeout: SUITE_TIMEOUT_MS
   });
   var out = (r.stdout || '') + (r.stderr || '');
   var tail = out.trim().split('\n');
@@ -81,6 +86,12 @@ suites.forEach(function (s) {
   } else {
     failures++;
     console.log('  ★ 실패 (통과 ' + passCount + ' / 실패 ' + failCount + ')');
+    // 어서션 실패와 타임아웃·크래시를 구분해 표시한다(종전에는 둘 다 "실패"로만 보였다).
+    if (r.error && r.error.code === 'ETIMEDOUT') {
+      console.log('  ⏱ 타임아웃 — ' + (SUITE_TIMEOUT_MS / 1000) + '초 내 미완료 (SUITE_TIMEOUT_MS로 조정)');
+    } else if (failCount === 0) {
+      console.log('  ⚠️ 어서션 실패 없이 비정상 종료 (예외·크래시) — 아래 출력 확인');
+    }
     console.log(out.split('\n').filter(function (l) { return l.indexOf('FAIL') !== -1; }).join('\n'));
     console.log('  마지막 출력: ' + tail.slice(-3).join(' | '));
   }

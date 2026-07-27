@@ -35,7 +35,10 @@
     return ((baseSeed >>> 0) + Math.imul(i + 1, 0x9E3779B1)) >>> 0;
   }
 
-  /** 단일 복제에서 스칼라 지표 추출 */
+  /** 단일 복제에서 스칼라 지표 추출.
+   * 시간 지표(meanTime*)는 표본이 없는 복제(격추 0건·교전 0건)에서 엔진이 0을 반환하는데,
+   * 이를 그대로 누산하면 MC 평균이 0 쪽으로 편향된다(transition.js는 killed>0 조건화와 불일치).
+   * 표본 없음은 0이 아니라 null로 반환하고 누산에서 제외한다(c2Mop과 동일 원칙). */
   function metricsOf(r) {
     var spawned = r.global.spawned || 0;
     var resolved = (r.global.killed || 0) + (r.global.leaked || 0);
@@ -49,8 +52,8 @@
       killRateResolved: resolved ? r.global.killed / resolved : 0,
       leakRateResolved: resolved ? r.global.leaked / resolved : 0,
       detectRate: spawned ? r.global.detected / spawned : 0,
-      meanTimeToEngageSec: r.global.meanTimeToEngageSec,
-      meanTimeToKillSec: r.global.meanTimeToKillSec,
+      meanTimeToEngageSec: (r.global.everEngaged || 0) > 0 ? r.global.meanTimeToEngageSec : null,
+      meanTimeToKillSec: (r.global.killed || 0) > 0 ? r.global.meanTimeToKillSec : null,
       bottleneckCount: r.bottlenecks.length
     };
   }
@@ -180,7 +183,9 @@
         deploymentId: cfg.deploymentId, features: cfg.features, modelFidelity: cfg.modelFidelity
       });
       var m = metricsOf(r);
-      METRIC_KEYS.forEach(function (k) { acc[k].push(m[k]); });
+      METRIC_KEYS.forEach(function (k) {
+        if (typeof m[k] === 'number' && isFinite(m[k])) acc[k].push(m[k]); // 표본 없음(null)은 제외
+      });
       reps = i + 1;
       if (reps >= minReps && acc[primary].ciHalf(z) <= tol) { convergedAt = reps; break; }
     }
@@ -238,9 +243,12 @@
       var asis = metricsOf(asisResult);
       var tobe = metricsOf(tobeResult);
       METRIC_KEYS.forEach(function (k) {
-        asisAcc[k].push(asis[k]);
-        tobeAcc[k].push(tobe[k]);
-        deltaAcc[k].push(tobe[k] - asis[k]);
+        var av = asis[k], tv = tobe[k];
+        var aOk = typeof av === 'number' && isFinite(av);
+        var tOk = typeof tv === 'number' && isFinite(tv);
+        if (aOk) asisAcc[k].push(av);
+        if (tOk) tobeAcc[k].push(tv);
+        if (aOk && tOk) deltaAcc[k].push(tv - av); // Δ는 양팔 모두 표본이 있을 때만(쌍대 정합)
       });
       if (includeC2Mop) {
         var asisReport = KJ.buildC2Analysis(asisResult.c2Events, asisResult);

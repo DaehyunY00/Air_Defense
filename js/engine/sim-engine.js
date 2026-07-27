@@ -545,12 +545,20 @@
     if (ns.node.category === 'c2') {
       this._metricEvent('C2_PROCESSING', t, job.threat, this._c2JobMetricDetail(ns.node.id, job));
     } else if (job.kind === 'engage') {
-      this._metricEvent('ENGAGEMENT_FIRED', t, job.threat, {
+      // 중복교전 ghost는 id가 없어 threatId=null로 기록됐고, c2-report가 threatId 없는
+      // 발사를 버려 legacy 중복교전이 "동시 중복교전 위협" 집계에서 누락되던 결함 수정 —
+      // 실제 위협(_real)로 귀속한다. ghost는 설계상 BDA·명령 수명주기가 없으므로(격추/누수는
+      // 주 계통 소유) duplicate 플래그를 달아, 소비 측(c2-report)이 중복 판정에만 쓰고
+      // 원인 분포·교전공백 구간에서는 제외하도록 한다.
+      var fireDetail = {
         shooterId: ns.node.id,
         cause: job.launchCause || job.threat._commandCause || 'unattributed',
         directiveId: job.directiveId || null,
         engagementId: job.engagementId || null
-      });
+      };
+      if (job.threat._dup) fireDetail.duplicate = true;
+      this._metricEvent('ENGAGEMENT_FIRED', t,
+        job.threat._dup ? job.threat._real : job.threat, fireDetail);
     }
     var svc = this.rng.exponential(ns.mean);   // ← RNG 소비: kind 분리와 무관하게 draw 1회 유지
     this.schedule(t + svc, PRI.SERVICE_END, 'SERVICE_END', { nsId: ns.node.id, job: job, onDone: onDone });
@@ -1904,6 +1912,9 @@
     this.cost.interceptM += cps;
     if (otherFired) this.cost.duplicateInterceptM += cps;
     if (SAT_THREATS[threat.type]) this.cost.interceptSatM += cps;
+    // 고가유도탄 보존율 분자 — legacy _onEngageEnd에만 배선되어 native 실행에서 항상 100%로
+    // 나오던 결함 수정. 임계·정의는 legacy와 동일(HIGH_VALUE_COST_M, KJADS 5-1).
+    if (cps >= HIGH_VALUE_COST_M) this.global.highValueInterceptM += cps;
     threat.tries++;
     var hit = this.rng.raw() < ev.pk;
     this._mark(threat, '발사:' + shooter.id + '/' + launcher.id + '/PIP' + ev.pip.rangeKm.toFixed(1) + 'km', t);
@@ -2674,8 +2685,8 @@
           attempts: this.global.coordAttempts, deconflicted: this.global.deconflicted,
           gaps: this.global.coordGaps, duplicates: this.global.duplicateEngagements
         },
-        // Phase 1(⑨): 문서 pk 폴백 발동 조합(무기×위협) · Phase 3: 종료 절단 위협 수
-        pkFallback: this.global.pkFallback, censored: this.global.censored,
+        // Phase 1(⑨): 문서 pk 폴백 발동 조합(무기×위협) — censored는 절단 보정 블록에서 이미 노출
+        pkFallback: this.global.pkFallback,
         features: this.features,
         // 비용교환비(MoFE, 백만 USD 개념): exchange = 소모 요격탄 비용 / 격추 위협가치
         // (>1이면 아군이 더 비싼 자원을 소모). sat*는 저가 포화위협(무인기·방사포) 부분집합

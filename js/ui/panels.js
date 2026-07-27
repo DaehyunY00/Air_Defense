@@ -77,7 +77,10 @@
 
   /** 링크 전달 1건당 평균 통신지연(초) — sim-view의 MoP 지표와 동일 정의.
    * kind 지정 시 그 종류(report/coord/command)만 집계 → 각 단계가 자기 단계 링크만 측정.
-   * kind 생략 시 전 링크(하위호환). */
+   * kind 생략 시 전 링크(하위호환).
+   * ⚠️ 샘플된 실제 지연이 아니라 대표값(delaySec)×건수 가중평균 — 현재 링크 분포(삼각·균등)가
+   * 모두 대칭이라 평균=대표값이지만, 비대칭 분포(lognormal 등)를 링크에 도입하면 실현 평균과
+   * 괴리가 생기므로 그때는 샘플 합 집계로 교체해야 한다. */
   function commMeanDelay(res, kind) {
     var num = 0, den = 0;
     res.links.forEach(function (l) {
@@ -351,7 +354,9 @@
             tip: 'F2T2EA Find→Engage 평균 소요. 협조·승인·권한위임 홉과 C2 대기(Wq)가 모두 포함 — As-Is 음성 협조 부담이 여기서 발생.' },
           { label: '그중 협조 홉 지연', mom: 'MoP', kind: 'sec', lower: true,
             a: ga.meanCoordDelaySec, b: gb.meanCoordDelaySec,
-            tip: '결심 지연 중 coord 협조 경로(육↔공 음성 등) 홉 지연 몫. **잔여(결심지연−협조)는 C2 처리·승인권자 대기(큐)·승인 서비스**다. ' +
+            tip: '결심 지연 중 coord 협조 경로(육↔공 음성 등) 홉 지연 몫. legacy 결심 경로(_decision)에서만 집계되며, ' +
+              '고해상도 native 경로(모델 충실도 iads-c2·MINI/FULL)는 협조를 상태공유·plan 차단으로 모델링해 이 값이 항상 0으로 표시된다(협조 지연 부재 아님). ' +
+              '**잔여(결심지연−협조)는 C2 처리·승인권자 대기(큐)·승인 서비스**다. ' +
               '실측: As-Is 결심지연의 협조 홉은 17~38%뿐이고 나머지 62~83%가 승인 대기다 — ' +
               '"데이터링크만 깔면 해결된다"는 함의는 절반만 맞다(승인권자 처리용량도 함께 봐야 한다). To-Be는 협조 홉이 대부분 생략되어 0에 가깝다.' },
           { label: '승인 노드 최대 ρ (approval)', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
@@ -423,8 +428,10 @@
         fix: '재교전 폐루프는 dwell 창 내에서만 — 앞 단계 지연 단축이 곧 재교전 기회 확보',
         codes: ['missed', 'timeout:engage', 'timeout:c2'],
         metrics: [
-          { label: '격추율', mom: 'MoFE', kind: 'rate', lower: false, max: 1,
-            a: ga.killRate, b: gb.killRate, tip: '생성 위협 중 격추 비율 — 최종 요격 성과.' },
+          { label: '격추율 (해결분 기준)', mom: 'MoFE', kind: 'rate', lower: false, max: 1,
+            a: ga.killRate, b: gb.killRate,
+            tip: '격추 ÷ (생성 − 관측종료 미해결) — censorFix 절단 보정 분모(해결분 기준). ' +
+              '결과 모달 상단의 "격추율 (전체 생성 기준)"(killed/spawned)과 분모가 다르므로 값 비교 시 주의.' },
           { label: '평균 격추시간 (조건부·생존자편향 주의)', mom: 'MoP', kind: 'sec', lower: true,
             a: ga.meanTimeToKillSec, b: gb.meanTimeToKillSec,
             tip: '격추 성공 항적의 생성→격추 평균 소요(n=As-Is ' + (ga.meanTimeToKillN || 0) + ' · To-Be ' + (gb.meanTimeToKillN || 0) + '). ' +
@@ -434,6 +441,7 @@
             a: ga.shotsPerEngagement, b: gb.shotsPerEngagement,
             tip: '요격탄 총 발사수 ÷ 최초교전 표적수. 1.0=교전당 1발(shoot-look-shoot), >1=재교전·연발(salvo) 발사 부담↑, ' +
               '<1=일부 명령표적이 발사 전 이탈(체공창 소진). 방향(개선/악화) 판정 없는 참고 지표 — 높/낮음이 곧 좋/나쁨이 아니다. ' +
+              '집계 범위 주의: As-Is 중복교전(ghost) 발사는 분자·분모 모두 제외되지만 비용교환비의 요격탄 비용에는 포함된다(범위 상이). ' +
               '비용교환비·격추율과 함께 요격탄 소모 강도를 읽는다.' },
           { label: '방어효율 (방어한 위협가치 비율)', mom: 'MoFE', kind: 'rate', lower: false, max: 1,
             a: ga.cost.defenseEfficiency, b: gb.cost.defenseEfficiency,
@@ -459,9 +467,10 @@
         fix: '구조적 원인([구조])은 To-Be에서 감소, 일부는 순수 명중 실패로 이동하는 것이 정상 경로',
         codes: [],
         metrics: [
-          { label: '요격 실패율 (누출률)', mom: 'MoFE', kind: 'rate', lower: true, max: 1,
+          { label: '요격 실패율 (누출률, 해결분 기준)', mom: 'MoFE', kind: 'rate', lower: true, max: 1,
             a: ga.leakRate, b: gb.leakRate,
-            tip: '생성 위협 중 격추하지 못하고 공역을 통과(누수)한 비율.' },
+            tip: '누출 ÷ (생성 − 관측종료 미해결) — censorFix 절단 보정 분모(해결분 기준). ' +
+              '결과 모달의 "확정 누출률 (전체 생성 기준)"(leaked/spawned)과 분모가 다르므로 값 비교 시 주의.' },
           { label: '구조적 실패 합 ([구조] 원인)', mom: 'MoCE', kind: 'cnt', lower: true,
             a: structuralLeaks(ga), b: structuralLeaks(gb),
             tip: '전 원인 코드 중 structural=true(탐지공백·비융합·책임공백·포화·지연) 합 — To-Be에서 감소해야 정상.' }

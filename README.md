@@ -93,8 +93,8 @@ K-JAMDS_시뮬레이터_단일본.html
 
 **한 파일을 브라우저로 바로 열면 됩니다**(더블클릭 또는 `file://` 경로). 별도 서버·설치가 필요 없습니다.
 
-- 이 파일은 `index.html` + `css/style.css` + 모든 `js/**`를 인라인한 **완전 자기완결(self-contained)** 빌드로,
-  외부 파일·CDN 의존이 없습니다(Leaflet 지도 라이브러리까지 인라인).
+- 이 파일은 `index.html` + `css/style.css` + 모든 `js/**` + `vendor/leaflet-1.9.4/**`를 인라인한
+  **완전 자기완결(self-contained)** 빌드로, 외부 파일·CDN 의존이 없습니다(Leaflet 지도 라이브러리까지 인라인).
 - `file://` 단일본은 브라우저 보안상 외부 Worker/ES module 파일을 불러올 수 없어 동일한 결정론 계산을 메인
   스레드 폴백으로 실행합니다. UI 정지를 막기 위해 이 모드에서는 자동 Monte Carlo를 생략합니다.
   가벼운 검토·공유에는 적합하지만 FULL/MC 실행은 `./scripts/serve.sh` 기반 다중 파일 실행을 사용해야 합니다.
@@ -197,10 +197,10 @@ docs/
   integration-audit.md           # ★ 통합 검증 감사(G1~G7): 회귀·되돌리기·死코드·제약·편향원장·결론 재산출·자원최적화 반증
   adr/ADR-001~009, 036, 049~054  # 결정 기록(pk 스키마·누수비용·절단·timeout분해·pk상관·salvo·비용WTA·재고·재가중 /
                                  #  USFK 독립축·SHORAD 벨트·실패분류v2·군단AOC·legacy 재배선·LEGACY_HIRES 이식)
-  metrics-verification.md        # 지표 검증 감사 (비용교환비 비단조성 등) + 지표 계정 결함 4건 시정
+  metrics-verification.md        # 지표 검증 감사 (비용교환비 비단조성 등) + 지표 계정 결함 7건 시정
   실험보고서_AsIs_ToBe.pdf       # ★ 시나리오×배치×충실도 21셀 As-Is↔To-Be 비교 실험 결과
 scripts/
-  serve.sh · build-single.mjs · build-guide-pdf.mjs · bias-ledger.mjs · step1~2·phase4~6 스윕
+  serve.sh · build-single.mjs · build-guide-pdf.mjs · verify-vendor-leaflet.mjs · bias-ledger.mjs · step1~2·phase4~6 스윕
   experiment-lib.mjs · experiment-run.mjs · experiment-delegation.mjs
   experiment-report.mjs · build-experiment-pdf.mjs   # ★ 시나리오×배치×충실도 As-Is↔To-Be 실험
 tests/  run-all.js + 32개 스위트  # 아래 [검증] 참조

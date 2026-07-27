@@ -35,11 +35,52 @@ var cssBuf = fs.readFileSync(path.join(root, VENDOR + 'leaflet.css'));
 assert(sha256(jsBuf) === LOCAL_SHA_JS, 'leaflet.js sha256 고정 (' + sha256(jsBuf).slice(0, 16) + '…)');
 assert(sha256(cssBuf) === LOCAL_SHA_CSS, 'leaflet.css sha256 고정 (' + sha256(cssBuf).slice(0, 16) + '…)');
 assert(sri(jsBuf) === UPSTREAM_SRI_JS, 'leaflet.js가 업스트림 SRI와 바이트 단위 일치');
-// CSS는 업스트림 SRI와 불일치하는 것이 현재 알려진 상태다(vendor README에 기록).
+// CSS는 업스트림 SRI와 불일치하는 것이 현재 알려진 상태다(원인 미규명 — vendor README §불일치).
 // "일치하게 됐다"도 변화이므로, 불일치라는 사실 자체를 고정해 조용한 교체를 막는다.
 assert(sri(cssBuf) !== 'p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=',
-  'leaflet.css는 업스트림 SRI와 불일치(README에 기록된 기지 상태)');
+  'leaflet.css는 업스트림 SRI와 불일치(README에 기록된 미해결 항목)');
 assert(fs.existsSync(path.join(root, VENDOR + 'README.md')), '출처·라이선스 문서 존재');
+assert(fs.existsSync(path.join(root, 'scripts/verify-vendor-leaflet.mjs')),
+  '업스트림 대조 스크립트 존재 (외부망 환경에서 불일치를 종결하기 위한 수단)');
+
+// ── (a3) CSS 진위 — 바이트 출처를 증명할 수 없으므로 내용으로 검증한다 ──
+// leaflet.css의 pane z-index 스택은 CSS에만 존재하는 임의 상수라, 다른 파일로
+// 바꿔치기하면 이 값들이 먼저 어긋난다. 지도 레이어 순서가 곧 이 값이다.
+console.log('# (a3) CSS 진위 — 정본 z-index 스택·구조');
+var cssText = cssBuf.toString('utf8');
+var jsText = jsBuf.toString('utf8');
+var Z = { 'leaflet-pane': 400, 'leaflet-tile-pane': 200, 'leaflet-overlay-pane': 400,
+  'leaflet-shadow-pane': 500, 'leaflet-marker-pane': 600, 'leaflet-tooltip-pane': 650,
+  'leaflet-popup-pane': 700, 'leaflet-control': 800 };
+Object.keys(Z).forEach(function (cls) {
+  var m = cssText.match(new RegExp('\\.' + cls + '\\s*\\{[^}]*z-index:\\s*(\\d+)'));
+  assert(m && Number(m[1]) === Z[cls], '.' + cls + ' z-index = ' + Z[cls] + (m ? ' (실제 ' + m[1] + ')' : ' (규칙 없음)'));
+});
+var depth = 0, unbalanced = false;
+for (var ci = 0; ci < cssText.length; ci++) {
+  var ch = cssText[ci];
+  if (ch === '{') depth++;
+  else if (ch === '}') { depth--; if (depth < 0) unbalanced = true; }
+}
+assert(depth === 0 && !unbalanced, '중괄호 균형 — 절단·삽입 없음');
+assert((cssText.match(/\/\*/g) || []).length === (cssText.match(/\*\//g) || []).length, '주석 균형');
+assert(!/[^\x00-\x7F]/.test(cssText), '순수 ASCII (HTML 경유 오염 흔적 없음)');
+['.leaflet-popup', '.leaflet-tooltip', '.leaflet-control-zoom', '.leaflet-control-layers',
+ '.leaflet-control-attribution', '.leaflet-control-scale', '.leaflet-touch', '.leaflet-oldie',
+ '.leaflet-zoom-anim', '@media print'].forEach(function (sec) {
+  assert(cssText.indexOf(sec) !== -1, '표준 섹션 존재: ' + sec);
+});
+// leaflet.js가 조작하는 클래스가 CSS에 정의돼 있는가 (런타임 접두사·비스타일 클래스는 제외)
+var RUNTIME_ONLY = ['leaflet-drag-target', 'leaflet-marker-', 'leaflet-zoom-', 'leaflet-tooltip-', 'leaflet-vml-container'];
+var jsCls = [], m2, reCls = /["'](leaflet-[a-z0-9-]+)["']/g;
+while ((m2 = reCls.exec(jsText)) !== null) if (jsCls.indexOf(m2[1]) === -1) jsCls.push(m2[1]);
+assert(jsCls.length >= 30, 'js에서 leaflet-* 클래스를 실제로 수집했는지 (' + jsCls.length + '종)');
+var cssCls = {}, m3, reCss = /\.(leaflet-[a-z0-9-]+)/g;
+while ((m3 = reCss.exec(cssText)) !== null) cssCls[m3[1]] = true;
+var uncovered = jsCls.filter(function (c) { return !cssCls[c] && RUNTIME_ONLY.indexOf(c) === -1; });
+assert(uncovered.length === 0,
+  'js가 쓰는 leaflet-* 클래스 ' + jsCls.length + '종을 CSS가 모두 정의' +
+  (uncovered.length ? ' — 미정의: ' + uncovered.join(', ') : ''));
 
 console.log('# (a2) 라이선스·식별자 보존');
 var js = jsBuf.toString('utf8');

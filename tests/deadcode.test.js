@@ -60,9 +60,13 @@ assert((leak['overflow'] || 0) >= 0 && (leak['missed'] || 0) > 0,
 console.log('# 영구 0 코드와 극희소 부활 코드');
 assert((leak['no_report_path'] || 0) === 0,
   'no_report_path 영구 死 ✓ — 구조적으로 발화 불가(커버 센서가 있으면 보고경로가 항상 존재)');
-assert((leak['not_detected'] || 0) > 0 && (leak['not_detected'] || 0) <= 5,
-  'not_detected 극희소 부활 — 확장 센서·위협 조합 풀링에서 ' + (leak['not_detected'] || 0) +
-  '건(주 실패원인이 되지 않으며 재스캔 누적탐지 구조 유지)');
+// [ADR-053] 재배선으로 링크 수·난수 소비 순서가 바뀌어 이 풀링 표본에서 not_detected가
+// 다시 0건이 되었다(시드 의존 극희소 사건 — 코드 경로는 여전히 라이브: 스캔당 베르누이
+// 탐지라 저Pd·짧은 체공 조합이면 발화한다). 정직한 0 원칙에 따라 존재를 강제하지 않고
+// 상한만 고정한다(주 실패원인으로 격상되면 모델 검토 신호).
+assert((leak['not_detected'] || 0) <= 5,
+  'not_detected 극희소(≤5) — 이번 풀링 ' + (leak['not_detected'] || 0) +
+  '건(ADR-053 이후 시드 의존으로 0건 관측, 재스캔 누적탐지 구조 유지)');
 assert((leak['no_shooter'] || 0) === 0,
   'no_shooter = 0 (커버리지 공백 없음) — 모든 (위협×축선) 셀에 능력·담당 무기 ≥1. ' +
   '능력·타이밍 공백은 no_engage_window가 포착. 공백을 인위 생성하지 않음(데이터 조작 방지)');

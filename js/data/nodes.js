@@ -319,8 +319,10 @@
     var cheongung = site.weapon === 'CHEONGUNG2';
     KJ.NODES.push({
       id: 'ICC-' + key, name: '정보통합센터 ICC (' + site.label + ')',
-      category: 'c2', service: 'joint', echelon: 'battalion', coord: coord.slice(), coordNote: note,
-      role: '권역 MFR·ECS 항적정보 통합, MCRC 협조·상향 승인경로.',
+      category: 'c2', service: cheongung ? 'af' : 'army', echelon: 'battalion', coord: coord.slice(), coordNote: note,
+      role: cheongung
+        ? '권역 MFR·ECS 항적정보 통합, MCRC Link-16 연동·상향 승인경로(공군 방공유도탄 계선).'
+        : '권역 MFR·ECS 항적정보 통합, 군단 AOC KVMF 협조·상향 승인경로(육군 ADC2A 계선).',
       deploymentRegion: site.region, pairedEcsId: 'ECS-' + key,
       queue: { servers: 5, serviceTimeSec: { asis: 9, tobe: 5 }, capacity: 25, paramRef: 'C2-LEGACY-ICC-SVC-01' }
     });

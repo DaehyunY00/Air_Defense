@@ -50,23 +50,32 @@ assert(sites.every(function (s) {
 }), '10개 포대의 ECS·MFR·사수 위·경도 동일');
 assert(sites.every(function (s) {
   var k = s.key, shooter = 'BAT-' + s.weapon + '-' + k;
+  var upstream = s.weapon === 'CHUNMA'
+    ? link('ICC-' + k, 'AOC-1C', 'asis') && link('AOC-1C', 'ICC-' + k, 'asis') &&
+      !link('ICC-' + k, 'MCRC', 'asis') && !link('MCRC', 'ICC-' + k, 'asis')
+    : link('ICC-' + k, 'MCRC', 'asis') && link('MCRC', 'ICC-' + k, 'asis');
   return link('MFR-' + k, 'ECS-' + k, 'asis') && link('MFR-' + k, 'ECS-' + k, 'tobe') &&
     link('ECS-' + k, 'ICC-' + k, 'asis') && link('ICC-' + k, 'ECS-' + k, 'asis') &&
-    link('ICC-' + k, 'MCRC', 'asis') && link('MCRC', 'ICC-' + k, 'asis') &&
+    upstream &&
     link('ECS-' + k, shooter, 'asis') && link('ECS-' + k, shooter, 'tobe');
-}), 'As-Is 양방향 협조·포대명령 및 양모드 MFR/ECS 연결 완전성');
+}), 'As-Is 상향 협조(천마→AOC 경유, 천궁-II→MCRC 직결)·포대명령·양모드 MFR/ECS 연결 완전성 (ADR-053)');
 assert(sites.every(function (s) {
   return link('MFR-' + s.key, 'JAMDC2', 'tobe') && link('ICC-' + s.key, 'JAMDC2', 'tobe') &&
     link('JAMDC2', 'ICC-' + s.key, 'tobe');
 }), 'To-Be JAMDC2 직결·통합협조 경로 완전성');
-assert(sites.every(function (s) {
-  var voice = link('ICC-' + s.key, 'MCRC', 'asis');
-  var fast = link('ICC-' + s.key, 'MCRC', 'tobe');
-  return voice.comm.asis.type === 'voice' && voice.comm.asis.delaySec === 20 &&
-    voice.comm.asis.dist && voice.comm.asis.dist.kind === 'uniform' &&
-    voice.comm.asis.dist.min === 10 && voice.comm.asis.dist.max === 30 &&
-    fast.comm.tobe.type === 'datalink' && fast.comm.tobe.delaySec === 2;
-}), 'ICC→MCRC는 As-Is 10~30초 균등분포 음성/VTC(대표 20초, 2026-07 실험 변경), To-Be 2초 데이터링크');
+// [ADR-053] 통신 매체 사실 정정: 천마(육군) ICC↔AOC-1C KVMF 30초, 천궁-II(공군)
+// ICC↔MCRC Link-16 12초. 종전 전 세트 ICC↔MCRC 음성/VTC는 공개자료 근거 부재로 폐기 —
+// 음성협조(10~30초 균등분포)는 기본 토폴로지의 육↔공 경계(AOC/JAOC↔MCRC 등)에서만 발화.
+assert(sites.filter(function (s) { return s.weapon === 'CHUNMA'; }).every(function (s) {
+  var l = link('ICC-' + s.key, 'AOC-1C', 'asis');
+  return l.comm.asis.type === 'kvmf' && l.comm.asis.delaySec === 30 &&
+    l.comm.tobe && l.comm.tobe.delaySec === 2;
+}), '천마 ICC→AOC-1C는 As-Is KVMF 30초(ADC2A 계선), To-Be 2초 데이터링크 (ADR-053)');
+assert(sites.filter(function (s) { return s.weapon === 'CHEONGUNG2'; }).every(function (s) {
+  var l = link('ICC-' + s.key, 'MCRC', 'asis');
+  return l.comm.asis.type === 'link16' && l.comm.asis.delaySec === 12 &&
+    l.comm.tobe && l.comm.tobe.delaySec === 2;
+}), '천궁-II ICC→MCRC는 As-Is Link-16 12초(공군 계선 데이터링크), To-Be 2초 (ADR-053)');
 
 var chunma = expanded.filter(function (n) { return /^BAT-CHUNMA-/.test(n.id); });
 var cheongung = expanded.filter(function (n) { return /^BAT-CHEONGUNG2-/.test(n.id); });

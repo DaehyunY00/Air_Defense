@@ -1,8 +1,8 @@
 {
  "sc1/asis": {
   "spawned": 60,
-  "killed": 34,
-  "leaked": 16,
+  "killed": 39,
+  "leaked": 11,
   "bn": "gap:responsibility_gap"
  },
  "sc1/tobe": {
@@ -13,8 +13,8 @@
  },
  "sc2/asis": {
   "spawned": 58,
-  "killed": 35,
-  "leaked": 13,
+  "killed": 28,
+  "leaked": 18,
   "bn": ""
  },
  "sc2/tobe": {
@@ -25,9 +25,9 @@
  },
  "sc3/asis": {
   "spawned": 307,
-  "killed": 71,
-  "leaked": 199,
-  "bn": "gap:responsibility_gap,node:KAMDOC,node:KAOC,node:MDU-L"
+  "killed": 59,
+  "leaked": 214,
+  "bn": "gap:responsibility_gap,node:KAMDOC"
  },
  "sc3/tobe": {
   "spawned": 307,

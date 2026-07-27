@@ -114,6 +114,13 @@
 
   // legacy 10개 ICC–ECS–MFR–포대 세트. As-Is는 포대 내부·KVMF·음성 협조,
   // To-Be는 MFR→JAMDC2 직결과 2초 데이터링크를 사용한다.
+  // [2026-07-27 토폴로지 사실 정정 — ADR-053] 종전에는 전 세트 ICC↔MCRC를 음성/VTC로
+  // 직결했으나 공개자료 근거가 없어 재배선:
+  //  - 천마(육군) 세트: 육군 계선 내부는 ADC2A/KVMF 데이터링크가 사실(ADD·보안뉴스).
+  //    ICC↔군단 AOC(KVMF)로 연결하고, 육↔공 음성협조는 기존 AOC-1C↔MCRC 링크로 수렴
+  //    (2022.12.26 실증: 1군단→공작사 유선전화 — 한국일보 2023-01-25).
+  //  - 천궁-II(공군 방공유도탄사) 세트: MCRC와 같은 군 계선 — 블록II 작전통제소는
+  //    Link-16 연동(공개자료). ICC↔MCRC를 L16 데이터링크로 연결(음성 아님).
   (KJ.LEGACY_AIR_DEFENSE_SITES || []).forEach(function (site) {
     var key = site.key, icc = 'ICC-' + key, ecs = 'ECS-' + key;
     var mfr = 'MFR-' + key, shooter = 'BAT-' + site.weapon + '-' + key;
@@ -122,12 +129,23 @@
       { from: mfr, to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST }, axis: site.region },
       { from: ecs, to: icc, kind: 'coord', comm: { asis: KVMF, tobe: DL_FAST }, axis: site.region },
       { from: icc, to: ecs, kind: 'coord', comm: { asis: KVMF, tobe: DL_FAST }, axis: site.region },
-      { from: icc, to: 'MCRC', kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST }, axis: site.region },
-      { from: 'MCRC', to: icc, kind: 'coord', comm: { asis: VOICE_COORD, tobe: DL_FAST }, axis: site.region },
       { from: icc, to: 'JAMDC2', kind: 'report', comm: { tobe: DL_FAST }, axis: site.region },
       { from: 'JAMDC2', to: icc, kind: 'coord', comm: { tobe: DL_FAST }, axis: site.region },
       { from: ecs, to: shooter, kind: 'command', comm: { asis: KVMF, tobe: DL_FAST }, axis: site.region }
     );
+    if (site.weapon === 'CHUNMA') {
+      // 육군 계선: ICC↔군단 AOC = ADC2A/KVMF. MCRC와의 직접 링크 없음(협조는 AOC 경유).
+      KJ.LINKS.push(
+        { from: icc, to: 'AOC-1C', kind: 'coord', comm: { asis: KVMF, tobe: DL_FAST }, axis: site.region },
+        { from: 'AOC-1C', to: icc, kind: 'coord', comm: { asis: KVMF, tobe: DL_FAST }, axis: site.region }
+      );
+    } else {
+      // 공군(방공유도탄사) 계선: ICC↔MCRC = Link-16 데이터링크(As-Is에서도 연동).
+      KJ.LINKS.push(
+        { from: icc, to: 'MCRC', kind: 'coord', comm: { asis: L16, tobe: DL_FAST }, axis: site.region },
+        { from: 'MCRC', to: icc, kind: 'coord', comm: { asis: L16, tobe: DL_FAST }, axis: site.region }
+      );
+    }
   });
 
   /** 해당 모드에서 활성인 링크만 반환 */

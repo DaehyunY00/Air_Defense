@@ -7,13 +7,39 @@
  * 상대경로로 임베드되므로 file:// 로 직접 열어 렌더한다 — 로컬 서버 불필요.
  *
  * 실행:  node scripts/build-guide-pdf.mjs   (저장소 루트에서)
- * 요구:  playwright-core + Chromium (PW_CHROMIUM_PATH 또는 표준 설치 경로),
+ * 요구:  playwright-core(또는 playwright) + Chromium (PW_CHROMIUM_PATH 또는 표준 설치 경로),
  *        한글 폰트(Noto Sans KR 등)가 시스템에 설치되어 있어야 함
+ *
+ * 패키지 해석: playwright-core를 먼저 찾고, 없으면 playwright(코어를 재수출)로 폴백한다 —
+ * 전역에 playwright만 설치된 환경에서도 위 명령이 그대로 동작하도록 하기 위함.
  */
-import { chromium } from 'playwright-core';
 import path from 'node:path';
 import { statSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { pathToFileURL, fileURLToPath } from 'node:url';
+
+// ESM 해석은 전역 node_modules를 보지 않으므로, 실패 시 NODE_PATH를 존중하는
+// CJS 해석(createRequire)으로 한 번 더 시도한다 — 전역 설치 환경 지원.
+const requireFrom = createRequire(import.meta.url);
+async function loadChromium() {
+  const errors = [];
+  for (const pkg of ['playwright-core', 'playwright']) {
+    try {
+      return (await import(pkg)).chromium;
+    } catch (err) {
+      errors.push(pkg + '(esm): ' + err.code);
+    }
+    try {
+      return requireFrom(pkg).chromium;
+    } catch (err) {
+      errors.push(pkg + '(cjs): ' + err.code);
+    }
+  }
+  throw new Error('playwright-core / playwright를 찾을 수 없습니다 (' + errors.join(', ') +
+    '). npm install playwright-core 후 다시 실행하거나, 전역 설치라면 ' +
+    'NODE_PATH=$(npm root -g) 를 지정하십시오.');
+}
+const chromium = await loadChromium();
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const src = path.join(root, 'docs', '사용자_가이드.html');

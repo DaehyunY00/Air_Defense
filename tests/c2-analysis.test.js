@@ -94,6 +94,8 @@ var syntheticEvents = [
     detected: true, tries: 0, hadDirective: false, hadGeometryWindow: true,
     failureContributors: ['capacity_full'] },
   { type: 'COORDINATION_FAILED', t: 9, threatId: 'T1', reason: 'deadline_exceeded' },
+  // 같은 위협 T1의 재시도 — 이벤트는 2건이지만 "겪은 위협"은 1건이어야 한다
+  { type: 'COORDINATION_FAILED', t: 11, threatId: 'T1', reason: 'no_coordination_path' },
   { type: 'RESPONSIBILITY_UNRESOLVED', t: 9, threatId: 'T2', reason: 'no_command_path' }
 ];
 var sr = KJ.buildC2Analysis(syntheticEvents, syntheticResult);
@@ -114,8 +116,12 @@ assert(sr.engagementGap.preFire.p50 === 9 && sr.engagementGap.neverEngagedLeaked
 assert(sr.lostOpportunity.lostThreats === 1 &&
   sr.lostOpportunity.byReason.window_lost_due_to_c2 === 1,
   '기하학 창이 있었지만 발사 0인 위협을 1회 기회손실로 집계');
-assert(sr.c2Command.coordinationFailures === 1 && sr.c2Command.responsibilityUnresolved === 1,
-  '협조 실패와 책임 미해소를 별도 계측');
+assert(sr.c2Command.coordinationFailures === 2 && sr.c2Command.responsibilityUnresolved === 1,
+  '협조 실패와 책임 미해소를 별도 계측(이벤트 수)');
+// 비율 지표의 분자는 이벤트가 아니라 위협 — 아니면 재시도 때문에 비율이 100%를 넘는다
+assert(sr.c2Command.coordinationFailedThreats === 1 &&
+  sr.c2Command.responsibilityUnresolvedThreats === 1,
+  '같은 위협의 반복 협조 실패는 위협 1건으로 중복 제거(비율 분자)');
 
 console.log('# 동일 seed paired Monte Carlo');
 var pairedCfg = {

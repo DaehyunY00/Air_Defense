@@ -34,6 +34,10 @@
     var thaadLink = KJ.LINKS.some(function (l) {
       return /thaad/i.test(l.from + l.to);
     });
+    // 독립축의 정의: USFK 자산은 (1) 한국군 노드와 C2 링크로 이어지지 않고
+    // (2) USFK_ 축에만 소속되어 한국군 WTA 후보군에 오르지 않는다.
+    // USFK 사수 자체는 자기 축에서 실제 교전을 수행하므로 canEngage는 참이어야 한다
+    // (tests/deployment-adapter.test.js의 어서션과 동일 정의).
     var fullIndependent = true;
     if (KJ.buildDeploymentCatalog) {
       var full = KJ.buildDeploymentCatalog('HANBANDO_FULL_NORMAL');
@@ -42,11 +46,12 @@
         full.links.every(function (l) {
           return (full.nodeMap[l.from].forceOwner === 'USFK') === (full.nodeMap[l.to].forceOwner === 'USFK');
         }) && usfk.filter(function (n) { return n.category === 'shooter'; }).every(function (n) {
-          return Object.keys(n.canEngage).every(function (k) { return n.canEngage[k] === false; });
+          return String(n.c2Axis).indexOf('USFK_') === 0 &&
+            Object.keys(n.canEngage).some(function (k) { return n.canEngage[k] === true; });
         });
     }
     add('B', 'legacy THAAD 부재·FULL USFK 독립축', !thaadNode && !thaadLink && fullIndependent,
-      'legacy에는 THAAD가 없고, FULL의 THAAD/Patriot은 KAMDOC 교차 링크·한국군 WTA 후보 없이 독립');
+      'legacy에는 THAAD가 없고, FULL의 THAAD/Patriot은 KAMDOC 교차 링크 없이 USFK_ 축에서만 교전 — 한국군 WTA 후보 아님');
 
     // (c) 디스클레이머 상시 표출
     var el = document.getElementById('disclaimer');

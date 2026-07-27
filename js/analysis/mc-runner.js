@@ -69,8 +69,8 @@
     delegatedFireRatio: { label: 'ICC/ECS 위임발사 비율', kind: 'rate' },
     directiveActivationRate: { label: '명령 활성 성공률', kind: 'rate' },
     directiveExpiryRate: { label: '명령 만료율', kind: 'rate' },
-    coordinationFailureRate: { label: '협조 실패율(생성 대비)', kind: 'rate' },
-    responsibilityUnresolvedRate: { label: '책임 미해소율(생성 대비)', kind: 'rate' },
+    coordinationFailureRate: { label: '협조 실패 위협 비율(생성 대비)', kind: 'rate' },
+    responsibilityUnresolvedRate: { label: '책임 미해소 위협 비율(생성 대비)', kind: 'rate' },
     decisionTrackAgeP50: { label: '결심 항적 age p50', kind: 'sec' },
     decisionTrackAgeP90: { label: '결심 항적 age p90', kind: 'sec' },
     staleDecisionRate: { label: 'stale 결심률', kind: 'rate' },
@@ -102,8 +102,10 @@
       delegatedFireRatio: fires ? ((causes.delegated_icc || 0) + (causes.delegated_ecs || 0)) / fires : null,
       directiveActivationRate: directives.available ? directives.activationRate : null,
       directiveExpiryRate: directives.available ? directives.expiryRate : null,
-      coordinationFailureRate: spawned ? report.c2Command.coordinationFailures / spawned : null,
-      responsibilityUnresolvedRate: spawned ? report.c2Command.responsibilityUnresolved / spawned : null,
+      // 분자는 이벤트 수가 아니라 "한 번이라도 겪은 위협" 수 — 이벤트 수를 쓰면 재시도·중복교전
+      // 때문에 한 위협이 여러 건을 내어 비율이 100%를 넘는다(관측 119.56%).
+      coordinationFailureRate: spawned ? report.c2Command.coordinationFailedThreats / spawned : null,
+      responsibilityUnresolvedRate: spawned ? report.c2Command.responsibilityUnresolvedThreats / spawned : null,
       decisionTrackAgeP50: report.trackFreshness.available ? report.trackFreshness.decisionTrackAge.p50 : null,
       decisionTrackAgeP90: report.trackFreshness.available ? report.trackFreshness.decisionTrackAge.p90 : null,
       staleDecisionRate: report.trackFreshness.available ? report.trackFreshness.staleDecisionRate : null,

@@ -186,22 +186,24 @@
     MoFE: 'Measure of Force Effectiveness — 전력 전체의 임무 효과 (NATO COBP/SAS-026)'
   };
 
-  function fmtVal(v, kind) {
+  // 종류별 기본 표시 자릿수. extra는 "두 값이 같게 보이는데 Δ는 개선이라 적히는" 모순을
+  // 없애기 위해 metricRow가 한 자리 더 요구할 때만 붙는다(97.6%·98.5% → 둘 다 "98%" 문제).
+  var BASE_PREC = { rate: 0, sec: 0, raw: 1, raw2: 2, ratio: 2 };
+  function fmtVal(v, kind, extra) {
     if (v === null || v === undefined || (kind !== 'cnt' && !isFinite(v))) return '—';
-    if (kind === 'rate') return (v * 100).toFixed(0) + '%';
-    if (kind === 'sec') return v.toFixed(0) + '초';
-    if (kind === 'raw') return v.toFixed(1);
-    if (kind === 'raw2') return v.toFixed(2);
-    if (kind === 'ratio') return v.toFixed(2) + '배';
+    var p = (BASE_PREC[kind] || 0) + (extra || 0);
+    if (kind === 'rate') return (v * 100).toFixed(p) + '%';
+    if (kind === 'sec') return v.toFixed(p) + '초';
+    if (kind === 'raw' || kind === 'raw2') return v.toFixed(p);
+    if (kind === 'ratio') return v.toFixed(p) + '배';
     return v + '건';
   }
-  function fmtDelta(d, kind) {
-    var av = Math.abs(d);
-    if (kind === 'rate') return (av * 100).toFixed(0) + '%p';
-    if (kind === 'sec') return av.toFixed(0) + '초';
-    if (kind === 'raw') return av.toFixed(1);
-    if (kind === 'raw2') return av.toFixed(2);
-    if (kind === 'ratio') return av.toFixed(2);
+  function fmtDelta(d, kind, extra) {
+    var av = Math.abs(d), p = (BASE_PREC[kind] || 0) + (extra || 0);
+    if (kind === 'rate') return (av * 100).toFixed(p) + '%p';
+    if (kind === 'sec') return av.toFixed(p) + '초';
+    if (kind === 'raw' || kind === 'raw2') return av.toFixed(p);
+    if (kind === 'ratio') return av.toFixed(p);
     return av + '건';
   }
 
@@ -212,28 +214,39 @@
     var max = m.max || Math.max(aN || 0, bN || 0, 1e-9);
     var aw = aN === null ? 0 : Math.min(100, aN / max * 100);
     var bw = bN === null ? 0 : Math.min(100, bN / max * 100);
+    // 표시 자릿수 결정: 기본 자릿수로 두 값이 똑같이 보이면 한 자리 더 준다.
+    // 한 자리를 더 줘도 같게 보이면 그 차이는 표시 해상도 아래 — "동일"로 읽는다.
+    var extra = 0, collapsed = false;
+    if (aN !== null && bN !== null && aN !== bN && m.kind !== 'cnt') {
+      if (fmtVal(aN, m.kind, 0) === fmtVal(bN, m.kind, 0)) {
+        extra = 1;
+        collapsed = fmtVal(aN, m.kind, 1) === fmtVal(bN, m.kind, 1);
+      }
+    }
     var deltaLabel, dcls;
     if (aN === null || bN === null) {
       deltaLabel = '판정 불가'; dcls = 'vs-flat';
     } else if (m.lower === null) { // 방향성 판정 없는 참고 지표 (예: 분권 전환)
       var dd = bN - aN;
-      deltaLabel = (dd === 0 ? '동일' : (dd > 0 ? '▲' : '▼') + ' ' + fmtDelta(dd, m.kind)) + ' (참고)';
+      deltaLabel = ((dd === 0 || collapsed) ? '동일'
+        : (dd > 0 ? '▲' : '▼') + ' ' + fmtDelta(dd, m.kind, extra)) + ' (참고)';
       dcls = 'vs-flat';
     } else {
       var d = bN - aN;
       var improved = m.lower ? d < 0 : d > 0;
-      var same = Math.abs(d) < (m.kind === 'cnt' ? 0.5 : 1e-9);
+      var same = collapsed || Math.abs(d) < (m.kind === 'cnt' ? 0.5 : 1e-9);
       var arrow = same ? '=' : (d > 0 ? '▲' : '▼');
       dcls = same ? 'vs-flat' : (improved ? 'vs-good' : 'vs-bad');
-      deltaLabel = same ? '동일' : (arrow + ' ' + fmtDelta(d, m.kind) + (improved ? ' 개선' : ' 악화'));
+      deltaLabel = same ? '동일' : (arrow + ' ' + fmtDelta(d, m.kind, extra) + (improved ? ' 개선' : ' 악화'));
     }
+    if (collapsed) extra = 0; // 동일로 접었으면 값도 기본 자릿수로 되돌린다
     return '<div class="pl-m" title="' + esc(m.tip || '') + '">' +
       '<span class="mom mom-' + m.mom.toLowerCase() + '" title="' + esc(MOM_TIP[m.mom]) + '">' + m.mom + '</span>' +
       '<span class="pl-m-label">' + esc(m.label) + '</span>' +
-      '<span class="pl-m-val asis">' + fmtVal(m.a, m.kind) + '</span>' +
+      '<span class="pl-m-val asis">' + fmtVal(m.a, m.kind, extra) + '</span>' +
       '<div class="pl-m-track l"><div class="pl-m-fill asis" style="width:' + aw.toFixed(0) + '%"></div></div>' +
       '<div class="pl-m-track r"><div class="pl-m-fill tobe" style="width:' + bw.toFixed(0) + '%"></div></div>' +
-      '<span class="pl-m-val tobe">' + fmtVal(m.b, m.kind) + '</span>' +
+      '<span class="pl-m-val tobe">' + fmtVal(m.b, m.kind, extra) + '</span>' +
       '<span class="pl-m-delta ' + dcls + '">' + deltaLabel + '</span></div>';
   }
 

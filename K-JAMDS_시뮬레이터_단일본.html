@@ -4468,6 +4468,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var thaadLink = KJ.LINKS.some(function (l) {
       return /thaad/i.test(l.from + l.to);
     });
+    // 독립축의 정의: USFK 자산은 (1) 한국군 노드와 C2 링크로 이어지지 않고
+    // (2) USFK_ 축에만 소속되어 한국군 WTA 후보군에 오르지 않는다.
+    // USFK 사수 자체는 자기 축에서 실제 교전을 수행하므로 canEngage는 참이어야 한다
+    // (tests/deployment-adapter.test.js의 어서션과 동일 정의).
     var fullIndependent = true;
     if (KJ.buildDeploymentCatalog) {
       var full = KJ.buildDeploymentCatalog('HANBANDO_FULL_NORMAL');
@@ -4476,11 +4480,12 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         full.links.every(function (l) {
           return (full.nodeMap[l.from].forceOwner === 'USFK') === (full.nodeMap[l.to].forceOwner === 'USFK');
         }) && usfk.filter(function (n) { return n.category === 'shooter'; }).every(function (n) {
-          return Object.keys(n.canEngage).every(function (k) { return n.canEngage[k] === false; });
+          return String(n.c2Axis).indexOf('USFK_') === 0 &&
+            Object.keys(n.canEngage).some(function (k) { return n.canEngage[k] === true; });
         });
     }
     add('B', 'legacy THAAD 부재·FULL USFK 독립축', !thaadNode && !thaadLink && fullIndependent,
-      'legacy에는 THAAD가 없고, FULL의 THAAD/Patriot은 KAMDOC 교차 링크·한국군 WTA 후보 없이 독립');
+      'legacy에는 THAAD가 없고, FULL의 THAAD/Patriot은 KAMDOC 교차 링크 없이 USFK_ 축에서만 교전 — 한국군 WTA 후보 아님');
 
     // (c) 디스클레이머 상시 표출
     var el = document.getElementById('disclaimer');
@@ -5093,7 +5098,11 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var decisionCause = {};
     var fireCause = {};
     var directives = {};
+    // 이벤트 수(coordinationFailed)와 별개로 "겪은 위협 수"를 함께 센다.
+    // 한 위협이 재시도·중복교전마다 COORDINATION_FAILED를 여러 번 낼 수 있어
+    // 이벤트 수를 생성 수로 나누면 100%를 넘는다(비율이 아니라 건/위협).
     var commandDiagnostics = { coordinationFailed: 0, responsibilityUnresolved: 0 };
+    var coordFailedThreats = {}, unresolvedThreats = {};
 
     function threat(id) {
       if (!threats[id]) threats[id] = {
@@ -5187,8 +5196,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         } else if (event.type === 'DIRECTIVE_CANCELLED') dir.cancelledAt = first(dir.cancelledAt, event.t);
       } else if (event.type === 'COORDINATION_FAILED') {
         commandDiagnostics.coordinationFailed++;
+        if (event.threatId) coordFailedThreats[event.threatId] = true;
       } else if (event.type === 'RESPONSIBILITY_UNRESOLVED') {
         commandDiagnostics.responsibilityUnresolved++;
+        if (event.threatId) unresolvedThreats[event.threatId] = true;
       }
     });
 
@@ -5532,7 +5543,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         decisionByCause: decisionCause,
         directives: directiveSummary,
         coordinationFailures: commandDiagnostics.coordinationFailed,
-        responsibilityUnresolved: commandDiagnostics.responsibilityUnresolved
+        responsibilityUnresolved: commandDiagnostics.responsibilityUnresolved,
+        // 비율 지표용 분자 — 이벤트가 아니라 "한 번이라도 겪은 위협" 수(≤ spawned)
+        coordinationFailedThreats: Object.keys(coordFailedThreats).length,
+        responsibilityUnresolvedThreats: Object.keys(unresolvedThreats).length
       },
       emergencyFire: {
         total: emergency.total,
@@ -8516,8 +8530,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     delegatedFireRatio: { label: 'ICC/ECS 위임발사 비율', kind: 'rate' },
     directiveActivationRate: { label: '명령 활성 성공률', kind: 'rate' },
     directiveExpiryRate: { label: '명령 만료율', kind: 'rate' },
-    coordinationFailureRate: { label: '협조 실패율(생성 대비)', kind: 'rate' },
-    responsibilityUnresolvedRate: { label: '책임 미해소율(생성 대비)', kind: 'rate' },
+    coordinationFailureRate: { label: '협조 실패 위협 비율(생성 대비)', kind: 'rate' },
+    responsibilityUnresolvedRate: { label: '책임 미해소 위협 비율(생성 대비)', kind: 'rate' },
     decisionTrackAgeP50: { label: '결심 항적 age p50', kind: 'sec' },
     decisionTrackAgeP90: { label: '결심 항적 age p90', kind: 'sec' },
     staleDecisionRate: { label: 'stale 결심률', kind: 'rate' },
@@ -8549,8 +8563,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       delegatedFireRatio: fires ? ((causes.delegated_icc || 0) + (causes.delegated_ecs || 0)) / fires : null,
       directiveActivationRate: directives.available ? directives.activationRate : null,
       directiveExpiryRate: directives.available ? directives.expiryRate : null,
-      coordinationFailureRate: spawned ? report.c2Command.coordinationFailures / spawned : null,
-      responsibilityUnresolvedRate: spawned ? report.c2Command.responsibilityUnresolved / spawned : null,
+      // 분자는 이벤트 수가 아니라 "한 번이라도 겪은 위협" 수 — 이벤트 수를 쓰면 재시도·중복교전
+      // 때문에 한 위협이 여러 건을 내어 비율이 100%를 넘는다(관측 119.56%).
+      coordinationFailureRate: spawned ? report.c2Command.coordinationFailedThreats / spawned : null,
+      responsibilityUnresolvedRate: spawned ? report.c2Command.responsibilityUnresolvedThreats / spawned : null,
       decisionTrackAgeP50: report.trackFreshness.available ? report.trackFreshness.decisionTrackAge.p50 : null,
       decisionTrackAgeP90: report.trackFreshness.available ? report.trackFreshness.decisionTrackAge.p90 : null,
       staleDecisionRate: report.trackFreshness.available ? report.trackFreshness.staleDecisionRate : null,
@@ -9980,22 +9996,24 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     MoFE: 'Measure of Force Effectiveness — 전력 전체의 임무 효과 (NATO COBP/SAS-026)'
   };
 
-  function fmtVal(v, kind) {
+  // 종류별 기본 표시 자릿수. extra는 "두 값이 같게 보이는데 Δ는 개선이라 적히는" 모순을
+  // 없애기 위해 metricRow가 한 자리 더 요구할 때만 붙는다(97.6%·98.5% → 둘 다 "98%" 문제).
+  var BASE_PREC = { rate: 0, sec: 0, raw: 1, raw2: 2, ratio: 2 };
+  function fmtVal(v, kind, extra) {
     if (v === null || v === undefined || (kind !== 'cnt' && !isFinite(v))) return '—';
-    if (kind === 'rate') return (v * 100).toFixed(0) + '%';
-    if (kind === 'sec') return v.toFixed(0) + '초';
-    if (kind === 'raw') return v.toFixed(1);
-    if (kind === 'raw2') return v.toFixed(2);
-    if (kind === 'ratio') return v.toFixed(2) + '배';
+    var p = (BASE_PREC[kind] || 0) + (extra || 0);
+    if (kind === 'rate') return (v * 100).toFixed(p) + '%';
+    if (kind === 'sec') return v.toFixed(p) + '초';
+    if (kind === 'raw' || kind === 'raw2') return v.toFixed(p);
+    if (kind === 'ratio') return v.toFixed(p) + '배';
     return v + '건';
   }
-  function fmtDelta(d, kind) {
-    var av = Math.abs(d);
-    if (kind === 'rate') return (av * 100).toFixed(0) + '%p';
-    if (kind === 'sec') return av.toFixed(0) + '초';
-    if (kind === 'raw') return av.toFixed(1);
-    if (kind === 'raw2') return av.toFixed(2);
-    if (kind === 'ratio') return av.toFixed(2);
+  function fmtDelta(d, kind, extra) {
+    var av = Math.abs(d), p = (BASE_PREC[kind] || 0) + (extra || 0);
+    if (kind === 'rate') return (av * 100).toFixed(p) + '%p';
+    if (kind === 'sec') return av.toFixed(p) + '초';
+    if (kind === 'raw' || kind === 'raw2') return av.toFixed(p);
+    if (kind === 'ratio') return av.toFixed(p);
     return av + '건';
   }
 
@@ -10006,28 +10024,39 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var max = m.max || Math.max(aN || 0, bN || 0, 1e-9);
     var aw = aN === null ? 0 : Math.min(100, aN / max * 100);
     var bw = bN === null ? 0 : Math.min(100, bN / max * 100);
+    // 표시 자릿수 결정: 기본 자릿수로 두 값이 똑같이 보이면 한 자리 더 준다.
+    // 한 자리를 더 줘도 같게 보이면 그 차이는 표시 해상도 아래 — "동일"로 읽는다.
+    var extra = 0, collapsed = false;
+    if (aN !== null && bN !== null && aN !== bN && m.kind !== 'cnt') {
+      if (fmtVal(aN, m.kind, 0) === fmtVal(bN, m.kind, 0)) {
+        extra = 1;
+        collapsed = fmtVal(aN, m.kind, 1) === fmtVal(bN, m.kind, 1);
+      }
+    }
     var deltaLabel, dcls;
     if (aN === null || bN === null) {
       deltaLabel = '판정 불가'; dcls = 'vs-flat';
     } else if (m.lower === null) { // 방향성 판정 없는 참고 지표 (예: 분권 전환)
       var dd = bN - aN;
-      deltaLabel = (dd === 0 ? '동일' : (dd > 0 ? '▲' : '▼') + ' ' + fmtDelta(dd, m.kind)) + ' (참고)';
+      deltaLabel = ((dd === 0 || collapsed) ? '동일'
+        : (dd > 0 ? '▲' : '▼') + ' ' + fmtDelta(dd, m.kind, extra)) + ' (참고)';
       dcls = 'vs-flat';
     } else {
       var d = bN - aN;
       var improved = m.lower ? d < 0 : d > 0;
-      var same = Math.abs(d) < (m.kind === 'cnt' ? 0.5 : 1e-9);
+      var same = collapsed || Math.abs(d) < (m.kind === 'cnt' ? 0.5 : 1e-9);
       var arrow = same ? '=' : (d > 0 ? '▲' : '▼');
       dcls = same ? 'vs-flat' : (improved ? 'vs-good' : 'vs-bad');
-      deltaLabel = same ? '동일' : (arrow + ' ' + fmtDelta(d, m.kind) + (improved ? ' 개선' : ' 악화'));
+      deltaLabel = same ? '동일' : (arrow + ' ' + fmtDelta(d, m.kind, extra) + (improved ? ' 개선' : ' 악화'));
     }
+    if (collapsed) extra = 0; // 동일로 접었으면 값도 기본 자릿수로 되돌린다
     return '<div class="pl-m" title="' + esc(m.tip || '') + '">' +
       '<span class="mom mom-' + m.mom.toLowerCase() + '" title="' + esc(MOM_TIP[m.mom]) + '">' + m.mom + '</span>' +
       '<span class="pl-m-label">' + esc(m.label) + '</span>' +
-      '<span class="pl-m-val asis">' + fmtVal(m.a, m.kind) + '</span>' +
+      '<span class="pl-m-val asis">' + fmtVal(m.a, m.kind, extra) + '</span>' +
       '<div class="pl-m-track l"><div class="pl-m-fill asis" style="width:' + aw.toFixed(0) + '%"></div></div>' +
       '<div class="pl-m-track r"><div class="pl-m-fill tobe" style="width:' + bw.toFixed(0) + '%"></div></div>' +
-      '<span class="pl-m-val tobe">' + fmtVal(m.b, m.kind) + '</span>' +
+      '<span class="pl-m-val tobe">' + fmtVal(m.b, m.kind, extra) + '</span>' +
       '<span class="pl-m-delta ' + dcls + '">' + deltaLabel + '</span></div>';
   }
 

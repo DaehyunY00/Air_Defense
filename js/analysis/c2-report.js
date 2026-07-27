@@ -73,7 +73,11 @@
     var decisionCause = {};
     var fireCause = {};
     var directives = {};
+    // 이벤트 수(coordinationFailed)와 별개로 "겪은 위협 수"를 함께 센다.
+    // 한 위협이 재시도·중복교전마다 COORDINATION_FAILED를 여러 번 낼 수 있어
+    // 이벤트 수를 생성 수로 나누면 100%를 넘는다(비율이 아니라 건/위협).
     var commandDiagnostics = { coordinationFailed: 0, responsibilityUnresolved: 0 };
+    var coordFailedThreats = {}, unresolvedThreats = {};
 
     function threat(id) {
       if (!threats[id]) threats[id] = {
@@ -167,8 +171,10 @@
         } else if (event.type === 'DIRECTIVE_CANCELLED') dir.cancelledAt = first(dir.cancelledAt, event.t);
       } else if (event.type === 'COORDINATION_FAILED') {
         commandDiagnostics.coordinationFailed++;
+        if (event.threatId) coordFailedThreats[event.threatId] = true;
       } else if (event.type === 'RESPONSIBILITY_UNRESOLVED') {
         commandDiagnostics.responsibilityUnresolved++;
+        if (event.threatId) unresolvedThreats[event.threatId] = true;
       }
     });
 
@@ -512,7 +518,10 @@
         decisionByCause: decisionCause,
         directives: directiveSummary,
         coordinationFailures: commandDiagnostics.coordinationFailed,
-        responsibilityUnresolved: commandDiagnostics.responsibilityUnresolved
+        responsibilityUnresolved: commandDiagnostics.responsibilityUnresolved,
+        // 비율 지표용 분자 — 이벤트가 아니라 "한 번이라도 겪은 위협" 수(≤ spawned)
+        coordinationFailedThreats: Object.keys(coordFailedThreats).length,
+        responsibilityUnresolvedThreats: Object.keys(unresolvedThreats).length
       },
       emergencyFire: {
         total: emergency.total,

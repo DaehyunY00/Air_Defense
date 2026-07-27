@@ -114,5 +114,26 @@ var tobePath = legDelay('LLR-1C', 'AOC-1C', 'tobe') + legDelay('AOC-1C', 'MCRC',
 assert(tobePath <= 30,
   'To-Be 대표 경로 총합 ' + tobePath + 's ≤ 30 (원 출처 "30초 수준으로 단축")');
 
+// ── (g) UI 노출 어서션 함수 자체 검증 (KJ.runConstraintChecks) ──
+// 화면 "근거자료" 탭이 호출하는 함수를 실제로 돌려 A~E가 전부 통과하는지 본다.
+// 데이터만 검사하던 (a)~(f)는 이 함수의 술어가 틀려도 잡지 못했다(제약 B의 USFK
+// canEngage 술어가 deployment-adapter 정의와 반대로 적혀 있던 회귀).
+console.log('# (g) KJ.runConstraintChecks() 전 항목 통과');
+['config/system-types.js', 'config/geo-mdl.js', 'config/deployments.js',
+ 'config/deployment-adapter.js', 'core/constraints.js'].forEach(function (f) {
+  require(path.join(root, 'js', f));
+});
+var nodeCountBefore = KJ.NODES.length;
+// #disclaimer 실물 문구를 index.html에서 읽어 최소 DOM을 세운다(표출 검증은 (c)와 동일 취지).
+var discText = (html.match(/id="disclaimer"[^>]*>([\s\S]*?)<\//) || [, ''])[1].replace(/<[^>]*>/g, '');
+global.document = { getElementById: function (id) { return id === 'disclaimer' ? { textContent: discText } : null; } };
+global.getComputedStyle = window.getComputedStyle = function () { return { display: 'block' }; };
+var checks = KJ.runConstraintChecks();
+assert(checks.length === 5, '제약 항목 5건 반환 (' + checks.length + '건)');
+checks.forEach(function (c) {
+  assert(c.pass, '[' + c.id + '] ' + c.name + (c.pass ? '' : ' — ' + c.detail));
+});
+assert(KJ.NODES.length === nodeCountBefore, '배치 카탈로그 로드가 legacy KJ.NODES를 오염시키지 않음');
+
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

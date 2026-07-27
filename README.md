@@ -207,7 +207,7 @@ tests/  run-all.js + 31개 스위트  # 아래 [검증] 참조
 ## 검증
 
 ```bash
-node tests/run-all.js            # 전체 회귀 — JS/ESM 39개 구문검증 + 31개 스위트·751 어서션
+node tests/run-all.js            # 전체 회귀 — JS/ESM 39개 구문검증 + 31개 스위트·757 어서션
 ```
 
 | 스위트 | 검증 내용 |

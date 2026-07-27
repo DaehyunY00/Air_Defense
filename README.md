@@ -178,7 +178,7 @@ docs/
   metrics-verification.md        # 지표 검증 감사 (비용교환비 비단조성 등)
 scripts/
   serve.sh · build-single.mjs · build-guide-pdf.mjs · bias-ledger.mjs · step1~2·phase4~6 스윕
-tests/  run-all.js + 30개 스위트  # 아래 [검증] 참조
+tests/  run-all.js + 31개 스위트  # 아래 [검증] 참조
 ```
 
 ## 설계 원칙: 병목은 고정이 아니라 도출된다
@@ -204,7 +204,7 @@ tests/  run-all.js + 30개 스위트  # 아래 [검증] 참조
 ## 검증
 
 ```bash
-node tests/run-all.js            # 전체 회귀 — JS/ESM 39개 구문검증 + 30개 스위트·735 어서션
+node tests/run-all.js            # 전체 회귀 — JS/ESM 39개 구문검증 + 31개 스위트·751 어서션
 ```
 
 | 스위트 | 검증 내용 |
@@ -216,6 +216,7 @@ node tests/run-all.js            # 전체 회귀 — JS/ESM 39개 구문검증 +
 | `reengage` · `deadcode` · `resource` | ⑨ 되돌리기·무기별 pk / 死코드 레지스트리(Gate 3) / 자원 최적화·As-Is불변·반증 |
 | `legacy-deployment-expansion` · `baseline` | legacy 10세트 수량·연결·실행 / 확장 후 전체결과 SHA-256·OFF 결정론 기준선 |
 | `map-visualization` · `ui-performance` | Leaflet/SVG 공동 포대 중첩 마커·범위 링 / Worker·지도·접이식 범례 토글 |
+| `metrics-accounting` | 지표 계정 — native 고가유도탄 보존율 배선 / 중복교전(ghost) 귀속 범위 분리 / MC 시간지표 표본 제외 |
 
 테스트는 `window.KJ` 네임스페이스를 Node에서 로드해 실행합니다. 브라우저에서는 4개 탭에서 대화형으로 확인합니다.
 V&V 종합은 **`docs/vv-report.md`**, 통합 감사(되돌리기·편향원장·반증·결론 재산출)는 **`docs/integration-audit.md`** 참조.

@@ -83,9 +83,9 @@
   <div class="sub">한국형 합동방공체계 As-Is(분절형) ↔ To-Be(통합형) C2 구조 비교<br>
   이산사건 시뮬레이션(DES) 기반 9단계 F2T2EA 파이프라인 모델</div>
   <div class="meta">
-    문서 버전 1.1 · 2026-07-27<br>
-    (v1.1 — 지표 계정 전수 검토 반영: §10.3 · §11.4 · §12.1~12.2 · §14.3 /
-    분석 탭 전 지표 해설 §16 신설)<br>
+    문서 버전 1.2 · 2026-07-27<br>
+    (v1.1 — 지표 계정 전수 검토 반영: §10.3 · §11.4 · §12.1~12.2 · §14.3 / 분석 탭 전 지표 해설 §16 신설<br>
+    &nbsp;v1.2 — LEGACY_HIRES 배치와 <b>결심 구조의 경로별 차이 §13.7</b> 신설, §13.1 배치 카탈로그 9종 갱신)<br>
     대상 저장소: DaehyunY00/Air_Defense
   </div>
   <div class="disc">
@@ -493,6 +493,9 @@ To-Be 1(COP·자동화 전제로 조기 전환). 전환 시점·횟수·노드�
 <p>탐지→최초 교전명령 소요(meanDecisionDelaySec)를 수집하면서, 그중 coord 협조 홉이 차지한 몫
 (meanCoordDelaySec)을 같은 분모로 분해 집계합니다. "As-Is 지연 = 음성 협조 탓"이 절반만 맞고
 나머지는 승인권자 대기행렬임을 화면에 드러내기 위한 순수 관측입니다(난수·동역학 불변).</p>
+<p><b>이 분해는 legacy 9단계 경로 전용입니다.</b> 고해상도 native 경로는 승인 홉 자체가 없어
+<code>coordDelaySum</code>이 누적되지 않으므로 협조 홉 지연이 항상 0으로 표시되며, 그 결과 To-Be의
+결심 지연 개선폭도 두 경로에서 한 자릿수 배 차이가 납니다 — 상세와 실측은 <b>§13.7</b> 참조.</p>
 
 <h3>7.6 ⑦ 교전협조 — 중복교전과 책임공백 (<code>_coordCheck</code>·<code>_dupEngage</code>)</h3>
 <p>As-Is 중복항적 계통(ghost)이 C2 처리를 마치면, 주교전 계통(_mainC2)과 "제때 협조가 가능한가"를
@@ -775,12 +778,27 @@ gap(x) = As-Is 누수율 − To-Be 누수율 → maxGapX(최대 격차 강도), 
 모델 충실도를 <code>IADS_C2 물리</code>로 올리면 활성화됩니다.</div>
 
 <h3>13.1 배치 카탈로그 (<code>js/config/deployments.js</code>)</h3>
-<p>6종 — HANBANDO_MINI/FULL × {NORMAL, MCRC_DOWN, KAMDOC_DOWN}. MINI는 포대 8·센서 11·C2 12,
+<p><b>9종</b> — HANBANDO_MINI/FULL/<b>LEGACY</b> × {NORMAL, MCRC_DOWN, KAMDOC_DOWN}. MINI는 포대 8·센서 11·C2 12,
 FULL(2030 가정)은 <b>포대 84·센서 71·C2 98</b>(L-SAM 3, 천궁-II 22, PAC-3 8, SHORAD 벨트 45개 중대
 노드 — 비호 167대→28노드·천마 100대→17노드, MDL 남측 9km 오프셋 호길이 등간격 배치, USFK THAAD 1·
 Patriot 5 독립축). C2 노드는 simultaneousCapacity→서버 수 c, 처리시간 = 시스템 평균+운용자 중간값으로
 M/M/c/K에 환산됩니다. MCRC_DOWN/KAMDOC_DOWN 상황은 노드 파괴 시 대체 보고경로와 cross-ICC 중복교전을
 관측하기 위한 변형입니다.</p>
+<p><b>LEGACY_HIRES</b>(노드 64 — C2 30·센서 19·사수 15)는 legacy 배치의 <b>자산 위치·편성만</b> 옮기고
+성능은 고해상도 타입 레지스트리를 따르는 배치입니다(ADR-054). legacy 노드에는 물리 계산에 필요한
+타입 메타데이터가 전혀 없어(센서 <code>typeId</code> 0/20, 사수 0/18) <code>iads-c2</code>를 적용할 수
+없었는데, 이 배치가 그 공백을 메웁니다. 천마 5세트는 <code>CHUNMA</code>, 천궁-II 5세트와 군단 중거리는
+<code>CHEONGUNG2</code>, 국지방공은 <code>BIHO</code>(LOCAL_AD 축), 미사일방어부대는
+<code>PAC3</code>·<code>LSAM</code>으로 이식했습니다.</p>
+<div class="box warn"><span class="bt">LEGACY_HIRES 해석 제약</span> — 전투기·이지스·조기경보기·함상
+레이더·광학감시는 대응 타입이 없어 <b>제외</b>했습니다(native 교전 모델은 고정 발사대·포락선·재장전을
+전제하고, 레이더 방정식은 육안 관측을 기술하지 못합니다). 따라서 legacy(compat)와 <b>전력 구성이 달라
+절대값을 직접 비교할 수 없습니다</b> — 비교는 언제나 같은 배치 안의 As-Is ↔ To-Be입니다.</div>
+<div class="box plain"><span class="bt">구현 함정 — 화력통제 사거리 없는 센서를 포대에 물리면 안 됨</span>
+<code>TPS880K</code>는 <code>ranges.fireControl</code>이 없어 <code>hasFireControlCapability</code>가
+false입니다. 이 센서를 포대의 <code>mfrSensorId</code>로 물리면 항적이 FIRE_CONTROL 상태에 영영 도달하지
+못해 <b>그 포대는 한 발도 쏘지 않습니다</b>. FULL의 SHORAD가 <code>mfrSensorTypeId: null</code>인 것도
+같은 이유이며, LEGACY_HIRES의 천마 세트도 같은 패턴을 따르고 legacy MFR은 독립 감시 센서로 둡니다.</div>
 
 <h3>13.2 센서 물리 (<code>js/model/iads/sensor-model.js</code>)</h3>
 <div class="formula">
@@ -826,9 +844,57 @@ mcrc_commanded / delegated_icc / delegated_ecs / autonomous / emergency로 귀�
 군단 AOC(LOCAL_AD)의 교전현황은 제한형 음성/VTC 채널(서버 1·수용 4건·삼각 90/180/270초·신선도 300초)로
 MCRC에 공유되며, 낡은(stale) 상태로 인한 중복교전이 별도 계상됩니다.</p>
 
-<div class="box warn"><span class="bt">해석 한계</span> — 고해상도(FULL/MINI) 절대값은 전술 성능치가
-아니라 <b>배치·파이프라인 비교값</b>으로만 사용해야 합니다. 경도·위도 진행률과 체공시간은 여전히 개념
-축선/dwell 함수이며 false merge/split은 미포함입니다(README·docs 명시).</div>
+<h3>13.7 결심 구조의 차이 — 9단계 경로 vs native 경로 (★ 결론 해석의 분기점)</h3>
+
+<div class="easy"><span class="bt">쉽게 말하면</span> — 같은 "통합 C2"라도 <b>어느 모델에서 재느냐에 따라
+결심이 빨라지는 폭이 열 배 넘게 차이</b>납니다. legacy 모델에서는 As-Is가 상급 지휘소 승인을 받으러
+갔다 오는 시간을 실제로 치르기 때문에 통합하면 그 왕복이 통째로 사라지지만, 고해상도 모델에서는
+As-Is에서도 담당 지휘소가 <b>스스로 승인</b>하므로 없앨 왕복 자체가 없습니다.</div>
+
+<p>두 경로는 ⑥ 결심 단계의 구현이 근본적으로 다릅니다.</p>
+<table>
+  <tr><th style="width:20%">구분</th><th>legacy 9단계 경로</th><th>고해상도 native 경로</th></tr>
+  <tr><td>As-Is 승인</td>
+      <td>위협별 승인권자(KAOC·MCRC·KAMDOC)까지 <b>coord 최단경로 홉 + 승인 서비스</b>를 지불</td>
+      <td><b>책임 C2가 자체 승인</b>(<code>_iadsDecide</code>에서 사수 선정과 동시에 명령 생성)</td></tr>
+  <tr><td>To-Be 개선 경로</td>
+      <td>사전승인 자동교전으로 <b>승인 홉을 통째로 제거</b></td>
+      <td>제거할 홉이 없음 — 이득은 <b>처리용량·항적 융합</b>에서 발생</td></tr>
+  <tr><td>협조 홉 지연 집계</td>
+      <td><code>coordDelaySum</code>에 누적(화면에 표시)</td>
+      <td>누적 경로 없음 → <b>항상 0으로 표시</b>(협조 부재가 아니라 모델링 방식 차이)</td></tr>
+  <tr><td>중복교전 기제</td>
+      <td>중복항적 팬아웃 + <code>_coordCheck</code> 협조 실패</td>
+      <td>교전상태 공유·plan 차단(<code>_iadsPlanBlocks</code>)</td></tr>
+</table>
+
+<p>이 차이는 <b>실측으로 확인됩니다</b>. 21셀 실험(각 셀 동일 seed paired 복제)에서 결심 지연
+Δ(To-Be − As-Is)를 배치 계열별로 보면 다음과 같습니다.</p>
+<table>
+  <tr><th style="width:26%">배치 · 충실도</th><th>C2 파이프라인</th><th>SC1</th><th>SC2</th><th>SC3</th><th>평균</th></tr>
+  <tr><td>legacy (compat)</td><td>9단계</td><td>−121s</td><td>−119s</td><td>−120s</td><td><b>−120s</b></td></tr>
+  <tr><td>LEGACY_HIRES (compat)</td><td>native</td><td>−7s</td><td>+11s</td><td>−95s</td><td>−30s</td></tr>
+  <tr><td>LEGACY_HIRES (iads-c2)</td><td>native</td><td>−10s</td><td>−5s</td><td>−88s</td><td>−34s</td></tr>
+  <tr><td>MINI (iads-c2)</td><td>native</td><td>−41s</td><td>−55s</td><td>−61s</td><td>−52s</td></tr>
+  <tr><td>FULL (iads-c2)</td><td>native</td><td>−33s</td><td>−6s</td><td>−25s</td><td>−21s</td></tr>
+</table>
+
+<div class="box warn"><span class="bt">이 표가 뜻하는 것</span>
+legacy는 <b>전 시나리오에서 −120초로 일정</b>합니다 — 부하와 무관하게 승인 홉이라는 <b>고정 비용</b>이
+사라지기 때문입니다. 반면 native는 저부하(SC1·SC2)에서 −10초 안팎에 그치다가 <b>포화가 걸리는 SC3에서만</b>
+−88~−95초로 커집니다. 즉 native의 이득은 홉 제거가 아니라 <b>대기행렬 해소</b>에서 나오므로 부하의
+함수입니다.<br><br>
+따라서 <b>"통합 C2가 결심을 N초 앞당긴다"는 문장은 어느 C2 모델에서 잰 값인지 명시하지 않으면
+성립하지 않습니다.</b> 한 계열의 수치를 다른 계열에 적용해 인용하면 개선폭을 크게 왜곡합니다.
+LEGACY_HIRES를 도입하기 전에는 배치 축과 파이프라인 축이 얽혀 있어(legacy=9단계 전용,
+고해상도=native 전용) 이 분리가 불가능했습니다.</div>
+
+<p class="small">근거: <code>docs/실험보고서_AsIs_ToBe.pdf</code> §8.2 · 재현
+<code>node scripts/experiment-run.mjs --cell "sc3|HANBANDO_LEGACY_NORMAL|iads-c2|1|30"</code></p>
+
+<div class="box warn"><span class="bt">해석 한계</span> — 고해상도(FULL/MINI/LEGACY_HIRES) 절대값은 전술
+성능치가 아니라 <b>배치·파이프라인 비교값</b>으로만 사용해야 합니다. 경도·위도 진행률과 체공시간은 여전히
+개념 축선/dwell 함수이며 false merge/split은 미포함입니다(README·docs 명시).</div>
 
 <!-- ───────────────────── 14 ───────────────────── -->
 <h2><span class="no">14.</span>기능 플래그와 감사 추적 방법론</h2>
@@ -917,6 +983,8 @@ MCRC에 공유되며, 낡은(stale) 상태로 인한 중복교전이 별도 계�
       절대값이 아닌 비교값으로만 해석해야 합니다.</li>
   <li><b>단일 실행의 조건부 사유</b> — overflow·no_engage_window 등 조건부 실패는 paired-seed 반복
       없이 구조적 결론의 근거로 쓸 수 없습니다.</li>
+  <li><b>결심 지연 개선폭의 경로 의존성</b> — 같은 지표라도 legacy 9단계 경로와 고해상도 native 경로에서
+      값이 한 자릿수 배 다릅니다(§13.7). 두 계열의 수치를 섞어 인용하면 통합 C2의 효과를 크게 왜곡합니다.</li>
 </ol>
 
 <!-- ───────────────────── 16 ───────────────────── -->

@@ -18,7 +18,7 @@ DES(이산사건 시뮬레이션) 엔진 위에서 9단계 F2T2EA 파이프라�
 ## 사용 흐름
 
 ```
-① 시나리오·배치(legacy 또는 6개 MINI/FULL)·체계모드(토글)·강도 선택
+① 시나리오·배치(legacy 또는 9개 고해상도: MINI/FULL/LEGACY_HIRES 각 3종)·체계모드(토글)·강도 선택
 ② [▶ 시뮬레이션 시작] → 지도 위 위협궤적·노드 재고 링 실시간 애니메이션
    (백그라운드: DES 양모드 비교 + Monte Carlo 수렴)
 ③ 재생 종료(또는 [결과 보기]) → 결과창: 요약·As-Is↔To-Be 비교·MC 95% CI·
@@ -157,7 +157,8 @@ K-JAMDS_시뮬레이터_단일본.html    # ★ 자기완결 단일본(서버 �
 css/style.css                    # 레이아웃·테마
 js/
   config/ system-types.js · geo-mdl.js · deployments.js · deployment-adapter.js
-         # 고해상도 체계 타입 · MDL 개념 벨트 · 6개 배치 · C2/센서/사수/링크 catalog
+         # 고해상도 체계 타입 · MDL 개념 벨트 · 9개 배치 · C2/센서/사수/링크 catalog
+         #   (MINI/FULL 각 3종 + LEGACY_HIRES 3종 — legacy 자산 배치의 고해상도 이식, ADR-054)
   data/  nodes.js · links.js · threats.js · scenarios.js · axes.js
          # 노드(대기행렬·pk·wtaSuit·costPerShotM·magazine)·모드별 링크·위협·시나리오·축선 좌표
   core/  router.js · constraints.js · rng.js · heap.js · sim-worker-client.js
@@ -174,14 +175,15 @@ docs/
   params.md                      # 파라미터 근거표 (ID·출처·인용·신뢰도 A/B/C·MC 적용방식)
   vv-report.md                   # V&V 종합: 매핑표·극한값·민감도·face validity·단계별 잔여 한계
   integration-audit.md           # ★ 통합 검증 감사(G1~G7): 회귀·되돌리기·死코드·제약·편향원장·결론 재산출·자원최적화 반증
-  adr/ADR-001~009                # 결정 기록(pk 스키마·누수비용·절단·timeout분해·pk상관·salvo·비용WTA·재고·재가중)
+  adr/ADR-001~009, 036, 049~054  # 결정 기록(pk 스키마·누수비용·절단·timeout분해·pk상관·salvo·비용WTA·재고·재가중 /
+                                 #  USFK 독립축·SHORAD 벨트·실패분류v2·군단AOC·legacy 재배선·LEGACY_HIRES 이식)
   metrics-verification.md        # 지표 검증 감사 (비용교환비 비단조성 등) + 지표 계정 결함 4건 시정
   실험보고서_AsIs_ToBe.pdf       # ★ 시나리오×배치×충실도 15셀 As-Is↔To-Be 비교 실험 결과
 scripts/
   serve.sh · build-single.mjs · build-guide-pdf.mjs · bias-ledger.mjs · step1~2·phase4~6 스윕
   experiment-lib.mjs · experiment-run.mjs · experiment-delegation.mjs
   experiment-report.mjs · build-experiment-pdf.mjs   # ★ 시나리오×배치×충실도 As-Is↔To-Be 실험
-tests/  run-all.js + 31개 스위트  # 아래 [검증] 참조
+tests/  run-all.js + 32개 스위트  # 아래 [검증] 참조
 ```
 
 ## 설계 원칙: 병목은 고정이 아니라 도출된다
@@ -207,7 +209,7 @@ tests/  run-all.js + 31개 스위트  # 아래 [검증] 참조
 ## 검증
 
 ```bash
-node tests/run-all.js            # 전체 회귀 — JS/ESM 39개 구문검증 + 31개 스위트·757 어서션
+node tests/run-all.js            # 전체 회귀 — JS/ESM 39개 구문검증 + 32개 스위트·832 어서션
 ```
 
 | 스위트 | 검증 내용 |
@@ -220,6 +222,19 @@ node tests/run-all.js            # 전체 회귀 — JS/ESM 39개 구문검증 +
 | `legacy-deployment-expansion` · `baseline` | legacy 10세트 수량·연결·실행 / 확장 후 전체결과 SHA-256·OFF 결정론 기준선 |
 | `map-visualization` · `ui-performance` | Leaflet/SVG 공동 포대 중첩 마커·범위 링 / Worker·지도·접이식 범례 토글 |
 | `metrics-accounting` | 지표 계정 — native 고가유도탄 보존율 배선 / 중복교전(ghost) 귀속 범위 분리 / MC 시간지표 표본 제외 |
+
+### 배치 × 모델충실도 조합
+
+`modelFidelity=iads-c2`(SNR/RCS 물리)는 **고해상도 배치에서만** 동작합니다. legacy 자산 편성으로
+물리 충실도를 쓰려면 `LEGACY_HIRES` 배치를 선택하십시오 — legacy 좌표·편성을 고해상도 타입으로
+이식한 배치입니다(ADR-054). 전투기·이지스·조기경보기·광학감시는 대응 타입이 없어 제외되므로
+**legacy(compat)와 절대값을 직접 비교하지 마십시오**(전력 구성이 다름).
+
+| 배치 | compat | iads-c2 |
+|---|---|---|
+| `legacy` | ✅ 9단계 파이프라인(중복교전·승인 병목 관측 가능) | ❌ |
+| `HANBANDO_LEGACY_*` | ✅ native 교전 | ✅ |
+| `HANBANDO_MINI_*` · `HANBANDO_FULL_*` | ✅ native 교전 | ✅ |
 
 ### As-Is ↔ To-Be 비교 실험 (재현 가능)
 

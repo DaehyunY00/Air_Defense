@@ -67,6 +67,7 @@ var suites = [
   ,['iads-kernel.test.mjs', 'IADS_C2 공통 커널 (ES module·이벤트 큐·도메인 RNG·SNR/RCS/수평선 센서)']
   ,['c2-analysis.test.js', 'C2 구조화 계측·병목 귀속·동일 seed paired Monte Carlo']
   ,['metrics-accounting.test.js', '지표 계정 (native 고가유도탄·중복교전 귀속 범위·MC 시간지표 표본)']
+  ,['legacy-hires-deployment.test.mjs', 'LEGACY_HIRES 배치 (legacy 자산 배치 × iads-c2 물리·DOWN 대체·기존경로 불변)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

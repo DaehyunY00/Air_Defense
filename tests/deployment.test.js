@@ -16,10 +16,15 @@ var expected = {
   HANBANDO_MINI_KAMDOC_DOWN: [11, 8, 13, 8, 0],
   HANBANDO_FULL_NORMAL: [71, 84, 98, 84, 45],
   HANBANDO_FULL_MCRC_DOWN: [71, 84, 97, 84, 45],
-  HANBANDO_FULL_KAMDOC_DOWN: [71, 84, 97, 84, 45]
+  HANBANDO_FULL_KAMDOC_DOWN: [71, 84, 97, 84, 45],
+  // LEGACY_HIRES(ADR-054): legacy 자산 배치를 고해상도 타입으로 이식 — 10세트(천마 5·천궁-II 5)
+  // + 국지방공 2 + 군단 중거리 1 + 미사일방어부대 2 = 포대 15. SHORAD 열은 BIHO 2 + CHUNMA 5 = 7.
+  HANBANDO_LEGACY_NORMAL: [19, 15, 32, 15, 7],
+  HANBANDO_LEGACY_MCRC_DOWN: [19, 15, 31, 15, 7],
+  HANBANDO_LEGACY_KAMDOC_DOWN: [19, 15, 31, 15, 7]
 };
 
-assert(JSON.stringify(KJ.DEPLOYMENT_IDS) === JSON.stringify(Object.keys(expected)), '6개 배치 ID·순서 고정');
+assert(JSON.stringify(KJ.DEPLOYMENT_IDS) === JSON.stringify(Object.keys(expected)), '9개 배치 ID·순서 고정');
 KJ.DEPLOYMENT_IDS.forEach(function (id) {
   var d = KJ.deploymentById(id), e = expected[id];
   var ecs = d.c2Nodes.filter(function (c) { return c.typeId === 'ECS'; }).length;
@@ -29,7 +34,7 @@ KJ.DEPLOYMENT_IDS.forEach(function (id) {
   assert(Object.isFrozen(d) && Object.isFrozen(d.positions) && Object.isFrozen(d.batteries) && Object.isFrozen(d.sensors), id + ' 불변 선언');
 });
 
-['MINI', 'FULL'].forEach(function (size) {
+['MINI', 'FULL', 'LEGACY'].forEach(function (size) {
   var n = KJ.deploymentById('HANBANDO_' + size + '_NORMAL');
   var m = KJ.deploymentById('HANBANDO_' + size + '_MCRC_DOWN');
   var k = KJ.deploymentById('HANBANDO_' + size + '_KAMDOC_DOWN');

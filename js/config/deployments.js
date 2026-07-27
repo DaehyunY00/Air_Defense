@@ -681,6 +681,233 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
 });
 
 // ════════════════════════════════════════════════════════════════
+// LEGACY_HIRES — legacy 자산 배치를 고해상도 카탈로그로 이식 (ADR-054)
+// ════════════════════════════════════════════════════════════════
+// 목적: legacy(js/data/nodes.js) 배치의 **자산 위치·편성만** 그대로 두고, 교전·센서 물리는
+// 고해상도 타입 레지스트리(system-types.js)를 쓰게 한다. 그러면 modelFidelity='iads-c2'가
+// legacy 배치 위에서 동작한다 — 엔진 수정 없이 배치 정의만 추가하는 방식(ADR-054 접근 B).
+//
+// ── 좌표 ──
+// 전부 legacy nodes.js의 개념좌표를 lon/lat로 옮긴 값이다(legacy는 [lat, lon] 순서).
+// 고도는 권역 개념 추정치이며, 실제 표고가 아니다.
+//
+// ── 타입 치환표 (legacy 자산 → IADS 타입) ──
+//   BAT-CHUNMA-*(5)   → CHUNMA        · 전속 MFR 없음(FC 게이팅 우회, FULL의 SHORAD와 동일 패턴)
+//   BAT-CHEONGUNG2(5) → CHEONGUNG2    · MSAM_MFR
+//   SHORAD-1C/CD      → BIHO          · LOCAL_AD 축(군단·수방사 AOC 통제)
+//   MSAM-1C           → CHEONGUNG2    · LOCAL_AD 축 — legacy MSAM-1C는 canEngage에서 탄도탄이
+//                                       빠진 ABT 전용 자산이라, LOCAL_AD(=ABT만 교전)가 정합이다
+//   MDU-M             → PAC3          · PATRIOT_RADAR
+//   MDU-L             → LSAM          · LSAM_MFR
+//   ACR-E/W           → FPS117        · LAR-C·LLR-1C/CD → TPS880K · GPR → GREEN_PINE_B
+//   천마 세트 MFR      → TPS880K(감시 전용, 포대 FC와 미연결 — TPS880K는 fireControl 사거리가 없다)
+//
+// ── 의도적 제외 (타입 레지스트리에 대응 자산군 없음) ──
+//   FTR(전투기)     : 이동 플랫폼. native 교전 모델은 고정 발사대·포락선·재장전을 전제한다.
+//   SM2-E/W(이지스) : 함상 이동 플랫폼. 위 사유와 동일.
+//   E737(조기경보기): 공중 플랫폼(고도가 시간의 함수).
+//   AEGIS-E/W       : 함상 레이더.
+//   ADC2A-W         : 육안·광학 관측 — 레이더 방정식(SNR∝R⁻⁴·RCS)이 성립하지 않는다.
+//   KAOC            : 어댑터 roles가 KAOC를 MCRC로 해소하므로 별도 노드가 불필요하다.
+// 제외 자산은 legacy(compat) 배치에는 그대로 남아 있다. 두 배치는 서로 다른 전력 구성이므로
+// **LEGACY_HIRES와 legacy의 절대값을 직접 비교하면 안 된다**(자산 구성이 다르다).
+const HANBANDO_LEGACY_POSITIONS = Object.freeze({
+  // 상급 C2
+  KAMD_OPS:     { lon: 127.08, lat: 36.92, alt: 100, confidence: 'scenario', sourceNote: 'legacy KAMDOC 개념좌표(오산권)' },
+  MCRC:         { lon: 127.05, lat: 37.00, alt: 50,  confidence: 'scenario', sourceNote: 'legacy MCRC 개념좌표(오산권)' },
+  IAOC:         { lon: 127.12, lat: 36.96, alt: 100, confidence: 'scenario', sourceNote: 'legacy JAMDC2 개념좌표(To-Be 융합허브)' },
+  EOC:          { lon: 127.05, lat: 37.00, alt: 100, confidence: 'scenario', sourceNote: 'kill-web 추상 노드(지도 미표시)' },
+  ARMY_1C_AD:   { lon: 126.83, lat: 37.66, alt: 80,  confidence: 'scenario', sourceNote: 'legacy AOC-1C(1군단 방공상황실) 개념좌표' },
+  ARMY_CD_AD:   { lon: 127.00, lat: 37.50, alt: 80,  confidence: 'scenario', sourceNote: 'legacy JAOC-CD(수방사 합동방공상황실) 개념좌표' },
+  // 10세트 ICC (legacy ICC-* 와 동일 좌표)
+  ICC_W1: { lon: 126.85, lat: 37.70, alt: 80, confidence: 'scenario', sourceNote: 'legacy ICC-W1' },
+  ICC_W2: { lon: 126.70, lat: 37.45, alt: 80, confidence: 'scenario', sourceNote: 'legacy ICC-W2' },
+  ICC_W3: { lon: 126.85, lat: 36.95, alt: 80, confidence: 'scenario', sourceNote: 'legacy ICC-W3' },
+  ICC_W4: { lon: 127.05, lat: 37.25, alt: 80, confidence: 'scenario', sourceNote: 'legacy ICC-W4' },
+  ICC_C1: { lon: 127.30, lat: 38.00, alt: 80, confidence: 'scenario', sourceNote: 'legacy ICC-C1' },
+  ICC_C2: { lon: 127.55, lat: 37.55, alt: 80, confidence: 'scenario', sourceNote: 'legacy ICC-C2' },
+  ICC_C3: { lon: 127.50, lat: 36.90, alt: 80, confidence: 'scenario', sourceNote: 'legacy ICC-C3' },
+  ICC_E1: { lon: 128.40, lat: 38.05, alt: 80, confidence: 'scenario', sourceNote: 'legacy ICC-E1' },
+  ICC_E2: { lon: 128.75, lat: 37.65, alt: 80, confidence: 'scenario', sourceNote: 'legacy ICC-E2' },
+  ICC_E3: { lon: 129.00, lat: 37.15, alt: 80, confidence: 'scenario', sourceNote: 'legacy ICC-E3' },
+  // 미사일방어부대 정보통합센터 — legacy는 KAMDOC이 MDU를 직접 통제하나, 고해상도 명령경로는
+  // ICC→ECS→포대를 전제하므로 계선 대표 노드를 둔다(개념).
+  ICC_MDU: { lon: 127.10, lat: 36.99, alt: 100, confidence: 'scenario', sourceNote: 'legacy 미사일방어부대 계선 대표(개념)' },
+  // 10세트 포대 (legacy BAT-* = ICC/ECS와 공동 사이트)
+  BAT_W1: { lon: 126.85, lat: 37.70, alt: 100, confidence: 'scenario', sourceNote: 'legacy 서부1 천마 포대' },
+  BAT_W2: { lon: 126.70, lat: 37.45, alt: 100, confidence: 'scenario', sourceNote: 'legacy 서부2 천궁-II 포대' },
+  BAT_W3: { lon: 126.85, lat: 36.95, alt: 100, confidence: 'scenario', sourceNote: 'legacy 서부3 천마 포대' },
+  BAT_W4: { lon: 127.05, lat: 37.25, alt: 100, confidence: 'scenario', sourceNote: 'legacy 서부4 천궁-II 포대' },
+  BAT_C1: { lon: 127.30, lat: 38.00, alt: 150, confidence: 'scenario', sourceNote: 'legacy 중부1 천마 포대' },
+  BAT_C2: { lon: 127.55, lat: 37.55, alt: 150, confidence: 'scenario', sourceNote: 'legacy 중부2 천궁-II 포대' },
+  BAT_C3: { lon: 127.50, lat: 36.90, alt: 120, confidence: 'scenario', sourceNote: 'legacy 중부3 천마 포대' },
+  BAT_E1: { lon: 128.40, lat: 38.05, alt: 200, confidence: 'scenario', sourceNote: 'legacy 동부1 천궁-II 포대' },
+  BAT_E2: { lon: 128.75, lat: 37.65, alt: 250, confidence: 'scenario', sourceNote: 'legacy 동부2 천마 포대' },
+  BAT_E3: { lon: 129.00, lat: 37.15, alt: 150, confidence: 'scenario', sourceNote: 'legacy 동부3 천궁-II 포대' },
+  // 국지방공·군단 중거리·미사일방어부대 포대
+  SHORAD_1C: { lon: 126.80, lat: 37.72, alt: 60,  confidence: 'scenario', sourceNote: 'legacy SHORAD-1C(1군단 단거리방공)' },
+  SHORAD_CD: { lon: 126.95, lat: 37.58, alt: 60,  confidence: 'scenario', sourceNote: 'legacy SHORAD-CD(수방사 단거리방공)' },
+  MSAM_1C:   { lon: 126.78, lat: 37.60, alt: 100, confidence: 'scenario', sourceNote: 'legacy MSAM-1C(군단 중거리)' },
+  MDU_M:     { lon: 127.07, lat: 37.15, alt: 100, confidence: 'scenario', sourceNote: 'legacy MDU-M(하층 탄도)' },
+  MDU_L:     { lon: 127.15, lat: 36.80, alt: 150, confidence: 'scenario', sourceNote: 'legacy MDU-L(상층 탄도)' },
+  // 광역 감시 센서
+  GPR:    { lon: 127.49, lat: 36.64, alt: 200, confidence: 'scenario', sourceNote: 'legacy GPR(탄도탄 감시)' },
+  ACR_E:  { lon: 128.90, lat: 37.75, alt: 300, confidence: 'scenario', sourceNote: 'legacy ACR-E(방공관제레이더 동부)' },
+  ACR_W:  { lon: 126.60, lat: 37.45, alt: 200, confidence: 'scenario', sourceNote: 'legacy ACR-W(방공관제레이더 서부)' },
+  LAR_C:  { lon: 127.31, lat: 38.15, alt: 250, confidence: 'scenario', sourceNote: 'legacy LAR-C(저고도 탐지레이더 중부)' },
+  LLR_1C: { lon: 126.86, lat: 37.70, alt: 80,  confidence: 'scenario', sourceNote: 'legacy LLR-1C(국지방공레이더 1군단)' },
+  LLR_CD: { lon: 126.97, lat: 37.55, alt: 80,  confidence: 'scenario', sourceNote: 'legacy LLR-CD(국지방공레이더 수방사)' },
+  // 포대 전속 MFR — MINI 패턴과 동일하게 포대에서 ~500m 옆(+0.005°) 별도 좌표
+  MFR_W2: { lon: 126.705, lat: 37.455, alt: 120, confidence: 'scenario', sourceNote: 'legacy MFR-W2(천궁-II 다기능레이더)' },
+  MFR_W4: { lon: 127.055, lat: 37.255, alt: 120, confidence: 'scenario', sourceNote: 'legacy MFR-W4' },
+  MFR_C2: { lon: 127.555, lat: 37.555, alt: 170, confidence: 'scenario', sourceNote: 'legacy MFR-C2' },
+  MFR_E1: { lon: 128.405, lat: 38.055, alt: 220, confidence: 'scenario', sourceNote: 'legacy MFR-E1' },
+  MFR_E3: { lon: 129.005, lat: 37.155, alt: 170, confidence: 'scenario', sourceNote: 'legacy MFR-E3' },
+  MFR_MSAM_1C: { lon: 126.785, lat: 37.605, alt: 120, confidence: 'scenario', sourceNote: 'legacy MSAM-1C 전속 MFR(개념)' },
+  MFR_MDU_M:   { lon: 127.075, lat: 37.155, alt: 120, confidence: 'scenario', sourceNote: 'legacy MDU-M 전속 레이더(개념)' },
+  MFR_MDU_L:   { lon: 127.155, lat: 36.805, alt: 170, confidence: 'scenario', sourceNote: 'legacy MDU-L 전속 MFR(개념)' },
+  // 천마 세트 감시레이더 — 포대 FC와 연결하지 않는다(TPS880K는 화력통제 사거리가 없어
+  // mfrSensorId로 물리면 FIRE_CONTROL 상태에 도달하지 못해 영구 미발사가 된다).
+  SR_W1: { lon: 126.855, lat: 37.705, alt: 120, confidence: 'scenario', sourceNote: 'legacy MFR-W1(천마 세트 감시레이더)' },
+  SR_W3: { lon: 126.855, lat: 36.955, alt: 120, confidence: 'scenario', sourceNote: 'legacy MFR-W3' },
+  SR_C1: { lon: 127.305, lat: 38.005, alt: 170, confidence: 'scenario', sourceNote: 'legacy MFR-C1' },
+  SR_C3: { lon: 127.505, lat: 36.905, alt: 140, confidence: 'scenario', sourceNote: 'legacy MFR-C3' },
+  SR_E2: { lon: 128.755, lat: 37.655, alt: 270, confidence: 'scenario', sourceNote: 'legacy MFR-E2' },
+  // 시나리오 참조점(다른 배치와 동일 역할)
+  SRBM_ORIGIN: { lon: 127.0,  lat: 39.5, alt: 0, confidence: 'scenario', sourceNote: '개념 발사원점' },
+  SRBM_TARGET: { lon: 127.03, lat: 37.0, alt: 0, confidence: 'scenario', sourceNote: '개념 표적점' },
+});
+
+// 천궁-II 세트 5 + 천마 세트 5 — legacy 10세트를 그대로 옮긴다(권역 서4·중3·동3, 교차 배치).
+const HANBANDO_LEGACY_SET_BATTERIES = Object.freeze([
+  Object.freeze({ shooterTypeId: 'CHUNMA',     posKey: 'BAT_W1', mfrSensorTypeId: null,       mfrSensorPosKey: null,     maxSimultaneous: 6,  totalRounds: { AAM: 48 }, iccPosKey: 'ICC_W1' }),
+  Object.freeze({ shooterTypeId: 'CHEONGUNG2', posKey: 'BAT_W2', mfrSensorTypeId: 'MSAM_MFR', mfrSensorPosKey: 'MFR_W2', maxSimultaneous: 10, totalRounds: { ABM: 16, AAM: 16 }, iccPosKey: 'ICC_W2' }),
+  Object.freeze({ shooterTypeId: 'CHUNMA',     posKey: 'BAT_W3', mfrSensorTypeId: null,       mfrSensorPosKey: null,     maxSimultaneous: 6,  totalRounds: { AAM: 48 }, iccPosKey: 'ICC_W3' }),
+  Object.freeze({ shooterTypeId: 'CHEONGUNG2', posKey: 'BAT_W4', mfrSensorTypeId: 'MSAM_MFR', mfrSensorPosKey: 'MFR_W4', maxSimultaneous: 10, totalRounds: { ABM: 16, AAM: 16 }, iccPosKey: 'ICC_W4' }),
+  Object.freeze({ shooterTypeId: 'CHUNMA',     posKey: 'BAT_C1', mfrSensorTypeId: null,       mfrSensorPosKey: null,     maxSimultaneous: 6,  totalRounds: { AAM: 48 }, iccPosKey: 'ICC_C1' }),
+  Object.freeze({ shooterTypeId: 'CHEONGUNG2', posKey: 'BAT_C2', mfrSensorTypeId: 'MSAM_MFR', mfrSensorPosKey: 'MFR_C2', maxSimultaneous: 10, totalRounds: { ABM: 16, AAM: 16 }, iccPosKey: 'ICC_C2' }),
+  Object.freeze({ shooterTypeId: 'CHUNMA',     posKey: 'BAT_C3', mfrSensorTypeId: null,       mfrSensorPosKey: null,     maxSimultaneous: 6,  totalRounds: { AAM: 48 }, iccPosKey: 'ICC_C3' }),
+  Object.freeze({ shooterTypeId: 'CHEONGUNG2', posKey: 'BAT_E1', mfrSensorTypeId: 'MSAM_MFR', mfrSensorPosKey: 'MFR_E1', maxSimultaneous: 10, totalRounds: { ABM: 16, AAM: 16 }, iccPosKey: 'ICC_E1' }),
+  Object.freeze({ shooterTypeId: 'CHUNMA',     posKey: 'BAT_E2', mfrSensorTypeId: null,       mfrSensorPosKey: null,     maxSimultaneous: 6,  totalRounds: { AAM: 48 }, iccPosKey: 'ICC_E2' }),
+  Object.freeze({ shooterTypeId: 'CHEONGUNG2', posKey: 'BAT_E3', mfrSensorTypeId: 'MSAM_MFR', mfrSensorPosKey: 'MFR_E3', maxSimultaneous: 10, totalRounds: { ABM: 16, AAM: 16 }, iccPosKey: 'ICC_E3' }),
+]);
+
+// 국지방공(LOCAL_AD 축) — legacy에서 군단·수방사 AOC가 직접 통제하는 자산.
+// MSAM-1C도 여기에 둔다: legacy MSAM-1C는 canEngage에서 탄도탄·무인기가 빠진 ABT 전용이고,
+// 엔진의 LOCAL_AD 축도 ABT만 교전하므로 두 제약이 일치한다.
+const HANBANDO_LEGACY_LOCAL_AD_BATTERIES = Object.freeze([
+  Object.freeze({
+    shooterTypeId: 'BIHO', posKey: 'SHORAD_1C', mfrSensorTypeId: null, mfrSensorPosKey: null,
+    maxSimultaneous: 24, totalRounds: { AAM: 24 },
+    batteryConfig: Object.freeze({ mfr: null, launchers: { AAM: 6 }, roundsPerLauncher: 4, perVehicleConcurrency: 4, reloadDurationSec: 900 }),
+    iccPosKey: null, commandC2PosKey: 'ARMY_1C_AD', c2Axis: 'LOCAL_AD', forceOwner: 'ROK_LOCAL_AD', localAdPosKey: 'ARMY_1C_AD',
+  }),
+  Object.freeze({
+    shooterTypeId: 'BIHO', posKey: 'SHORAD_CD', mfrSensorTypeId: null, mfrSensorPosKey: null,
+    maxSimultaneous: 16, totalRounds: { AAM: 16 },
+    batteryConfig: Object.freeze({ mfr: null, launchers: { AAM: 4 }, roundsPerLauncher: 4, perVehicleConcurrency: 4, reloadDurationSec: 900 }),
+    iccPosKey: null, commandC2PosKey: 'ARMY_CD_AD', c2Axis: 'LOCAL_AD', forceOwner: 'ROK_LOCAL_AD', localAdPosKey: 'ARMY_CD_AD',
+  }),
+  Object.freeze({
+    shooterTypeId: 'CHEONGUNG2', posKey: 'MSAM_1C', mfrSensorTypeId: 'MSAM_MFR', mfrSensorPosKey: 'MFR_MSAM_1C',
+    maxSimultaneous: 2, totalRounds: { AAM: 48 },
+    iccPosKey: null, commandC2PosKey: 'ARMY_1C_AD', c2Axis: 'LOCAL_AD', forceOwner: 'ROK_LOCAL_AD', localAdPosKey: 'ARMY_1C_AD',
+  }),
+]);
+
+// 미사일방어부대 — legacy MDU-M/MDU-L. 한국군 주축(ROK)이라 탄도 위협에서 KAMD_OPS 지휘를 받는다.
+const HANBANDO_LEGACY_MDU_BATTERIES = Object.freeze([
+  Object.freeze({ shooterTypeId: 'PAC3', posKey: 'MDU_M', mfrSensorTypeId: 'PATRIOT_RADAR', mfrSensorPosKey: 'MFR_MDU_M', maxSimultaneous: 4, totalRounds: { ABM: 48 }, iccPosKey: 'ICC_MDU' }),
+  Object.freeze({ shooterTypeId: 'LSAM', posKey: 'MDU_L', mfrSensorTypeId: 'LSAM_MFR',      mfrSensorPosKey: 'MFR_MDU_L', maxSimultaneous: 3, totalRounds: { ABM: 12, AAM: 12 }, iccPosKey: 'ICC_MDU' }),
+]);
+
+const HANBANDO_LEGACY_BATTERIES = Object.freeze([
+  ...HANBANDO_LEGACY_SET_BATTERIES,
+  ...HANBANDO_LEGACY_LOCAL_AD_BATTERIES,
+  ...HANBANDO_LEGACY_MDU_BATTERIES,
+]);
+
+const HANBANDO_LEGACY_SENSORS = Object.freeze([
+  Object.freeze({ typeId: 'GREEN_PINE_B', posKey: 'GPR',    radarRangeKm: 900, radarColor: '#44cc44', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'FPS117',       posKey: 'ACR_E',  radarRangeKm: 470, radarColor: '#88ccff', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'FPS117',       posKey: 'ACR_W',  radarRangeKm: 470, radarColor: '#88ccff', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'TPS880K',      posKey: 'LAR_C',  radarRangeKm: 40,  radarColor: '#ccff88', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'TPS880K',      posKey: 'LLR_1C', radarRangeKm: 40,  radarColor: '#ccff88', confidence: 'scenario', localAdPosKey: 'ARMY_1C_AD' }),
+  Object.freeze({ typeId: 'TPS880K',      posKey: 'LLR_CD', radarRangeKm: 40,  radarColor: '#ccff88', confidence: 'scenario', localAdPosKey: 'ARMY_CD_AD' }),
+  // 포대 전속 MFR
+  Object.freeze({ typeId: 'MSAM_MFR',      posKey: 'MFR_W2',      radarRangeKm: 100, radarColor: '#ff66cc', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'MSAM_MFR',      posKey: 'MFR_W4',      radarRangeKm: 100, radarColor: '#ff66cc', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'MSAM_MFR',      posKey: 'MFR_C2',      radarRangeKm: 100, radarColor: '#ff66cc', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'MSAM_MFR',      posKey: 'MFR_E1',      radarRangeKm: 100, radarColor: '#ff66cc', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'MSAM_MFR',      posKey: 'MFR_E3',      radarRangeKm: 100, radarColor: '#ff66cc', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'MSAM_MFR',      posKey: 'MFR_MSAM_1C', radarRangeKm: 100, radarColor: '#ff66cc', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'PATRIOT_RADAR', posKey: 'MFR_MDU_M',   radarRangeKm: 180, radarColor: '#ffaa00', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'LSAM_MFR',      posKey: 'MFR_MDU_L',   radarRangeKm: 310, radarColor: '#00aaff', confidence: 'scenario' }),
+  // 천마 세트 감시레이더(포대 FC 미연결)
+  Object.freeze({ typeId: 'TPS880K', posKey: 'SR_W1', radarRangeKm: 40, radarColor: '#ccff88', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'TPS880K', posKey: 'SR_W3', radarRangeKm: 40, radarColor: '#ccff88', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'TPS880K', posKey: 'SR_C1', radarRangeKm: 40, radarColor: '#ccff88', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'TPS880K', posKey: 'SR_C3', radarRangeKm: 40, radarColor: '#ccff88', confidence: 'scenario' }),
+  Object.freeze({ typeId: 'TPS880K', posKey: 'SR_E2', radarRangeKm: 40, radarColor: '#ccff88', confidence: 'scenario' }),
+]);
+
+const HANBANDO_LEGACY_C2_BASE = Object.freeze([
+  ...['ICC_W1', 'ICC_W2', 'ICC_W3', 'ICC_W4', 'ICC_C1', 'ICC_C2', 'ICC_C3', 'ICC_E1', 'ICC_E2', 'ICC_E3', 'ICC_MDU']
+    .map(posKey => Object.freeze({ typeId: 'ICC', posKey, showNetworkNode: true, instanceLabel: 'ICC ' + posKey.slice(4) })),
+  Object.freeze({ typeId: 'ARMY_LOCAL_AD', posKey: 'ARMY_1C_AD', showNetworkNode: true, instanceLabel: '1군단 방공상황실(AOC)' }),
+  Object.freeze({ typeId: 'ARMY_LOCAL_AD', posKey: 'ARMY_CD_AD', showNetworkNode: true, instanceLabel: '수방사 합동방공상황실(JAOC)' }),
+  ...HANBANDO_LEGACY_BATTERIES.map(b => Object.freeze({
+    typeId: 'ECS',
+    posKey: b.posKey,
+    showNetworkNode: true,
+    instanceLabel: `ECS ${b.shooterTypeId} ${b.posKey}`,
+  })),
+  Object.freeze({ typeId: 'IAOC', posKey: 'IAOC', showNetworkNode: false }),
+  Object.freeze({ typeId: 'EOC', posKey: 'EOC', showNetworkNode: false }),
+]);
+
+const KAMDOC_LEGACY_ENTRY = Object.freeze({
+  typeId: 'KAMD_OPS', posKey: 'KAMD_OPS', showNetworkNode: true, instanceLabel: 'KAMDOC',
+});
+const MCRC_LEGACY_ENTRY = Object.freeze({
+  typeId: 'MCRC', posKey: 'MCRC', showNetworkNode: true, instanceLabel: 'MCRC',
+});
+
+const LEGACY_HIRES_DESCRIPTION_SUFFIX =
+  ' legacy 자산 배치를 고해상도 타입으로 이식해 modelFidelity=iads-c2를 적용할 수 있게 한 배치(ADR-054).' +
+  ' 전투기·이지스·조기경보기·광학감시는 대응 타입이 없어 제외했으므로 legacy(compat)와 절대값을 직접 비교하지 말 것.';
+
+const RAW_DEPLOYMENT_HANBANDO_LEGACY_NORMAL = Object.freeze({
+  id: 'HANBANDO_LEGACY_NORMAL',
+  name: 'legacy 배치 — 고해상도(정상)',
+  description: '상황 A: KAMDOC + MCRC 정상.' + LEGACY_HIRES_DESCRIPTION_SUFFIX,
+  positions: HANBANDO_LEGACY_POSITIONS,
+  batteries: HANBANDO_LEGACY_BATTERIES,
+  sensors: HANBANDO_LEGACY_SENSORS,
+  c2Nodes: Object.freeze([KAMDOC_LEGACY_ENTRY, MCRC_LEGACY_ENTRY, ...HANBANDO_LEGACY_C2_BASE]),
+});
+
+const RAW_DEPLOYMENT_HANBANDO_LEGACY_MCRC_DOWN = Object.freeze({
+  id: 'HANBANDO_LEGACY_MCRC_DOWN',
+  name: 'legacy 배치 — 고해상도(MCRC 무력화)',
+  description: '상황 B: MCRC 부재 → ABT 위협이 권역 ICC로 분산.' + LEGACY_HIRES_DESCRIPTION_SUFFIX,
+  positions: HANBANDO_LEGACY_POSITIONS,
+  batteries: HANBANDO_LEGACY_BATTERIES,
+  sensors: HANBANDO_LEGACY_SENSORS,
+  c2Nodes: Object.freeze([KAMDOC_LEGACY_ENTRY, ...HANBANDO_LEGACY_C2_BASE]),
+});
+
+const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
+  id: 'HANBANDO_LEGACY_KAMDOC_DOWN',
+  name: 'legacy 배치 — 고해상도(KAMDOC 무력화)',
+  description: '상황 C: KAMDOC 부재 → 탄도 위협이 권역 ICC로 분산.' + LEGACY_HIRES_DESCRIPTION_SUFFIX,
+  positions: HANBANDO_LEGACY_POSITIONS,
+  batteries: HANBANDO_LEGACY_BATTERIES,
+  sensors: HANBANDO_LEGACY_SENSORS,
+  c2Nodes: Object.freeze([MCRC_LEGACY_ENTRY, ...HANBANDO_LEGACY_C2_BASE]),
+});
+
+// ════════════════════════════════════════════════════════════════
 // DEPLOYMENTS — 레지스트리 (index.html 토글)
 // ════════════════════════════════════════════════════════════════
 // Phase 4.2 진입: HANBANDO_MINI 3종 + HANBANDO_FULL 3종.
@@ -823,6 +1050,9 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
   const DEPLOYMENT_HANBANDO_FULL_NORMAL = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_FULL_NORMAL);
   const DEPLOYMENT_HANBANDO_FULL_MCRC_DOWN = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_FULL_MCRC_DOWN);
   const DEPLOYMENT_HANBANDO_FULL_KAMDOC_DOWN = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_FULL_KAMDOC_DOWN);
+  const DEPLOYMENT_HANBANDO_LEGACY_NORMAL = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_LEGACY_NORMAL);
+  const DEPLOYMENT_HANBANDO_LEGACY_MCRC_DOWN = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_LEGACY_MCRC_DOWN);
+  const DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN);
 
   KJ.DEPLOYMENTS = Object.freeze({
     HANBANDO_MINI_NORMAL: DEPLOYMENT_HANBANDO_MINI_NORMAL,
@@ -830,7 +1060,10 @@ const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
     HANBANDO_MINI_KAMDOC_DOWN: DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN,
     HANBANDO_FULL_NORMAL: DEPLOYMENT_HANBANDO_FULL_NORMAL,
     HANBANDO_FULL_MCRC_DOWN: DEPLOYMENT_HANBANDO_FULL_MCRC_DOWN,
-    HANBANDO_FULL_KAMDOC_DOWN: DEPLOYMENT_HANBANDO_FULL_KAMDOC_DOWN
+    HANBANDO_FULL_KAMDOC_DOWN: DEPLOYMENT_HANBANDO_FULL_KAMDOC_DOWN,
+    HANBANDO_LEGACY_NORMAL: DEPLOYMENT_HANBANDO_LEGACY_NORMAL,
+    HANBANDO_LEGACY_MCRC_DOWN: DEPLOYMENT_HANBANDO_LEGACY_MCRC_DOWN,
+    HANBANDO_LEGACY_KAMDOC_DOWN: DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN
   });
   KJ.deploymentById = function (id) { return KJ.DEPLOYMENTS[id] || null; };
   KJ.DEPLOYMENT_IDS = Object.freeze(Object.keys(KJ.DEPLOYMENTS));

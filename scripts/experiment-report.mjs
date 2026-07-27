@@ -345,7 +345,9 @@ const html = `<!doctype html>
   <div class="sub">시나리오 × 배치 × 모델충실도 전수 실험 — 동일 seed 짝지은(paired) 복제와 Δ 95% 신뢰구간</div>
   <div class="meta">
     생성일 ${esc(generatedAt)} · 실험 셀 ${cells.length}개 · 총 복제 ${cells.reduce((n, c) => n + c.reps * 2, 0)}회 실행<br>
-    엔진 <code>js/engine/sim-engine.js</code> · 러너 <code>scripts/experiment-run.mjs</code> · 집계 <code>scripts/experiment-report.mjs</code>
+    엔진 <code>js/engine/sim-engine.js</code> · 러너 <code>scripts/experiment-run.mjs</code> · 집계 <code>scripts/experiment-report.mjs</code><br>
+    <b>수치 재검증</b> — 초판 이후의 코드 변경(시정 8·9·10, Leaflet 동봉)을 반영해 전 셀을 재실행,
+    23개 산출물이 모두 바이트 단위로 재현됨(§8.6)
   </div>
   <div class="disc">⚠️ <b>디스클레이머</b> — 본 보고서의 모든 수치는 공개자료 기반 <b>정책연구용 개념값</b>으로 수행한
   시뮬레이션 결과이며 실제 작전 성능이 아닙니다. 절대값이 아니라 <b>동일 조건에서의 As-Is↔To-Be 상대비교</b>로만
@@ -608,6 +610,34 @@ ${deploymentTable()}
     직접 비교할 수 없습니다.</li>
   <li><b>MINI/FULL 절대값</b>은 배치·파이프라인 비교값이며 전술 성능치가 아닙니다.</li>
 </ul>
+<h3>8.6 초판 이후의 코드 변경과 수치 유효성 (2026-07-27 재검증)</h3>
+<p class="small">이 보고서를 처음 낸 뒤 코드가 네 군데 바뀌었습니다. 실험 결과를 담은 문서는
+"그때는 맞았다"로 끝나면 안 되므로, <b>각 변경이 실험 경로에 닿는지 따지고 전 셀을 다시 돌려
+대조</b>했습니다.</p>
+<table>
+  <thead><tr><th>변경</th><th>내용</th><th>실험 경로에 닿는가</th></tr></thead>
+  <tbody>
+    <tr><td>시정 8</td><td>협조 실패율의 분자를 이벤트 수 → 겪은 위협 수로 교정(119.56% → 21.84%)</td>
+      <td><b>닿지 않음</b> — <code>c2-report.js</code>·<code>mc-runner.js</code>의 C2 MOP 경로이고,
+        실험 러너의 <code>metricsOf()</code>는 DES 결과(<code>r.global</code>·<code>r.nodes</code>)만 읽어
+        <code>c2Mop</code>을 수집하지 않습니다.</td></tr>
+    <tr><td>시정 9</td><td>제약 B의 USFK 술어를 어댑터 정의와 일치시킴</td>
+      <td><b>닿지 않음</b> — <code>constraints.js</code>는 화면 어서션 전용이며 엔진이 호출하지 않습니다.</td></tr>
+    <tr><td>시정 10</td><td>반올림으로 두 값이 같게 보일 때만 한 자리 추가 표시</td>
+      <td><b>닿지 않음</b> — <code>panels.js</code>의 표시 형식이며 계산에 관여하지 않습니다.</td></tr>
+    <tr><td>Leaflet 동봉</td><td>지도 라이브러리를 <code>vendor/</code>로 이관</td>
+      <td><b>닿지 않음</b> — 브라우저 자산이며, 실험은 Node에서 엔진만 적재해 실행합니다.</td></tr>
+  </tbody>
+</table>
+<p class="small">다만 <b>"닿지 않는다"는 코드 판독이지 증명이 아니므로</b>, 21개 셀 + 강도 스윕 +
+분권 전환 실험을 같은 인자로 전부 재실행해 초판 산출물과 대조했습니다. 결과:
+<b>23개 파일 전부, 벽시계(<code>elapsedMs</code>)를 제외한 모든 필드가 바이트 단위로 일치</b>
+(차이 필드 0개). 따라서 <b>이 보고서의 모든 수치·신뢰구간·유의성 판정은 그대로 유효</b>합니다.</p>
+<p class="small">참고로 이 재실행은 <b>결정론 회귀 시험</b>도 겸합니다 — 엔진·난수·집계 어디에도
+의도치 않은 변화가 없었음을 21셀 1,020회 규모로 확인한 셈입니다. 시정 1~7은 초판 실험을
+돌리기 <i>전에</i> 이미 반영돼 있었고(시정 7은 이 실험 도중 발견돼 반영 후 재실행),
+그 내역은 <code>docs/metrics-verification.md</code> §6에 있습니다.</p>
+
 <div class="box"><b class="t">재현 방법</b>
 전 셀은 결정론적입니다. 동일 명령으로 같은 수치를 재현할 수 있습니다.<br>
 <code>node scripts/experiment-run.mjs --cell "sc3|legacy|compat|1|30"</code><br>

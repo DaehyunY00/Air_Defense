@@ -120,26 +120,34 @@
   // ── kind별(track/approval/engage) 분해 지표 — C2 서버풀이 ③④⑤ 항적처리(track)와
   //    ⑥⑦ 승인처리(approval)에 공유되므로, 각 카드가 자기 kind만 보게 한다(엔진 rhoByKind 등).
   //    구 필드가 없는 결과(하위호환·이론분석 노드)에는 0으로 폴백한다. ──
+  // 고해상도 native는 항적처리를 kind='iads_track'으로 태깅하므로, 'track' 조회는 두 키를
+  // 함께 본다(두 경로는 배타적이라 합·최대가 같다). 이 폴백이 없으면 고해상도 실행에서
+  // ③④⑤ 카드가 실제 병목(노드 ρ≥0.9)을 0으로 표시한다.
+  function kindKeys(kind) { return kind === 'track' ? ['track', 'iads_track'] : [kind]; }
   function maxRhoByKind(res, cat, kind) {
-    var m = 0;
+    var m = 0, keys = kindKeys(kind);
     res.nodes.forEach(function (n) {
-      var v = n.rhoByKind ? n.rhoByKind[kind] : 0;
-      if (n.category === cat && v > m) m = v;
+      if (n.category !== cat || !n.rhoByKind) return;
+      keys.forEach(function (k) { var v = n.rhoByKind[k] || 0; if (v > m) m = v; });
     });
     return m;
   }
   function sumDropsByKind(res, cat, kind) {
-    var s = 0;
+    var s = 0, keys = kindKeys(kind);
     res.nodes.forEach(function (n) {
-      if (n.category === cat && n.dropsByKind) s += n.dropsByKind[kind] || 0;
+      if (n.category !== cat || !n.dropsByKind) return;
+      keys.forEach(function (k) { s += n.dropsByKind[k] || 0; });
     });
     return s;
   }
   function maxWqByKind(res, cat, kind) {
-    var m = 0;
+    var m = 0, keys = kindKeys(kind);
     res.nodes.forEach(function (n) {
-      var v = n.WqByKind ? n.WqByKind[kind] : 0;
-      if (n.category === cat && isFinite(v) && v > m) m = v;
+      if (n.category !== cat || !n.WqByKind) return;
+      keys.forEach(function (k) {
+        var v = n.WqByKind[k] || 0;
+        if (isFinite(v) && v > m) m = v;
+      });
     });
     return m;
   }
@@ -362,6 +370,7 @@
           { label: '승인 노드 최대 ρ (approval)', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
             a: maxRhoByKind(a, 'c2', 'approval'), b: maxRhoByKind(b, 'c2', 'approval'),
             tip: '교전승인권자 노드가 승인 처리(⑥⑦)로 점유된 이용률 — C2 서버풀 공유 부하 중 approval만 분리. ' +
+              '고해상도 native 경로는 별도 승인 홉 없이 책임 C2가 자체 승인하므로 이 값이 0이며, 그 부하는 ③④⑤ 카드(항적처리)에 포함된다. ' +
               '종전 ③④⑤ 카드의 C2 ρ에는 이 승인 부하가 섞여 있어(예: KAOC는 승인 전용에 가깝다) 항적처리 부하를 과대표시했다. ' +
               '이 지표가 ⑥⑦(한국 이원화 C2의 승인 병목)을 직접 측정한다.' },
           { label: '승인 대기 (Wq·approval)', mom: 'MoP', kind: 'sec', lower: true,

@@ -111,5 +111,48 @@ console.log('    paired: Δ meanTTK n=' + dttk.n + ' · asis n=' + paired.asis.m
 assert(dttk.n <= Math.min(paired.asis.metrics.meanTimeToKillSec.n, paired.tobe.metrics.meanTimeToKillSec.n),
   'Δ 표본 수 ≤ 양팔 표본 수의 최솟값 (쌍대 교집합)');
 
+// ════════ F7: native 항적처리 부하(iads_track)가 kind 분해에 노출되는가 ════════
+// 고해상도 native는 kind='iads_track'으로 태깅하므로 3종만 노출하면 ③④⑤ 카드가
+// 실제 병목(노드 ρ≥0.9)을 0으로 표시한다. legacy wire shape은 그대로 보존해야 한다.
+console.log('# F7 — native C2 부하 kind 분해 노출');
+function maxC2(res, keys) {
+  return res.nodes.reduce(function (m, n) {
+    if (n.category !== 'c2' || !n.rhoByKind) return m;
+    return keys.reduce(function (x, k) { return Math.max(x, n.rhoByKind[k] || 0); }, m);
+  }, 0);
+}
+function maxC2NodeRho(res) {
+  return res.nodes.reduce(function (m, n) {
+    return n.category === 'c2' && n.rho > m ? n.rho : m;
+  }, 0);
+}
+var nativeRun = KJ.runDES({
+  scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1, seed: 12345,
+  endTimeSec: 1800, deploymentId: 'HANBANDO_MINI_NORMAL',
+  features: { highResolutionDeployment: true }
+});
+var nativeNodeRho = maxC2NodeRho(nativeRun);
+var nativeLegacyKeyOnly = maxC2(nativeRun, ['track']);
+var nativeWithIads = maxC2(nativeRun, ['track', 'iads_track']);
+console.log('    native 노드 최대 ρ=' + nativeNodeRho.toFixed(3) +
+  ' · track만=' + nativeLegacyKeyOnly.toFixed(3) + ' · track+iads_track=' + nativeWithIads.toFixed(3));
+assert(nativeNodeRho > 0.5, '고해상도 실행에서 C2 노드가 실제로 부하를 받음(검증 전제)');
+assert(nativeWithIads > 0.5,
+  'iads_track 포함 시 ③④⑤ 분해값이 실제 부하를 표시 (수정 전 0.000)');
+assert(Math.abs(nativeWithIads - nativeNodeRho) < 0.2,
+  '분해값이 노드 전체 ρ와 같은 자릿수 (승인 홉이 없는 native는 항적처리가 부하의 대부분)');
+assert(nativeRun.nodes.every(function (n) {
+  return !n.rhoByKind || ('iads_track' in n.rhoByKind && 'directive_reception' in n.rhoByKind);
+}), '고해상도 결과는 native kind 키를 노출');
+
+var legacyRun = KJ.runDES({
+  scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1, seed: 12345, endTimeSec: 1800
+});
+assert(legacyRun.nodes.every(function (n) {
+  return !n.rhoByKind || Object.keys(n.rhoByKind).join(',') === 'track,approval,engage';
+}), 'legacy 결과의 kind 키는 종전 3종 그대로 (wire shape 보존)');
+assert(maxC2(legacyRun, ['track']) === maxC2(legacyRun, ['track', 'iads_track']),
+  'legacy에서는 iads_track 폴백이 값을 바꾸지 않음');
+
 console.log(fail === 0 ? '\nOK — 수정 검증 전체 통과' : '\n실패 ' + fail + '건');
 process.exit(fail ? 1 : 0);

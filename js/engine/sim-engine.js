@@ -2515,8 +2515,15 @@
       // ── kind별 분해(track/approval/engage) — 기존 필드는 전체 합계로 그대로 유지, 추가만 ──
       // C2 서버풀이 ③④⑤(track)과 ⑥⑦(approval)에 공유되므로, 카드가 자기 단계만 보게 하려면
       // 노드 통계를 kind로 쪼갠 값이 필요하다. 부재 kind는 0(빈 버킷)으로 노출한다.
+      // native 고해상도는 항적처리를 kind='iads_track', 명령수신을 'directive_reception'으로
+      // 태깅한다. 3종만 노출하면 고해상도 실행에서 ③④⑤ 카드의 ρ/Wq/드롭이 전부 0으로 보여
+      // 병목 진단이 무력화된다(노드 ρ는 0.9인데 분해값은 0). 고해상도에서만 키를 추가해
+      // legacy wire shape(Phase 0 SHA)는 그대로 보존한다.
+      var kindKeys = self.highResolutionDeployment
+        ? ['track', 'approval', 'engage', 'iads_track', 'directive_reception']
+        : ['track', 'approval', 'engage'];
       var rhoByKind = {}, arrivalsByKind = {}, dropsByKind = {}, WqByKind = {};
-      ['track', 'approval', 'engage'].forEach(function (k) {
+      kindKeys.forEach(function (k) {
         var b = ns.byKind[k];
         rhoByKind[k] = b ? b.busyTime / (ns.c * T) : 0;
         arrivalsByKind[k] = b ? b.arrivals : 0;

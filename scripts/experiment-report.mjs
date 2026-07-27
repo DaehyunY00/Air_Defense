@@ -16,7 +16,12 @@ const DIR = path.join(ROOT, 'artifacts', 'experiment');
 const OUT = path.join(ROOT, 'docs', '실험보고서_AsIs_ToBe.html');
 
 const SC_NAME = { sc1: 'SC1 경계 침투(교전 중복·책임공백)', sc2: 'SC2 무인기 동시 남파', sc3: 'SC3 전략적 섞어쏘기' };
-const DEP_NAME = { legacy: 'legacy(64노드 개념배치)', HANBANDO_MINI_NORMAL: 'MINI(8포대 고해상도)', HANBANDO_FULL_NORMAL: 'FULL(84포대 고해상도)' };
+const DEP_NAME = {
+  legacy: 'legacy(64노드 개념배치)',
+  HANBANDO_LEGACY_NORMAL: 'LEGACY_HIRES(legacy 편성 고해상도)',
+  HANBANDO_MINI_NORMAL: 'MINI(8포대 고해상도)',
+  HANBANDO_FULL_NORMAL: 'FULL(84포대 고해상도)'
+};
 const FID_NAME = { compat: 'compat(개념 교전)', 'iads-c2': 'iads-c2(물리 충실도)' };
 
 const cells = fs.readdirSync(DIR).filter(f => f.startsWith('cell-') && f.endsWith('.json'))
@@ -47,6 +52,8 @@ function deltaCell(d, fmt, betterLower = true) {
 
 const ORDER = [
   ['legacy', 'compat'],
+  ['HANBANDO_LEGACY_NORMAL', 'compat'],
+  ['HANBANDO_LEGACY_NORMAL', 'iads-c2'],
   ['HANBANDO_MINI_NORMAL', 'compat'],
   ['HANBANDO_MINI_NORMAL', 'iads-c2'],
   ['HANBANDO_FULL_NORMAL', 'compat'],
@@ -353,8 +360,9 @@ const html = `<!doctype html>
   <tr><th style="width:16%">축</th><th style="width:34%">수준</th><th>의도</th></tr>
   <tr><td>시나리오</td><td>SC1 경계 침투 · SC2 무인기 동시 남파 · SC3 전략적 섞어쏘기</td>
       <td>KJADS 구축안 3대 문제 상황. 부하(λ)와 위협 구성이 다르다</td></tr>
-  <tr><td>배치</td><td>legacy(64노드) · MINI(8포대) · FULL(84포대)</td>
-      <td>전력 규모와 지리적 밀도가 결과를 지배하는지 분리</td></tr>
+  <tr><td>배치</td><td>legacy(64노드) · <b>LEGACY_HIRES</b>(legacy 편성 고해상도) · MINI(8포대) · FULL(84포대)</td>
+      <td>전력 규모와 지리적 밀도가 결과를 지배하는지 분리. LEGACY_HIRES는 legacy와 <b>자산 편성이 같고
+      충실도만 다른</b> 대조를 만들기 위해 추가했다(ADR-054)</td></tr>
   <tr><td>모델 충실도</td><td>compat(개념 교전) · iads-c2(SNR/RCS·PIP·화력통제 물리)</td>
       <td>모델 정밀화가 As-Is↔To-Be 결론을 뒤집는지 검증</td></tr>
 </table>
@@ -365,7 +373,7 @@ const html = `<!doctype html>
 <b>seed별 Δ(To-Be−As-Is)의 95% 신뢰구간이 0을 제외하는지</b>로 판정했습니다(표에서 <code>n.s.</code>는
 분리되지 않음). 강도·지속시간·seed 격자는 전 셀에서 동일합니다(기본 강도 ×1.0, 1800초, baseSeed 12345).</div>
 <div class="box warn"><b class="t">복제 수의 비대칭 — 계산 비용 때문입니다</b>
-legacy·MINI는 30복제, FULL은 <b>10복제</b>로 실행했습니다. FULL 셀은 실행 1회가 8~37초로
+legacy·LEGACY_HIRES·MINI는 30복제, FULL은 <b>10복제</b>로 실행했습니다. FULL 셀은 실행 1회가 8~37초로
 legacy(0.01~0.08초)보다 세 자릿수 비쌉니다. 복제가 적은 셀은 신뢰구간이 넓어 <code>n.s.</code>가
 나오기 쉬우므로, <b>"차이 없음"이 아니라 "이 표본으로는 분리되지 않음"</b>으로 읽어야 합니다.</div>
 
@@ -425,7 +433,7 @@ function summaryBlock() {
 function fidelityTable() {
   let rows = '';
   for (const sc of ['sc1', 'sc2', 'sc3']) {
-    for (const dep of ['HANBANDO_MINI_NORMAL', 'HANBANDO_FULL_NORMAL']) {
+    for (const dep of ['HANBANDO_LEGACY_NORMAL', 'HANBANDO_MINI_NORMAL', 'HANBANDO_FULL_NORMAL']) {
       const cc = byKey.get(`${sc}|${dep}|compat`), ci = byKey.get(`${sc}|${dep}|iads-c2`);
       if (!cc || !ci) continue;
       const dirOf = c => {
@@ -455,24 +463,62 @@ function fidelityTable() {
   </tr></thead><tbody>${rows}</tbody></table>`;
 }
 
+/**
+ * 배치·충실도별 결심 지연 Δ — legacy 9단계와 native 경로의 구조적 차이를 드러낸다.
+ * legacy는 승인 홉·음성 협조가 명시적으로 모델링되어 To-Be가 그것을 제거하지만,
+ * native는 As-Is에서도 책임 C2가 자체 승인하므로 제거할 홉 자체가 적다.
+ */
+function decisionDelayTable() {
+  const groups = new Map();
+  for (const c of cells) {
+    const d = c.delta.meanDecisionDelaySec;
+    if (!d || d.mean == null) continue;
+    const k = `${c.spec.deployment}|${c.spec.fidelity}`;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push({ sc: c.spec.scenario, mean: d.mean });
+  }
+  const order = ORDER.map(([dep, fid]) => `${dep}|${fid}`).filter(k => groups.has(k));
+  const rows = order.map(k => {
+    const [dep, fid] = k.split('|');
+    const v = groups.get(k);
+    const avg = v.reduce((n, x) => n + x.mean, 0) / v.length;
+    const per = ['sc1', 'sc2', 'sc3'].map(sc => {
+      const hit = v.find(x => x.sc === sc);
+      return `<td class="num">${hit ? (hit.mean > 0 ? '+' : '') + hit.mean.toFixed(0) + 's' : '—'}</td>`;
+    }).join('');
+    const pipeline = dep === 'legacy' ? '9단계(승인 홉·음성 협조 명시)' : 'native(책임 C2 자체 승인)';
+    return `<tr><td>${esc(DEP_NAME[dep])} <span class="small">${esc(FID_NAME[fid])}</span></td>
+      <td>${esc(pipeline)}</td>${per}
+      <td class="num ${avg < -60 ? 'good' : 'flat'}">${(avg > 0 ? '+' : '') + avg.toFixed(0)}s</td></tr>`;
+  }).join('');
+  return `<table><thead><tr>
+    <th style="width:24%">배치 · 충실도</th><th style="width:22%">C2 파이프라인</th>
+    <th>SC1</th><th>SC2</th><th>SC3</th><th>평균</th>
+  </tr></thead><tbody>${rows}</tbody></table>`;
+}
+
 /** 배치 축: 같은 시나리오·충실도에서 legacy/MINI/FULL 절대값 비교 */
 function deploymentTable() {
   let rows = '';
   for (const sc of ['sc1', 'sc2', 'sc3']) {
     for (const fid of ['compat', 'iads-c2']) {
-      const cells3 = ['legacy', 'HANBANDO_MINI_NORMAL', 'HANBANDO_FULL_NORMAL']
+      const cells3 = ['legacy', 'HANBANDO_LEGACY_NORMAL', 'HANBANDO_MINI_NORMAL', 'HANBANDO_FULL_NORMAL']
         .map(dep => byKey.get(`${sc}|${dep}|${fid}`));
       if (!cells3.some(Boolean)) continue;
       const cellFor = c => c ? `${pct(c.asis.leakRateSpawn.mean)} → ${pct(c.tobe.leakRateSpawn.mean)}` : '—';
       rows += `<tr><td>${esc(sc.toUpperCase())} · ${esc(FID_NAME[fid])}</td>
         <td class="num">${cellFor(cells3[0])}</td>
         <td class="num">${cellFor(cells3[1])}</td>
-        <td class="num">${cellFor(cells3[2])}</td></tr>`;
+        <td class="num">${cellFor(cells3[2])}</td>
+        <td class="num">${cellFor(cells3[3])}</td></tr>`;
     }
   }
   return `<table><thead><tr><th>시나리오 · 충실도</th>
-    <th>legacy (As-Is → To-Be)</th><th>MINI (As-Is → To-Be)</th><th>FULL (As-Is → To-Be)</th>
-  </tr></thead><tbody>${rows}</tbody></table>`;
+    <th>legacy</th><th>LEGACY_HIRES</th><th>MINI</th><th>FULL</th>
+  </tr></thead><tbody>${rows}</tbody></table>
+  <p class="small">각 칸은 <b>As-Is → To-Be</b> 요격 실패율. <code>legacy</code>는 iads-c2를 지원하지 않으므로
+  물리 행에서 '—'이고, <b>LEGACY_HIRES는 legacy와 전력 구성이 달라</b>(전투기·이지스·조기경보기·광학감시 제외)
+  두 열의 절대값을 직접 비교하면 안 된다.</p>`;
 }
 
 /** 동적 분권 전환의 부하 의존성 — 강도 축에서 As-Is가 스스로 적응하는 기제 */
@@ -521,19 +567,38 @@ function wrapUp() {
 <p>같은 시나리오·배치에서 <b>compat(개념 교전)</b>과 <b>iads-c2(물리 충실도)</b>의 절대값과
 As-Is↔To-Be 방향을 비교했습니다. 절대값이 크게 달라져도 <b>결론 방향이 유지</b>되어야 모델이 건전합니다.</p>
 ${fidelityTable()}
-<h3>8.2 배치 축 — 전력 규모가 결과를 지배하는가</h3>
+<h3>8.2 왜 legacy에서만 결심 지연이 극적으로 줄어드는가</h3>
+<p>결심 지연의 개선폭(Δ)이 배치 계열에 따라 <b>한 자릿수 배 차이</b>가 납니다. 이는 시나리오나
+전력 규모가 아니라 <b>C2 파이프라인 구현의 차이</b>에서 옵니다.</p>
+${decisionDelayTable()}
+<div class="box"><b class="t">해석</b>
+legacy 배치는 9단계 파이프라인을 타므로 As-Is가 <b>승인권자까지 가는 협조 홉과 승인 대기</b>를
+실제로 지불하고, To-Be는 사전승인 자동교전으로 그 홉을 통째로 제거합니다 — 그래서 Δ가 −120초 안팎으로
+전 시나리오에서 일정합니다.<br>
+반면 고해상도(native) 경로는 <b>As-Is에서도 책임 C2가 자체 승인</b>하므로 제거할 홉이 애초에 적습니다.
+그래서 저부하(SC1·SC2)에서는 Δ가 −10초 안팎에 그치고, 포화가 걸리는 SC3에서만 −88~−95초로 커집니다
+(이때의 이득은 홉 제거가 아니라 <b>처리용량·융합</b>에서 옵니다).<br>
+<b>"통합 C2가 결심을 얼마나 앞당기는가"의 답은 배치가 아니라 어느 C2 모델을 보느냐에 달려 있습니다.</b>
+두 계열의 값을 섞어 인용하면 개선폭을 크게 왜곡하게 됩니다.</div>
+
+<h3>8.3 배치 축 — 전력 규모가 결과를 지배하는가</h3>
 ${deploymentTable()}
-<h3>8.3 세 축이 각각 무엇을 바꾸는가</h3>
+<h3>8.4 세 축이 각각 무엇을 바꾸는가</h3>
 <ul class="obs">
   <li><b>시나리오(부하)</b> — 개선폭은 부하의 함수입니다. 저부하에서는 두 구조 모두 여유가 있어
     차이가 작고, 처리용량 임계를 넘는 구간에서 통합 C2의 가치가 비선형적으로 커집니다(각 장 6절 스윕).</li>
+  <li><b>LEGACY_HIRES의 역할</b> — 종전에는 "legacy = compat 전용, 고해상도 = MINI/FULL"이라
+    배치 축과 충실도 축이 얽혀 있었습니다. LEGACY_HIRES는 <b>legacy와 같은 자산 편성에서 충실도만
+    바꾼 대조</b>를 제공하므로, 절대값 변화가 전력 구성 때문인지 물리 정밀화 때문인지 분리할 수 있습니다.
+    다만 제외 자산군(전투기·이지스·조기경보기·광학감시) 탓에 <b>legacy와 절대값을 직접 비교할 수는
+    없습니다</b> — 비교는 언제나 같은 배치 안의 As-Is ↔ To-Be입니다.</li>
   <li><b>배치(전력 규모)</b> — 포대 수를 늘리는 것과 C2를 통합하는 것은 <b>다른 축</b>입니다.
     배치가 커지면 절대 격추율은 오르지만, As-Is에서는 통제계통이 함께 늘어 중복교전·협조 부하도 증가합니다.</li>
   <li><b>모델 충실도</b> — compat → iads-c2로 정밀화하면 <b>절대값은 크게 바뀝니다</b>(물리 제약이
     교전 가능 조건을 재정의하므로). 중요한 것은 정밀화 후에도 As-Is↔To-Be의 <b>방향</b>이 유지되는지이며,
     이는 각 장 5절 관찰에서 셀별로 확인할 수 있습니다.</li>
 </ul>
-<h3>8.4 이 실험의 한계</h3>
+<h3>8.5 이 실험의 한계</h3>
 <ul class="obs">
   <li><b>FULL 배치의 복제 수(10회)</b>가 적어 신뢰구간이 넓습니다. FULL의 <code>n.s.</code>는
     "차이 없음"의 근거가 아닙니다.</li>

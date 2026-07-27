@@ -178,7 +178,7 @@ docs/
   adr/ADR-001~009, 036, 049~054  # 결정 기록(pk 스키마·누수비용·절단·timeout분해·pk상관·salvo·비용WTA·재고·재가중 /
                                  #  USFK 독립축·SHORAD 벨트·실패분류v2·군단AOC·legacy 재배선·LEGACY_HIRES 이식)
   metrics-verification.md        # 지표 검증 감사 (비용교환비 비단조성 등) + 지표 계정 결함 4건 시정
-  실험보고서_AsIs_ToBe.pdf       # ★ 시나리오×배치×충실도 15셀 As-Is↔To-Be 비교 실험 결과
+  실험보고서_AsIs_ToBe.pdf       # ★ 시나리오×배치×충실도 21셀 As-Is↔To-Be 비교 실험 결과
 scripts/
   serve.sh · build-single.mjs · build-guide-pdf.mjs · bias-ledger.mjs · step1~2·phase4~6 스윕
   experiment-lib.mjs · experiment-run.mjs · experiment-delegation.mjs
@@ -238,7 +238,7 @@ node tests/run-all.js            # 전체 회귀 — JS/ESM 39개 구문검증 +
 
 ### As-Is ↔ To-Be 비교 실험 (재현 가능)
 
-시나리오(SC1~3) × 배치(legacy/MINI/FULL) × 모델충실도(compat/iads-c2) 15개 셀에서 **동일 seed로
+시나리오(SC1~3) × 배치(legacy/LEGACY_HIRES/MINI/FULL) × 모델충실도(compat/iads-c2) 21개 셀에서 **동일 seed로
 짝지은(paired) 복제**를 실행하고, seed별 Δ(To-Be−As-Is)의 95% CI로 구조 차이를 판정합니다.
 
 ```bash

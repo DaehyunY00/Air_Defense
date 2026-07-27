@@ -33,7 +33,7 @@ DES(이산사건 시뮬레이션) 엔진 위에서 9단계 F2T2EA 파이프라�
 기본 `legacy` 배치는 기존 24노드에 **ICC–ECS–MFR–포대 10세트(40노드)**를 더해 총
 64노드로 구성됩니다. 권역 분포는 서부 4·중부 3·동부 3세트이며, 천마 5개와 천궁-II
 5개를 교차 배치합니다. 각 세트는 전속 MFR→ECS→ICC와 ECS→포대 명령 경로를 가지며,
-As-Is에서는 ICC↔MCRC가 180초 음성/VTC, To-Be에서는 MFR·ICC가 JAMDC2에 2초
+As-Is에서는 ICC↔MCRC가 10~30초 균등분포 음성/VTC(대표 20초, 2026-07 실험 변경 — 원래 180초), To-Be에서는 MFR·ICC가 JAMDC2에 2초
 데이터링크로 연결됩니다. 모든 위치는 실제 부대 위치가 아닌 도시·권역 수준 개념좌표입니다.
 
 지도에서는 포대별 ECS·MFR/레이더·사수의 위·경도를 같은 공동 사이트로 저장합니다. 동일 좌표
@@ -124,7 +124,7 @@ DES 엔진(`js/engine/sim-engine.js`)은 개별 위협 객체를 이벤트 구�
 | **⑨ BDA→재교전** | 무기별 pk 배선, 방어효율(누수 보상), 종료 절단 보정, timeout 분해, 재교전 상관·연발 | `pkByShooter`·`leakCost`·`censorFix`·`timeoutSplit`(ON) / `pkCorrelated`·`salvo`(OFF) |
 | **자원 최적화(원칙 5)** | 비용 인식 WTA(고가 유도탄 보존), 유도탄 재고·보존 임계, 임계 재가중 | `costAwareWta`(ON) / `magazine`·`reserveFloor`·`thresholdReweight`(OFF) |
 
-- As-Is는 육↔공 미연동으로 교전승인권자까지 음성 coord 홉(180초) — 중복·지연·책임공백의 원천.
+- As-Is는 육↔공 미연동으로 교전승인권자까지 음성 coord 홉(10~30초 균등분포, 2026-07 실험 변경 — 원래 180초) — 중복·지연·책임공백의 원천(단축 후 저강도 병목 신호는 약화됨).
 - To-Be는 JAMDC2에서 융합·AI 식별·무기배정을 집중 처리하고, 위협별 자동화 차등(사전승인 자동교전)으로 결심·협조 홉을 생략.
 - 모든 무작위성은 `seed` 기반 Mulberry32에서만 나오고, 도착·처리 스트림을 분리(CRN, Common Random Numbers)해
   As-Is↔To-Be가 **같은 위협열**을 마주하게 합니다 → **동일 config는 항상 동일 결과**(재현성·딥링크 공유·짝지은 비교).

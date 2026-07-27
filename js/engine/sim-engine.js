@@ -950,6 +950,7 @@
     var base = comm.delaySec;
     if (comm.dist) {
       if (comm.dist.kind === 'triangular') base = this.rng.triangular(comm.dist.min, comm.dist.mode, comm.dist.max);
+      else if (comm.dist.kind === 'uniform') base = this.rng.uniform(comm.dist.min, comm.dist.max);
       else if (comm.dist.kind === 'lognormal') base = this.rng.lognormal(comm.dist.mean, comm.dist.stddev);
       else if (comm.dist.kind === 'normal') base = this.rng.normal(comm.dist.mean, comm.dist.stddev);
     }

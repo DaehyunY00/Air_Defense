@@ -15,8 +15,8 @@
   var SHORT = Object.freeze({ type: 'datalink', delaySec: 4, paramRef: 'IADS-LINK-SHORT-01' });
   var LONG = Object.freeze({ type: 'datalink', delaySec: 16, paramRef: 'IADS-LINK-LONG-01' });
   var VOICE = Object.freeze({
-    type: 'voice', delaySec: 180,
-    dist: Object.freeze({ kind: 'triangular', min: 90, mode: 180, max: 270 }),
+    type: 'voice', delaySec: 20,
+    dist: Object.freeze({ kind: 'uniform', min: 10, max: 30 }),
     paramRef: 'C2-VOICE-COORD-01'
   });
   // 군단 AOC→MCRC 교전현황 공유. 음성/VTC 1개 채널이 현재 처리 중

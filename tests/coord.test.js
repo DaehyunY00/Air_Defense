@@ -52,11 +52,12 @@ assert(pt && pt.length === 2 && (pt[0].to === 'B' || pt[0].to === 'M'),
 assert(KJ._coordPath('A', 'Q', 'asis', G) === null, '도달 불가 경로는 null');
 assert(KJ._coordPath('A', 'A', 'asis', G) === null, 'src===target은 null (자기 승인 케이스)');
 
-// 현재 실제 그래프에서 알려진 경로 (As-Is): AOC-1C→KAOC = MCRC 경유 2홉 182s, MCRC→KAOC = 1홉 2s
+// 현재 실제 그래프에서 알려진 경로 (As-Is): AOC-1C→KAOC = MCRC 경유 2홉 22s, MCRC→KAOC = 1홉 2s
+// [2026-07 C2-VOICE-COORD-01 실험 변경] 음성협조 대표 180s → 20s(Uniform 10~30).
 var pk = KJ._coordPath('AOC-1C', 'KAOC', 'asis');
 var pkTotal = pk.reduce(function (s, l) { return s + l.comm.asis.delaySec; }, 0);
-assert(pk.length === 2 && pk[0].from === 'AOC-1C' && pk[pk.length - 1].to === 'KAOC' && pkTotal === 182,
-  'As-Is AOC-1C→KAOC = 2홉 182s (음성 180 + 2) — 이원화 C2의 정량 실체');
+assert(pk.length === 2 && pk[0].from === 'AOC-1C' && pk[pk.length - 1].to === 'KAOC' && pkTotal === 22,
+  'As-Is AOC-1C→KAOC = 2홉 22s (음성 20 + 2) — 실험 변경 정본');
 var pm = KJ._coordPath('MCRC', 'KAOC', 'asis');
 assert(pm.length === 1 && pm[0].comm.asis.delaySec === 2, 'As-Is MCRC→KAOC = 1홉 2s');
 

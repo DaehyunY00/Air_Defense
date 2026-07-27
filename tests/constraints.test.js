@@ -103,9 +103,12 @@ function legDelay(from, to, mode) {
   return l ? l.comm[mode].delaySec : 0; // 대표값(delaySec) — 경로 총합 검증용
 }
 // As-Is 음성 계통 대표 경로: 음성보고 + 음성협조 + 교전명령(KVMF)
+// [2026-07 C2-VOICE-COORD-01 실험 변경] 음성협조 대표 180s → 20s(Uniform 10~30 샘플링)로
+// 원 출처 "3분 이상" 정박 범위 [180, 300]은 더 이상 성립하지 않는다(현재 총합 60+20+30=110s).
+// 실험 하에서는 내부 정합(대표값 합산 = 110s)과 As-Is > To-Be 방향성만 검증한다.
 var asisPath = legDelay('ADC2A-W', 'AOC-1C', 'asis') + legDelay('AOC-1C', 'MCRC', 'asis') + legDelay('AOC-1C', 'SHORAD-1C', 'asis');
-assert(asisPath >= 180 && asisPath <= 300,
-  'As-Is 대표 경로 총합 ' + asisPath + 's ∈ [180, 300] (C2-RESP-E2E-01 재해석 범위 — 홉당 오적용 이중계상 제거)');
+assert(asisPath === 110,
+  'As-Is 대표 경로 총합 ' + asisPath + 's = 110 (음성보고 60 + 음성협조 20 + KVMF 30 — 실험 변경 정본)');
 // To-Be 데이터링크 계통 대표 경로: report + coord + command 전부 데이터링크
 var tobePath = legDelay('LLR-1C', 'AOC-1C', 'tobe') + legDelay('AOC-1C', 'MCRC', 'tobe') + legDelay('AOC-1C', 'SHORAD-1C', 'tobe');
 assert(tobePath <= 30,

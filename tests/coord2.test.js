@@ -53,11 +53,14 @@ assert(s1.dup > t1.dup && s3.dup > t3.dup, 'SC1·SC3: As-Is 중복교전 > To-Be
 assert(s1.dup === s1.gaps && s3.dup === s3.gaps, '중복교전 건수 = coordGaps 건수 (협조 실패 1건 → 중복교전 1건)');
 assert(s1.dupCost > 0 && s3.dupCost > 0, 'As-Is 요격탄 이중 소모 비용 > 0 (비용교환비 악화 요인)');
 
-// ══════════ SC2: 대부분 협조되지만 확장 ICC 병렬 음성경로에서 일부 gap 발생 ══════════
-console.log('# SC2 무인기 버스트 — 확장 ICC 음성협조의 성립·실패가 함께 관측');
+// ══════════ SC2: 협조가 사실상 전부 성립 ══════════
+// [2026-07 C2-VOICE-COORD-01 실험 변경] 음성협조 10~30s 균등분포에서는 장체공(900s) 무인기의
+// 잔여 체공창 대비 협조 지연이 충분히 짧아, 종전 "일부 책임공백·중복교전" 신호(gaps>0)가
+// SC2에서 소멸한다(gaps=0). SC1·SC3의 gaps>0 검증은 위에서 유지된다.
+console.log('# SC2 무인기 버스트 — 확장 ICC 음성협조 사실상 전부 성립');
 var s2 = agg('sc2', 'asis', 2.5);
-assert(s2.decon > s2.gaps && s2.gaps > 0 && s2.dup === s2.gaps,
-  'SC2 As-Is: 대부분 협조 성립(' + s2.decon + ')하나 확장 ICC 음성경로 일부 책임공백(' + s2.gaps + ')·중복교전 발생');
+assert(s2.decon > 0 && s2.gaps === 0 && s2.dup === s2.gaps,
+  'SC2 As-Is: 협조 성립(' + s2.decon + ')·책임공백(' + s2.gaps + ')=중복교전(' + s2.dup + ')=0 — 실험 변경 정본');
 
 // ══════════ 보존 — 중복교전은 격추/누수를 이중 계상하지 않는다 ══════════
 console.log('# 보존 항등식 (killed+leaked ≤ spawned)');

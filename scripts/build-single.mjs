@@ -50,7 +50,7 @@ out = out.replace(
 
 // head: Leaflet CDN CSS 링크(2줄) + 로컬 스타일시트 링크 → 빌드 주석 + 인라인 CSS 2블록
 out = out.replace(
-  /  <link rel="stylesheet" href="https:\/\/unpkg\.com\/leaflet[^>]*\n[^>]*>\n  <link rel="stylesheet" href="css\/style\.css">/,
+  /  <link rel="stylesheet" href="https:\/\/unpkg\.com\/leaflet[^>]*\n[^>]*>\n  <link rel="stylesheet" href="css\/style\.css(?:\?[\w=.-]*)?">/,
   '  <!-- 단일 파일 빌드: 모든 CSS/JS(+Leaflet) 인라인. 지도 타일만 온라인(OpenStreetMap), ' +
   '폐쇄망에서는 자동 SVG 개념도로 대체. 원본: index.html + js/ + css/ (재생성: node scripts/build-single.mjs) -->\n' +
   '  ' + leafletCss + '\n  ' + inlineFile('css/style.css', 'style')
@@ -62,8 +62,8 @@ out = out.replace(
   '  ' + leafletJs
 );
 
-// 각 로컬 스크립트 → 인라인 (index.html의 순서 그대로)
-out = out.replace(/  <script src="(js\/[\w/.-]+\.js)"><\/script>/g, (m, rel) => '  ' + inlineFile(rel, 'script'));
+// 각 로컬 스크립트 → 인라인 (index.html의 순서 그대로, ?v= 캐시버스터 허용)
+out = out.replace(/  <script src="(js\/[\w/.-]+\.js)(?:\?[\w=.-]*)?"><\/script>/g, (m, rel) => '  ' + inlineFile(rel, 'script'));
 
 // 잔여 외부 참조 검증
 if (/<link rel="stylesheet" href="css\//.test(out) || /<script src="js\//.test(out)) {

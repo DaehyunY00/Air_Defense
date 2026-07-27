@@ -14,7 +14,7 @@
  *  - command : C2 → 무기체계 교전명령
  *
  * As-Is 핵심 구조(2022.12.26 실증): 육군 ADC2A(군단 AOC·JAOC)와 공군 MCRC·KAMDOC이
- * 데이터링크 미연동 — 음성보고(C2-VOICE-RPT-01)·음성협조(≥180s, C2-VOICE-COORD-01)만
+ * 데이터링크 미연동 — 음성보고(C2-VOICE-RPT-01)·음성협조(10~30s 균등, C2-VOICE-COORD-01)만
  *   가능, SAWS는 일방향 경보방송. 음성 지연은 삼각분포(dist) — 엔진 _linkDelay가 샘플링.
  * To-Be: JAMDC2(Track Fusion) 경유 전 노드 데이터링크 연동.
  */
@@ -32,8 +32,8 @@
   var VOICE_RPT = { type: 'voice', delaySec: 60,
                     dist: { kind: 'triangular', min: 30, mode: 60, max: 90 },
                     paramRef: 'C2-VOICE-RPT-01' };   // 음성 항적보고(일방향 짧은 전달)
-  var VOICE_COORD = { type: 'voice', delaySec: 180,
-                      dist: { kind: 'triangular', min: 90, mode: 180, max: 270 },
+  var VOICE_COORD = { type: 'voice', delaySec: 20,
+                      dist: { kind: 'uniform', min: 10, max: 30 },
                       paramRef: 'C2-VOICE-COORD-01' }; // 음성 교전협조(왕복 협의)
 
   KJ.LINKS = [

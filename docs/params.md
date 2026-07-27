@@ -55,13 +55,13 @@
 - **비고**: "단순 항적보고 음성"과 "교전협조 음성 협의"를 같은 180s로 두던 것을 분리 — 전자는 짧은 일방향 전달.
 
 ### [C2-VOICE-COORD-01] 음성 교전협조 지연 (coord)
-- **값/분포**: 대표 180 s · **대칭 Triangular(min 90, mode 180, max 270)** (확정)
+- **값/분포**: 대표 20 s · **Uniform(min 10, max 30)** (2026-07-24 실험 변경)
 - **단위**: 초
 - **출처**: 음성 교전협조(교전의사 선언·책임구역 확인·중복 회피 협상)의 왕복 협의. 2022.12.26 실증 병목.
 - **적용범위**: `AOC-1C→MCRC`·`JAOC-CD→MCRC`·`MCRC→KAMDOC` (coord, asis)
-- **신뢰도 등급**: C (용도 분해 후 개념 추정; 대표값은 원 출처 180s 계승)
-- **MC 적용방식**: 삼각분포 샘플링 (`_linkDelay`)
-- **비고**: 왕복 협의라 분산이 크다(대칭 min 90 ~ max 270, 평균=대표값 180). As-Is 이원화 C2의 핵심 병목 증거물. COORD<180이면 저부하 SC1에서 `AOC-1C→MCRC` 병목 신호가 소멸(inTransit<1)하므로 180 미만 금지(Phase 2 스윕 근거).
+- **신뢰도 등급**: C (실험 설정 — 원 출처 없음)
+- **MC 적용방식**: 균등분포 샘플링 (`_linkDelay`)
+- **비고**: **[실험 변경 이력]** 원래 값은 대표 180 s · 대칭 Triangular(90, 180, 270)였으며, 원장에는 "COORD<180이면 저부하 SC1에서 `AOC-1C→MCRC` 병목 신호가 소멸(inTransit<1)하므로 180 미만 금지(Phase 2 스윕 근거)"라는 제약이 있었다. 2026-07-24 사용자 요청으로 10~30 s 균등분포로 변경 — 이 설정에서는 As-Is 음성협조가 To-Be 데이터링크(2 s)와 한 자릿수 배 차이로 좁혀지므로, SC1 음성협조 병목·중복교전 신호가 약화되거나 소멸할 수 있고 As-Is↔To-Be 개선폭 해석이 기존 보고서·ADR 수치와 달라진다. 기존 결론과의 비교 시 이 변경을 반드시 명시할 것. 원복하려면 `js/data/links.js`·`js/config/deployment-adapter.js`의 VOICE_COORD/VOICE를 Triangular(90, 180, 270)·대표 180 s로 되돌리면 된다.
 
 ### [C2-DL-DLY-01] 통합 데이터링크 지연 (To-Be 개념)
 - **값/분포**: 2 s (고정 개념)
@@ -203,7 +203,7 @@
 - **MC 적용방식**: 고정 (민감도스윕 후보)
 
 ### [C2-COORD-HORIZ-01] 수평 교전협조 링크 (Phase 2 ⑥⑦, `js/data/links.js`)
-- **값/분포**: As-Is 신규 coord 링크 — `AOC-1C↔JAOC-CD`(양방향)·`MCRC→AOC-1C`·`MCRC→JAOC-CD`. As-Is=`VOICE_COORD`(대칭 삼각분포 min90/mode180/max270, 대표 180s), To-Be=`DL_FAST`(2s)
+- **값/분포**: As-Is 신규 coord 링크 — `AOC-1C↔JAOC-CD`(양방향)·`MCRC→AOC-1C`·`MCRC→JAOC-CD`. As-Is=`VOICE_COORD`(Uniform min10/max30, 대표 20s — 2026-07-24 실험 변경, 원래 대칭 삼각분포 min90/mode180/max270·대표 180s), To-Be=`DL_FAST`(2s)
 - **단위**: 초(링크 전달 지연)
 - **출처**: 개념 설정 — KJADS 문제상황 1("각 군 개별 작전 → 음성 VTC에 의존, 신속 조율 불가")의 "협조 수단 부재"를 **링크 부재가 아니라 느린 음성 링크**로 표현. 종전엔 육↔육/상↔하 coord 링크가 아예 없어 `coordPath`가 호출조차 되지 않아 중복교전을 판정할 수 없었다. 지연값은 `[C2-VOICE-COORD-01]` 승계(등급 C)
 - **적용범위**: DES `_coordCheck`(중복항적 계통 간 교전협조)·`coordPath`(다익스트라 최소지연). To-Be는 JAMDC2 COP 공유로 2s

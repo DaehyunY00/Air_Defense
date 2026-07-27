@@ -53,15 +53,17 @@ var sig = {};
   });
 });
 assert(new Set(Object.values(sig)).size > 3, '시나리오·강도·모드별 병목 다양 (' + new Set(Object.values(sig)).size + '종)');
-// legacy ICC 확장 후에도 저강도에서 처리 노드는 포화되지 않아야 한다. 다만 ICC→MCRC의
-// 180초 음성/VTC 경로는 메시지가 1건만 체류해도 통신병목 기준을 충족하므로 링크 신호는
-// 저강도에서도 정상적으로 나타날 수 있다(용량 포화와 구조적 지연을 구분).
+// legacy ICC 확장 후에도 저강도에서 처리 노드는 포화되지 않아야 한다.
+// [2026-07 C2-VOICE-COORD-01 실험 변경] 음성협조가 180s 삼각분포 → 10~30s 균등분포로
+// 단축되어, 종전 "메시지 1건 체류만으로 통신병목 기준 충족"이던 ICC→MCRC 링크 신호가
+// 저강도에서 소멸한다. 원 파라미터(Triangular 90/180/270)로 되돌리면 이 어서션도
+// some(...) 존재 검사로 복원할 것.
 var sc1Low = run('sc1', 'asis', 0.5, 5);
 assert(sc1Low.bottlenecks.filter(function (b) { return b.kind === 'node'; }).length === 0,
   'SC1 저강도(0.5×): 처리 노드 용량 병목 0');
-assert(sc1Low.bottlenecks.some(function (b) {
+assert(!sc1Low.bottlenecks.some(function (b) {
   return b.kind === 'link' && /^ICC-[WCE]\d→MCRC$/.test(b.id);
-}), 'SC1 저강도(0.5×): legacy ICC→MCRC 음성협조 지연은 통신병목으로 관측');
+}), 'SC1 저강도(0.5×): 10~30s 음성협조에서는 ICC→MCRC 통신병목 신호 소멸 (실험 변경 정본)');
 ['sc2', 'sc3'].forEach(function (id) {
   assert(run(id, 'asis', 2.5, 100).bottlenecks.length >= run(id, 'asis', 1, 100).bottlenecks.length,
     id + ': 강도↑ 병목 비감소');

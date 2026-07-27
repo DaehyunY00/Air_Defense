@@ -62,9 +62,11 @@ assert(sites.every(function (s) {
 assert(sites.every(function (s) {
   var voice = link('ICC-' + s.key, 'MCRC', 'asis');
   var fast = link('ICC-' + s.key, 'MCRC', 'tobe');
-  return voice.comm.asis.type === 'voice' && voice.comm.asis.delaySec === 180 &&
+  return voice.comm.asis.type === 'voice' && voice.comm.asis.delaySec === 20 &&
+    voice.comm.asis.dist && voice.comm.asis.dist.kind === 'uniform' &&
+    voice.comm.asis.dist.min === 10 && voice.comm.asis.dist.max === 30 &&
     fast.comm.tobe.type === 'datalink' && fast.comm.tobe.delaySec === 2;
-}), 'ICC→MCRC는 As-Is 180초 음성/VTC, To-Be 2초 데이터링크');
+}), 'ICC→MCRC는 As-Is 10~30초 균등분포 음성/VTC(대표 20초, 2026-07 실험 변경), To-Be 2초 데이터링크');
 
 var chunma = expanded.filter(function (n) { return /^BAT-CHUNMA-/.test(n.id); });
 var cheongung = expanded.filter(function (n) { return /^BAT-CHEONGUNG2-/.test(n.id); });

@@ -146,9 +146,11 @@ node tests/run-all.js
 # 셀 하나: 시나리오|배치|충실도|강도|반복수 — As-Is/To-Be를 같은 난수로 짝지어 실행
 node scripts/experiment-run.mjs --cell "sc3|HANBANDO_LEGACY_NORMAL|iads-c2|1.5|30"
 
-# ADR-056 통합 교전상태 켜고 반사실 실행
+# 기능 플래그를 켜고 반사실 실행 (예: ADR-056 통합 교전상태, ADR-057 링크 의미론)
 node scripts/experiment-run.mjs --cell "sc3|HANBANDO_LEGACY_NORMAL|iads-c2|1.5|30" \
   --features '{"unifiedEngagementState":true}'
+node scripts/experiment-run.mjs --cell "sc3|HANBANDO_LEGACY_NORMAL|iads-c2|1.5|30" \
+  --features '{"linkSemanticsV2":true}'
 
 # 편향 원장 (변경이 어느 편을 유리하게 했는지 추적)
 node scripts/bias-ledger.mjs</pre>

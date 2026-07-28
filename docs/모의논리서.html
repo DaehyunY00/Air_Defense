@@ -32,7 +32,7 @@
 <body>
 
 <h1>K-JAMDS 시뮬레이터 — 모의논리서</h1>
-<p class="small">문서 버전: v3 (Phase 1 — ADR-056 반영) · 대상 코드: <code>v3</code> 브랜치 ·
+<p class="small">문서 버전: v3.1 (Phase 2 — ADR-057 반영) · 대상 코드: <code>v3</code> 브랜치 ·
 배치 6종(FULL 3 + LEGACY_HIRES 3) · 충실도 compat / iads-c2</p>
 
 <div class="box warn"><span class="bt">디스클레이머</span>
@@ -60,6 +60,10 @@
 의 핵심 모델을 <b>DES 이벤트 구조로 재구성해 이식</b>한 것이다. 이식 계층은
 <code>js/model/iads/</code>(ES module 커널)이며, 엔진(<code>js/engine/sim-engine.js</code>)이
 이 커널을 호출한다.</p>
+<div class="box"><span class="bt">정본 관계</span> IADS_codex가 <b>물리·제원의 정본</b>이다
+(<code>system-types.js</code> 헤더가 명시). 설계가 갈리면 codex 판정을 우선 참조하고, 다르게
+가면 그 사유를 ADR에 남긴다. 값이 다른데 조정 근거를 찾을 수 없으면 "조정 근거 불명 —
+codex 값으로 환원"이 기본이다(예: ADR-057의 C2↔C2 전송 지연 4초→1초 환원).</div>
 
 <h3>2.1 가져온 것 (원본 → 이 저장소)</h3>
 <table>
@@ -91,6 +95,11 @@
 <tr><td><b>명령 수명주기</b></td><td><code>entities.js</code> engagementPlan (intent/commit)</td><td><code>js/model/iads/c2-agent.js</code></td>
   <td>교전명령 상태기계: created→in_transit→received→…→committed→executing→hit/miss/released.
   claim 상태(reserved/fired/bda_pending)로 중복 청구 차단.</td></tr>
+<tr><td><b>링크 의미론 (ADR-014)</b></td><td>codex <code>LINK_DELAYS</code> + <code>reportingPeriod</code></td><td>어댑터 변형 카탈로그 (ADR-057, 플래그 <code>linkSemanticsV2</code>)</td>
+  <td>As-Is 센서→C2는 "일률 지연"이 아니라 <b>그 센서의 보고 주기</b>(그린파인 16·FPS-117 8·TPS-880K 4·MFR 1초)가
+  정보 나이를 지배. To-Be(킬웹)는 <b>IFCN 1초</b>("킬웹 보고주기 전부 1s"). C2↔C2 As-Is 전송은 codex
+  shortRange 1초. ⚠️ codex 스스로 주기 수치를 "가상 placeholder"라 명시 — 의미론 정합이지
+  수치 근거 확보가 아니다(등급 C).</td></tr>
 <tr><td><b>도메인 분리 RNG</b></td><td><code>rng-substream.js → RNG_DOMAIN</code></td><td>동일 구조 이식</td>
   <td>센서스캔/통신지연/킬체인/명중추첨/위협생성/상관 도메인별 독립 서브스트림 —
   한 도메인의 소비량 변화가 다른 도메인 난수열을 밀지 않는다(CRN 비교의 전제).</td></tr>
@@ -318,11 +327,17 @@ C2 모델</b>(M/M/c/K 처리·링크 지연·승인 계선)과 결합한 것, �
 </div>
 
 <h3>3.4 채널(링크) 모델</h3>
+<p class="small">고해상도 경로 기준. <b>플래그 <code>linkSemanticsV2</code>(ADR-057, 기본 OFF)</b>가
+켜지면 codex ADR-014 의미론이 적용된다 — 괄호 안이 ON 값.</p>
 <table>
 <thead><tr><th>채널</th><th>As-Is</th><th>To-Be</th><th>모델</th></tr></thead>
 <tbody>
-<tr><td>항적 보고(report)</td><td>데이터링크 대표 2~16초</td><td>데이터링크 2초</td><td>대표지연 + 분포 샘플(파라미터 ID <code>C2-DL-DLY-01</code> 등)</td></tr>
-<tr><td>축간 협조(coord)</td><td>음성 대표 20초 · Uniform(10,30)</td><td>데이터링크 2초</td><td>결심 경로의 다익스트라 최소지연 경로 탐색이 사용</td></tr>
+<tr><td>센서→C2 항적 보고(report)</td><td>일률 16초 <b>(ON: 센서별 보고주기 16/8/4/1초)</b></td>
+<td>데이터링크 2초 <b>(ON: IFCN 1초 — codex "킬웹 보고주기 전부 1s")</b></td>
+<td>OFF는 codex가 폐기한 "일률 지연" 호환 상태. ON은 As-Is=<code>reportingPeriod</code>(<code>IADS-LINK-RP-01</code>) ·
+To-Be=IFCN 네트워크 주기(<code>IADS-LINK-IFCN-01</code>)</td></tr>
+<tr><td>C2↔C2 협조·항적 중계(coord/report)</td><td>16 또는 4초 <b>(ON: 1초 — codex shortRange 환원)</b></td><td>데이터링크 2초 <b>(ON: IFCN 1초)</b></td>
+<td>구 4초의 조정 근거 불명 → codex 값 환원(<code>IADS-LINK-SHORT-01</code>)</td></tr>
 <tr><td>교전현황(status) — 군단 AOC→상급</td><td>음성/VTC 대표 180초 · Triangular(90,180,270) · <b>서버 1·용량 4</b>(초과 드롭) · 신선도 300초</td>
 <td>데이터링크 2초 · 무손실</td><td>M/M/1/K 메시지 채널. <b>소비처</b>: As-Is=MCRC, To-Be=KILL_WEB(ADR-056, 플래그)</td></tr>
 <tr><td>역방향 COP(상급→국지) </td><td><b>없음</b> (정보 비대칭)</td><td>계획 생성 2초 후 가시화(ADR-056)</td><td>To-Be 전용 — 통합 COP의 양방향성</td></tr>
@@ -463,7 +478,7 @@ C2 모델</b>(M/M/c/K 처리·링크 지연·승인 계선)과 결합한 것, �
   모델 붕괴로 취급.</li>
 <li><b>편향 원장</b> — 각 변경의 As-Is↔To-Be 이동 방향을 단독 측정해 기록(우호 편향 감시).</li>
 <li><b>ADR</b> — 설계 갈림길마다 맥락/선택지/결정/검증/되돌리는 법을 <code>docs/adr/</code>에 기록.
-  현재 ADR-001~009, 036, 049~056.</li>
+  현재 ADR-001~009, 036, 049~057.</li>
 </ul>
 
 <h2 id="s7">7. 알려진 한계</h2>
@@ -477,6 +492,9 @@ C2 모델</b>(M/M/c/K 처리·링크 지연·승인 계선)과 결합한 것, �
   민감한 결론은 스윕으로 강건성을 확인한다.</li>
 <li><b>역방향 COP는 대표지연 근사</b> — To-Be의 상급→국지 교전상태 가시화는 링크 큐 없이
   대표 2초 지연으로 근사(ADR-056 한계 1).</li>
+<li><b>보고 주기의 톱니 신선도 미구현</b> — <code>linkSemanticsV2</code>는 보고 주기를 고정
+  지연으로 근사한다(항상 주기 상한만큼 늦게 보는 보수적 가정, 실제 평균은 주기/2).
+  주기 수치 자체도 codex placeholder(등급 C)다(ADR-057 한계 0·1).</li>
 </ol>
 
 <p class="small">관련 문서: <code>실험보고서.html</code>(As-Is↔To-Be paired 실험 결과) ·

@@ -138,6 +138,7 @@ legacy C2 이론은 **정책 계층으로 이식**되었고, 전부 기능 플�
 | `approvalChain` (+반증 `approvalChainTobe`) | As-Is 승인 계선(KAOC→MCRC coord 홉 + 승인 서비스 + 동적 위임), USFK 제외 | ADR-058 |
 | `nativeWtaMode` (+반증 `nativeWtaCostAsis`) | WTA 모드 차등 — As-Is는 관측 가능한 것만(자기 탄약·부하), To-Be는 물리 점수×비용 인식 | ADR-059 |
 | `c2OperatorLevel` ('high'/'low') | 운용자 처리시간 스윕 노브 | ADR-058 |
+| `threatTargetDispersion` (+반경 `targetSpreadKm`) | 표적권역 산포 — 위협마다 착탄점을 권역(반경 15km 개념) 안에서 추첨. 끄면 같은 축선의 모든 위협이 정확히 같은 한 점으로 향한다 | ADR-063 |
 
 - 모든 무작위성은 `seed` 기반 Mulberry32에서만 나오고, 도착·센서 스트림을 분리(CRN)해
   As-Is↔To-Be가 **같은 위협열**을 마주하게 합니다 → **동일 config는 항상 동일 결과**(재현성·딥링크 공유·짝지은 비교).
@@ -187,10 +188,10 @@ docs/
   params.md                      # 파라미터 근거표 (ID·출처·인용·신뢰도 A/B/C)
   high-resolution-iads-architecture.md  # 목표 아키텍처(§6은 ADR-061로 개정)
   compat-retirement-readiness.md # Phase 5 폐기 조건 판정 원장
-  adr/ADR-001~009, 036, 049~062  # 결정 기록
+  adr/ADR-001~009, 036, 049~063  # 결정 기록
 scripts/
   serve.sh · build-single.mjs · bias-ledger.mjs · experiment-lib/run/report.mjs 등
-tests/  run-all.js + 26개 스위트  # 아래 [검증] 참조. 폐기 스위트 원장: tests/retired-legacy-suites.md
+tests/  run-all.js + 27개 스위트  # 아래 [검증] 참조. 폐기 스위트 원장: tests/retired-legacy-suites.md
 ```
 
 ## 설계 원칙: 병목은 고정이 아니라 도출된다
@@ -205,12 +206,15 @@ tests/  run-all.js + 26개 스위트  # 아래 [검증] 참조. 폐기 스위트
 
 ## 딥링크 스킴
 
-`#tab=<sim|analysis|mc|data>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&x=<강도배수>&seed=<정수>&dur=<초>`
+`#tab=<sim|analysis|mc|data>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&x=<강도배수>&seed=<정수>&dur=<초>`
 
 - `dep`은 고해상도 6종 ID(기본 `HANBANDO_LEGACY_NORMAL`). 구 딥링크의 `dep=legacy`·MINI ID·
   `fid=` 파라미터는 기본값으로 자동 흡수됩니다(ADR-061).
 - `appr=1`은 **승인 계선 모델**(ADR-058)을 켭니다(기본 0). 끄면 ⑥⑦ 승인·협조 지표가 0이
   아니라 **"미측정"**으로 표시됩니다(ADR-062) — 상단 컨트롤의 체크박스와 같은 스위치입니다.
+- `disp=1`은 **표적권역 산포**(ADR-063)를 켭니다(기본 0). 끄면 같은 축선의 모든 위협이 seed와
+  무관하게 정확히 같은 한 점으로 향합니다. ⚠️ 산포는 표적권역 **내부**만 다양화하며 새 표적
+  (부산·대구 등)을 만들지 않습니다 — 그것은 축선 추가(별도 사안)의 몫입니다.
 - 구 `tab=map|scenario|des|playback`은 `sim` 탭으로 흡수됩니다.
 - [`#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345`](index.html#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345) — 섞어쏘기 As-Is 1.5배.
 - [`#tab=analysis&sc=sc1&mode=asis`](index.html#tab=analysis&sc=sc1&mode=asis) — 경계 침투 해석 분석.
@@ -219,7 +223,7 @@ tests/  run-all.js + 26개 스위트  # 아래 [검증] 참조. 폐기 스위트
 ## 검증
 
 ```bash
-node tests/run-all.js            # 전체 회귀 — js/ 구문검증 + 26개 스위트 (CI 게이트)
+node tests/run-all.js            # 전체 회귀 — js/ 구문검증 + 27개 스위트 (CI 게이트)
 ```
 
 | 스위트 | 검증 내용 |
@@ -233,6 +237,7 @@ node tests/run-all.js            # 전체 회귀 — js/ 구문검증 + 26개 �
 | `legacy-hires-deployment` | LEGACY_HIRES 편성·물리 동작·DOWN 대체·**legacy/compat 거부(ADR-061)** |
 | `engagement-state-unification` · `link-semantics` · `approval-chain` · `native-wta` | ADR-056~059 플래그별 OFF bit-exact·ON 거동·반증 |
 | `analysis-metric-honesty` | ADR-062 분석 탭 지표 정직성 — 死 지표 제거 근거(포화에도 사수 Wq=0)·"미측정" 표기·승인계선 토글 배선·OFF bit-exact |
+| `target-dispersion` | ADR-063 표적권역 산포 — OFF bit-exact·균등원판 분포·seed 의존성·도착 스트림 분리·권역 무결성·제약 불변 |
 | `map-visualization` · `ui-performance` · `vendor-leaflet` · `overlap-performance` | 지도 렌더 정합(카탈로그 기준) / Worker·범례 / Leaflet 동봉 무결성 / FULL 성능 |
 
 폐기된 legacy 스위트 16종의 목록·사유·대체 커버리지는 **`tests/retired-legacy-suites.md`** 원장 참조.

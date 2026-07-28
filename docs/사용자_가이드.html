@@ -68,6 +68,9 @@ Monte Carlo는 서버 실행을 권장합니다.</p>
 <tr><td>체계 모드</td><td>토글 OFF = As-Is(현 체계) / ON = To-Be(통합 체계)</td></tr>
 <!-- ADR-061: 모델 충실도 선택은 폐기 — 모든 실행이 IADS_C2 물리(레이더 SNR·수평선·요격점
      계산·발사대 재장전)로 돕니다. -->
+<tr><td>표적권역 산포</td><td>체크하면 위협의 <b>착탄 지점이 표적권역 안에서 매번 달라집니다</b>(반경 15km 개념).
+  끄면 같은 방향에서 오는 위협이 <b>전부 똑같은 한 점</b>으로 향합니다 — 시드를 바꿔도 착탄점은 그대로입니다.
+  ⚠️ 켜도 <b>새로운 표적 도시가 생기지는 않습니다</b>(부산·대구 등). 권역 안이 다양해질 뿐입니다.</td></tr>
 <tr><td>승인 계선 모델</td><td>체크하면 <b>As-Is 승인 절차</b>(군단·수방사 방공통제소 → MCRC 협조 통화 + 승인 대기 + 부하 몰릴 때 권한 위임)를 모델에 포함합니다.
   <b>끄면 [분석] 탭의 ⑥⑦ 승인·협조 지표가 "미측정"으로 표시됩니다</b> — 값이 0이라서가 아니라 그 설정에서는 재지 않기 때문입니다(ADR-062).
   현 체계의 승인 지연이 궁금하면 켜고 보십시오.</td></tr>
@@ -92,6 +95,7 @@ Monte Carlo는 서버 실행을 권장합니다.</p>
 <tr><td><code>mode</code></td><td>asis | tobe</td></tr>
 <tr><td><code>dep</code></td><td>HANBANDO_LEGACY_* | HANBANDO_FULL_* (모르는 값·구 legacy는 기본 배치로 폴백)</td></tr>
 <tr><td><code>appr</code></td><td>0(기본) | 1 — 승인 계선 모델 ON/OFF (ADR-062)</td></tr>
+<tr><td><code>disp</code></td><td>0(기본) | 1 — 표적권역 산포 ON/OFF (ADR-063)</td></tr>
 <tr><td><code>fid</code></td><td>(폐기 — ADR-061) 어떤 값이든 iads-c2로 정규화됩니다</td></tr>
 <tr><td><code>x</code> / <code>seed</code> / <code>dur</code></td><td>강도(0.5~3) / 난수 시드 / 시뮬레이션 시간(초)</td></tr>
 </tbody>

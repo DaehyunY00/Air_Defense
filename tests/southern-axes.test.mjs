@@ -36,7 +36,8 @@ function run(f, opts) {
     scenario: KJ.scenarioById(opts.sc || 'sc3'), mode: opts.mode || 'asis', intensity: 1.5,
     seed: opts.seed || 12345, endTimeSec: opts.dur || 900, trace: true, traceCap: 5000,
     deploymentId: opts.dep || 'HANBANDO_FULL_NORMAL',
-    features: Object.assign({ highResolutionDeployment: true }, f)
+    // ADR-065: 남부 축선이 기본 ON이라 키 생략 = ON이다. 호출자가 항상 명시한다.
+    features: Object.assign({ highResolutionDeployment: true, southernAxes: false }, f)
   });
 }
 var SOUTH = KJ.SOUTHERN_AXIS_KEYS;
@@ -49,7 +50,7 @@ assert(!off.global.features.southernAxes, 'OFF는 features에 노출되지 않�
 assert(off.threatTraces.every(function (t) { return SOUTH.indexOf(t.axis) === -1; }),
   'OFF에서는 남부 축선 위협이 하나도 생성되지 않음');
 // coverage 파생: OFF 카탈로그에는 남부 축선 키가 없어야 한다(있으면 기존 자산의 교전 자격이 바뀜)
-var catOff = KJ.buildDeploymentCatalog('HANBANDO_FULL_NORMAL');
+var catOff = KJ.buildDeploymentCatalog('HANBANDO_FULL_NORMAL', { southernAxes: false });
 var catOn = KJ.buildDeploymentCatalog('HANBANDO_FULL_NORMAL', { southernAxes: true });
 assert(catOff.nodes.every(function (n) {
   return !n.coverage || n.coverage.every(function (a) { return SOUTH.indexOf(a) === -1; });
@@ -163,13 +164,15 @@ assert(shoradSouth === 0,
 // ── 7. UI·라우터·문서 배선 ──
 console.log('# 배선');
 var router = fs.readFileSync(path.join(root, 'js', 'core', 'router.js'), 'utf8');
-assert(/south: '0'/.test(router), '라우터 DEFAULTS에 south 기본 OFF');
-assert(/state\.south = \(state\.south === '1'/.test(router), '알 수 없는 south 값은 OFF로 정규화');
+// ADR-065: 기본 ON 전환 — 라우터 기본값 '1', 명시적 '0'만 해제로 읽는다.
+assert(/south: '1'/.test(router), "라우터 DEFAULTS에 south 기본 ON ('1')");
+assert(/state\.south = \(state\.south === '0'/.test(router), "명시적 '0'만 해제로 정규화");
 var html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 assert(html.indexOf('id="southern-axes-toggle"') !== -1, '상단 컨트롤에 남부 축선 토글 존재');
 ['main.js', 'ui/panels.js', 'ui/sim-view.js'].forEach(function (f) {
   var src = fs.readFileSync(path.join(root, 'js', f), 'utf8');
-  assert(/southernAxes = true/.test(src), f + ' modelConfig가 south → features 전달');
+  assert(/features\.southernAxes = .*south !== '0'/.test(src),
+    f + " modelConfig가 south → features 전달 (기본 ON, '0'만 해제)");
 });
 var params = fs.readFileSync(path.join(root, 'docs', 'params.md'), 'utf8');
 ['THREAT-SOUTH-SHARE-01', 'THREAT-AXIS-DWELL-SCALE-01'].forEach(function (id) {

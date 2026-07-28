@@ -1,5 +1,5 @@
 {
-  "note": "ADR-061 기준선 이관 — 폐기 직전(2026-07-28) LEGACY_HIRES×iads-c2×seed12345×900초×기본 플래그 지문. 이것은 \"개선 이전 지문\"이 아니라 \"이관 시점 지문\"이다(되돌리기 증명의 의미 약화 — ADR-061 §한계).",
+  "note": "ADR-065 기준선 재수립 — 승인 계선·표적 산포·남부 축선을 기본 ON으로 전환하면서 전 수치가 바뀌어, ADR-061 이관 기준선(전 OFF 기본값 지문)은 폐기했다. 구 지문은 git 이력(ADR-064 이전 커밋의 이 파일)에서 확인한다. 본 지문은 \"신규 기본값 확정 시점\"의 회귀 방지선이다.",
   "config": {
     "deploymentId": "HANBANDO_LEGACY_NORMAL",
     "modelFidelity": "iads-c2",
@@ -7,48 +7,83 @@
     "seed": 12345,
     "endTimeSec": 900
   },
+  "defaults": {
+    "approvalChain": true,
+    "threatTargetDispersion": true,
+    "southernAxes": true
+  },
   "cases": {
     "sc1|asis": {
-      "sha256": "a6e6989914652e6d266f5f6dab2566daa6a94551811d2d392468fd8458cb5658",
-      "killed": 25,
+      "sha256": "6e60d394b36db98a7ea165eacc216a4dfb4603b94e8c2d40a8c760427b6a3ed5",
+      "killed": 22,
       "leaked": 0,
       "spawned": 35,
-      "eventCount": 38986
+      "eventCount": 42925,
+      "features": {
+        "approvalChain": true,
+        "threatTargetDispersion": true,
+        "southernAxes": true
+      }
     },
     "sc1|tobe": {
-      "sha256": "c61ad404575570ef9ddfaf5a581e985b375c479fe7d5eaca8cbf261c274ce776",
+      "sha256": "7f8d7314c844857d6f6b4483851898a0dddabc3dae5eacec3c1a768ba78fee36",
       "killed": 25,
-      "leaked": 0,
+      "leaked": 1,
       "spawned": 35,
-      "eventCount": 40569
+      "eventCount": 42358,
+      "features": {
+        "approvalChain": true,
+        "threatTargetDispersion": true,
+        "southernAxes": true
+      }
     },
     "sc2|asis": {
-      "sha256": "966c002e7ae545f1df4bea1bdcdff9d50e9242bdb39b301cc0e9f3da71d588ea",
-      "killed": 19,
+      "sha256": "1e4135f69c6d102aad4d1417370f4c08ced5511ad6bdd536cd0be580f0cb5a28",
+      "killed": 13,
       "leaked": 0,
       "spawned": 40,
-      "eventCount": 99957
+      "eventCount": 101069,
+      "features": {
+        "approvalChain": true,
+        "threatTargetDispersion": true,
+        "southernAxes": true
+      }
     },
     "sc2|tobe": {
-      "sha256": "a72d0d0d31a88b0c0c04c054800f7187aea0b87f92285dbfbd64a0bb00f0bc78",
-      "killed": 19,
+      "sha256": "120d4f0f9514c60179ab20660257be7251e36ce78979ddcbb7c15bd3325e674f",
+      "killed": 13,
       "leaked": 0,
       "spawned": 40,
-      "eventCount": 103259
+      "eventCount": 106901,
+      "features": {
+        "approvalChain": true,
+        "threatTargetDispersion": true,
+        "southernAxes": true
+      }
     },
     "sc3|asis": {
-      "sha256": "4b9b4301263ebea31da93e846534484e392398de9baf963ec8344fb212407feb",
-      "killed": 37,
-      "leaked": 119,
-      "spawned": 196,
-      "eventCount": 167007
+      "sha256": "ef2d5e7c69f61ad320111704bdb5ae883df1a455705d836b00a5d574060a21e8",
+      "killed": 32,
+      "leaked": 138,
+      "spawned": 214,
+      "eventCount": 182103,
+      "features": {
+        "approvalChain": true,
+        "threatTargetDispersion": true,
+        "southernAxes": true
+      }
     },
     "sc3|tobe": {
-      "sha256": "6d827c19f5a641809229cc8a0a023d8c3e0ff972ec73696f5789e1ffa538dcb5",
-      "killed": 100,
-      "leaked": 56,
-      "spawned": 196,
-      "eventCount": 172369
+      "sha256": "b8527640b66e1f3c5aef4b484bc18b23fd8f64049aaa9f4ca893032a485e06c9",
+      "killed": 107,
+      "leaked": 64,
+      "spawned": 214,
+      "eventCount": 191613,
+      "features": {
+        "approvalChain": true,
+        "threatTargetDispersion": true,
+        "southernAxes": true
+      }
     }
   }
 }

@@ -7,7 +7,8 @@
  *  2) 라벨 정정: 사수 노드의 drops는 capacityBlocks(차단 후 재시도)이지 영구 상실이 아니다.
  *  3) 미측정 표기: 승인 계선 OFF 실행은 ⑥⑦ 승인·협조 지표를 0이 아니라 '미측정'으로 표시한다.
  *  4) 토글 배선: appr 딥링크·UI 토글이 features.approvalChain으로 전달되고, ON에서 지표가 실제로 발화한다.
- *  5) OFF 불변: 토글 OFF 실행은 종전 기본 실행과 bit-exact.
+ *  5) ADR-065 이후: 기본값이 ON이라 **기본 화면은 승인·협조가 측정된다**. '미측정' 표기는
+ *     사용자가 토글을 끈 경우에만 나타난다(키 생략 == ON을 어서션으로 고정).
  */
 import path from 'node:path';
 import fs from 'node:fs';
@@ -30,8 +31,8 @@ installIadsKernel(KJ);
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
 
 function run(opts) {
-  var features = { highResolutionDeployment: true };
-  if (opts.appr) features.approvalChain = true;
+  // ADR-065: 승인 계선이 기본 ON — OFF 팔은 명시적 false로 고정한다.
+  var features = { highResolutionDeployment: true, approvalChain: !!opts.appr };
   return KJ.runDES({
     scenario: KJ.scenarioById(opts.sc || 'sc3'), mode: opts.mode || 'asis',
     intensity: opts.x || 1.5, seed: 12345, endTimeSec: opts.dur || 600,
@@ -99,13 +100,15 @@ assert(heavy.global.delegation.count > 0,
 // ── 4. UI·라우터 배선 ──
 console.log('# 토글 배선 (라우터·컨트롤·모델설정)');
 var router = fs.readFileSync(path.join(root, 'js', 'core', 'router.js'), 'utf8');
-assert(/appr: '0'/.test(router), '라우터 DEFAULTS에 appr 기본 OFF 등록');
-assert(/state\.appr = \(state\.appr === '1'/.test(router), '알 수 없는 appr 값은 OFF로 정규화');
+// ADR-065: 기본 ON 전환 — 라우터 기본값 '1', 명시적 '0'만 해제로 읽는다.
+assert(/appr: '1'/.test(router), "라우터 DEFAULTS에 appr 기본 ON ('1')");
+assert(/state\.appr = \(state\.appr === '0'/.test(router), "명시적 '0'만 해제로 정규화");
 var html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 assert(html.indexOf('id="approval-chain-toggle"') !== -1, '상단 컨트롤에 승인 계선 토글 존재');
 ['main.js', 'ui/panels.js', 'ui/sim-view.js'].forEach(function (f) {
   var src = fs.readFileSync(path.join(root, 'js', f), 'utf8');
-  assert(/approvalChain = true/.test(src), f + ' modelConfig가 appr → features.approvalChain 전달');
+  assert(/features\.approvalChain = .*appr !== '0'/.test(src),
+    f + " modelConfig가 appr → features 전달 (기본 ON, '0'만 해제)");
 });
 var css = fs.readFileSync(path.join(root, 'css', 'style.css'), 'utf8');
 assert(/\.pl-m-na-note/.test(css), '미측정 표기 스타일 존재');
@@ -113,13 +116,15 @@ assert(/\.pl-m-na-note/.test(css), '미측정 표기 스타일 존재');
 // ── 5. OFF bit-exact (기본 결과 불변) ──
 console.log('# OFF bit-exact');
 function sha(r) { return crypto.createHash('sha256').update(JSON.stringify(r)).digest('hex'); }
-var plain = KJ.runDES({
+// ADR-065: 기본값이 ON으로 바뀌어 "키 생략 = 종전 OFF"가 더 이상 성립하지 않는다.
+// 대신 (1) 키 생략이 기본 ON과 동일하고 (2) 명시적 OFF는 다른 결과임을 고정한다.
+var omitted = KJ.runDES({
   scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1.5, seed: 12345,
   endTimeSec: 600, deploymentId: 'HANBANDO_LEGACY_NORMAL',
   features: { highResolutionDeployment: true }
 });
-assert(sha(plain) === sha(off), '토글 OFF 실행 == 종전 기본 실행 (SHA-256 동일)');
-assert(sha(plain) !== sha(on), 'ON 실행은 실제로 다른 결과 — 토글이 무의미한 장식이 아님');
+assert(sha(omitted) === sha(on), '키 생략 == 승인 계선 ON (ADR-065 기본값 전환)');
+assert(sha(omitted) !== sha(off), '명시적 OFF는 다른 결과 — 토글이 무의미한 장식이 아님');
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

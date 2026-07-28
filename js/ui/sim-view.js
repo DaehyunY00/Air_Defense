@@ -99,9 +99,10 @@
     // ADR-061: 충실도 1종(iads-c2)·고해상도 배치만 존재한다.
     // ADR-062: 승인 계선(ADR-058) 토글 — 기본 OFF.
     var features = { highResolutionDeployment: true };
-    if (cfg && cfg.appr === '1') features.approvalChain = true;
-    if (cfg && cfg.disp === '1') features.threatTargetDispersion = true; // ADR-063
-    if (cfg && cfg.south === '1') features.southernAxes = true; // ADR-064
+    // ADR-065: 승인 계선·표적 산포·남부 축선은 기본 ON — 상태가 '0'일 때만 끈다.
+    features.approvalChain = cfg && cfg.appr !== '0';
+    features.threatTargetDispersion = cfg && cfg.disp !== '0';
+    features.southernAxes = cfg && cfg.south !== '0';
     return { deploymentId: cfg && cfg.dep, features: features, modelFidelity: 'iads-c2' };
   }
 

@@ -33,13 +33,17 @@ function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fa
 
 // Phase 0 종료 시점(ADR-055, MINI 폐기 직후) 지문 — LEGACY_HIRES × iads-c2 × ×1.5 × seed 12345 × 900초.
 // 갱신 규칙: 의도된 거동 변경으로 재기준선이 필요하면 ADR에 사유를 남기고 아래 값을 교체한다.
+// ADR-065 재기준화: 기본값 3종(승인 계선·표적 산포·남부 축선)을 ON으로 전환하면서 배경이
+// 바뀌어 구 지문(전 OFF 기본값 기준)은 재현 불가가 되었다. 지문을 신 기본값으로 다시 잡는다.
+// ⚠️ 이 어서션의 의미도 함께 약해진다: "unifiedEngagementState OFF == ADR-056 도입 전"이
+// 아니라 **"OFF == 현행 기본 기준선"**(이후 회귀 방지선)이다. 구 지문은 git 이력에 있다.
 var PHASE0_SHA = {
-  'sc1|asis': 'a6e6989914652e6d266f5f6dab2566daa6a94551811d2d392468fd8458cb5658',
-  'sc1|tobe': 'c61ad404575570ef9ddfaf5a581e985b375c479fe7d5eaca8cbf261c274ce776',
-  'sc3|asis': '4b9b4301263ebea31da93e846534484e392398de9baf963ec8344fb212407feb',
-  'sc3|tobe': '6d827c19f5a641809229cc8a0a023d8c3e0ff972ec73696f5789e1ffa538dcb5'
+  'sc1|asis': '6e60d394b36db98a7ea165eacc216a4dfb4603b94e8c2d40a8c760427b6a3ed5',
+  'sc1|tobe': '7f8d7314c844857d6f6b4483851898a0dddabc3dae5eacec3c1a768ba78fee36',
+  'sc3|asis': 'ef2d5e7c69f61ad320111704bdb5ae883df1a455705d836b00a5d574060a21e8',
+  'sc3|tobe': 'b8527640b66e1f3c5aef4b484bc18b23fd8f64049aaa9f4ca893032a485e06c9'
 };
-var OFF_TOBE_DUP = { sc1: 15, sc3: 16 }; // OFF To-Be 중복교전(동일 셀 실측) — ON에서 이보다 작아야 함
+var OFF_TOBE_DUP = { sc1: 12, sc3: 12 }; // OFF To-Be 중복교전(신 기본값 실측) — ON에서 이보다 작아야 함
 
 function run(sc, mode, flags) {
   return KJ.runDES({

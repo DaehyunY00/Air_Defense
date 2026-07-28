@@ -19,9 +19,10 @@
     // ADR-062: 승인 계선(ADR-058)은 화면에서 켤 수 있어야 한다 — 끈 채로 두면 ⑥⑦ 승인·협조
     // 지표가 영구 0이 되어 "승인 병목 없음"으로 오독된다. 기본값은 OFF(종전과 bit-exact).
     var features = { highResolutionDeployment: true };
-    if (state.appr === '1') features.approvalChain = true;
-    if (state.disp === '1') features.threatTargetDispersion = true; // ADR-063
-    if (state.south === '1') features.southernAxes = true; // ADR-064
+    // ADR-065: 승인 계선·표적 산포·남부 축선은 기본 ON — 상태가 '0'일 때만 끈다.
+    features.approvalChain = state.appr !== '0';
+    features.threatTargetDispersion = state.disp !== '0';
+    features.southernAxes = state.south !== '0';
     return { deploymentId: state.dep, features: features, modelFidelity: 'iads-c2' };
   }
 

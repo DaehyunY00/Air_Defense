@@ -218,7 +218,10 @@
     // ADR-058: 승인 계선 이식 — As-Is LOCAL_AD 축(군단 AOC)의 교전이 승인권자(KAOC→MCRC)
     // 협조 홉 + 승인 서비스(kind='approval')를 거친다. 동적 권한위임(DELEG_QUEUE_MULT)·
     // automation 3단계 차등 포함. approvalChainTobe는 반증 전용 — To-Be에도 As-Is 계선 강제.
-    this.approvalChain = ff('approvalChain', false);
+    // ADR-065: 기본 ON 전환. 승인 계선이 꺼진 As-Is는 KJADS 문제 정의(음성 VTC 협조 의존)를
+    // 모델링하지 않은 것이고, G6①(As-Is 병목=협조·승인)의 메커니즘이 기본 화면에서 사라진다.
+    // 반증 플래그(approvalChainTobe)는 기본 OFF 유지 — 반사실 실험 전용.
+    this.approvalChain = ff('approvalChain', true);
     this.approvalChainTobe = ff('approvalChainTobe', false);
     // ADR-059: native WTA 모드 차등 — As-Is는 COP 부재로 무기별 적합도(pk·PIP) 비교가 불가하다는
     // 이론을 사수 선정에 이식. To-Be는 현행 물리 점수식 + 비용 인식(탄도 위협 한정).
@@ -228,25 +231,27 @@
     // ADR-063: 표적권역 산포 — 종전에는 같은 축선의 모든 위협이 정확히 같은 한 점으로 향해
     // seed를 바꿔도 착탄점이 불변이었다. ON이면 위협마다 표적권역(disk) 안에서 착탄점을 뽑는다.
     // 반경은 features.targetSpreadKm로 스윕 가능(기본 THREAT-TARGET-DISP-01 = 15km, 등급 C).
-    this.threatTargetDispersion = ff('threatTargetDispersion', false);
+    // ADR-065: 기본 ON — 같은 축선의 모든 위협이 좌표 한 점으로 수렴하는 것은 정당화할 수 없다.
+    this.threatTargetDispersion = ff('threatTargetDispersion', true);
     // ADR-064: 남부 종심 축선(대구·부산) 활성화. 시나리오의 southernMix를 도착 예약에 추가한다.
     // OFF면 남부 축선 위협이 하나도 생성되지 않아 종전과 bit-exact.
-    this.southernAxes = ff('southernAxes', false);
+    // ADR-065: 기본 ON — 배치 자산의 1/6이 표적 회랑 밖이라 구조적으로 유휴인 상태를 해소한다.
+    this.southernAxes = ff('southernAxes', true);
     this.targetSpreadKm = (typeof f.targetSpreadKm === 'number' && f.targetSpreadKm >= 0)
       ? f.targetSpreadKm : (KJ.THREAT_TARGET_SPREAD_KM || 0);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
     if (this.highResolutionDeployment) this.features.highResolutionDeployment = true;
     if (this.unifiedEngagementState) this.features.unifiedEngagementState = true;
     if (this.linkSemanticsV2) this.features.linkSemanticsV2 = true;
-    if (this.approvalChain) this.features.approvalChain = true;
+    // ADR-065: 기본 ON 3종은 "ON일 때만 노출"이 아니라 **실제 해석값을 항상 신고**한다 —
+    // 소비 측(분석 탭의 미측정 표기 등)이 실행 조건을 정확히 읽어야 하기 때문이다.
+    this.features.approvalChain = this.approvalChain;
     if (this.approvalChainTobe) this.features.approvalChainTobe = true;
     if (this.nativeWtaMode) this.features.nativeWtaMode = true;
     if (this.nativeWtaCostAsis) this.features.nativeWtaCostAsis = true;
-    if (this.threatTargetDispersion) {
-      this.features.threatTargetDispersion = true;
-      this.features.targetSpreadKm = this.targetSpreadKm;
-    }
-    if (this.southernAxes) this.features.southernAxes = true;
+    this.features.threatTargetDispersion = this.threatTargetDispersion;
+    if (this.threatTargetDispersion) this.features.targetSpreadKm = this.targetSpreadKm;
+    this.features.southernAxes = this.southernAxes;
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.

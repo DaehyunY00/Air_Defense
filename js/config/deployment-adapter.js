@@ -350,9 +350,12 @@
     return buildDeploymentCatalog(config.deploymentId || 'HANBANDO_LEGACY_NORMAL',
       { linkSemanticsV2: features.linkSemanticsV2 === true,
         // ADR-058: 승인 계선용 coord 링크는 변형 카탈로그에서만 생성(OFF wire shape 불변).
-        approvalChain: features.approvalChain === true || features.approvalChainTobe === true,
-        // ADR-064: 남부 종심 축선 — coverage 파생에 포함할지 결정(OFF면 종전 wire shape)
-        southernAxes: features.southernAxes === true,
+        // ADR-065: 기본 ON 전환 — 엔진 기본값과 반드시 일치해야 한다. `=== true`로 두면
+        // features에 키가 없는 호출에서 엔진은 승인 계선 ON인데 카탈로그에는 coord 링크가
+        // 없는 불일치가 생긴다. 명시적 false만 끈다.
+        approvalChain: features.approvalChain !== false || features.approvalChainTobe === true,
+        // ADR-064·065: 남부 종심 축선 — coverage 파생 포함 여부(명시적 false만 제외)
+        southernAxes: features.southernAxes !== false,
         // ADR-058 동반 스윕: 운용자 처리시간 high/mid/low (기본 mid — 종전 동일)
         c2OperatorLevel: features.c2OperatorLevel === 'high' || features.c2OperatorLevel === 'low'
           ? features.c2OperatorLevel : null });

@@ -40,8 +40,8 @@ function km(a, b) {
 }
 function run(seed, disp, opts) {
   opts = opts || {};
-  var features = { highResolutionDeployment: true };
-  if (disp) features.threatTargetDispersion = true;
+  // ADR-065: 산포가 기본 ON이 되어 **키 생략 = ON**이다. OFF 팔은 명시적 false로 고정한다.
+  var features = { highResolutionDeployment: true, threatTargetDispersion: !!disp };
   if (opts.spreadKm !== undefined) features.targetSpreadKm = opts.spreadKm;
   return KJ.runDES({
     scenario: KJ.scenarioById(opts.sc || 'sc3'), mode: opts.mode || 'asis',
@@ -53,18 +53,15 @@ function run(seed, disp, opts) {
 // ── 1. OFF bit-exact ──
 console.log('# OFF bit-exact');
 var off = run(12345, false);
-var plain = KJ.runDES({
-  scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1.5, seed: 12345,
-  endTimeSec: 900, trace: true, traceCap: 3000, deploymentId: 'HANBANDO_LEGACY_NORMAL',
-  features: { highResolutionDeployment: true }
-});
-assert(sha(off) === sha(plain), '플래그 OFF == 도입 전 실행 (SHA-256 동일 — 전용 스트림 미소비)');
+// ADR-065 이후 "도입 전 실행"은 재현 대상이 아니다(기본값이 ON으로 바뀌어 배경이 달라졌다).
+// 대신 명시적 OFF의 결정론과 "전용 스트림을 소비하지 않음"(착탄점 부재)을 고정한다.
+assert(sha(off) === sha(run(12345, false)), '명시적 OFF 결정론 (SHA-256 동일)');
 assert(!off.global.features.threatTargetDispersion, 'OFF는 features에 노출되지 않음(wire shape 보존)');
 assert(off.threatTraces.every(function (t) { return t.target === undefined; }),
   'OFF는 위협에 착탄점을 부여하지 않음 — 축선 표적점 그대로');
 
 var on = run(12345, true);
-assert(sha(on) !== sha(plain), 'ON은 실제로 다른 결과');
+assert(sha(on) !== sha(off), 'ON은 실제로 다른 결과');
 assert(on.global.features.threatTargetDispersion === true &&
   on.global.features.targetSpreadKm === KJ.THREAT_TARGET_SPREAD_KM,
   'ON은 features에 산포·반경을 신고 (' + on.global.features.targetSpreadKm + 'km)');
@@ -190,13 +187,15 @@ assert(balRun.nodes.filter(function (n) { return shoradIds[n.id] && (n.shots || 
 // ── 8. UI·라우터 배선 ──
 console.log('# 토글 배선');
 var router = fs.readFileSync(path.join(root, 'js', 'core', 'router.js'), 'utf8');
-assert(/disp: '0'/.test(router), '라우터 DEFAULTS에 disp 기본 OFF 등록');
-assert(/state\.disp = \(state\.disp === '1'/.test(router), '알 수 없는 disp 값은 OFF로 정규화');
+// ADR-065: 기본 ON 전환 — 라우터 기본값 '1', 명시적 '0'만 해제로 읽는다.
+assert(/disp: '1'/.test(router), "라우터 DEFAULTS에 disp 기본 ON ('1')");
+assert(/state\.disp = \(state\.disp === '0'/.test(router), "명시적 '0'만 해제로 정규화");
 var html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 assert(html.indexOf('id="target-dispersion-toggle"') !== -1, '상단 컨트롤에 표적 산포 토글 존재');
 ['main.js', 'ui/panels.js', 'ui/sim-view.js'].forEach(function (f) {
   var src = fs.readFileSync(path.join(root, 'js', f), 'utf8');
-  assert(/threatTargetDispersion = true/.test(src), f + ' modelConfig가 disp → features 전달');
+  assert(/features\.threatTargetDispersion = .*disp !== '0'/.test(src),
+    f + " modelConfig가 disp → features 전달 (기본 ON, '0'만 해제)");
 });
 var params = fs.readFileSync(path.join(root, 'docs', 'params.md'), 'utf8');
 assert(params.indexOf('THREAT-TARGET-DISP-01') !== -1 && /공개근거 없음/.test(params),

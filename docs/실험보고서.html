@@ -30,13 +30,25 @@
 <body>
 
 <h1>K-JAMDS 시뮬레이터 — As-Is ↔ To-Be 실험보고서</h1>
-<p class="small">보고서 버전: v3.4 (2026-07-28 실측 · Phase 6 ADR-061 반영) · 코드: <code>v3</code> 브랜치(ADR-055~061 반영) ·
+<p class="small">보고서 버전: v3.5 (2026-07-28 실측 · ADR-065 기본값 전환 반영) · 코드: <code>v3</code> 브랜치(ADR-055~065 반영) ·
 실험 원자료: <code>artifacts/experiment/*.json</code>(동일 명령으로 재현 가능)</p>
 
 <div class="box warn"><span class="bt">디스클레이머</span>
 모든 수치는 공개자료 기반 정책연구용 <b>개념값</b> 위에서 나온 시뮬레이션 결과다. 절대값은 전술
 성능치가 아니며, 의미가 있는 것은 <b>같은 조건·같은 난수에서의 As-Is↔To-Be 차이</b>뿐이다.
 이 보고서의 전 수치는 이번 판(v3)에서 재실측한 것이다 — 폐기된 배치(MINI)나 구판 기록은 인용하지 않는다.</div>
+
+<div class="box red"><span class="bt">🔴 개선폭 20% 이상 이동 공지 — 기본값 전환 (ADR-065)</span>
+승인 계선(ADR-058)·표적권역 산포(ADR-063)·남부 종심 축선(ADR-064)이 <b>기본 ON</b>으로 전환됐다.
+그 결과 <b>결심지연 개선폭이 SC1 −21.9→−33.7초(+54%), SC3 −68.0→−82.2초(+21%)</b>로 커졌다.
+⚠️ <b>To-Be가 좋아진 것이 아니라 As-Is가 원래 치러야 할 비용을 이제 치르는 것</b>이다 — 근거는
+As-Is 협조몫이 0.0초 → 23~34초로 발현했고 To-Be 절대값은 거의 불변이라는 점이다. 종전 기본값은
+As-Is를 실제보다 유리하게 모델링하고 있었다. SC1 격추율 Δ는 부호까지 바뀌었다(−0.5pp n.s. →
++2.9pp 유의). 상세·편향 원장은 <code>docs/adr/ADR-065</code>.
+<br><br>
+⚠️ <b>본 보고서 §2~§8의 표는 대부분 「구 기본값(3종 OFF)」에서 측정된 값</b>이다. 수치는 감사
+추적을 위해 그대로 두되, 현재 기본 실행과 다르다는 점을 명시한다. 구 기본값 재현은 딥링크
+<code>appr=0&amp;disp=0&amp;south=0</code>으로 가능하다. 신 기본값 전면 재측정은 후속 과제다.</div>
 
 <div class="box warn"><span class="bt">Phase 6 (ADR-061) — legacy·compat 폐기 공지</span>
 본 보고서의 <b>legacy·compat / LEGACY_HIRES·compat 셀은 측정 당시의 기록</b>이다. Phase 6에서
@@ -263,13 +275,31 @@ As-Is 반증(비용항 강제)도 보존율 0.578→0.581뿐. ② 따라서 lega
 <code>tests/retired-legacy-suites.md</code>에 원장으로 남겼다. 단일본은 IIFE 커널 번들로
 iads-c2를 그대로 실행한다(모듈 커널과 bit-exact 6/6 검증).</p>
 
+<h2 id="s65">9-0. ADR-065 기본값 전환 — 편향 원장 (paired 20 seed × 900초 × ×1.5)</h2>
+<table>
+<thead><tr><th>셀</th><th>격추율 Δ</th><th>결심지연 Δ</th><th>As-Is 협조몫</th><th>exchangeSat As-Is/To-Be</th></tr></thead>
+<tbody>
+<tr><td>SC1 구 기본(전 OFF)</td><td class="num"><span class="ns">−0.5pp ±1.9</span></td><td class="num">−21.9s ±2.9</td><td class="num">0.0s</td><td class="num">21.25 / 21.88</td></tr>
+<tr><td>SC1 <b>신 기본(3종 ON)</b></td><td class="num"><span class="sig">+2.9pp ±2.7</span></td><td class="num"><span class="sig">−33.7s ±2.8</span></td><td class="num"><b>34.1s</b></td><td class="num">20.00 / 20.42</td></tr>
+<tr><td>SC3 구 기본(전 OFF)</td><td class="num"><span class="sig">+38.7pp ±1.5</span></td><td class="num">−68.0s ±3.9</td><td class="num">0.0s</td><td class="num">6.55 / 4.57</td></tr>
+<tr><td>SC3 <b>신 기본(3종 ON)</b></td><td class="num"><span class="sig">+39.9pp ±1.5</span></td><td class="num"><span class="sig">−82.2s ±7.6</span></td><td class="num"><b>23.3s</b></td><td class="num"><b>25.51</b> / 4.59</td></tr>
+</tbody>
+</table>
+<p><b>SC3 As-Is exchangeSat 6.55→25.51(3.9배)</b>는 "더 비싸게 막았다"가 아니라 <b>남부 위협을
+놓쳐 격추 위협가치(분모)가 줄어든 것</b>이다(To-Be 4.57→4.59 불변). 이 지표의 알려진 함정이므로
+방어효율·격추율과 함께 읽어야 한다.</p>
+<p><b>정직 기록 — 두 보증 약화</b>: ① ADR-056 지문이 "OFF == 도입 전"에서 <b>"OFF == 현행
+기준선"</b>으로 재기준화됐다(배경 변경으로 구 비교 재현 불가). ② ADR-059 비용항 반증이 무는
+셀이 6셀 중 2셀로 줄었다 — 발화 셀과 <b>비발화 셀을 함께</b> 어서션으로 고정해 빈도 감소를
+증거로 남겼다. 이는 "비용항은 거의 물지 않는다"는 원 결론을 강화한다.</p>
+
 <h2 id="s5">9. G6 — 결론 불변 4종 재산출</h2>
 <table>
 <thead><tr><th style="width:36%">결론</th><th>이번 판 재산출 결과</th></tr></thead>
 <tbody>
-<tr><td>① As-Is 핵심 병목은 협조·승인 경로(①⑥⑦)</td><td><b>유지·강화</b> — ADR-058 ON에서 native 최초로 협조몫(19~35초)·승인 Wq(36.8초) 관측, legacy 발견 재현. — legacy·compat 결심지연 145~153초 중 승인 파이프라인 몫이 지배적(As-Is→To-Be −135초). LEGACY_HIRES에서도 SC3 대기행렬 해소 −87초.</td></tr>
+<tr><td>① As-Is 핵심 병목은 협조·승인 경로(①⑥⑦)</td><td><b>유지·강화 (ADR-065로 기본 관측)</b> — 승인 계선이 기본 ON이 되어 <b>기본 화면에서 협조몫 23~34초가 직접 보인다</b>(종전에는 0으로 표시돼 결론을 화면에서 확인할 수 없었다). ADR-058 ON에서 native 최초로 협조몫(19~35초)·승인 Wq(36.8초) 관측, legacy 발견 재현. — legacy·compat 결심지연 145~153초 중 승인 파이프라인 몫이 지배적(As-Is→To-Be −135초). LEGACY_HIRES에서도 SC3 대기행렬 해소 −87초.</td></tr>
 <tr><td>② To-Be 병목은 C2에서 무기체계로 이동</td><td><b>유지</b> — To-Be에서 구조적 실패(책임공백류) 0이 되고 잔여 누수가 timeout(교전창)·missed로 이동(legacy·compat 누수 사유 분포).</td></tr>
-<tr><td>③ 무인기 비용 비대칭 미해소 (exchangeSat &gt; 1)</td><td><b>유지</b> — SC2 exchangeSat: legacy 72.6→68.5, LEGACY_HIRES 71.6→70.8. SC1/SC3 iads-c2에서도 20.4~20.6, 4.7~5.8 — 어느 셀·어느 플래그(ADR-056·057 ON 포함)에서도 1 밑으로 내려가지 않음.</td></tr>
+<tr><td>③ 무인기 비용 비대칭 미해소 (exchangeSat &gt; 1)</td><td><b>유지 (신 기본값에서 심화)</b> — 신 기본값 전 셀 4.59~25.51로 As-Is 비대칭이 오히려 커졌다. 구 기본값 기록: SC2 exchangeSat: legacy 72.6→68.5, LEGACY_HIRES 71.6→70.8. SC1/SC3 iads-c2에서도 20.4~20.6, 4.7~5.8 — 어느 셀·어느 플래그(ADR-056·057 ON 포함)에서도 1 밑으로 내려가지 않음.</td></tr>
 <tr><td>④ 신궁·천마 탄도탄 교전 불가</td><td><b>유지</b> — 제약 어서션(<code>tests/constraints.test.mjs</code> — ADR-061에서 <code>iadsEngageableThreats</code> 데이터 + 탄도 단독 발사 0건 행위로 이중 검증 이관) 통과, 전 회귀 스위트 녹색(Phase 6 판은 25스위트).</td></tr>
 </tbody>
 </table>

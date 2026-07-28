@@ -96,8 +96,8 @@
   var tlog = { els: {}, lastUpdate: 0 }; // 위협 항적 로그 패널 상태 (실행당 재구성)
 
   function modelConfig(cfg) {
-    var high = cfg && cfg.dep && cfg.dep !== 'legacy';
-    return high ? { deploymentId: cfg.dep, features: { highResolutionDeployment: true }, modelFidelity: cfg.fid || 'compat' } : {};
+    // ADR-061: 충실도 1종(iads-c2)·고해상도 배치만 존재한다.
+    return { deploymentId: cfg && cfg.dep, features: { highResolutionDeployment: true }, modelFidelity: 'iads-c2' };
   }
 
   function runCatalog() {
@@ -107,8 +107,7 @@
   function contextLabel(cfg) {
     return KJ.scenarioById(cfg.sc).name + ' · ' +
       (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형') +
-      ' · ' + (cfg.dep === 'legacy' ? '기존 대표 배치' : cfg.dep) +
-      ' · ' + (cfg.fid === 'iads-c2' ? 'IADS_C2 물리' : '현행 DES') +
+      ' · ' + cfg.dep + ' · IADS_C2 물리' +
       ' · 강도 ×' + Number(cfg.x).toFixed(1) + ' · seed ' + cfg.seed;
   }
 
@@ -141,7 +140,7 @@
       var generation = ++computeGeneration;
       var seed = Math.max(0, Math.floor(parseFloat(el('sim-seed').value) || 0));
       var dur = Math.min(7200, Math.max(60, Math.floor(parseFloat(el('sim-dur').value) || 1800)));
-      var cfg = { sc: state.sc, mode: state.mode, dep: state.dep || 'legacy', fid: state.fid || 'compat', x: state.x, seed: seed, dur: dur };
+      var cfg = { sc: state.sc, mode: state.mode, dep: state.dep, fid: 'iads-c2', x: state.x, seed: seed, dur: dur };
       var btn = el('sim-run');
       btn.disabled = true; btn.textContent = '⏳ DES 실행 중...';
       setStatus('DES 실행 중 (trace 모드)...');

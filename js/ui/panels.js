@@ -16,8 +16,8 @@
   }
   function el(id) { return document.getElementById(id); }
   function modelConfig(state) {
-    var high = state && state.dep && state.dep !== 'legacy';
-    return high ? { deploymentId: state.dep, features: { highResolutionDeployment: true }, modelFidelity: state.fid || 'compat' } : {};
+    // ADR-061: 충실도 1종(iads-c2)·고해상도 배치만 존재한다.
+    return { deploymentId: state && state.dep, features: { highResolutionDeployment: true }, modelFidelity: 'iads-c2' };
   }
   function catalogFor(state) {
     return KJ.resolveModelCatalog ? KJ.resolveModelCatalog(modelConfig(state)) : null;
@@ -39,7 +39,7 @@
   // DES 양모드 캐시 (설정이 같으면 재계산하지 않음 — 탭 전환·재렌더 대비)
   var desCache = { key: null, data: null, pendingKey: null, requestId: 0, error: null, errorKey: null };
   function pipelineData(state, onReady) {
-    var key = [state.sc, state.x, state.seed, state.dur, state.dep || 'legacy', state.fid || 'compat'].join('|');
+    var key = [state.sc, state.x, state.seed, state.dur, state.dep, 'iads-c2'].join('|');
     if (desCache.key === key) return desCache.data;
     if (desCache.errorKey === key) return null;
     if (desCache.pendingKey === key) return null;
@@ -326,7 +326,7 @@
         bottleneck: '항적 비융합(중복항적), 보고경로 부재',
         fix: 'JAMDC2 융합 허브로 단일 연속 항적 생성',
         // no_report_path는 구조적으로 발화 불가(커버 센서가 있으면 보고경로 항상 존재 —
-        // tests/deadcode.test.js 영구 死 판정)라 분석 탭 표시에서 제외(2026-07 지표 정리).
+        // 구 tests/deadcode.test.js 영구 死 판정 — ADR-061로 스위트 폐기, tests/retired-legacy-suites.md)라 분석 탭 표시에서 제외(2026-07 지표 정리).
         codes: ['no_responsible_c2'],
         metrics: [
           { label: 'report 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
@@ -528,7 +528,7 @@
       { code: 'no_sensor', fixer: '센서 배치' },
       { code: 'no_responsible_c2', fixer: '책임·권한 설계' },
       // no_report_path 행 제거(2026-07 지표 정리): 전 시나리오·강도·배치 스윕에서 0건이며
-      // tests/deadcode.test.js가 "구조적으로 발화 불가(영구 死)"로 판정한 코드 — 엔진 경로와
+      // 구 tests/deadcode.test.js(ADR-061 폐기)가 "구조적으로 발화 불가(영구 死)"로 판정한 코드 — 엔진 경로와
       // 死 코드 게이트는 유지하되 분석 탭 표에는 표시하지 않는다.
       { code: 'responsibility_gap', fixer: 'To-Be 통합 C2', core: true },
       { code: 'overflow', fixer: '처리용량·자동화',

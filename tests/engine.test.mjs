@@ -5,15 +5,22 @@
  * 브라우저 전역(window.KJ)을 Node 전역으로 매핑해 데이터·엔진 모듈을 로드하고,
  * 재현성·극한값·시나리오 기반 병목 도출·제약·보존 항등식을 검증한다.
  */
-'use strict';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { installIadsKernel } from '../js/model/iads/index.js';
+const require = createRequire(import.meta.url);
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 global.window = global;
 var path = require('path');
 var root = path.join(__dirname, '..', 'js');
-['data/nodes.js', 'data/links.js', 'data/threats.js', 'data/scenarios.js',
+['config/system-types.js', 'config/geo-mdl.js', 'config/deployments.js',
+ 'data/nodes.js', 'data/links.js', 'data/threats.js', 'data/scenarios.js', 'data/axes.js',
+ 'config/deployment-adapter.js',
  'core/rng.js', 'core/heap.js', 'engine/sim-engine.js'].forEach(function (f) {
   require(path.join(root, f));
 });
 var KJ = global.KJ;
+installIadsKernel(KJ);
 
 var fail = 0;
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }

@@ -8,7 +8,11 @@
  *      단, ghost는 BDA·명령 수명주기가 없으므로 원인 분포·교전공백에는 들어가면 안 된다(범위 분리).
  *  (3) MC 시간지표가 표본 없는 복제의 0을 누산해 평균이 하향 편향되던 결함.
  */
-'use strict';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { installIadsKernel } from '../js/model/iads/index.js';
+const require = createRequire(import.meta.url);
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 global.window = global;
 var path = require('path');
 var root = path.join(__dirname, '..', 'js');
@@ -20,6 +24,7 @@ var root = path.join(__dirname, '..', 'js');
  'analysis/c2-report.js', 'engine/sim-engine.js', 'analysis/mc-runner.js']
   .forEach(function (f) { require(path.join(root, f)); });
 var KJ = global.KJ;
+installIadsKernel(KJ);
 var fail = 0;
 function assert(c, m, extra) {
   console.log((c ? '  PASS ' : '  FAIL ') + m + (extra ? '  [' + extra + ']' : ''));
@@ -49,10 +54,10 @@ assert(nat.highValuePreservation < 1,
 assert(Math.abs(nat.highValuePreservation - (1 - nat.highValueInterceptM / nat.cost.interceptM)) < 1e-12,
   '보존율 = 1 − 고가소모/전체소모 항등 성립');
 
-// legacy는 종전과 동일해야 한다(회귀 안전)
+// ADR-061: 플래그를 생략한 기본 실행(native·기본 배치)에서도 계상이 유지되는지 확인
 var leg = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 2, seed: 12345, endTimeSec: 1800 }).global;
 assert(leg.highValueInterceptM > 0 && leg.highValuePreservation < 1,
-  'legacy 경로는 종전과 동일하게 고가탄 계상 유지',
+  '기본 실행에서도 고가탄 계상 유지',
   'pres=' + leg.highValuePreservation.toFixed(4));
 
 // ════════ F3: legacy As-Is 중복교전(ghost) 발사가 C2 리포트에 귀속되는가 ════════
@@ -73,7 +78,9 @@ console.log('    엔진 duplicates=' + dupCount +
   ' concurrent=' + report.duplicateEngagement.concurrent);
 assert(dupCount > 0, '이 설정에서 As-Is 중복교전이 실제로 발생(검증 전제)');
 assert(nullThreat === 0, '발사 이벤트에 threatId 누락이 없음 (수정 전 ghost 발사가 null)');
-assert(dupFlagged > 0, 'ghost 발사가 duplicate=true로 구분 표시됨');
+// ADR-061: legacy ghost 발사 개념 폐기 — native 중복교전은 BDA·명령 수명주기를 가진
+// 실제 발사이므로 duplicate 플래그 없이 전부 주 계통으로 귀속된다.
+assert(dupFlagged === 0, 'native에는 ghost 발사가 없음 — 중복교전도 실제 발사(ADR-061)');
 assert(report.duplicateEngagement.duplicateThreats > 0,
   'C2 리포트가 중복교전 위협을 집계함 (수정 전 0으로 누락)');
 
@@ -149,14 +156,16 @@ assert(nativeRun.nodes.every(function (n) {
   return !n.rhoByKind || ('iads_track' in n.rhoByKind && 'directive_reception' in n.rhoByKind);
 }), '고해상도 결과는 native kind 키를 노출');
 
-var legacyRun = KJ.runDES({
+// ADR-061: legacy 경로 폐기 — 배치·플래그를 생략한 실행도 동일한 native 경로여야 한다
+// (숨은 legacy 잔존 경로 부재 확인).
+var defaultRun = KJ.runDES({
   scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1, seed: 12345, endTimeSec: 1800
 });
-assert(legacyRun.nodes.every(function (n) {
-  return !n.rhoByKind || Object.keys(n.rhoByKind).join(',') === 'track,approval,engage';
-}), 'legacy 결과의 kind 키는 종전 3종 그대로 (wire shape 보존)');
-assert(maxC2(legacyRun, ['track']) === maxC2(legacyRun, ['track', 'iads_track']),
-  'legacy에서는 iads_track 폴백이 값을 바꾸지 않음');
+assert(defaultRun.nodes.every(function (n) {
+  return !n.rhoByKind || ('iads_track' in n.rhoByKind && 'directive_reception' in n.rhoByKind);
+}), '기본 실행도 native kind 키를 노출(ADR-061: legacy 경로 부재)');
+assert(maxC2(defaultRun, ['track', 'iads_track']) === nativeWithIads,
+  '기본 실행 == 명시 고해상도 실행 (동일 기본 배치 HANBANDO_LEGACY_NORMAL)');
 
 console.log(fail === 0 ? '\nOK — 수정 검증 전체 통과' : '\n실패 ' + fail + '건');
 process.exit(fail ? 1 : 0);

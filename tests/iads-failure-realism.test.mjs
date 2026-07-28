@@ -1,5 +1,9 @@
 /** Native high-resolution IADS interception-failure realism regression. */
-'use strict';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { installIadsKernel } from '../js/model/iads/index.js';
+const require = createRequire(import.meta.url);
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 global.window = global;
 var path = require('path');
 var root = path.join(__dirname, '..', 'js');
@@ -11,6 +15,7 @@ var root = path.join(__dirname, '..', 'js');
 ].forEach(function (f) { require(path.join(root, f)); });
 
 var KJ = global.KJ, fail = 0;
+installIadsKernel(KJ);
 function assert(c, m) {
   console.log((c ? '  PASS ' : '  FAIL ') + m);
   if (!c) fail++;
@@ -23,8 +28,11 @@ assert(KJ.SHOOTER_TYPES.CHUNMA.missiles.AAM.pssekTable.default === 0.30,
 assert(KJ.SHOOTER_TYPES.LSAM.missiles.ABM.pssekTable.default === 0.75,
   '비SHORAD 체계 Pk는 기존 개념값 보존');
 
+// ADR-061: 종전 셀(SC2·×1)은 compat 충실도(센서물리 OFF) 위에서 명중 실패 누출을 관측했다.
+// 정본 iads-c2에서는 SC2 저강도 셀의 명중 실패가 전량 재교전으로 흡수돼(missed=0) 관측이
+// 불가능하므로, 동일 관측이 실제로 발생하는 SC3·×1.5 셀로 이동했다(관측 대상 불변).
 var sim = new KJ.Simulation({
-  scenario: KJ.scenarioById('sc2'), mode: 'asis', intensity: 1, seed: 12345,
+  scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1.5, seed: 12345,
   endTimeSec: 1800, trace: true, traceCap: 400,
   deploymentId: 'HANBANDO_FULL_NORMAL',
   features: { highResolutionDeployment: true }
@@ -38,7 +46,7 @@ var fireCounts = result.threatTraces.map(function (tr) {
 assert(g.spawned === g.killed + g.leaked + g.censoredRaw,
   '생성=격추+확정 누출+관측 종료 미해결 보존');
 assert(g.leaked > 0 && g.leakReasons.missed > 0,
-  'FULL SC2 고해상도에서 명중 실패가 실제 누출로 관측됨');
+  'FULL SC3 고해상도에서 명중 실패가 실제 누출로 관측됨');
 assert(fireCounts.length > 0 && Math.max.apply(null, fireCounts) <= 2,
   '위협당 실제 발사는 shoot-look-shoot 2발 상한');
 assert(result.threatTraces.some(function (tr) {

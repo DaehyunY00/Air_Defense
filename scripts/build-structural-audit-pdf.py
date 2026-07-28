@@ -603,7 +603,7 @@ source_rows = [
     ["정적 병목", "js/analysis/bottleneck.js", "M/M/c Erlang-C, sensor load propagation, link/gap bottleneck"],
     ["MC", "js/analysis/mc-runner.js", "Welford, CI, replication seed, sensitivity"],
     ["결과 UI", "js/ui/sim-view.js", "stat cards, structuralLeaks, vsCompare, leak table"],
-    ["회귀", "tests/iads-native-pipeline.test.js / iads-failure-realism.test.js / baseline.test.js", "책임 C2, PIP, 탄약, 2발 상한, legacy bit-exact"],
+    ["회귀", "tests/iads-native-pipeline.test.mjs / iads-failure-realism.test.mjs / hires-baseline.test.mjs", "책임 C2, PIP, 탄약, 2발 상한, native bit-exact(ADR-061)"],
 ]
 story.append(audit_table(["영역", "파일", "주요 근거"], source_rows, [31, 60, 79]))
 

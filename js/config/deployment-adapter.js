@@ -332,16 +332,11 @@
     return catalog;
   }
 
-  KJ.LEGACY_CATALOG = Object.freeze({
-    id: 'legacy', deployment: null, nodes: KJ.NODES, links: KJ.LINKS,
-    nodeMap: null, roles: Object.freeze({ fusionC2: 'JAMDC2', KAMDOC: 'KAMDOC', MCRC: 'MCRC', KAOC: 'KAOC' }),
-    compatibilityMode: null
-  });
+  // ADR-061: KJ.LEGACY_CATALOG 폐기 — 고해상도 카탈로그만 존재한다.
   KJ.buildDeploymentCatalog = buildDeploymentCatalog;
   KJ.resolveModelCatalog = function (config) {
     config = config || {};
     var features = config.features || {};
-    if (features.highResolutionDeployment !== true) return KJ.LEGACY_CATALOG;
     // ADR-055: MINI 폐기 이후의 기본 고해상도 배치. LEGACY_HIRES는 legacy와 자산 편성이
     // 같아, 배치 ID를 생략한 호출이 legacy 결과와 가장 가까운 편성을 보게 된다.
     // ADR-057: linkSemanticsV2 ON이면 codex ADR-014 정합 링크 변형 카탈로그를 쓴다(캐시 분리).
@@ -354,21 +349,21 @@
           ? features.c2OperatorLevel : null });
   };
   KJ.resolveRoleId = function (id, catalog) {
-    catalog = catalog || KJ.LEGACY_CATALOG;
+    catalog = catalog || buildDeploymentCatalog('HANBANDO_LEGACY_NORMAL', {});
     return catalog.roles && Object.prototype.hasOwnProperty.call(catalog.roles, id)
       ? catalog.roles[id] : id;
   };
   KJ.nodeById = function (id, catalog) {
-    catalog = catalog || KJ.LEGACY_CATALOG;
+    catalog = catalog || buildDeploymentCatalog('HANBANDO_LEGACY_NORMAL', {});
     if (catalog.nodeMap) return catalog.nodeMap[id] || null;
     return catalog.nodes.find(function (n) { return n.id === id; }) || null;
   };
   KJ.nodesInMode = function (mode, catalog) {
-    catalog = catalog || KJ.LEGACY_CATALOG;
+    catalog = catalog || buildDeploymentCatalog('HANBANDO_LEGACY_NORMAL', {});
     return catalog.nodes.filter(function (n) { return !n.modes || n.modes.indexOf(mode) !== -1; });
   };
   KJ.linksInMode = function (mode, catalog) {
-    catalog = catalog || KJ.LEGACY_CATALOG;
+    catalog = catalog || buildDeploymentCatalog('HANBANDO_LEGACY_NORMAL', {});
     return catalog.links.filter(function (l) { return !!l.comm[mode]; });
   };
 })();

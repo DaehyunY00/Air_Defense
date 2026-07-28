@@ -70,6 +70,8 @@
   // 하드코딩된 병목이 아니라 부하의 함수: 시나리오·강도가 낮으면 어느 모드에서도 전환이
   // 일어나지 않는다(회귀로 고정).
   var DELEG_QUEUE_MULT = { asis: 4, tobe: 1 };
+  // 저가 포화위협 부분집합(무인기·방사포) — exchangeSat 분자·분모 계정용 (ADR-002)
+  var SAT_THREATS = { uav_small: true, mrl_large: true };
 
   /**
    * 작업 종류(kind)별 통계 버킷을 지연 생성해 반환. (Phase: track/approval 부하 분리)
@@ -141,19 +143,20 @@
       ? KJ.resolveModelCatalog(cfg)
       : { id: 'legacy', nodes: KJ.NODES, links: KJ.LINKS,
           roles: { fusionC2: 'JAMDC2', KAMDOC: 'KAMDOC', MCRC: 'MCRC', KAOC: 'KAOC' } };
-    this.highResolutionDeployment = !!(cfg.features && cfg.features.highResolutionDeployment);
-    this.nativeIads = this.highResolutionDeployment;
-    this.modelFidelity = cfg.modelFidelity || 'compat';
-    if (this.modelFidelity !== 'compat' && this.modelFidelity !== 'iads-c2') {
-      throw new Error('Unsupported modelFidelity: ' + this.modelFidelity);
+    // ADR-061: legacy 배치·compat 충실도 폐기 — 고해상도 iads-c2가 유일한 정본 경로다.
+    if (cfg.features && cfg.features.highResolutionDeployment === false) {
+      throw new Error('legacy 배치는 폐기되었다(ADR-061) — 고해상도 배치 6종만 지원');
     }
-    if (this.modelFidelity === 'iads-c2' && !this.highResolutionDeployment) {
-      throw new Error('modelFidelity=iads-c2 requires a high-resolution deployment');
+    if (cfg.modelFidelity && cfg.modelFidelity !== 'iads-c2') {
+      throw new Error('compat 충실도는 폐기되었다(ADR-061) — modelFidelity는 iads-c2 하나다');
     }
-    if (this.modelFidelity === 'iads-c2' && (!KJ.IADS || !KJ.createIadsEventQueue)) {
-      throw new Error('IADS_C2 module kernel is not loaded; use the module worker over HTTP');
+    this.highResolutionDeployment = true;
+    this.nativeIads = true;
+    this.modelFidelity = 'iads-c2';
+    if (!KJ.IADS || !KJ.createIadsEventQueue) {
+      throw new Error('IADS_C2 module kernel is not loaded; use the module worker over HTTP (또는 단일본의 IIFE 커널)');
     }
-    this.iadsSensorPhysics = this.modelFidelity === 'iads-c2';
+    this.iadsSensorPhysics = true;
     this.jammingLevel = Math.max(0, Math.min(1, Number(cfg.jammingLevel) || 0));
     this.ecmActive = cfg.ecmActive === true;
     this.iadsSensorStats = this.iadsSensorPhysics
@@ -922,61 +925,6 @@
     }
   };
 
-  /**
-   * 스캔 1회당 탐지확률 — [센서 고유 Pd] × [위협 고유 탐지난이도] × [민감도 배수]를
-   * per-sensor로 계산한 뒤 모드별 융합 규칙으로 결합한다 (SEN-FUSION-01).
-   *   pᵢ = clamp(sensorPd_i × threat.detectFactor × mult.detect, 0, 1)
-   *   As-Is (비융합) : p = maxᵢ(pᵢ)          — 자군 최선의 단일 센서 성능이 곧 체계 성능
-   *   To-Be (융합)   : p = 1 − Πᵢ(1 − pᵢ)     — 다출처 센서 병렬 결합(Any Sensor)
-   * 의미론: nodes[].detectProb.value = 센서 고유 스캔당 탐지확률(표준 표적 기준),
-   *         threats[].detectFactor = 위협 고유 탐지난이도 계수(저RCS·저고도 등, 0~1).
-   * 민감도 배수(mult.detect)는 결합 *전*(per-sensor)에 곱한다 — 결합 후 곱하면 스윕 의미가 달라짐.
-   * value 누락 센서는 폴백 Pd=1.0 (데이터 누락이 조용한 0 탐지가 되지 않도록). 발동 시 STEP5 보고.
-   * RNG는 소비하지 않는다(호출부가 단일 draw로 판정 — 스캔당 정확히 1회 유지).
-   */
-  Simulation.prototype._scanProb = function (threat) {
-    var tt = KJ.threatType(threat.type);
-    var md = this.mult.detect;
-    // Gate 2 되돌리기: sensorPdFusion OFF → 통합 이전(0468f10) 탐지식(센서 Pd·융합 무시).
-    if (!this.features.sensorPdFusion) return Math.max(0, Math.min(1, tt.detectFactor * md));
-    var sensors = threat._sensors || [];
-    var ps = sensors.map(function (s) {
-      var pd = (s.detectProb && typeof s.detectProb.value === 'number')
-        ? s.detectProb.value : 1.0;                       // value 누락 시 안전 폴백
-      return Math.max(0, Math.min(1, pd * tt.detectFactor * md));
-    });
-    if (!ps.length) return 0;
-    if (this.mode === 'tobe') {
-      // 다출처 융합(Any Sensor): 센서 병렬 결합
-      return 1 - ps.reduce(function (acc, p) { return acc * (1 - p); }, 1);
-    }
-    // 비융합(As-Is): 최선의 단일 센서만
-    return Math.max.apply(null, ps);
-  };
-
-  Simulation.prototype._onDetect = function (t, d) {
-    var threat = d.threat;
-    if (!threat.alive || threat.detected || threat.pipelineDead) return;
-    var p = this._scanProb(threat); // per-scan 탐지확률: 센서 Pd × 위협 난이도, 모드별 융합
-    if (this.rng.raw() < p) {
-      threat.detected = true;
-      threat._detectT = t; // 결심 지연(MoP) 기준 시각
-      this.global.detected++;
-      this._mark(threat, '탐지', t);
-      this._metricEvent('SENSOR_DETECTED', t, threat, { source: 'legacy-scan' });
-      this._onDetected(threat, t);
-    } else {
-      // 항적 소실 → 재획득 시도 (공역 이탈 전까지 반복, EXIT가 상한)
-      this.schedule(t + SCAN_SEC, PRI.DETECT, 'DETECT', { threat: threat });
-    }
-  };
-
-  /**
-   * 링크 1건 전달 지연(초) — comm.dist가 있으면 분포 샘플링, 없으면 대표값(delaySec).
-   * mult.delay(민감도 배수)는 항상 곱한다. RNG는 dist가 있을 때만 소비(스캔당/홉당 1회).
-   * ※ 경로 "선택"(argmin·coordPath BFS)은 항상 대표값 delaySec으로 하고, 여기서는
-   *   실제 전달 "시각"만 샘플링한다 — 비결정론적 경로 선택을 피하기 위함(재현성).
-   */
   Simulation.prototype._linkDelay = function (comm) {
     var base = comm.delaySec;
     if (comm.dist) {
@@ -992,192 +940,17 @@
     return base * this.mult.delay;
   };
 
-  /**
-   * 중복 항적(dup) 프록시(ghost) — C2 서버 부하만 소비하는 유령 작업. 실제 위협을 참조만 한다.
-   * alive를 getter로 두어 실제 위협이 격추/누수되면 ghost도 alive=false → 큐에서 자동 reneging
-   * (_onServiceEnd의 죽은 작업 스킵 재사용). ghost 드롭은 ns.drops에 계상되나 EXIT 이벤트가
-   * 없어 global.leaked에는 절대 반영되지 않는다(보존 항등식 유지).
-   */
-  function makeGhost(real) {
-    return {
-      type: real.type, _dup: true, _real: real,
-      pipelineDead: false, leakReason: null,
-      get alive() { return real.alive; }
-    };
-  }
-
-  /** 2 추적생성: 최속 보고경로로 담당 C2에 항적 전달 (To-Be는 직결 센서면 JAMDC2 직행) */
   Simulation.prototype._onDetected = function (threat, t) {
-    if (this.nativeIads) {
-      this._routeIadsDetected(threat, t);
-      return;
-    }
-    var self = this;
-    // To-Be 다출처 Plug-in 직결(Phase 3): 센서→JAMDC2 직결 링크를 가진 센서가 하나라도 있으면
-    // 담당 C2를 건너뛰고 JAMDC2로 직행한다(FUSION_ARRIVE). argmin에 섞지 않는 명시적 우선 규칙 —
-    // 직결/담당C2 모두 2s라 tiebreak가 자의적으로 갈리는 것을 피한다. 근거: KJADS "P→F 전환"
-    // (다출처 plot 수신·융합 → 기존 체계 사각지대의 신규 항적 F 생성). 담당 C2 포화가 융합을
-    // 막지 못하게 한다. detects/커버리지·탐지 확률(①)은 불변 — 여기는 "탐지 후 어디로"의 문제.
-    var fusionId = this.fusionC2Id;
-    if (this.mode === 'tobe' && fusionId && this.nodeState[fusionId]) {
-      var dbest = null;
-      threat._sensors.forEach(function (s) {
-        self.catalog.links.forEach(function (l) {
-          if (l.from === s.id && l.to === fusionId && l.kind === 'report' && l.comm.tobe) {
-            var dd = l.comm.tobe.delaySec;
-            if (!dbest || dd < dbest.delay || (dd === dbest.delay && l.from < dbest.from)) {
-              dbest = { delay: dd, comm: l.comm.tobe, from: l.from };
-            }
-          }
-        });
-      });
-      if (dbest) {
-        this._recordLink(dbest.from, fusionId, dbest.comm, 'report');
-        this._mark(threat, '직결→' + fusionId, t);
-        this.schedule(t + this._linkDelay(dbest.comm), PRI.LINK_ARRIVE, 'FUSION_ARRIVE', { threat: threat });
-        return;
-      }
-    }
-    // 담당 C2 후보 수집 (C2별 최속 report 링크, 동점 시 센서 id 사전순 — 데이터 순서 의존성 제거).
-    var targets = {}; // c2Id -> { delay, comm, from }
-    threat._sensors.forEach(function (s) {
-      self.catalog.links.forEach(function (l) {
-        if (l.from === s.id && l.to !== fusionId && l.kind === 'report' && l.comm[self.mode]) {
-          var d = l.comm[self.mode].delaySec;
-          var cur = targets[l.to];
-          if (!cur || d < cur.delay || (d === cur.delay && l.from < cur.from)) {
-            targets[l.to] = { delay: d, comm: l.comm[self.mode], from: l.from };
-          }
-        }
-      });
-    });
-    var ids = Object.keys(targets);
-    if (!ids.length) { threat.leakReason = 'no_report_path'; return; }
-    ids.sort(function (a, b) { return targets[a].delay - targets[b].delay || (a < b ? -1 : 1); });
-    // 주 항적: 최속 C2 — 하위 단계(⑥⑦⑧)를 구동한다. 이 C2가 주교전 통제계통(_mainC2)이며,
-    // 중복항적 계통(ghost)은 이 계통과 협조가 안 되면 중복교전한다(_coordCheck).
-    var main = targets[ids[0]];
-    threat._mainC2 = ids[0];
-    this._recordLink(main.from, ids[0], main.comm, 'report');
-    this.schedule(t + this._linkDelay(main.comm), PRI.LINK_ARRIVE, 'C2_ARRIVE', { threat: threat, c2: ids[0] });
-    // 중복 항적(Phase 4, As-Is 전용): 나머지 커버 C2 전부에 팬아웃. Track Fusion 부재로 같은 표적이
-    // 각 군 C2에 별개 항적으로 생성되는 KJADS GAP 1을 모사한다. 이들은 C2 서버 부하만 소비하고
-    // 하위 단계는 구동하지 않는다(프록시 ghost). To-Be는 팬아웃하지 않는다 — JAMDC2 Track Fusion이
-    // dup을 흡수(직결 없는 위협도 주 항적 1건만). 재획득 dup(config.dupReacquire)은 기본 off·별개 과제.
-    if (this.mode === 'asis') {
-      for (var i = 1; i < ids.length; i++) {
-        var dup = targets[ids[i]];
-        this._recordLink(dup.from, ids[i], dup.comm, 'report');
-        this._mark(threat, '중복항적→' + ids[i], t);
-        this.schedule(t + this._linkDelay(dup.comm), PRI.LINK_ARRIVE, 'C2_ARRIVE_DUP',
-          { threat: makeGhost(threat), c2: ids[i] });
-      }
-    }
+    // ADR-061: legacy 9단계 파이프라인 폐기 — native 경로만 남는다.
+    this._routeIadsDetected(threat, t);
   };
 
-  /**
-   * 중복 항적 C2 도착(As-Is): C2 서버 부하를 소비한 뒤, 처리 완료 시점에 ⑥⑦ 교전협조 검사.
-   * 종전에는 부하만 소비하고 하위 단계를 구동하지 않았다(중복교전 미모사). 이제 이 계통이
-   * 주교전 계통(_mainC2)과 협조가 안 되면 중복교전한다 — KJADS 문제상황 1(교전 중복·책임 공백).
-   */
-  Simulation.prototype._onC2ArriveDup = function (t, d) {
-    var self = this, threat = d.threat; // ghost
-    if (!threat.alive || threat.pipelineDead) return;
-    this._nodeArrive(d.c2, t, { threat: threat, kind: 'track' }, function (tt2, job) {
-      self._coordCheck(tt2, job.threat, d.c2);
-    });
-  };
-
-  /**
-   * ⑥⑦ 교전협조 검사 — 중복항적을 받은 이 계통(ghostC2)이 주교전 계통(_mainC2)과
-   * 잔여 체공창 내에 협조(deconflict)할 수 있는가?
-   *  - 협조 성립(coord 경로 지연 < 잔여 dwell): 주교전자 1개 지정, 이 계통 교전 포기(중복 회피).
-   *  - 협조 실패(경로 부재 OR 지연 ≥ 잔여 dwell): responsibility_gap(책임공백) → 두 계통 각각 교전.
-   * To-Be는 팬아웃이 없어(JAMDC2 COP 공유) 이 경로에 진입하지 않는다(중복 원천 차단).
-   * 순수 관측이 아니라 거동 변경 — 요격탄 이중 소모·engaged 이중 계상이 발생한다(문제상황 1의 비용).
-   */
-  Simulation.prototype._coordCheck = function (t, ghost, ghostC2) {
-    var self = this, real = ghost._real;
-    if (!real.alive || real.killed) return;             // 이미 종결 → 중복 없음
-    var mainC2 = real._mainC2, type = real.type;
-    if (!mainC2 || mainC2 === ghostC2) return;          // 동일 계통 → 중복 아님
-    // 이 계통이 이 위협을 교전할 수단(canEngage 무기)을 실제로 통제하는가?
-    var shooters = this._nodesInMode().filter(function (n) {
-      return n.category === 'shooter' && n.canEngage[type] &&
-        n.controlledBy && (n.controlledBy[self.mode] || []).indexOf(ghostC2) !== -1;
-    });
-    if (!shooters.length) return;                       // 교전수단 없음 → 중복 아님
-    this.global.coordAttempts++;
-    // 협조 성립 여부: coord 경로(대표값) 총지연이 잔여 체공창 내인가
-    var remaining = (real.spawnT + real.dwellSec) - t;
-    var path = coordPath(ghostC2, mainC2, this.mode, this.catalog.links);
-    var coordSec = null;
-    if (path) { coordSec = 0; for (var i = 0; i < path.length; i++) coordSec += path[i].comm[this.mode].delaySec; }
-    if (path && coordSec < remaining) {
-      this.global.deconflicted++;                       // 제때 협조 → 중복 회피
-      this._mark(real, '교전협조:' + ghostC2 + '⇄' + mainC2 + '(' + coordSec.toFixed(0) + 's)', t);
-      return;
-    }
-    // ── 책임공백: 협조 경로 부재 또는 잔여 체공창 내 협조 불가 → 중복교전 ──
-    this.global.coordGaps++;
-    real._hadCoordGap = true;
-    this._metricEvent('COORDINATION_FAILED', t, real, {
-      phase: 'deconfliction', fromC2Id: ghostC2, toC2Id: mainC2,
-      reason: path ? 'deadline_exceeded' : 'no_coordination_path'
-    });
-    this._mark(real, '책임공백:' + ghostC2 + '↮' + mainC2 +
-      (path ? '(협조' + coordSec.toFixed(0) + 's≥잔여' + Math.max(0, remaining).toFixed(0) + 's)' : '(협조경로없음)'), t);
-    this._dupEngage(t, ghost, ghostC2, shooters);
-  };
-
-  /**
-   * 중복교전 명령 — 협조 실패 계통이 자기 무기로 별개 교전. 요격탄·engaged를 이중 계상하되,
-   * 실제 격추/누수(BDA)는 주 계통이 소유한다(이중 계상 방지·보존 항등식 유지). 즉 "낭비된 병렬 사격".
-   */
-  Simulation.prototype._dupEngage = function (t, ghost, ghostC2, shooters) {
-    var self = this, best = null;
-    shooters.forEach(function (sh) {
-      var ns = self.nodeState[sh.id];
-      var load = ns ? (ns.busy + ns.queue.length) : 0;
-      if (!best || load < best.load || (load === best.load && sh.id < best.sh.id)) best = { sh: sh, load: load };
-    });
-    var shooter = best.sh;
-    var comm = this._link(ghostC2, shooter.id, 'command');
-    var delay = comm ? this._linkDelay(comm) : 0;
-    if (comm) this._recordLink(ghostC2, shooter.id, comm, 'command');
-    this.global.engaged++;
-    this.global.duplicateEngagements++;
-    this._mark(ghost._real, '중복교전명령:' + ghostC2 + '→' + shooter.id, t);
-    this.schedule(t + delay, PRI.LINK_ARRIVE, 'DUP_SHOOTER_ARRIVE', { threat: ghost, shooter: shooter.id });
-  };
-
-  Simulation.prototype._onDupShooterArrive = function (t, d) {
-    var self = this, ghost = d.threat;
-    if (!ghost.alive) return;   // 주 계통이 이미 격추/누수 → ghost.alive=false → 중복 사격 취소(사격 안 함)
-    this._nodeArrive(d.shooter, t, { threat: ghost, kind: 'engage' }, function (tt2, job) {
-      self._onDupEngageEnd(tt2, d.shooter, job.threat.type);
-    });
-  };
-
-  /** 중복 교전탄 소모만 계상 — BDA 없음(실제 격추/누수는 주 계통 소유, 보존 유지) */
   Simulation.prototype._onDupEngageEnd = function (t, shooterId, type) {
     var shooter = this._nodeById(shooterId);
     var shot = (shooter.engage && shooter.engage.costPerShotM) || 0;
     this.cost.interceptM += shot;
     this.cost.duplicateInterceptM += shot;
     if (SAT_THREATS[type]) this.cost.interceptSatM += shot;
-  };
-
-  /** 3·4·5 식별·위협평가·WTA: C2(또는 To-Be JAMDC2) 서버 처리 */
-  Simulation.prototype._onC2Arrive = function (t, d) {
-    var self = this, threat = d.threat;
-    if (!threat.alive || threat.pipelineDead) return;
-    this._mark(threat, 'C2도착:' + d.c2, t);
-    this._nodeArrive(d.c2, t, { threat: threat, kind: 'track' }, function (tt2, job) {
-      if (!job.threat._countedC2) { job.threat._countedC2 = true; self.global.reachedC2++; }
-      self._mark(job.threat, 'C2처리완료:' + d.c2, tt2);
-      self._afterC2(tt2, job.threat, d.c2);
-    });
   };
 
   Simulation.prototype._onIadsC2Arrive = function (t, d) {
@@ -2157,322 +1930,6 @@
     this._iadsRefreshLaunchers(d.shooterId, t);
   };
 
-  Simulation.prototype._afterC2 = function (t, threat, c2Id) {
-    if (!threat.alive || threat.pipelineDead) return;
-    var self = this;
-    // To-Be: 다중센서 융합·AI 식별·무기배정을 JAMDC2에서 집중 수행
-    var fusionId = this.fusionC2Id;
-    if (this.mode === 'tobe' && fusionId && this._nodeById(fusionId) && this.nodeState[fusionId] && c2Id !== fusionId) {
-      var comm = this._link(c2Id, fusionId, 'report') || this._link(c2Id, fusionId, null);
-      var delay = comm ? this._linkDelay(comm) : 0;
-      if (comm) this._recordLink(c2Id, fusionId, comm, 'report');
-      this._mark(threat, '융합경유', t);
-      this.schedule(t + delay, PRI.LINK_ARRIVE, 'FUSION_ARRIVE', { threat: threat });
-      return;
-    }
-    this._decision(threat, t, c2Id);
-  };
-
-  Simulation.prototype._onFusionArrive = function (t, d) {
-    var self = this, threat = d.threat;
-    if (!threat.alive || threat.pipelineDead) return;
-    var fusionId = this.fusionC2Id;
-    this._nodeArrive(fusionId, t, { threat: threat, kind: 'track' }, function (tt2, job) {
-      if (!job.threat._countedC2) { job.threat._countedC2 = true; self.global.reachedC2++; }
-      self._mark(job.threat, '융합처리완료', tt2);
-      // To-Be는 사전승인 자동교전(approval=null)이 대부분 → 결심 홉 없이 바로 교전
-      self._decision(job.threat, tt2, fusionId);
-    });
-  };
-
-  /**
-   * 6·7 결심·교전협조/권한위임.
-   * 정밀화 Phase B-3: 위협별 자동화 차등 플래그(threats.js automation, C2-AUTO-LEVEL-01)를
-   * 참조해 결심 홉을 생략/단축한다 — 구 approval=null 우회의 일반화.
-   *  - auto-preauth : 결심 홉 생략(사전승인 자동교전)
-   *  - human-on-loop: 승인 처리(서비스)는 수행하되 coord 협조경로 홉 생략(COP 감독)
-   *  - human-in-loop: 승인권자까지 coord 최단경로 홉 + 승인 처리(As-Is 기본)
-   * 정밀화 Phase B-2: 승인권자 노드가 임계(DELEG_THRESH, 모드별) 이상 혼잡하면 결심을
-   * 하위/자동으로 동적 위임(중앙→분권 전환)하고 전환 시점·횟수를 기록한다.
-   */
-  Simulation.prototype._decision = function (threat, t, controlC2) {
-    var tt = KJ.threatType(threat.type);
-    var auto = tt.automation ? tt.automation[this.mode] : null;
-    var approvalId = tt.approvalLevel ? this._resolveRole(tt.approvalLevel[this.mode]) : null;
-    if (auto === 'auto-preauth' || !approvalId || approvalId === controlC2 || !this.nodeState[approvalId]) {
-      threat._commandCause = auto === 'auto-preauth' ? 'autonomous' : 'local_authority';
-      this._doEngage(threat, t);       // 승인 불필요(사전승인 자동교전) 또는 동일 노드 승인
-      return;
-    }
-    // B-2: 부하 기반 동적 권한위임 — 승인권자의 관측 대기열이 임계 초과 시 분권 전환
-    var apprNs = this.nodeState[approvalId];
-    if (apprNs.busy >= apprNs.c &&
-        apprNs.queue.length >= apprNs.c * DELEG_QUEUE_MULT[this.mode]) {
-      this.deleg.count++;
-      if (this.deleg.firstT === null) this.deleg.firstT = t;
-      this.deleg.byNode[approvalId] = (this.deleg.byNode[approvalId] || 0) + 1;
-      this._mark(threat, '권한위임:' + approvalId, t);
-      threat._commandCause = 'delegated';
-      this._doEngage(threat, t);
-      return;
-    }
-    if (auto === 'human-on-loop') {
-      // 감독하 자동교전: 협조경로 홉 생략, 승인권자 처리만 수행
-      this._mark(threat, '감독승인개시:' + approvalId, t);
-      this.schedule(t, PRI.LINK_ARRIVE, 'APPROVE_ARRIVE', { threat: threat, appr: approvalId });
-      return;
-    }
-    var path = coordPath(controlC2, approvalId, this.mode, this.catalog.links);
-    if (!path) {
-      threat.leakReason = 'responsibility_gap';
-      this._metricEvent('RESPONSIBILITY_UNRESOLVED', t, threat, {
-        fromC2Id: controlC2, toC2Id: approvalId, reason: 'no_coordination_path'
-      });
-      return;
-    } // 책임공백(협조 경로 부재)
-    var self = this, delay = 0;
-    path.forEach(function (l) {
-      delay += self._linkDelay(l.comm[self.mode]); // 홉별 실제 전달시각 샘플링(경로는 대표값으로 이미 선택됨)
-      self._recordLink(l.from, l.to, l.comm[self.mode], 'coord');
-    });
-    // 결심지연 분해(1B): 이 항적이 겪은 coord 협조 홉 지연을 누적한다(순수 관측 — delay는
-    // 이미 스케줄에 반영된 값, 재계산·추가 RNG 소비 없음). 잔여(=결심지연−협조)가 곧 C2 처리·
-    // 승인 대기(큐)·승인 서비스 몫이다. "As-Is 지연=음성 협조 탓"이 절반만 맞음을 화면에 드러낸다.
-    threat._coordDelay = (threat._coordDelay || 0) + delay;
-    this._mark(threat, '협조개시:' + controlC2 + '→' + approvalId, t);
-    this.schedule(t + delay, PRI.LINK_ARRIVE, 'APPROVE_ARRIVE', { threat: threat, appr: approvalId });
-  };
-
-  Simulation.prototype._onApproveArrive = function (t, d) {
-    var self = this, threat = d.threat;
-    if (!threat.alive || threat.pipelineDead) return;
-    this._nodeArrive(d.appr, t, { threat: threat, kind: 'approval' }, function (tt2, job) {
-      self._mark(job.threat, '승인완료:' + d.appr, tt2);
-      job.threat._commandCause = 'commanded';
-      self._doEngage(job.threat, tt2);
-    });
-  };
-
-  /**
-   * 자원최적화 Step 2: 무기 n을 위협 type에 교전할 때 지켜야 할 보존 최소수량.
-   * engage.reserveFloor = {srbm: 6} → srbm 아닌 위협 교전 시 6발 보존(srbm 교전 시엔 0). 여러 보존
-   * 위협이 있으면 "현재 위협이 아닌" 보존위협들의 합을 지킨다(KJADS 5-2 고위협 대응 보존).
-   */
-  function reserveFloorFor(node, type) {
-    var rf = node.engage && node.engage.reserveFloor;
-    if (!rf) return 0;
-    var floor = 0;
-    Object.keys(rf).forEach(function (rt) { if (rt !== type) floor += rf[rt]; });
-    return floor;
-  }
-
-  /**
-   * 8 교전명령: WTA로 무기 선택 → 명령 링크 → 교전채널 투입.
-   * 정밀화 Phase B-1 — 모드별 WTA 차등:
-   *  - As-Is : COP 부재로 무기별 적합도 비교가 불가 — 관측 가능한 최소부하 선택(기존 동작).
-   *  - To-Be : Best-Shooter 적합도 점수 = wtaSuit[위협 고도대역](개념 가중, C2-WTA-SUIT-01)
-   *            × 잔여 교전용량(0.25+0.75×(1-충전율)). 동점은 노드 id 사전순(결정론).
-   * canEngage 제약(신궁·천마 탄도탄 배제 등)은 두 모드 모두에서 항상 우선 필터다.
-   */
-  Simulation.prototype._doEngage = function (threat, t) {
-    if (!threat.alive || threat.pipelineDead) return;
-    var self = this, mode = this.mode, type = threat.type;
-    // (1) 능력 후보: canEngage 제약(신궁·천마 탄도탄 배제 등) + 통제계통 존재 + 축선 담당.
-    //     coverage(Phase 2, WPN-*-COV-01)가 위협 축선을 포함해야 교전 가능 — 사거리 7km 무기가
-    //     전 축선을 맡던 결함(SM2-E가 서부 순항 요격 등) 차단. coverage 미지정 노드는 전축선 폴백.
-    var capable = this._nodesInMode().filter(function (n) {
-      if (n.category !== 'shooter' || !n.canEngage[type]) return false;
-      if (!n.controlledBy || !(n.controlledBy[mode] || []).length) return false;
-      if (n.coverage && n.coverage.indexOf(threat.axis) === -1) return false; // 축선 미담당
-      return true;
-    });
-    if (capable.length === 0) { threat.leakReason = 'no_shooter'; return; } // 능력·축선 공백(방공 공백)
-    // (2) 교전창 실현가능성(Phase 1): 명령링크 지연 + 교전 소요시간(engageTimeSec 평균)이 잔여
-    //     체공창을 넘으면 물리적으로 교전 완료 불가 → 후보에서 제외. FTR(300s)이 fighter(dwell
-    //     180s)를 "최적"이라 고르고 EXIT 전에 못 끝내던 확정 실패를 원천 차단한다(KJADS 원칙 3-2).
-    var remainDwell = (threat.spawnT + threat.dwellSec) - t;
-    var shooters = capable.filter(function (n) {
-      var cmd = self._link(n.controlledBy[mode][0], n.id, 'command');
-      var lead = (cmd ? cmd.delaySec * self.mult.delay : 0) + n.engage.engageTimeSec;
-      return lead <= remainDwell * ENGAGE_WINDOW_MARGIN;
-    });
-    if (shooters.length === 0) {
-      // 능력 있는 무기는 있으나 잔여 체공창 내 교전 완료 불가. 이미 한 번이라도 교전했으면(tries>0)
-      // 기회 소진(missed), 한 번도 못 쐈으면 교전창 부족(no_engage_window). 구조성은 STOP 판단 대상.
-      threat.leakReason = threat.tries > 0 ? 'missed' : 'no_engage_window';
-      return;
-    }
-    // (3) 자원최적화 Step 2(magazine·reserveFloor): 재고 소진·보존 필터.
-    //   · ammo≤0 → 후보 제외(소진). · reserveFloor(To-Be 전용, GAP 5): 비(非)보존위협 교전 시 잔여가
-    //     보존수량 이하면 제외(고위협용 유도탄 지킴). 후보 0이면 no_ammo(비구조 — C2로 유도탄 안 늘어남).
-    if (this.features.magazine) {
-      var withAmmo = shooters.filter(function (n) {
-        var ns = self.nodeState[n.id];
-        if (ns.ammo <= 0) return false; // 소진
-        if (mode === 'tobe' && self.features.reserveFloor) {
-          var floor = reserveFloorFor(n, type);
-          if (floor > 0 && ns.ammo <= floor) { ns.reserveTriggers++; return false; } // 보존 발동(To-Be)
-        }
-        return true;
-      });
-      if (withAmmo.length === 0) { threat.leakReason = 'no_ammo'; return; }
-      shooters = withAmmo;
-    }
-    var best = null;
-    // 자원최적화 Step 1(costAwareWta): 비용 인식 점수. score = suit·(0.25+0.75·remain)·((1−W)+W·costFit),
-    // costFit=min(1, 위협가치/요격탄가). W=0 또는 플래그 OFF → 현행과 완전 동일(RNG 미소비, bit-clean 되돌리기).
-    // ⚠️ canEngage·coverage·교전창 3중 필터가 항상 선행(§6 금지: SHORAD가 싸다고 방사포에 배정 불가).
-    var altBand = KJ.threatType(type).altBand;
-    var threatVal = KJ.threatType(type).unitCostM || 0;
-    var W = this.costWtaWeight;
-    function costScore(sh, useCost) {
-      var ns = self.nodeState[sh.id];
-      var remain = ns ? Math.max(0, 1 - (ns.busy + ns.queue.length) / ns.K) : 1;
-      var suit = sh.wtaSuit ? (sh.wtaSuit[altBand] || 0) : 1;
-      var score = suit * (0.25 + 0.75 * remain);
-      // KJADS 5-1 문언("탄도탄용 고가 유도탄 보존")에 충실 — 비용항은 탄도(ballistic) 위협에만 적용한다.
-      // 저·중고도 위협 선택에 비용항을 걸면 anti-pattern(고가 낭비)이 없는 곳까지 재배정해 격추율에
-      // 부작용을 준다(실측: SC1 −1.1pp). 고가 낭비는 오직 탄도(MDU-M vs MDU-L)에서 발생하므로 국한한다.
-      if (useCost && altBand === 'ballistic') {
-        var cps = (sh.engage && sh.engage.costPerShotM) || 0;
-        var costFit = cps > 0 ? Math.min(1, threatVal / cps) : 1; // 위협가치/요격탄가 (1 상한)
-        score *= ((1 - W) + W * costFit);
-      }
-      // 자원최적화 Step 3(thresholdReweight, To-Be 전용): 재고가 임계 이하로 떨어지면 점수 감쇠 —
-      // KJADS 5-2 "임계 도달 시 자동 경보→상위 환수"의 최소 구현(soft, Step 2 reserveFloor의 연속판).
-      if (mode === 'tobe' && self.features.thresholdReweight && isFinite(ns.ammo) && isFinite(ns.magazine0) && ns.magazine0 > 0) {
-        var ammoRatio = ns.ammo / ns.magazine0;
-        var scarcity = ammoRatio < SCARCITY_THRESH ? (ammoRatio / SCARCITY_THRESH) : 1;
-        score *= (0.3 + 0.7 * scarcity);
-      }
-      return score;
-    }
-    var asisCost = mode === 'asis' && this.features.costAwareWtaAsis; // 반증 실험(3E) 전용
-    if (mode === 'tobe' || asisCost) {
-      var useCost = mode === 'tobe' ? this.features.costAwareWta : true; // 반증: As-Is에도 비용항
-      shooters.forEach(function (sh) {
-        var score = costScore(sh, useCost);
-        if (!best || score > best.score ||
-            (score === best.score && sh.id < best.sh.id)) best = { sh: sh, score: score };
-      });
-    } else {
-      // As-Is WTA (Phase 3 결정: 안 D 유지 — 변경 없음, 한계 문서화). 관측 가능한 최소부하 선택.
-      // ⚠️ 한계: 전군 무기의 실시간 부하를 완벽 조회하는 것은 "COP 부재" 전제(KJADS GAP 5, 자산
-      // 미통합)와 모순된다. 대안(A 자기계통·C 낡은부하 등)의 편향 원장 영향은 측정해 ADR 원장
-      // §4-5에 기록했고, 결론에 유리한 방향(To-Be 개선폭 확대)이라 근거 없이 채택하지 않는다.
-      // 3C: 동점은 id 사전순(To-Be와 통일 — 종전 strict< 배열순 의존 제거).
-      shooters.forEach(function (sh) {
-        var ns = self.nodeState[sh.id];
-        var load = ns ? (ns.busy + ns.queue.length) : 0;
-        if (!best || load < best.load || (load === best.load && sh.id < best.sh.id)) best = { sh: sh, load: load };
-      });
-    }
-    var shooter = best.sh;
-    var controlC2 = shooter.controlledBy[mode][0];
-    this._metricEvent('COMMAND_DECIDED', t, threat, {
-      nodeId: controlC2, shooterId: shooter.id, cause: threat._commandCause || 'commanded'
-    });
-    var comm = this._link(controlC2, shooter.id, 'command');
-    var delay = comm ? this._linkDelay(comm) : 0;
-    if (comm) this._recordLink(controlC2, shooter.id, comm, 'command');
-    this.global.engaged++;
-    if (!threat._countedEngaged) {
-      threat._countedEngaged = true;
-      this.global.everEngaged++;
-      // 자원최적화 Step 1: 교전한 위협의 가치 합(격추 여부 무관) — 위협등급 대비 요격탄 단가 비율 분모.
-      this.global.engagedThreatValueM += KJ.threatType(threat.type).unitCostM || 0;
-      // 교전지연(생성→최초 교전명령, CRN 검토 이식): 탐지 잠복 + 결심을 포함한 end-to-end C2 지연.
-      // As-Is 음성협조 vs To-Be 자동교전 차이를 MC 비교·토네이도에서 직접 포착(meanDecisionDelaySec는
-      // 탐지→교전이라 탐지 잠복 제외 — 두 지표는 상보적).
-      this.global.timeToEngage.push(t - threat.spawnT);
-      // 결심 지연(MoP): 탐지→최초 교전명령 (협조/승인/위임 지연이 모두 포함됨)
-      if (threat._detectT != null) {
-        this.decisionDelaySum += (t - threat._detectT);
-        this.decisionDelayCount++;
-        this.coordDelaySum += (threat._coordDelay || 0); // 1B: 같은 분모로 협조 홉 몫 집계
-      }
-    }
-    this._mark(threat, '교전명령#' + (threat.tries + 1) + ':' + shooter.id, t);
-    this.schedule(t + delay, PRI.LINK_ARRIVE, 'SHOOTER_ARRIVE', { threat: threat, shooter: shooter.id });
-  };
-
-  Simulation.prototype._onShooterArrive = function (t, d) {
-    var self = this, threat = d.threat;
-    if (!threat.alive || threat.pipelineDead) return;
-    var engagementId = 'ENG_' + (++this.engagementSeq);
-    this._nodeArrive(d.shooter, t, {
-      threat: threat, kind: 'engage', engagementId: engagementId,
-      launchCause: threat._commandCause || 'unattributed'
-    }, function (tt2, job) {
-      self._onEngageEnd(tt2, job.threat, d.shooter, job.engagementId);
-    });
-  };
-
-  // 비용교환비의 '저가 포화위협' 부분집합 (계획서: 장사정포·UAV 대응 소모 비용)
-  var SAT_THREATS = { uav_small: true, mrl_large: true };
-
-  /** 9 BDA: 요격확률 판정 → 실패 시 재교전 피드백(폐루프) */
-  Simulation.prototype._onEngageEnd = function (t, threat, shooterId, engagementId) {
-    if (!threat.alive) return;
-    var shooter = this._nodeById(shooterId);
-    threat.tries++;
-    // Phase D: 교전 시도 1회 = 요격탄 1발 소모(개념) — 비용교환비(MoFE) 집계.
-    // Phase 6(salvo): ON이면 교전당 k발 동시 발사 → 비용 k배, 누적 pk=1−(1−pk)^k. OFF면 k=1(legacy).
-    var shots = this.features.salvo ? this.salvoSize : 1;
-    this.global.shotsFired += shots; // Phase 7: 교전당 발사수 계측(salvo·재교전 발사 부담 가시화)
-    var cps = (shooter.engage && shooter.engage.costPerShotM) || 0;
-    var shot = cps * shots;
-    this.cost.interceptM += shot;
-    if (SAT_THREATS[threat.type]) this.cost.interceptSatM += shot;
-    // 자원최적화 Step 1: 고가 유도탄(≥$5M = L-SAM 계열) 소모액 — 고가유도탄 보존율 분자.
-    if (cps >= HIGH_VALUE_COST_M) this.global.highValueInterceptM += shot;
-    // 자원최적화 Step 2(magazine): 재고 차감(As-Is·To-Be 공통 — 물리). 첫 소진 시각 기록(비대칭 소진 지표).
-    var sns = this.nodeState[shooterId];
-    if (this.features.magazine && sns && isFinite(sns.ammo)) {
-      sns.ammo -= shots;
-      if (sns.ammo <= 0 && sns.ammoDepletedT === null) sns.ammoDepletedT = t;
-    }
-    var pk = this._pk(shooter, threat);
-    if (shots > 1) pk = 1 - Math.pow(1 - pk, shots); // 연발 누적 요격확률 (그리기 수 불변 — pk 값만 상향)
-    // Phase 5(pkCorrelated): 재교전 상관. OFF면 독립 추출(legacy: raw() < pk). ON이면 표적별 공유
-    // 잠재 frailty(최초 교전서 1회 추출)와 발사별 신규 추출을 ρ로 혼합 → 같은 표적 발사들이 양의
-    // 상관을 가져 재교전의 누적 격추 이득이 줄어든다(체계적 실패 재현). 그리기 수: OFF=발사당 raw 1회
-    // (종전과 동일), ON=+표적당 frailty 1회. u<pk이면 격추.
-    var hit;
-    if (this.features.pkCorrelated) {
-      if (threat._frailty === null) threat._frailty = this.rng.raw(); // 지연 추출(최초 교전 표적만)
-      var u = this.pkCorrRho * threat._frailty + (1 - this.pkCorrRho) * this.rng.raw();
-      hit = u < pk;
-    } else {
-      hit = this.rng.raw() < pk;
-    }
-    if (hit) {
-      threat.alive = false; threat.killed = true;
-      this.global.killed++;
-      this.global.timeToKill.push(t - threat.spawnT);
-      var tv = KJ.threatType(threat.type).unitCostM || 0;
-      this.cost.killedThreatM += tv;
-      if (SAT_THREATS[threat.type]) this.cost.killedThreatSatM += tv;
-      this._mark(threat, '격추성공#' + threat.tries, t);
-      this._metricEvent('INTERCEPT_HIT', t, threat, { shooterId: shooterId, engagementId: engagementId || null });
-      if (threat._trace) { threat._trace.exitT = t; threat._trace.outcome = 'killed'; }
-    } else if (threat.tries < MAX_ENGAGE_TRIES && t < threat.spawnT + threat.dwellSec) {
-      this._mark(threat, '교전실패#' + threat.tries, t);
-      this._metricEvent('INTERCEPT_MISS', t, threat, { shooterId: shooterId, engagementId: engagementId || null });
-      this._doEngage(threat, t);          // 재교전
-    } else if (!threat.leakReason) {
-      threat.leakReason = 'missed';       // 요격 실패(기회 소진)
-      this._mark(threat, '교전실패#' + threat.tries + '(기회소진)', t);
-      this._metricEvent('INTERCEPT_MISS', t, threat, { shooterId: shooterId, engagementId: engagementId || null });
-    }
-  };
-
-  /**
-   * 요격확률(개념값). Phase 1(⑨): 무기별 pk를 nodes.js engage.pk(params.md 문서값)에서 읽는다.
-   * 종전엔 shooter 인자가 항상-참 조건 체크에만 쓰여 무기를 바꿔도 pk가 안 바뀌었다(사실 b) —
-   * ⑧ Best-Shooter가 격추율에 영향을 주지 못하는 근본 원인. pkByShooter 플래그로 켠다(기본 ON).
-   * RNG는 스캔당 정확히 1회(triangular 1회) — 문서값·폴백·legacy 모두 동일해 정렬이 유지된다.
-   */
   Simulation.prototype._pk = function (shooter, threat) {
     if (!this.features.pkByShooter) return this._pkLegacy(shooter, threat);
     var spec = shooter.engage && shooter.engage.pk;
@@ -2658,9 +2115,7 @@
   Simulation.prototype._dispatch = function (ev) {
     switch (ev.type) {
       case 'SPAWN': this._spawn(ev.t, ev.data); break;
-      case 'DETECT': this._onDetect(ev.t, ev.data); break;
       case 'IADS_SENSOR_SCAN': this._onIadsSensorScan(ev.t, ev.data); break;
-      case 'C2_ARRIVE': this._onC2Arrive(ev.t, ev.data); break;
       case 'IADS_C2_ARRIVE': this._onIadsC2Arrive(ev.t, ev.data); break;
       case 'IADS_RETRY': this._onIadsRetry(ev.t, ev.data); break;
       case 'IADS_FIRE': this._onIadsFire(ev.t, ev.data); break;
@@ -2668,11 +2123,6 @@
       case 'IADS_RELOAD': this._onIadsReload(ev.t, ev.data); break;
       case 'IADS_STATUS_ARRIVE': this._onIadsStatusArrive(ev.t, ev.data); break;
       case 'IADS_APPROVE_ARRIVE': this._onIadsApproveArrive(ev.t, ev.data); break;
-      case 'C2_ARRIVE_DUP': this._onC2ArriveDup(ev.t, ev.data); break;
-      case 'FUSION_ARRIVE': this._onFusionArrive(ev.t, ev.data); break;
-      case 'APPROVE_ARRIVE': this._onApproveArrive(ev.t, ev.data); break;
-      case 'SHOOTER_ARRIVE': this._onShooterArrive(ev.t, ev.data); break;
-      case 'DUP_SHOOTER_ARRIVE': this._onDupShooterArrive(ev.t, ev.data); break;
       case 'SERVICE_END': this._onServiceEnd(ev.t, ev.data); break;
       case 'EXIT': this._onExit(ev.t, ev.data); break;
     }
@@ -2946,48 +2396,7 @@
     }
     return result;
   };
-
-  /**
-   * srcId → targetId coord 최단'지연'경로 (다익스트라, 방향성 존중). 도달 불가면 null.
-   * 1C: 구 BFS는 홉수 최소화라 "느린 1홉"을 "빠른 3홉"보다 우선했다 — ②단계 _onDetected의
-   * 지연 argmin과 기준이 어긋난다. 링크 지연(delaySec 대표값)으로 경로를 고르도록 통일한다.
-   * (링크 지연 분포는 여기서 샘플링하지 않는다 — 경로 선택은 대표값, 실제 전달 시각만 _decision이
-   *  _linkDelay로 샘플링. 재현성·기준 통일.) 동점은 노드 id 사전순 tiebreak(결정론).
-   */
-  function coordPath(srcId, targetId, mode, links) {
-    if (srcId === targetId) return null;
-    links = links || KJ.LINKS;   // 기본 전역 그래프. 테스트는 인위적 그래프를 주입할 수 있다.
-    var dist = {}, prev = {}, visited = {};
-    dist[srcId] = 0; prev[srcId] = null;
-    while (true) {
-      // 미방문 중 최소 누적지연 노드 선택 (동점은 노드 id 사전순 — 결정론)
-      var cur = null, best = Infinity;
-      Object.keys(dist).forEach(function (n) {
-        if (visited[n]) return;
-        if (dist[n] < best || (dist[n] === best && (cur === null || n < cur))) { best = dist[n]; cur = n; }
-      });
-      if (cur === null) break;
-      if (cur === targetId) {
-        var path = [], at = targetId;
-        while (prev[at]) { path.unshift(prev[at]); at = prev[at].from; }
-        return path.length ? path : null;
-      }
-      visited[cur] = true;
-      links.forEach(function (l) {
-        if (l.from !== cur || l.kind !== 'coord' || !l.comm[mode]) return;
-        var nd = dist[cur] + l.comm[mode].delaySec;
-        // 갱신: 더 짧거나, 동점이면 이전 링크의 from이 사전순으로 뒤일 때 앞선 것으로 교체(결정론)
-        if (!(l.to in dist) || nd < dist[l.to] ||
-            (nd === dist[l.to] && prev[l.to] && l.from < prev[l.to].from)) {
-          dist[l.to] = nd; prev[l.to] = l;
-        }
-      });
-    }
-    return null;
-  }
-
   KJ.Simulation = Simulation;
-  KJ._coordPath = coordPath;   // 테스트/검증용 노출 (다익스트라 coord 최단지연 경로)
   KJ.DELEG_QUEUE_MULT = DELEG_QUEUE_MULT;  // 감사/스윕용 노출 (속성 변경 시 엔진이 즉시 참조 — 기본 asis4/tobe1)
 
   // ── 정밀화 Phase C: 요격 실패(누수) 원인 코드 → 병목 분류(taxonomy) ──

@@ -1,58 +1,60 @@
 # K-JAMDS C2 시뮬레이터 — KJADS 3대 문제 상황
 
-> ⚠️ **디스클레이머**: 본 프로젝트의 모든 수치·좌표·확률·범위는 공개자료(오픈소스) 기반의 **정책연구용 개념값**이며, 실제 작전자료가 아닙니다. 모든 좌표는 도시·권역 수준 개념좌표입니다. KP-SAM(신궁)·천마(K-31)는 탄도탄 요격 불가로 모델링합니다. 고해상도 FULL 배치에는 주한미군 THAAD/Patriot이 독립 축으로 존재하지만 KAMDOC와 연동하지 않으며, legacy 기본 배치에는 THAAD가 없습니다.
+> ⚠️ **디스클레이머**: 본 프로젝트의 모든 수치·좌표·확률·범위는 공개자료(오픈소스) 기반의 **정책연구용 개념값**이며, 실제 작전자료가 아닙니다. 모든 좌표는 도시·권역 수준 개념좌표입니다. KP-SAM(신궁)·천마(K-31)는 탄도탄 요격 불가로 모델링합니다. FULL 배치에는 주한미군 THAAD/Patriot이 독립 축으로 존재하지만 KAMDOC와 연동하지 않으며, LEGACY 배치에는 THAAD가 없습니다. **본 모델은 지상배치 방공체계 C2에 한정하며 요격기·해상 자산을 포함하지 않습니다(ADR-060).**
 
 한국형 합동방공체계(K-JAMDS)의 As-Is(분절형) ↔ To-Be(통합형) C2 구조를 비교하고,
 시나리오 기반으로 C2 프로세스 병목을 도출·시각화하는 웹 시뮬레이터입니다.
-DES(이산사건 시뮬레이션) 엔진 위에서 9단계 F2T2EA 파이프라인(탐지→…→BDA→재교전)을
-단계별로 정밀화하고, **모든 개선을 기능 플래그로 토글·되돌릴 수 있게** 하여 감사 추적을 남깁니다.
+DES(이산사건 시뮬레이션) 엔진이 IADS_C2 계열 물리(SNR/RCS·레이더 수평선·센서상태·PSSEK/PIP)
+위에서 책임 C2 결정 → 항적 상관·식별 → 사수선정(WTA) → 승인·협조 → 발사대 단위 교전 → BDA의
+**native IADS 파이프라인**을 실행하며, **모든 신규 거동은 기능 플래그(기본 OFF)로 토글**하여
+감사 추적을 남깁니다. 2026-07 Phase 6(ADR-061)로 legacy 9단계 파이프라인과 compat 충실도는
+폐기되었고, `modelFidelity`는 `iads-c2` 하나입니다.
 
 ## 시나리오 — KJADS 구축안 3대 문제 상황 (1:1 재현)
 
 | ID | 문제 상황 | 재현 내용 |
 |---|---|---|
-| **SC1** | 교전 중복 및 책임 공백 | 동일 침투 항공기·헬기가 수도군단 AOC·공군·수방사 JAOC 책임구역 **경계 부근** 접근 — 음성 VTC 협조 의존에 따른 중복교전·책임공백 위험 |
+| **SC1** | 교전 중복 및 책임 공백 | 동일 침투 항공기·헬기가 수도군단 AOC·공군·수방사 책임구역 **경계 부근** 접근 — 음성 협조 의존에 따른 중복교전·책임공백 위험 |
 | **SC2** | 무인기 대응 실패 | 소형 무인기 **8대 동시 남파**(burst, 2022.12.26 확대 재현) — 저고도·저속·저RCS 반복 소실 + 이군종 센서 융합·COP 부재 |
 | **SC3** | 전략적 섞어쏘기 | 전투기·무인기·TBM·방사포 **동시 복합 공격** — 처리용량 임계(ρ≥0.9) 초과 구간에서 As-Is↔To-Be 개선폭 정량화 |
+
+## 배치 — 고해상도 6종 (ADR-061: 이것이 전부)
+
+| 배치 ID | 구성 | 용도 |
+|---|---|---|
+| `HANBANDO_LEGACY_NORMAL` | **기본 배치·주 분석 대상.** legacy 자산 편성(10세트 교차 배치 + 국지방공 + 미사일방어부대)을 고해상도 타입으로 이식(ADR-054) — 천마 5·천궁-II 6·비호 2·L-SAM 1·PAC-3 1 | 주 분석 |
+| `HANBANDO_LEGACY_MCRC_DOWN` | 〃 에서 MCRC 파괴 — ABT 책임이 권역 ICC로 전환 | C2 생존성 변형 |
+| `HANBANDO_LEGACY_KAMDOC_DOWN` | 〃 에서 KAMDOC 파괴 — 탄도 책임이 권역 ICC로 전환 | 〃 |
+| `HANBANDO_FULL_NORMAL` | 전국 84개 포대 확장 배치 + USFK THAAD/Patriot 독립 축 | 규모 민감도 |
+| `HANBANDO_FULL_MCRC_DOWN` / `HANBANDO_FULL_KAMDOC_DOWN` | 〃 의 C2 파괴 변형 | 〃 |
+
+- 전투기·이지스·조기경보기·광학감시는 **의도적으로 제외**됩니다(ADR-060 — 지상배치 방공 C2 한정).
+- 링크 의미론은 codex(IADS_codex) 정본을 따릅니다(ADR-057): 센서→C2 보고주기 차등(GREEN_PINE 16s /
+  FPS117 8s / TPS880K 4s / MFR 1s), C2↔C2 1초, To-Be 킬웹 IFCN 전 링크 1초. As-Is 육↔공 협조는
+  음성 **절차** 지연(대표 20초, Uniform 10~30 — 전선 성능이 아님)으로 모델링합니다(ADR-058).
+- 구 legacy 배치(24+40노드 wire)와 그 L16 12초·KVMF 30초 링크는 ADR-061로 폐기 — 판정 근거는
+  `js/data/links.js` 주석과 ADR-057.
+
+지도에서는 동일 좌표의 포대·ECS·MFR을 하나의 공동 사이트 마커(자산 수 배지)로 겹쳐 표시하고,
+팝업에서 구성 자산별 역할·범위·부하를 확인할 수 있습니다. 과밀 방지를 위해 C2 연결선은 기본
+OFF입니다. Leaflet 없는 SVG fallback도 같은 중첩 표시와 범위 링 토글을 지원합니다.
 
 ## 사용 흐름
 
 ```
-① 시나리오·배치(legacy 또는 6개 고해상도: FULL/LEGACY_HIRES 각 3종)·체계모드(토글)·강도 선택
+① 시나리오·배치(고해상도 6종)·체계모드(토글)·강도 선택
 ② [▶ 시뮬레이션 시작] → 지도 위 위협궤적·노드 재고 링 실시간 애니메이션
-   (백그라운드: DES 양모드 비교 + Monte Carlo 수렴)
-③ 재생 종료(또는 [결과 보기]) → 결과창: 요약·As-Is↔To-Be 비교·MC 95% CI·
-   도출 병목·누수 사유·단계별 funnel·중복교전 위험·노드 관측통계
+   (백그라운드: DES 양모드 비교 — iads-c2 물리는 계산량이 커 자동 MC를 생략)
+③ 재생 종료(또는 [결과 보기]) → 결과창: 요약·As-Is↔To-Be 비교·
+   도출 병목·누수 사유·흐름 funnel·중복교전 위험·노드 관측통계
 ```
 
 - 체계 모드는 **단일 토글 스위치**(off=As-Is 분절형, on=To-Be 통합형).
-- 4개 탭: **[시뮬레이션]**(지도·실행·결과창) · **[분석]**(9단계 파이프라인 지표·병목 taxonomy·정상상태 해석) · **[Monte Carlo]**(수렴·유의성·민감도·임계 전환점) · **[근거자료·제약검증]**(파라미터 근거·제약 어서션).
-
-## Legacy 대표 배치
-
-기본 `legacy` 배치는 기존 24노드에 **ICC–ECS–MFR–포대 10세트(40노드)**를 더해 총
-64노드로 구성됩니다. 권역 분포는 서부 4·중부 3·동부 3세트이며, 천마 5개와 천궁-II
-5개를 교차 배치합니다. 각 세트는 전속 MFR→ECS→ICC와 ECS→포대 명령 경로를 가지며,
-As-Is 상향 협조는 계선별로 나뉩니다(ADR-053 사실 정정): 천마(육군) 세트는 ICC↔군단
-AOC KVMF 30초(ADC2A 계선)로 연결되고 육↔공 협조는 AOC↔MCRC 음성(10~30초 균등분포)으로
-수렴하며, 천궁-II(공군) 세트는 ICC↔MCRC Link-16 12초 데이터링크로 연동됩니다. To-Be에서는
-MFR·ICC가 JAMDC2에 2초 데이터링크로 연결됩니다. 모든 위치는 실제 부대 위치가 아닌
-도시·권역 수준 개념좌표입니다.
-
-지도에서는 포대별 ECS·MFR/레이더·사수의 위·경도를 같은 공동 사이트로 저장합니다. 동일 좌표
-자산은 C2·센서·무기 기호를 겹친 하나의 사이트 마커와 자산 수 배지로 표시하고, 팝업에서 구성
-자산별 역할·범위·부하를 함께 확인할 수 있습니다. 범례는 우측 하단 제목을 눌러 열고 닫을 수
-있으며, 자산 요약에는 전체 노드·지도 사이트·중첩 사이트 수가 표시됩니다. 과밀 방지를 위해 C2
-연결선은 기본 OFF입니다. Leaflet이 없는 SVG fallback도 같은 중첩 표시와 탐지·교전 범위 링
-토글을 지원합니다.
-
-이 확장으로 중앙축 UAV의 FTR 단독 취약은 천마 3개가, 동부축 대구경방사포의 MDU-L
-단독 취약은 천궁-II 2개가 보강됩니다. 반면 As-Is에서는 다중 MFR 중복항적과 ICC 음성협조
-부하가 늘므로, 포대 수 증가가 곧바로 C2 구조 개선을 뜻하지 않습니다.
+- 4개 탭: **[시뮬레이션]**(지도·실행·결과창) · **[분석]**(파이프라인 지표·병목 taxonomy·정상상태 해석) · **[Monte Carlo]**(수렴·유의성·민감도·임계 전환점) · **[근거자료·제약검증]**(파라미터 근거·제약 어서션).
 
 ## 실행 방법
 
-정적 웹 페이지이므로 별도 빌드가 필요 없습니다. 두 가지 방법이 있습니다. 고해상도 배치·Monte
+정적 웹 페이지이므로 별도 빌드가 필요 없습니다. 두 가지 방법이 있습니다. FULL 배치·Monte
 Carlo처럼 계산량이 큰 실행은 **방법 A**를 사용해야 DES·MC·민감도·전환점 계산이 Web Worker로
 분리되어 지도와 컨트롤이 계속 반응합니다.
 
@@ -72,16 +74,13 @@ Carlo처럼 계산량이 큰 실행은 **방법 A**를 사용해야 DES·MC·민
 직접 실행하면(특히 macOS) IPv6 주소(`http://[::]:8000/`)가 떠서 클릭해도 안 열리는 경우가 있는데,
 이 스크립트를 쓰면 항상 바로 열리는 링크가 출력됩니다. (`python3 -m http.server 8000 --bind 127.0.0.1`도 동일.)
 
-서버 실행에서는 ES module 기반 `js/workers/sim-worker.mjs`가 연산을 전담하고, 구형 환경용
-`js/workers/sim-worker.js`는 Classic Worker 호환 경계로 남습니다. 입력 강도 슬라이더도 120ms로
-디바운스하고, FULL 지도는 수백 개 객체를 10fps(legacy/LEGACY_HIRES 30fps), 재고 링을 4Hz로 제한해
-드래그·지도 조작과 애니메이션의 경합을 줄였습니다. 결과창의 중복교전 그래프도 Worker에서 한 번만
-선계산하며, 결과 계산식·seed·wire shape는 바뀌지 않습니다. 화면의 `계산 모드`가
-`Web Worker`인지 확인하면 됩니다. 상단 **모델 충실도**에서 `IADS_C2 물리`를 고르면
-SNR·RCS·레이더 수평선·섹터·센서 4상태, coarse-scan 추적상실 hazard/신선도,
-센서별 탐지·추적·FC 거리와 range·aspect PSSEK/PIP,
-상관·식별과 명시적 C2 명령 수명주기가 적용됩니다. 이 프로파일은 ES module
-로딩이 필요하므로 반드시 로컬 서버로 실행해야 합니다.
+서버 실행에서는 IADS 커널(ES module, `js/model/iads/`)이 모듈로 적재되고, ES module 기반
+`js/workers/sim-worker.mjs`가 연산을 전담합니다(구형 환경용 `js/workers/sim-worker.js`는 Classic
+Worker 호환 경계). 입력 강도 슬라이더는 120ms 디바운스, FULL 지도는 10fps(LEGACY 30fps)·재고 링
+4Hz로 제한해 드래그와 애니메이션의 경합을 줄였습니다. 화면의 `계산 모드`가 `Web Worker`인지
+확인하면 됩니다. 모든 실행은 SNR·RCS·레이더 수평선·섹터·센서 4상태, coarse-scan 추적상실
+hazard/신선도, 센서별 탐지·추적·FC 거리와 range·aspect PSSEK/PIP, 상관·식별과 명시적 C2 명령
+수명주기를 사용합니다(iads-c2가 유일 충실도 — ADR-061).
 
 ### 방법 B — 단일 HTML 파일 (서버를 쓸 수 없을 때) 📄
 
@@ -94,14 +93,14 @@ K-JAMDS_시뮬레이터_단일본.html
 **한 파일을 브라우저로 바로 열면 됩니다**(더블클릭 또는 `file://` 경로). 별도 서버·설치가 필요 없습니다.
 
 - 이 파일은 `index.html` + `css/style.css` + 모든 `js/**` + `vendor/leaflet-1.9.4/**`를 인라인한
-  **완전 자기완결(self-contained)** 빌드로, 외부 파일·CDN 의존이 없습니다(Leaflet 지도 라이브러리까지 인라인).
-- `file://` 단일본은 브라우저 보안상 외부 Worker/ES module 파일을 불러올 수 없어 동일한 결정론 계산을 메인
-  스레드 폴백으로 실행합니다. UI 정지를 막기 위해 이 모드에서는 자동 Monte Carlo를 생략합니다.
-  가벼운 검토·공유에는 적합하지만 FULL/MC 실행은 `./scripts/serve.sh` 기반 다중 파일 실행을 사용해야 합니다.
-- 지도 **타일**만 인터넷이 있어야 표시됩니다. Leaflet 자체는 인라인돼 있으므로 타일이 없어도
-  자산 마커·범위 링·**위협 궤적 재생 애니메이션**은 정상 동작하며, 배경만 비어 보입니다.
-  DES 실행·9단계 분석·Monte Carlo·결과창·근거자료·제약검증 등 **나머지 모든 기능도 오프라인에서
-  동일하게 동작**합니다.
+  **완전 자기완결(self-contained)** 빌드로, 외부 파일·CDN 의존이 없습니다.
+- IADS 커널은 단일본에서 **IIFE 번들로 동봉**됩니다(ADR-061 — file://는 ES module import가
+  차단되므로 빌드가 모듈 8종을 텍스트 번들). IIFE 커널 실행은 모듈 커널과 **bit-exact**임이
+  기준선 6케이스로 검증되었습니다.
+- `file://` 단일본은 외부 Worker 파일을 불러올 수 없어 동일한 결정론 계산을 메인 스레드 폴백으로
+  실행하고, UI 정지를 막기 위해 자동 Monte Carlo를 생략합니다. 가벼운 검토·공유에는 적합하지만
+  FULL/MC 실행은 `./scripts/serve.sh` 기반 다중 파일 실행을 사용해야 합니다.
+- 지도 **타일**만 인터넷이 있어야 표시됩니다. 나머지 모든 기능은 오프라인에서 동일하게 동작합니다.
 - 소스(`index.html`/`css`/`js`)를 수정한 뒤에는 아래로 단일본을 재생성합니다:
 
   ```bash
@@ -109,9 +108,6 @@ K-JAMDS_시뮬레이터_단일본.html
   ```
 
   빌드는 **현재 소스만으로** 결정론적으로 동작합니다(`index.html` + `css/` + `js/` + `vendor/`).
-  Leaflet은 `vendor/leaflet-1.9.4/`에 동봉돼 있어 CDN 없이도 재생성됩니다 —
-  종전에는 직전 단일본에서 Leaflet 블록을 추출해 재사용했으나, 단일본이 자기 자신의 입력이 되는
-  구조라 동봉으로 대체했습니다(`vendor/leaflet-1.9.4/README.md`).
 
 > 📘 **처음 사용한다면**: [`docs/사용자_가이드.html`](docs/사용자_가이드.html) — 실행법·화면 조작·
 > 지표 읽는 법(일상어)·자주 오해되는 지표·FAQ.
@@ -120,89 +116,81 @@ K-JAMDS_시뮬레이터_단일본.html
 > 가져온 것/가져오지 않은 것, As-Is/To-Be C2 파이프라인 다이어그램, 지표 계산식 전체, V&V 장치, 한계.
 >
 > 📊 **실험 결과**: [`docs/실험보고서.html`](docs/실험보고서.html) — paired MC(30 seed) As-Is↔To-Be
-> 비교(v3 재실측), ADR-056 결함 확정·수정의 단독 효과 공개, G6 결론 재산출.
+> 비교(v3 재실측), ADR-056~059 단독 효과 공개, G6 결론 재산출.
 
-## 9단계 C2 파이프라인 + 단계별 정밀화(①~⑨)
+## native IADS C2 파이프라인 + 정책 계층 이식 (ADR-056~059)
 
-DES 엔진(`js/engine/sim-engine.js`)은 개별 위협 객체를 이벤트 구동으로 9단계에 흘려보내
-**관측** 이용률·대기열·드롭·격추/누수를 수집합니다(M/M/c/K 대기행렬, 서버 c·지수 서비스·용량 K 초과 시 드롭=누수).
+DES 엔진(`js/engine/sim-engine.js`)은 개별 위협 객체를 이벤트 구동으로 흘려보내
+**관측** 이용률·대기열·드롭·격추/누수를 수집합니다(C2 노드는 M/M/c/K 대기행렬 — 서버 c·지수 서비스·용량 K 초과 시 드롭).
 
 ```
-① 탐지 → ② 추적생성 → ③ 식별 → ④ 위협평가 → ⑤ WTA → ⑥ 결심
-        → ⑦ 교전협조/권한위임 → ⑧ 교전/요격명령 → ⑨ BDA ─(실패)─▶ 재교전(폐루프)
+센서 스캔(SNR/RCS·수평선·섹터) → 항적 생성·상관·식별 → 책임 C2 결정(위협종류×아키텍처×생존상태)
+  → 승인·협조(ADR-058: LOCAL_AD 축 승인 계선·위임) → 사수선정 WTA(ADR-059: 모드 차등)
+  → PIP/PSSEK·발사대 탄약/재장전 → 교전(SLS 최대 2발) → BDA → 재교전/누출 분류
 ```
 
-각 단계는 실제 결함을 하나씩 진단·수정하며 정밀화했고, **모든 신규 거동은 기능 플래그로 토글**됩니다:
+legacy C2 이론은 **정책 계층으로 이식**되었고, 전부 기능 플래그(기본 OFF)입니다:
 
-| 단계 | 정밀화 내용 | 대표 기능 플래그 (기본값) |
+| 플래그 (기본 OFF) | 내용 | ADR |
 |---|---|---|
-| **① 탐지** | 센서 고유 Pd × 위협 난이도 → 모드별 융합(As-Is=max, To-Be=1−Π(1−p)) | `sensorPdFusion`(ON) |
-| **② 추적생성** | 중복항적(dup) 팬아웃, 음성 지연 분해·분포화, 死링크·死노드(JAOC-CD) 부활 | — |
-| **③④⑤ 식별·위협평가·WTA** | C2 서버풀 track/approval kind 분리, Wq 노출, 대기실 K 근거 | — |
-| **⑥⑦ 결심·교전협조** | 다익스트라 최소지연 경로, 수평 교전협조, `responsibility_gap` 부활, 동적 권한위임 | — |
-| **⑧ 교전/요격명령** | 교전창 실현가능성·축선(coverage)·사거리 필터, Best-Shooter WTA | — |
-| **⑨ BDA→재교전** | 무기별 pk 배선, 방어효율(누수 보상), 종료 절단 보정, timeout 분해, 재교전 상관·연발 | `pkByShooter`·`leakCost`·`censorFix`·`timeoutSplit`(ON) / `pkCorrelated`·`salvo`(OFF) |
-| **자원 최적화(원칙 5)** | 비용 인식 WTA(고가 유도탄 보존), 유도탄 재고·보존 임계, 임계 재가중 | `costAwareWta`(ON) / `magazine`·`reserveFloor`·`thresholdReweight`(OFF) |
+| `unifiedEngagementState` | To-Be 통합 교전상태(양방향 COP) — 중복해소 결함 수정 | ADR-056 |
+| `linkSemanticsV2` | codex 정합 링크 의미론(보고주기 차등·C2 1초·킬웹 IFCN 1초) | ADR-057 |
+| `approvalChain` (+반증 `approvalChainTobe`) | As-Is 승인 계선(KAOC→MCRC coord 홉 + 승인 서비스 + 동적 위임), USFK 제외 | ADR-058 |
+| `nativeWtaMode` (+반증 `nativeWtaCostAsis`) | WTA 모드 차등 — As-Is는 관측 가능한 것만(자기 탄약·부하), To-Be는 물리 점수×비용 인식 | ADR-059 |
+| `c2OperatorLevel` ('high'/'low') | 운용자 처리시간 스윕 노브 | ADR-058 |
 
-- As-Is는 육↔공 미연동으로 교전승인권자까지 음성 coord 홉(10~30초 균등분포, 2026-07 실험 변경 — 원래 180초) — 중복·지연·책임공백의 원천(단축 후 저강도 병목 신호는 약화됨).
-- To-Be는 JAMDC2에서 융합·AI 식별·무기배정을 집중 처리하고, 위협별 자동화 차등(사전승인 자동교전)으로 결심·협조 홉을 생략.
-- 모든 무작위성은 `seed` 기반 Mulberry32에서만 나오고, 도착·처리 스트림을 분리(CRN, Common Random Numbers)해
+- 모든 무작위성은 `seed` 기반 Mulberry32에서만 나오고, 도착·센서 스트림을 분리(CRN)해
   As-Is↔To-Be가 **같은 위협열**을 마주하게 합니다 → **동일 config는 항상 동일 결과**(재현성·딥링크 공유·짝지은 비교).
 
 ## 감사 추적 방법론 — "고쳤더니 좋아졌다"는 비판의 방어
 
 단계별 개선이 결론을 유리하게만 움직이지 않았음을 **정량 감사**로 증명합니다(감사 이력은 ADR과 커밋 로그가 원장입니다).
 
-- **기능 플래그 + 되돌리기 증명**: 모든 개선은 토글 가능하며, **플래그를 전부 끄면 개선 이전 지문과 완전 일치**(bit-clean).
-  가장 중요한 불변으로 회귀 테스트에 고정합니다(`tests/reengage.test.js`·`resource.test.js`).
-- **편향 원장(bias ledger)**: 각 개선을 하나씩 적용해 격추율·누수율·구조적실패·비용교환비·방어효율·고가유도탄 보존율의
-  As-Is↔To-Be 이동을 기록. 개선이 어느 방향으로 결론을 움직이는지 추적합니다.
-- **반증 실험(falsification)**: 자원 최적화처럼 "정의상 To-Be만 좋아지는" 변경은, **As-Is에도 동일 로직을 적용한 반사실 실행**과
-  비교합니다. 예) 비용 인식 WTA — 반증 결과 As-Is 고가 유도탄 보존율(75.1%)이 To-Be(46.2%)보다 높아, **자원 절약 효익이
-  C2 통합이 아니라 비용 인식 로직 자체에서 나옴**을 드러냈습니다("통합하면 절약된다"는 주장을 정직하게 반증).
-- **에스컬레이션**: 어떤 변경이 To-Be 개선폭을 20% 이상 움직이면 보고서 최상단에 🔴로 명시.
-- **핵심 결론 불변(G6)**: 모든 개선 후에도 ①⑥⑦이 As-Is 핵심 병목, ②To-Be 병목이 무기체계로 이동,
-  ③무인기 비용 비대칭 미해소(exchangeSat>1), ④신궁·천마 탄도탄 불가 — **4종이 유지**되어야 정상.
-  하나라도 뒤집히면 결함 수정이 아니라 모델 붕괴로 간주합니다.
-- **결정 기록(ADR)**: 설계가 갈린 지점마다 `docs/adr/ADR-001~009` — 맥락·선택지·결정·근거·결론 영향(수치)·되돌리는 법.
+- **기능 플래그 + OFF bit-exact**: 모든 개선은 토글 가능하며, 플래그 OFF는 기준선 지문과 완전
+  일치해야 합니다. 폐기 이후의 기준선은 `tests/hires-baseline.json`(이관 시점 SHA-256 6케이스 —
+  ADR-061: "개선 이전" 증명이 아니라 "이관 후 회귀 없음" 증명으로 의미가 약해졌음을 명시).
+- **2-베이스 편향 원장(bias ledger)**: 각 플래그를 주 베이스({056+057 ON})와 전-OFF 참조 베이스
+  양쪽에서 토글해 지표 이동을 기록 — 낡은 기준선이 효과를 3~4배 부풀리는 것을 실측으로 노출.
+- **반증 실험(falsification)**: "정의상 To-Be만 좋아지는" 변경은 As-Is에도 동일 로직을 적용한
+  반사실 실행과 비교합니다. **정직 기록**: legacy의 반증 결론("자원 절약은 비용 인식 로직에서
+  나온다")은 native에서 **재현되지 않았습니다** — 비용항의 단독 효과가 사실상 0이고, 보존율
+  차이는 교전 기회의 양·기하에서 나옵니다(ADR-059 §반증 결론).
+- **에스컬레이션**: 어떤 변경이 To-Be 개선폭을 20% 이상(상대) 움직이면 보고서 최상단에 🔴로 명시.
+- **핵심 결론 불변(G6)**: 모든 변경 후에도 ①협조·승인이 As-Is 핵심 병목, ②To-Be 병목이
+  무기체계로 이동, ③무인기 비용 비대칭 미해소(exchangeSat≫1), ④신궁·천마 탄도탄 불가 —
+  **4종이 유지**되어야 정상. 하나라도 뒤집히면 결함 수정이 아니라 모델 붕괴로 간주합니다.
+- **결정 기록(ADR)**: 설계가 갈린 지점마다 `docs/adr/` — 맥락·선택지·결정·근거·결론 영향(수치)·되돌리는 법.
 
 ## 프로젝트 구조
 
 ```
 index.html                       # 진입점: 탭 구조·컨트롤·디스클레이머
-K-JAMDS_시뮬레이터_단일본.html    # ★ 자기완결 단일본(서버 없이 실행) — build-single.mjs로 재생성
+K-JAMDS_시뮬레이터_단일본.html    # ★ 자기완결 단일본(서버 없이 실행, IIFE 커널 동봉) — build-single.mjs로 재생성
 css/style.css                    # 레이아웃·테마
 js/
   config/ system-types.js · geo-mdl.js · deployments.js · deployment-adapter.js
-         # 고해상도 체계 타입 · MDL 개념 벨트 · 6개 배치 · C2/센서/사수/링크 catalog
-         #   (FULL 3종 + LEGACY_HIRES 3종 — legacy 자산 배치의 고해상도 이식, ADR-054.
-         #    HANBANDO_MINI 3종은 ADR-055로 폐기)
+         # 고해상도 체계 타입 · MDL 개념 벨트 · 배치 6종 · C2/센서/사수/링크 catalog
+         #   (FULL 3종 + LEGACY_HIRES 3종 — ADR-054·055·061. 변형 카탈로그: linkV2/appr/opLevel)
   data/  nodes.js · links.js · threats.js · scenarios.js · axes.js
-         # 노드(대기행렬·pk·wtaSuit·costPerShotM·magazine)·모드별 링크·위협·시나리오·축선 좌표
+         # nodes/links는 ADR-061로 빈 stub(legacy 배치 폐기 기록 보존) · 위협·시나리오·축선 좌표
   core/  router.js · constraints.js · rng.js · heap.js · sim-worker-client.js
-         # dep/fid 포함 딥링크 · 제약 어서션 · RNG/힙 · 무거운 계산의 Worker 라우팅/단일본 폴백
-  analysis/  bottleneck.js · mc-runner.js · overlap-heatmap.js · transition.js
-         # 해석적 병목 근사 · Monte Carlo · 중복교전 히트맵 · 임계 전환점
-  engine/  sim-engine.js         # ★ DES: 9단계·M/M/c/K·책임 C2·scope WTA·PIP·발사대 탄약/재장전·BDA
-  model/iads/                    # IADS_C2 공통 EventQueue·RNG substream·탐지 물리 ES modules
-  workers/ sim-worker.mjs        # 우선 ES module Worker
-           sim-worker.js         # Classic Worker 호환 폴백
+         # 딥링크 · 제약 어서션(고해상도 정본) · RNG/힙 · Worker 라우팅/단일본 폴백
+  analysis/  bottleneck.js · mc-runner.js · overlap-heatmap.js · transition.js · c2-report.js
+  engine/  sim-engine.js         # ★ DES: native IADS 파이프라인·M/M/c/K·책임 C2·WTA·PIP·발사대·BDA
+  model/iads/                    # IADS_C2 공통 커널 ES modules (event-queue·rng-substream·물리·
+                                 #  sensor/track/engagement/c2-agent·c2-policy(ADR-058))
+  workers/ sim-worker.mjs · sim-worker.js
   ui/    map-view.js · panels.js · sim-view.js · mc-panel.js · geo.js · table-sort.js
   main.js                        # 부트스트랩·상태 관리 (해시 = 상태 단일원천)
 docs/
-  모의논리서.html                 # ★ IADS 이식 범위·C2 파이프라인 다이어그램·지표 계산식·V&V·한계
-  사용자_가이드.html              # 실행법·화면 조작·지표 읽는 법(일상어)·FAQ
-  실험보고서.html                # ★ paired MC As-Is↔To-Be 비교(v3 재실측)·ADR-056 효과·G6 재산출
-  params.md                      # 파라미터 근거표 (ID·출처·인용·신뢰도 A/B/C·MC 적용방식)
-  high-resolution-iads-architecture.md  # 목표 아키텍처(정책 객체 분리 §5·어댑터 폐기 조건 §6)
-  adr/ADR-001~009, 036, 049~056  # 결정 기록(pk 스키마·누수비용·절단·timeout분해·pk상관·salvo·비용WTA·재고·재가중 /
-                                 #  USFK 독립축·SHORAD 벨트·실패분류v2·군단AOC·legacy 재배선·LEGACY_HIRES 이식 /
-                                 #  MINI 폐기·To-Be 교전상태 통합)
+  모의논리서.html · 사용자_가이드.html · 실험보고서.html    # ★ 3대 문서 (아래 참조)
+  params.md                      # 파라미터 근거표 (ID·출처·인용·신뢰도 A/B/C)
+  high-resolution-iads-architecture.md  # 목표 아키텍처(§6은 ADR-061로 개정)
+  compat-retirement-readiness.md # Phase 5 폐기 조건 판정 원장
+  adr/ADR-001~009, 036, 049~061  # 결정 기록
 scripts/
-  serve.sh · build-single.mjs · build-guide-pdf.mjs · verify-vendor-leaflet.mjs · bias-ledger.mjs · step1~2·phase4~6 스윕
-  experiment-lib.mjs · experiment-run.mjs · experiment-delegation.mjs
-  experiment-report.mjs · build-experiment-pdf.mjs   # ★ 시나리오×배치×충실도 As-Is↔To-Be 실험
-tests/  run-all.js + 32개 스위트  # 아래 [검증] 참조
+  serve.sh · build-single.mjs · bias-ledger.mjs · experiment-lib/run/report.mjs 등
+tests/  run-all.js + 25개 스위트  # 아래 [검증] 참조. 폐기 스위트 원장: tests/retired-legacy-suites.md
 ```
 
 ## 설계 원칙: 병목은 고정이 아니라 도출된다
@@ -210,106 +198,84 @@ tests/  run-all.js + 32개 스위트  # 아래 [검증] 참조
 병목 위치는 하드코딩되지 않습니다. **시나리오 부하(λ)·모드별 토폴로지·노드 처리용량(M/M/c/K)**
 로부터 계산하며, 시나리오·강도·모드·seed를 바꾸면 병목 위치가 함께 바뀝니다.
 
-- **해석적(`analysis/bottleneck.js`)**: 부하를 그래프에 전파해 정상상태 M/M/c(Erlang-C) ρ·Wq·통신 체류량 — 빠른 개략 분석.
-- **DES(`engine/sim-engine.js`)**: 개별 위협을 이벤트 구동으로 9단계에 흘려 **관측** 이용률·대기열·드롭·격추/누수 수집 — 실증적 병목·결과지표.
+- **해석적(`analysis/bottleneck.js`)**: 부하를 그래프에 전파해 정상상태 M/M/c(Erlang-C) ρ·Wq — 빠른 개략 분석.
+- **DES(`engine/sim-engine.js`)**: 개별 위협을 이벤트 구동으로 흘려 **관측** 이용률·대기열·드롭·격추/누수 수집 — 실증적 병목·결과지표.
 
-임계값(주의 ρ≥0.7, 병목 ρ≥0.9, 포화=드롭 발생, 통신병목 지연≥60s·체류≥1건 — 근거 `docs/params.md` ENV-RHO-THRESH-01)을 초과하는 지점을 병목으로 **도출**합니다.
+임계값(주의 ρ≥0.7, 병목 ρ≥0.9, 포화=드롭 발생 — 근거 `docs/params.md` ENV-RHO-THRESH-01)을 초과하는 지점을 병목으로 **도출**합니다.
 
 ## 딥링크 스킴
 
-`#tab=<sim|analysis|mc|data>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<legacy|배치ID>&x=<강도배수>&seed=<정수>&dur=<초>`
+`#tab=<sim|analysis|mc|data>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&x=<강도배수>&seed=<정수>&dur=<초>`
 
-구 딥링크의 `tab=map|scenario|des|playback`은 자동으로 `sim` 탭으로 흡수됩니다.
-
-- [`#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345`](index.html#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345) — 섞어쏘기 As-Is 1.5배 (시작 버튼으로 실행).
-- [`#tab=analysis&sc=sc1&mode=asis`](index.html#tab=analysis&sc=sc1&mode=asis) — 경계 침투 시나리오 해석 분석.
+- `dep`은 고해상도 6종 ID(기본 `HANBANDO_LEGACY_NORMAL`). 구 딥링크의 `dep=legacy`·MINI ID·
+  `fid=` 파라미터는 기본값으로 자동 흡수됩니다(ADR-061).
+- 구 `tab=map|scenario|des|playback`은 `sim` 탭으로 흡수됩니다.
+- [`#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345`](index.html#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345) — 섞어쏘기 As-Is 1.5배.
+- [`#tab=analysis&sc=sc1&mode=asis`](index.html#tab=analysis&sc=sc1&mode=asis) — 경계 침투 해석 분석.
 - [`#tab=mc&sc=sc3&mode=asis&x=2`](index.html#tab=mc&sc=sc3&mode=asis&x=2) — Monte Carlo·임계 전환점.
 
 ## 검증
 
 ```bash
-node tests/run-all.js            # 전체 회귀 — JS/ESM 39개 구문검증 + 32개 스위트·832 어서션
+node tests/run-all.js            # 전체 회귀 — js/ 구문검증 + 25개 스위트 (CI 게이트)
 ```
 
 | 스위트 | 검증 내용 |
 |---|---|
-| `engine` · `mc` · `overlap` · `transition` · `constraints` | DES 재현성·극한값·보존 / Monte Carlo·수렴 / 중복교전 히트맵 / 임계 전환점 / 제약 a~e |
-| `detect` · `track` | ① 센서 Pd 융합·단일센서 대조군 / ② 추적생성·①②독립성 |
-| `refine` · `metrics-verification` · `nodekind` | 정밀화 스냅샷·WTA·권한위임 / 지표 감사 / ③④⑤·⑥⑦ 작업종류 분리 |
-| `coord` · `coord2` · `wta` | ⑥⑦ 결심·협조·다익스트라 / 수평 협조·책임공백 부활 / ⑧ 교전창·축선 필터 |
-| `reengage` · `deadcode` · `resource` | ⑨ 되돌리기·무기별 pk / 死코드 레지스트리(Gate 3) / 자원 최적화·As-Is불변·반증 |
-| `legacy-deployment-expansion` · `baseline` | legacy 10세트 수량·연결·실행 / 확장 후 전체결과 SHA-256·OFF 결정론 기준선 |
-| `map-visualization` · `ui-performance` | Leaflet/SVG 공동 포대 중첩 마커·범위 링 / Worker·지도·접이식 범례 토글 |
-| `metrics-accounting` | 지표 계정 — native 고가유도탄 보존율 배선 / 중복교전(ghost) 귀속 범위 분리 / MC 시간지표 표본 제외 |
+| `engine` · `mc` · `overlap` · `transition` | DES 재현성·극한값·보존·trace / MC 수렴·유의성 / 중복교전 히트맵 / 임계 전환점 (전부 native 이관) |
+| `constraints` | 제약 a~g — 신궁·천마 탄도탄 불가(데이터+행위), THAAD 부재, 디스클레이머, 개념좌표, ADR-060 범위, 협조 지연 정박점, runConstraintChecks |
+| `hires-baseline` | **ADR-061 기준선** — 이관 시점 지문 6케이스 SHA-256 |
+| `deployment` · `deployment-adapter` · `high-resolution-connection` | 배치 6종 선언·수량 / 카탈로그 토폴로지·DOWN·결정론·보존 / ICC 승인경로 |
+| `iads-kernel` · `iads-native-pipeline` · `c2a-asis` | 커널(이벤트 큐·RNG·센서 물리) / 책임 C2·WTA·PIP·발사대·BDA / 군단 AOC C2A |
+| `iads-failure-realism` · `failure-classification` · `metrics-accounting` · `c2-analysis` | 실패 현실성(SLS 2발) / 실패 분류 v2 / 지표 계정 / C2 계측·paired MC |
+| `legacy-hires-deployment` | LEGACY_HIRES 편성·물리 동작·DOWN 대체·**legacy/compat 거부(ADR-061)** |
+| `engagement-state-unification` · `link-semantics` · `approval-chain` · `native-wta` | ADR-056~059 플래그별 OFF bit-exact·ON 거동·반증 |
+| `map-visualization` · `ui-performance` · `vendor-leaflet` · `overlap-performance` | 지도 렌더 정합(카탈로그 기준) / Worker·범례 / Leaflet 동봉 무결성 / FULL 성능 |
 
-### 배치 × 모델충실도 조합
-
-`modelFidelity=iads-c2`(SNR/RCS 물리)는 **고해상도 배치에서만** 동작합니다. legacy 자산 편성으로
-물리 충실도를 쓰려면 `LEGACY_HIRES` 배치를 선택하십시오 — legacy 좌표·편성을 고해상도 타입으로
-이식한 배치입니다(ADR-054). 전투기·이지스·조기경보기·광학감시는 대응 타입이 없어 제외되므로
-**legacy(compat)와 절대값을 직접 비교하지 마십시오**(전력 구성이 다름).
-
-| 배치 | compat | iads-c2 | As-Is 결심 절차 |
-|---|---|---|---|
-| `legacy` | ✅ 9단계 파이프라인 | ❌ | 승인권자까지 **coord 홉 + 승인 대기**(중복교전·승인 병목 관측 가능) |
-| `HANBANDO_LEGACY_*` | ✅ native 교전 | ✅ | **책임 C2 자체 승인**(제거할 홉 없음) |
-| `HANBANDO_FULL_*` | ✅ native 교전 | ✅ | 〃 |
-
-> ⚠️ **배치는 규모만 바꾸지 않습니다 — ⑥ 결심 절차의 모델이 다릅니다.** 그래서 같은
-> `meanDecisionDelaySec` 지표라도 **To-Be 개선폭이 한 자릿수 배 차이**가 납니다(21셀 실측 평균):
-> legacy **−120초**(부하와 무관하게 일정 — 승인 홉이라는 고정 비용이 사라짐) vs
-> LEGACY_HIRES −30초 · MINI −52초(ADR-055로 폐기된 배치의 기록값) · FULL −21초(저부하 −10초 안팎, 포화 SC3에서만 −88~−95초 —
-> 이득이 홉 제거가 아니라 **대기행렬 해소**에서 나오므로 부하의 함수).
-> **"통합 C2가 결심을 N초 앞당긴다"고 인용할 때는 어느 배치에서 잰 값인지 반드시 명시하십시오.**
-> 상세는 `docs/실험보고서.html` §2 · `docs/모의논리서.html` §3.
+폐기된 legacy 스위트 16종의 목록·사유·대체 커버리지는 **`tests/retired-legacy-suites.md`** 원장 참조.
 
 ### As-Is ↔ To-Be 비교 실험 (재현 가능)
 
-시나리오(SC1~3) × 배치(legacy/LEGACY_HIRES/FULL) × 모델충실도(compat/iads-c2) 15개 셀에서 **동일 seed로
-짝지은(paired) 복제**를 실행하고, seed별 Δ(To-Be−As-Is)의 95% CI로 구조 차이를 판정합니다.
-
-> ⚠️ **이 절에 인용된 21셀 실측치는 ADR-055(`HANBANDO_MINI` 3종 폐기) 이전의 기록입니다.**
-> MINI 6셀(SC1~3 × compat/iads-c2)은 배치가 사라졌으므로 **재현할 수 없습니다.** 아래 숫자는
-> 측정 당시의 기록으로 그대로 남겨 두었고, 지금 명령을 다시 돌리면 15셀 결과가 나옵니다.
-> MINI가 등장하는 문장은 폐기된 배치의 관측이라는 뜻입니다.
+시나리오(SC1~3) × 배치 × 기능 플래그 조합에서 **동일 seed로 짝지은(paired) 복제**를 실행하고,
+seed별 Δ(To-Be−As-Is)의 95% CI로 구조 차이를 판정합니다.
 
 ```bash
-node scripts/experiment-run.mjs --cell "sc3|legacy|compat|1|30"   # 셀 1개 (시나리오|배치|충실도|강도|복제수)
-node scripts/experiment-run.mjs --sweep "legacy|compat|20"        # 강도 0.5~3.0 스윕
-node scripts/experiment-delegation.mjs                            # As-Is 분권 전환의 부하 의존성
+node scripts/experiment-run.mjs --cell "sc3|HANBANDO_LEGACY_NORMAL|iads-c2|1.5|30"   # 셀 1개
+node scripts/experiment-run.mjs --cell "..." --features '{"unifiedEngagementState":true}'
 node scripts/experiment-report.mjs && node scripts/build-experiment-pdf.mjs
 ```
 
-결과는 `artifacts/experiment/*.json`에 남습니다. 정리된 결과는 `docs/실험보고서.html`이 단일 권위이며,
-`scripts/experiment-report.mjs`는 아티팩트에서 자동 생성되는 데이터 부록(`docs/실험보고서_부록_자동생성.html`)을 만듭니다.
-전 셀이 결정론적이라 동일 명령은 동일 수치를 재현합니다.
+결과는 `artifacts/experiment/*.json`에 남습니다. 정리된 결과는 `docs/실험보고서.html`이 단일
+권위입니다. 전 셀이 결정론적이라 동일 명령은 동일 수치를 재현합니다.
 
-주요 결과(21셀 · 1,020회 paired 실행): **11셀에서 To-Be 유의 개선, 0셀 악화, 10셀 미분리(n.s.)**.
-결심 지연은 20셀 중 18셀에서 단축. 미분리 셀은 대부분 저부하이며, 그중에는 **구조가 아니라 능력
-공백이 결과를 지배**하는 경우(SC2×MINI compat: 양 모드 68.1% 동일 — 무인기 교전 수단 부재)와
-**양쪽 다 이미 막아내 개입 여지가 없는** 경우(SC2×FULL iads-c2: 양 모드 누출 0%)가 있습니다.
-보고서는 이런 셀을 평균에 묻지 않고 그대로 노출합니다.
+> ⚠️ **기록 보존 주의**: 과거 보고서·ADR에 인용된 legacy/compat 셀(구 21셀·15셀 실측)은
+> ADR-055(MINI 폐기)·ADR-061(legacy·compat 폐기)로 **더 이상 재현할 수 없는 측정 당시의
+> 기록**입니다. 현재 재현 가능한 조합은 고해상도 배치 6종 × iads-c2 × 기능 플래그입니다.
 
-보고서 §7에는 **기존 서사와 반대 방향의 관측**이 별도 장으로 실려 있습니다 — SC3에서 강도를 올리면
-As-Is 실패율이 오히려 70.1%→52.4%로 **낮아지는데**, 절단 효과가 아니라(미해결 11% 일정)
-**동적 분권 전환**이 발동해(×0.5에서 0건 → ×3.0에서 509건) 승인 홉을 건너뛰기 때문입니다.
-"임계 이후 통합 C2의 가치가 비선형적으로 커진다"는 통상적 서사가 이 설정에서는 성립하지 않습니다.
-
-테스트는 `window.KJ` 네임스페이스를 Node에서 로드해 실행합니다. 브라우저에서는 4개 탭에서 대화형으로 확인합니다.
-V&V 장치 종합은 **`docs/모의논리서.html` §6**, 실험·결론 재산출은 **`docs/실험보고서.html`** 참조.
+주요 결과(v3 주 베이스, paired 30 seed — `docs/실험보고서.html`): SC3 포화에서 To-Be 격추율
++20pp 안팎·결심지연 −46초 안팎의 유의 개선, SC1 저부하는 개선 미분리(n.s.) 셀 존재.
+As-Is 협조몫 19~35초·승인 Wq 36.8초(ADR-058 원장) — **G6 ① As-Is 병목=협조·승인**의 native 증거.
+exchangeSat는 전 셀 4.7~20.6(≫1)로 **③ 무인기 비용 비대칭 미해소** 유지.
 
 ### 고해상도 결과의 요격 실패율 읽기
 
-결과 모달은 `격추`, `확정 누출`, `관측 종료 미해결`을 전체 생성 위협 기준으로 따로 표시합니다. `global.killRate/leakRate`는 종료 시점 미해결을 제외한 **해결분 기준** 파생지표이므로, 전체 생성 기준 비율과 구분해야 합니다. native 고해상도 경로는 무한 재교전을 막기 위해 표적당 전 책임 C2 축 합산 최대 2발을 발사합니다. `fid=iads-c2`는 정본의 센서 거리·SNR/RCS·추적상실 hazard·MFR FC·PSSEK/PIP·재밍/ECM·상관/식별·명령 상태를 사용하지만, 경도·위도 진행률과 체공시간은 아직 Air_Defense 개념 축선/dwell 함수이고 false merge/split은 포함하지 않습니다. 따라서 FULL/LEGACY_HIRES 절대값은 전술 성능치가 아니라 배치·파이프라인 비교값으로만 사용하십시오.
+결과 모달은 `격추`, `확정 누출`, `관측 종료 미해결`을 전체 생성 위협 기준으로 따로 표시합니다.
+`global.killRate/leakRate`는 종료 시점 미해결을 제외한 **해결분 기준** 파생지표이므로, 전체 생성
+기준 비율과 구분해야 합니다. native 경로는 무한 재교전을 막기 위해 표적당 전 책임 C2 축 합산
+최대 2발을 발사합니다. 경도·위도 진행률과 체공시간은 아직 개념 축선/dwell 함수이고 false
+merge/split은 포함하지 않습니다(§6 미충족 후속 과제 — ADR-061). 따라서 절대값은 전술 성능치가
+아니라 배치·모드 비교값으로만 사용하십시오.
 
 ### 통계·시각화 방법론 (요약)
 
-- **Welford 온라인 분산 + 95% CI 수렴판정**(주지표 누수율 CI 반폭 ≤ 허용오차, 최소 30회): 근거 계획서 Recommendations 3.
+- **Welford 온라인 분산 + 95% CI 수렴판정**(주지표 누수율 CI 반폭 ≤ 허용오차): 근거 계획서 Recommendations 3.
 - **통계적 유의성**: As-Is·To-Be를 완전히 같은 seed 집합으로 쌍대복제하고,
   seed별 Δ(To-Be−As-Is)의 95% CI가 0을 제외할 때 구조 차이가 통계적으로 분리된 것으로 판정.
-- **C2 병목 귀속**: 선택적 구조화 이벤트에서 누출 시점의 C2 상태(대기·처리·처리완료 후·미도달),
-  노드별 대기/서비스 분위수와 60초 피크 ρ를 순수 파생한다. 원시 이벤트는 Worker에서 요약 후 폐기한다.
+- **C2 병목 귀속**: 선택적 구조화 이벤트(`c2Analysis`)에서 누출 시점의 C2 상태, 노드별
+  대기/서비스 분위수와 60초 피크 ρ를 순수 파생. 원시 이벤트는 Worker에서 요약 후 폐기.
 - **민감도 스윕(±20% 토네이도)**: 포화 시나리오에서 처리시간·강도가 지배적 → "병목은 처리용량" 진단을 정량 뒷받침.
-- **DES trace 모드**·**위협궤적 애니메이션**(축선 개념좌표 선형보간·60fps)·**실시간 노드 링**·**자산 범위 링**·**Sankey형 흐름도**·**중복교전 히트맵**(JAMDC2 융합허브 특례) — Leaflet은 `vendor/`에 동봉돼 오프라인에서도 애니메이션이 동작하며, `window.L`이 없을 때(`?svgFallback=1`)만 SVG 개념도로 대체.
+- **DES trace 모드**·**위협궤적 애니메이션**·**실시간 노드 링**·**자산 범위 링**·**Sankey형 흐름도**·**중복교전 히트맵** — Leaflet은 `vendor/`에 동봉돼 오프라인에서도 동작.
 
-제약조건 어서션(신궁·천마 탄도탄 교전 불가, legacy THAAD 부재·FULL USFK 독립축/KAMDOC 미연동, 디스클레이머 상시 표출, 개념좌표 주석, KF-21 보라매 표기)은 **[근거자료·제약검증] 탭**에서 상시 확인됩니다.
+제약조건 어서션(신궁·천마 탄도탄 교전 불가, LEGACY 배치 THAAD 부재·FULL USFK 독립축/KAMDOC
+미연동, 디스클레이머 상시 표출, 개념좌표 주석, 전투기류 미포함 — ADR-060 범위)은
+**[근거자료·제약검증] 탭**에서 상시 확인됩니다.

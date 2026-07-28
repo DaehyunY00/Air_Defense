@@ -1,5 +1,9 @@
 /** Failure classification v2: causal families, structurality, native evidence and shooter load. */
-'use strict';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { installIadsKernel } from '../js/model/iads/index.js';
+const require = createRequire(import.meta.url);
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 global.window = global;
 var path = require('path');
 var root = path.join(__dirname, '..', 'js');
@@ -11,6 +15,7 @@ var root = path.join(__dirname, '..', 'js');
 ].forEach(function (f) { require(path.join(root, f)); });
 
 var KJ = global.KJ, fail = 0;
+installIadsKernel(KJ);
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
 function sum(o) { return Object.keys(o || {}).reduce(function (s, k) { return s + o[k]; }, 0); }
 
@@ -45,11 +50,15 @@ assert(fired.length > 0 && fired.every(function (n) {
   return isFinite(n.rho) && n.rho >= 0 && n.peakActive > 0 && n.maxSimultaneous > 0;
 }), 'native 사수 실제 발사·피크활성·이용률을 node 결과에 계측');
 
-// 동일 센서/C2에서 SHORAD와 그 ECS만 제거해 '책임 C2 없음'과 '보고경로 없음'이 혼합되지 않음을 고정한다.
+// 동일 센서/C2에서 uav_small 교전가능 사수 전종(과 그 ECS)만 제거해 '책임 C2 없음'과
+// '보고경로 없음'이 혼합되지 않음을 고정한다. ADR-061: 정본 iads-c2의 교전가능성은
+// SHOOTER_TYPES.iadsEngageableThreats 표가 결정하므로(SHORAD만 제거하면 천궁-II·L-SAM이
+// uav_small 책임을 승계해 timeout:c2로 분류됨), 표를 직접 조회해 제거 대상을 도출한다.
 var base = KJ.buildDeploymentCatalog('HANBANDO_FULL_NORMAL');
 var removed = {};
 base.nodes.forEach(function (n) {
-  if (n.category === 'shooter' && (n.typeId === 'BIHO' || n.typeId === 'CHUNMA')) removed[n.id] = true;
+  var t = n.category === 'shooter' && KJ.SHOOTER_TYPES[n.typeId];
+  if (t && (t.iadsEngageableThreats || []).indexOf('uav_small') !== -1) removed[n.id] = true;
 });
 base.nodes.forEach(function (n) {
   if (n.category === 'c2' && n.typeId === 'ECS' && removed[n.batteryId]) removed[n.id] = true;

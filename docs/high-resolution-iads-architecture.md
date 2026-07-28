@@ -26,6 +26,8 @@
 
 현재 Resolver는 위협 종류, As-Is/To-Be 아키텍처, C2 생존상태와 force owner를 입력받아 KAMDOC/MCRC/ICC/IAOC/지역방공/USFK 독립 축을 결정한다. 후속에서 ROE, AOR, track-release authority, 동적 delegation state를 명시적 정책 객체로 분리한다. 한국군 KAMDOC/MCRC와 USFK THAAD/Patriot 권한은 현재도 자동 통합하지 않는다.
 
-## 6. 호환 어댑터 폐기 조건
+## 6. 호환 어댑터 폐기 조건 (2026-07-28 개정 — ADR-061)
 
-동일 배치에 대해 이벤트 스키마, 도메인 RNG, 위협 운동, 센서/항적, PIP, C2 Resolver, 차량별 재장전이 모두 결합되고 보존법칙·결정론·paired MC·V&V 게이트를 통과한 후 `phase1-axis-queue` 어댑터를 폐기한다.
+**개정 기준(범위 축소)**: 동일 배치에 대해 **범위 축소로 정의된** 센서/항적(상태·주기·보임·신선도·상관까지 — §3-2·3), PIP(실현가능 PIP + range/aspect PSSEK — §4), C2 Resolver(+정책 객체, ADR-058 — §5), 차량별 재장전이 결합되고, 보존법칙·결정론·paired MC·V&V 게이트를 통과하며, 폐기 직전 지문의 SHA-256 기준선 이관이 완료되면 `phase1-axis-queue` 어댑터와 legacy 경로를 폐기한다.
+
+**원문 기준에서 미충족으로 남는 항목(정직 기록·후속 과제)**: ① 정본 이벤트 스키마(§1 — eventId/causation/재생 저장소), ② 위협 운동학(§3-1 — 3D 세그먼트·기하 교전창), ③ 도메인별 RNG 완전 이관(§2 — 현재 도착·센서 스캔만 분리). 개정 사유·유실 기록은 `docs/adr/ADR-061`과 `docs/compat-retirement-readiness.md`가 원장이다. (원문 기준: "동일 배치에 대해 이벤트 스키마, 도메인 RNG, 위협 운동, 센서/항적, PIP, C2 Resolver, 차량별 재장전이 모두 결합되고 보존법칙·결정론·paired MC·V&V 게이트를 통과한 후 폐기한다.")

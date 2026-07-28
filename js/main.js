@@ -15,8 +15,8 @@
   var intensityTimer = null;
 
   function modelConfig() {
-    var high = state.dep && state.dep !== 'legacy';
-    return high ? { deploymentId: state.dep, features: { highResolutionDeployment: true }, modelFidelity: state.fid } : {};
+    // ADR-061: 충실도 1종(iads-c2)·고해상도 6배치만 존재한다.
+    return { deploymentId: state.dep, features: { highResolutionDeployment: true }, modelFidelity: 'iads-c2' };
   }
 
   function analyze() {
@@ -48,22 +48,18 @@
     // 공통 컨트롤 동기화
     document.getElementById('scenario-select').value = state.sc;
     document.getElementById('deployment-select').value = state.dep;
-    document.getElementById('fidelity-select').value = state.fid;
     var depWarning = document.getElementById('deployment-warning');
-    var high = state.dep !== 'legacy';
-    depWarning.classList.toggle('hidden', !high);
+    depWarning.classList.remove('hidden'); // ADR-061: 고해상도 배치만 존재 — 경고 상시 표출
     // LEGACY_HIRES는 legacy 자산 배치를 고해상도 타입으로 이식한 계열이라, 제외 자산군 때문에
     // legacy(compat)와 절대값을 직접 비교할 수 없다는 경고를 따로 붙인다(ADR-054).
     var legacyHires = state.dep.indexOf('HANBANDO_LEGACY_') === 0;
-    depWarning.textContent = high
-      ? '⚠️ ' + state.dep + ': ' + (state.fid === 'iads-c2'
-        ? 'IADS_C2식 모듈 Worker·이벤트 큐·도메인 RNG와 SNR/RCS/수평선/센서상태 물리를 실행합니다. PIP·PSSEK·상관/식별·명령 에이전트의 완전 공통화는 후속 이식 중입니다.'
-        : '현행 9단계 DES 호환 실행입니다. 책임 C2·개념 PIP·발사대별 탄약을 사용하지만 센서·PSSEK는 과도기 근사입니다.') +
-        (legacyHires
-          ? ' legacy 자산 배치를 고해상도 타입으로 이식한 배치입니다 — 전투기·이지스·조기경보기·광학감시는 대응 타입이 없어 제외되므로 legacy(현행 DES 호환)와 절대값을 직접 비교하지 마십시오(전력 구성이 다름).'
-          : '') +
-        ' 좌표와 수치는 공개자료 기반 정책연구용 개념값이며 전술적 절대값이 아닙니다.'
-      : '';
+    depWarning.textContent = '⚠️ ' + state.dep +
+      ': IADS_C2식 모듈 Worker·이벤트 큐·SNR/RCS/수평선/센서상태 물리를 실행합니다.' +
+      (legacyHires
+        ? ' legacy 자산 편성을 고해상도 타입으로 이식한 배치입니다(ADR-054).'
+        : '') +
+      ' 본 모델은 지상배치 방공 C2에 한정하며 요격기·해상 자산을 포함하지 않습니다(ADR-060).' +
+      ' 좌표와 수치는 공개자료 기반 정책연구용 개념값이며 전술적 절대값이 아닙니다.';
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
     document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
@@ -99,14 +95,6 @@
     });
     document.getElementById('deployment-select').addEventListener('change', function (e) {
       setState({ dep: e.target.value, open: '' });
-    });
-    document.getElementById('fidelity-select').addEventListener('change', function (e) {
-      var patch = { fid: e.target.value, open: '' };
-      // iads-c2는 고해상도 배치에서만 동작하므로 legacy에서 고르면 배치를 함께 옮긴다.
-      // 목적지는 자산 편성이 같은 LEGACY_HIRES다 — 종전에는 MINI로 보냈으나 전력 구성이
-      // 전혀 달라(포대 8기·SHORAD 없음) "legacy 편성으로 물리를 본다"는 의도와 어긋났다(ADR-054).
-      if (patch.fid === 'iads-c2' && state.dep === 'legacy') patch.dep = 'HANBANDO_LEGACY_NORMAL';
-      setState(patch);
     });
     document.getElementById('intensity-slider').addEventListener('input', function (e) {
       var value = parseFloat(e.target.value);
@@ -184,8 +172,7 @@
     }).join('');
 
     var depSel = document.getElementById('deployment-select');
-    depSel.innerHTML = '<option value="legacy">기존 대표 배치 (legacy)</option>' +
-      KJ.DEPLOYMENT_IDS.map(function (id) {
+    depSel.innerHTML = KJ.DEPLOYMENT_IDS.map(function (id) {
         return '<option value="' + id + '">' + KJ.deploymentById(id).name + '</option>';
       }).join('');
 

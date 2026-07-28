@@ -13,6 +13,7 @@
   <div id="disclaimer">
     ⚠️ 본 시뮬레이터의 모든 수치·좌표·확률·범위는 공개자료 기반 <b>정책연구용 개념값 · 실제 작전자료 아님</b>.
     좌표는 도시 수준 개념좌표. 신궁·천마는 탄도탄 요격 불가로 모델링. FULL의 주한미군 THAAD/Patriot은 독립 축으로 표시하며 KAMDOC와 연동하지 않음.
+    본 모델은 <b>지상배치 방공체계 C2에 한정</b>하며 요격기·해상 자산을 포함하지 않음(ADR-060).
   </div>
 
   <header>
@@ -26,11 +27,6 @@
     <select id="scenario-select"></select>
     <label>배치</label>
     <select id="deployment-select"></select>
-    <label>모델 충실도</label>
-    <select id="fidelity-select">
-      <option value="compat">현행 DES 호환</option>
-      <option value="iads-c2">IADS_C2 물리 (보정)</option>
-    </select>
     <label>체계 모드</label>
     <label class="mode-switch" title="As-Is 분절형 ↔ To-Be K-JAMDS 통합형">
       <span class="ms-side ms-asis">As-Is 분절형</span>

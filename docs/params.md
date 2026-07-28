@@ -244,7 +244,7 @@
 ### [C2-DELEG-THRESH-01] 부하 기반 중앙↔분권 동적 전환 임계 (정밀화 Phase B-2)
 - **값/분포**: 승인권자 노드 관측 상태가 [전 결심서버 점유(busy≥c) AND 대기열 ≥ c×배수]일 때 해당 결심을 하위/자동으로 위임(분권 전환). 배수: **As-Is 4 / To-Be 1**
 - **출처**: 개념 설정 — 임무형 지휘(권한위임) 원칙의 부하 트리거화. To-Be는 COP 공유·자동화로 조기 전환, As-Is는 수동 절차로 포화가 누적되어야 전환(느림/준부재)
-- **적용범위**: DES `_decision`. 전환 시점·횟수·승인노드별 분포가 `global.delegation`으로 관측됨. **하드코딩된 병목이 아니라 부하의 함수** — 저강도에서는 어느 모드도 전환 0건(회귀 고정, tests/refine.test.js B-2)
+- **적용범위**: DES `_decision`. 전환 시점·횟수·승인노드별 분포가 `global.delegation`으로 관측됨. **하드코딩된 병목이 아니라 부하의 함수** — 저강도에서는 어느 모드도 전환 0건(회귀 고정 — 구 tests/refine.test.js B-2, ADR-061 폐기 후 approval-chain.test.mjs가 승계)
 - **신뢰도 등급**: C(개념 임계)
 - **MC 적용방식**: 고정 (민감도스윕 후보)
 
@@ -500,7 +500,7 @@
 - **신뢰도 등급**: C(개념 정의; 단가는 WPN/THR-*-COST-01)
 - **MC 적용방식**: 고정 단가(민감도스윕 후보)
 - **비고**: Caveat — 단가가 타 전역 공개수치 기반이므로 절대값보다 As-Is↔To-Be 상대비교에 사용
-- **⚠️ 함정·보완(Phase 2 ⑨)**: 분모에 **격추분만** 들어가 누수(패배)가 계상되지 않는다 → **아무것도 안 쏘면 exchange=0으로 "최적"**. As-Is가 C2에서 항적을 잃어 못 쏜 것이 "비용 우수"로 표시되는 역설. **보완 지표 `defenseEfficiency = 격추 위협가치 / (격추 + 누수 위협가치)` 신설**(ADR-002, `features.leakCost`, 기본 ON, 새 파라미터 0개 — 기존 unitCostM 재사용). exchange는 회귀 안전(`refine.test.js` 의존)을 위해 **그대로 유지**하고, 함정은 tip·본 비고로 명시. 실측(SC3 x2.5): defenseEfficiency As-Is 16% · To-Be 66% — exchange가 못 하던 "실제 방어 성과 보상"을 수행
+- **⚠️ 함정·보완(Phase 2 ⑨)**: 분모에 **격추분만** 들어가 누수(패배)가 계상되지 않는다 → **아무것도 안 쏘면 exchange=0으로 "최적"**. As-Is가 C2에서 항적을 잃어 못 쏜 것이 "비용 우수"로 표시되는 역설. **보완 지표 `defenseEfficiency = 격추 위협가치 / (격추 + 누수 위협가치)` 신설**(ADR-002, `features.leakCost`, 기본 ON, 새 파라미터 0개 — 기존 unitCostM 재사용). exchange는 회귀 안전(구 `refine.test.js` 의존 — ADR-061 폐기)을 위해 **그대로 유지**하고, 함정은 tip·본 비고로 명시. 실측(SC3 x2.5): defenseEfficiency As-Is 16% · To-Be 66% — exchange가 못 하던 "실제 방어 성과 보상"을 수행
 
 ### [ENV-MOM-COBP-01] 지표 계층(MoM) 라벨링
 - **값/분포**: MoP(과정 성능: 결심 지연·평균 격추시간·통신지연 부하) / MoCE(C2 효과성: 중복교전 위험·구조적 실패·도출 병목 수) / MoFE(전력 효과성: 누출률·격추율·비용교환비)
@@ -554,7 +554,7 @@
 
 위협 유형별 개념 사거리대와 허용 발사권역 태그. `js/data/axes.js`의 축선별
 launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한다(ENV-AXIS-FIT-01,
-`tests/refine.test.js`로 회귀 고정). **전부 공개자료 기반 개념값이며 실제 제원·배치·발사원점이 아님.**
+구 `tests/refine.test.js`로 회귀 고정 — ADR-061 폐기, 기록). **전부 공개자료 기반 개념값이며 실제 제원·배치·발사원점이 아님.**
 발사권역 태그: `dmz`(DMZ 인접 근거리) / `coastal`(서해·연안) / `deep`(종심).
 
 | ID | 위협 | 개념 사거리대(km) | 발사권역 | 출처 성격 | 신뢰도 |
@@ -638,7 +638,7 @@ launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한
 - **값/분포**: MCRC 40 · KAMDOC 30 · KAOC 30 · AOC-1C 15 · JAOC-CD 15 · JAMDC2 60 (M/M/c/K). 서버 수(c) 대비 배수로 보면 대체로 ×10(AOC-1C·JAOC-CD만 ×7.5)
 - **단위**: 항적/작업 건수 (대기실 슬롯)
 - **출처**: **개념 설정 — 서버 수 대비 배수로 임의 설정. 공개근거 없음(등급 C).** 무기체계 K(`[ENV-DES-SHOOTERK-01]`)는 "c×2" 규칙이라도 명시돼 있으나 C2의 K는 규칙조차 없이 노드 데이터에 박혀 있어, 본 항목으로 명시화하고 민감도 스윕 대상으로 지정한다. **근거를 지어내지 않는다.**
-- **적용범위**: DES C2 노드 포화 판정 — 재계 중(busy)+대기(queue)가 K에 도달하면 이후 도착은 드롭(`overflow:<노드>`, 항적/승인 상실). track·approval 부하가 같은 K를 공유한다(`nodekind.test.js`).
+- **적용범위**: DES C2 노드 포화 판정 — 재계 중(busy)+대기(queue)가 K에 도달하면 이후 도착은 드롭(`overflow:<노드>`, 항적/승인 상실). track·approval 부하가 같은 K를 공유한다(구 `nodekind.test.js` 검증 — ADR-061 폐기, native kind 검증은 metrics-accounting.test.mjs F7).
 - **신뢰도 등급**: C (근거 등급이 가장 낮으나, 아래 비고대로 버스트 시나리오에서 결과를 결정하는 파라미터)
 - **MC 적용방식**: 민감도스윕 대상 (임시 스크립트에서 `queue.capacity` 조작으로 스윕 — Phase 3)
 - **비고 (버스트에서 c가 아니라 K가 구속한다)**:

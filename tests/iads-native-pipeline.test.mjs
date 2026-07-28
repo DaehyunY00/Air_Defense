@@ -1,5 +1,9 @@
 /** Native high-resolution IADS C2/WTA/PIP/launcher/BDA regression. */
-'use strict';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { installIadsKernel } from '../js/model/iads/index.js';
+const require = createRequire(import.meta.url);
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 global.window = global;
 var path = require('path');
 var root = path.join(__dirname, '..', 'js');
@@ -9,6 +13,7 @@ var root = path.join(__dirname, '..', 'js');
   'config/deployment-adapter.js', 'core/rng.js', 'core/heap.js', 'engine/sim-engine.js'
 ].forEach(function (f) { require(path.join(root, f)); });
 var KJ = global.KJ, fail = 0;
+installIadsKernel(KJ);
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
 function run(id, mode, trace) {
   return KJ.runDES({

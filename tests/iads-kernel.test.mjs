@@ -162,9 +162,15 @@ assert(Object.values(calibratedC2.c2Command.byCause).reduce((sum, n) => sum + n,
 let rejected = false;
 try {
   KJ.runDES({ scenario: KJ.scenarioById('sc1'), mode: 'asis', intensity: 1, seed: 1,
-    endTimeSec: 60, modelFidelity: 'iads-c2' });
-} catch (error) { rejected = /high-resolution deployment/.test(error.message); }
-assert(rejected, 'IADS_C2 물리 프로파일의 legacy 배치 오사용 명시적 거부');
+    endTimeSec: 60, features: { highResolutionDeployment: false } });
+} catch (error) { rejected = /ADR-061/.test(error.message); }
+assert(rejected, 'legacy 배치 명시 요청의 폐기 거부 (ADR-061)');
+let rejectedCompat = false;
+try {
+  KJ.runDES({ scenario: KJ.scenarioById('sc1'), mode: 'asis', intensity: 1, seed: 1,
+    endTimeSec: 60, modelFidelity: 'compat' });
+} catch (error) { rejectedCompat = /ADR-061/.test(error.message); }
+assert(rejectedCompat, 'compat 충실도 요청의 폐기 거부 (ADR-061)');
 
 console.log(failures === 0 ? '\nOK — 전체 통과' : `\nFAILED — ${failures}건`);
 process.exit(failures ? 1 : 0);

@@ -1,20 +1,34 @@
-/** Phase 1 deployment adapter integration and deterministic execution. */
-'use strict';
-global.window = global;
-var path = require('path');
-var root = path.join(__dirname, '..');
+/** Phase 1 배치 어댑터 통합·결정론 실행 — ADR-061: 고해상도 카탈로그 단일화 후. */
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { installIadsKernel } from '../js/model/iads/index.js';
+
+globalThis.window = globalThis;
+const require = createRequire(import.meta.url);
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'js');
 [
   'config/system-types.js', 'config/geo-mdl.js', 'config/deployments.js',
   'data/nodes.js', 'data/links.js', 'data/threats.js', 'data/scenarios.js', 'data/axes.js',
   'config/deployment-adapter.js', 'core/rng.js', 'core/heap.js',
   'engine/sim-engine.js', 'analysis/bottleneck.js', 'analysis/overlap-heatmap.js'
-].forEach(function (f) { require(path.join(root, 'js', f)); });
-var KJ = global.KJ;
+].forEach(function (f) { require(path.join(root, f)); });
+var KJ = globalThis.KJ;
+installIadsKernel(KJ);
 var fail = 0;
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
 function stable(r) { return JSON.stringify({ global: r.global, flow: r.flow, nodes: r.nodes, links: r.links, eventCount: r.eventCount }); }
 
-assert(KJ.resolveModelCatalog({}).id === 'legacy' && KJ.resolveModelCatalog({ deploymentId: 'HANBANDO_FULL_NORMAL', features: { highResolutionDeployment: false } }).id === 'legacy', '플래그 생략/OFF는 legacy 카탈로그');
+// ADR-061: legacy 카탈로그 폐기 — 플래그 생략도 고해상도 기본 배치를 받는다.
+assert(KJ.resolveModelCatalog({}).id === 'HANBANDO_LEGACY_NORMAL',
+  '플래그 생략도 고해상도 기본 배치(ADR-061: legacy 카탈로그 폐기)');
+assert(KJ.LEGACY_CATALOG === undefined, 'KJ.LEGACY_CATALOG는 더 이상 존재하지 않음(ADR-061)');
+var offRejected = false;
+try {
+  KJ.runDES({ scenario: KJ.scenarioById('sc1'), mode: 'asis', intensity: 0.5, seed: 42,
+    endTimeSec: 60, features: { highResolutionDeployment: false } });
+} catch (e) { offRejected = /ADR-061/.test(e.message); }
+assert(offRejected, 'highResolutionDeployment:false는 명시적 오류(ADR-061: legacy 배치 폐기)');
 assert(KJ.resolveModelCatalog({ features: { highResolutionDeployment: true } }).id === 'HANBANDO_LEGACY_NORMAL', 'ON+ID 생략은 LEGACY_NORMAL (ADR-055: MINI 폐기 후 기본 배치)');
 var bad = false;
 try { KJ.resolveModelCatalog({ deploymentId: 'NO_SUCH_DEPLOYMENT', features: { highResolutionDeployment: true } }); } catch (e) { bad = /Unknown high-resolution deployment/.test(e.message); }

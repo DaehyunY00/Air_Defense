@@ -6,8 +6,10 @@
 global.window = global;
 var path = require('path');
 var root = path.join(__dirname, '..', 'js');
-['data/nodes.js', 'data/links.js', 'data/threats.js', 'data/scenarios.js', 'data/axes.js',
- 'analysis/overlap-heatmap.js'].forEach(function (f) { require(path.join(root, f)); });
+// ADR-061: 히트맵이 고해상도 카탈로그(nodesInMode)를 쓰므로 어댑터 의존을 적재한다.
+['config/system-types.js', 'config/geo-mdl.js', 'config/deployments.js',
+ 'data/nodes.js', 'data/links.js', 'data/threats.js', 'data/scenarios.js', 'data/axes.js',
+ 'config/deployment-adapter.js', 'analysis/overlap-heatmap.js'].forEach(function (f) { require(path.join(root, f)); });
 var KJ = global.KJ;
 
 var fail = 0;

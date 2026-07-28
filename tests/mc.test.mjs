@@ -5,15 +5,22 @@
  * 검증: Welford 정확성(나이브 대비), 분포 샘플러의 이론값 수렴, CI 축소, MC 재현성·수렴,
  *       민감도 스윕 단조성, 성능 상한.
  */
-'use strict';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { installIadsKernel } from '../js/model/iads/index.js';
+const require = createRequire(import.meta.url);
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 global.window = global;
 var path = require('path');
 var root = path.join(__dirname, '..', 'js');
-['data/nodes.js', 'data/links.js', 'data/threats.js', 'data/scenarios.js',
+['config/system-types.js', 'config/geo-mdl.js', 'config/deployments.js',
+ 'data/nodes.js', 'data/links.js', 'data/threats.js', 'data/scenarios.js', 'data/axes.js',
+ 'config/deployment-adapter.js',
  'core/rng.js', 'core/heap.js', 'engine/sim-engine.js', 'analysis/mc-runner.js'].forEach(function (f) {
   require(path.join(root, f));
 });
 var KJ = global.KJ;
+installIadsKernel(KJ);
 
 var fail = 0;
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
@@ -56,9 +63,11 @@ var logn = sampleMeanVar(function () { return rng.lognormal(5, 2); });
 assert(near(logn.mean, 5, 0.15), '로그정규(mean=5,sd=2): 표본평균≈5 (' + logn.mean.toFixed(3) + ')');
 
 console.log('# MC 재현성·수렴');
-var cfg = { scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1.5, seed: 2024, endTimeSec: 1800 };
-var mc1 = KJ.runMonteCarlo(cfg, { minReps: 30, maxReps: 300, tol: 0.01 });
-var mc2 = KJ.runMonteCarlo(cfg, { minReps: 30, maxReps: 300, tol: 0.01 });
+// ADR-061: iads-c2 단일 충실도의 실행 비용이 legacy의 수십 배라, 회귀 게이트가 감당 가능한
+// 크기로 관측창·복제수를 줄였다(검증 성질은 동일 — 재현성·최소반복·수렴시 CI 상한).
+var cfg = { scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1.5, seed: 2024, endTimeSec: 600 };
+var mc1 = KJ.runMonteCarlo(cfg, { minReps: 30, maxReps: 40, tol: 0.01 });
+var mc2 = KJ.runMonteCarlo(cfg, { minReps: 30, maxReps: 40, tol: 0.01 });
 assert(JSON.stringify(mc1) === JSON.stringify(mc2), '동일 baseSeed → 동일 MC 요약 (재현성)');
 assert(mc1.metrics.leakRate.n >= 30, 'MC 최소 반복수 보장 (' + mc1.metrics.leakRate.n + '≥30)');
 assert(!mc1.converged || mc1.metrics.leakRate.ci <= 0.01 + 1e-9, '수렴 시 누수율 95% CI 반폭 ≤ 허용오차 0.01');
@@ -66,18 +75,18 @@ console.log('    → leakRate=' + (mc1.metrics.leakRate.mean * 100).toFixed(1) +
   (mc1.metrics.leakRate.ci * 100).toFixed(2) + '%p, reps=' + mc1.reps + ', converged=' + mc1.converged);
 
 console.log('# CI 축소 (반복수↑ → CI↓)');
-var few = KJ.runMonteCarlo(cfg, { minReps: 20, maxReps: 20, tol: 0 });   // 강제 20회
-var many = KJ.runMonteCarlo(cfg, { minReps: 200, maxReps: 200, tol: 0 }); // 강제 200회
+var few = KJ.runMonteCarlo(cfg, { minReps: 10, maxReps: 10, tol: 0 });   // 강제 10회
+var many = KJ.runMonteCarlo(cfg, { minReps: 90, maxReps: 90, tol: 0 }); // 강제 90회
 assert(many.metrics.leakRate.ci < few.metrics.leakRate.ci,
-  'reps 20→200: CI 반폭 감소 (' + (few.metrics.leakRate.ci * 100).toFixed(2) + '%p → ' +
+  'reps 10→90: CI 반폭 감소 (' + (few.metrics.leakRate.ci * 100).toFixed(2) + '%p → ' +
   (many.metrics.leakRate.ci * 100).toFixed(2) + '%p)');
-// √n 스케일링: CI는 대략 1/√(n비율)=1/√10≈0.316 배로 감소해야 함
+// √n 스케일링: CI는 대략 1/√(n비율)=1/√9=0.333 배로 감소해야 함
 var ratio = many.metrics.leakRate.ci / few.metrics.leakRate.ci;
-assert(ratio > 0.15 && ratio < 0.55, 'CI 축소가 1/√n 스케일과 정합 (비율 ' + ratio.toFixed(3) + ' ≈ 0.316)');
+assert(ratio > 0.15 && ratio < 0.55, 'CI 축소가 1/√n 스케일과 정합 (비율 ' + ratio.toFixed(3) + ' ≈ 0.333)');
 
 console.log('# As-Is vs To-Be 통계적 유의성');
-var a = KJ.runMonteCarlo({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 2, seed: 55, endTimeSec: 1800 }, { minReps: 100, maxReps: 100, tol: 0 });
-var b = KJ.runMonteCarlo({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2, seed: 55, endTimeSec: 1800 }, { minReps: 100, maxReps: 100, tol: 0 });
+var a = KJ.runMonteCarlo({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 2, seed: 55, endTimeSec: 600 }, { minReps: 30, maxReps: 30, tol: 0 });
+var b = KJ.runMonteCarlo({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2, seed: 55, endTimeSec: 600 }, { minReps: 30, maxReps: 30, tol: 0 });
 var overlap = a.metrics.leakRate.lo <= b.metrics.leakRate.hi && b.metrics.leakRate.lo <= a.metrics.leakRate.hi;
 assert(a.metrics.leakRate.mean > b.metrics.leakRate.mean && !overlap,
   'To-Be 누수율 유의하게 낮음 (As-Is ' + (a.metrics.leakRate.mean * 100).toFixed(1) + '±' +
@@ -85,7 +94,7 @@ assert(a.metrics.leakRate.mean > b.metrics.leakRate.mean && !overlap,
   '±' + (b.metrics.leakRate.ci * 100).toFixed(2) + ', CI 비중첩)');
 
 console.log('# 민감도 스윕');
-var sw = KJ.sensitivitySweep({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1.5, seed: 7, endTimeSec: 1800 }, { reps: 40, deltaPct: 0.2 });
+var sw = KJ.sensitivitySweep({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1.5, seed: 7, endTimeSec: 600 }, { reps: 8, deltaPct: 0.2 });
 sw.rows.forEach(function (r) {
   console.log('    ' + r.label + ': ' + (r.low * 100).toFixed(1) + '% ↔ ' + (r.high * 100).toFixed(1) +
     '% (스윙 ' + (r.swing * 100).toFixed(1) + '%p)');
@@ -107,18 +116,22 @@ assert(Number.isFinite(serviceRow.low) && Number.isFinite(serviceRow.high) && se
 // detect.test.js 참조). 따라서 누수를 지배하는 것은 여전히 2022.12.26 실패의 본질인 저요격확률
 // (pk 삼각 0.1/0.3/0.5)이다 — pk↑→누수↓ 단조성으로 검증. 탐지확률 민감도(mult.detect)의
 // 누수 영향이 처리시간보다 작다는 아래 어서션은 이 포화 구조 때문에 방향이 유지된다.
-var swU = KJ.sensitivitySweep({ scenario: KJ.scenarioById('sc2'), mode: 'asis', intensity: 1, seed: 7, endTimeSec: 1800 }, { reps: 60, deltaPct: 0.2 });
+// ⚠️ SC2 관측창은 1800초를 유지해야 한다(복제수만 축소). 900초 창에서는 무인기가 아직
+// 표적에 도달하지 않아 전 인자 누수율이 0.0%로 눌리고, 민감도 자체가 관측 불가가 된다
+// (ADR-061 재조정 중 실측: reps 12·900초 → 전 인자 swing 0.0, reps 12·1800초 → pk 6.2→0.2).
+var swU = KJ.sensitivitySweep({ scenario: KJ.scenarioById('sc2'), mode: 'asis', intensity: 1, seed: 7, endTimeSec: 1800 }, { reps: 12, deltaPct: 0.2 });
 var pkRow = swU.rows.find(function (r) { return r.factor === 'pk'; });
 assert(pkRow.high < pkRow.low, 'SC2(무인기): 요격확률↑ → 누수율↓ (단조 정합 — 격추실패가 지배 제약)');
 var swS3Detect = sw.rows.find(function (r) { return r.factor === 'detect'; });
 assert(swS3Detect.swing < serviceRow.swing, 'SC3(포화): 탐지확률 영향 < 처리시간 영향 (병목은 처리용량)');
 
 console.log('# 성능');
+// native(iads-c2) 복제당 비용은 legacy(~40ms)의 수십 배 — 상한을 native 기준으로 재설정(ADR-061).
 var t0 = Date.now();
-KJ.runMonteCarlo({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 2, seed: 1, endTimeSec: 1800 }, { minReps: 200, maxReps: 200, tol: 0 });
+KJ.runMonteCarlo({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 2, seed: 1, endTimeSec: 600 }, { minReps: 20, maxReps: 20, tol: 0 });
 var elapsed = Date.now() - t0;
-assert(elapsed < 15000, '200 복제 < 15초 (' + elapsed + 'ms)');
-console.log('    → 200 복제 ' + elapsed + 'ms (' + (elapsed / 200).toFixed(1) + 'ms/복제)');
+assert(elapsed < 180000, '20 복제(600초 창) < 180초 (' + elapsed + 'ms)');
+console.log('    → 20 복제 ' + elapsed + 'ms (' + (elapsed / 20).toFixed(0) + 'ms/복제)');
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

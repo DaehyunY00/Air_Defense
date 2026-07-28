@@ -2,11 +2,11 @@
  * LEGACY_HIRES 배치 회귀 — legacy 자산 배치 위에서 고해상도(iads-c2) 실행 (ADR-054).
  *
  * 검증 관점:
- *  1) 두 충실도(compat·iads-c2) 모두 실행되고, iads-c2가 물리 계층을 실제로 사용한다
+ *  1) 정본 충실도(iads-c2)가 물리 계층을 실제로 사용한다 (ADR-061: compat 폐기)
  *  2) 자산 구성이 legacy 편성을 따른다(10세트 교차 배치 + 국지방공 + 미사일방어부대)
  *  3) 제외 자산군(전투기·이지스·조기경보기·광학감시)이 실제로 없다
  *  4) 노드 파괴 변형에서 책임 C2가 권역 ICC로 대체된다
- *  5) 기존 배치·legacy(compat) 경로에 영향이 없다
+ *  5) legacy·compat 요청이 명시적 오류로 거부된다 (ADR-061)
  */
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -70,23 +70,19 @@ assert(chunma.every(function (n) { return !n.mfrSensorId; }),
 var msam = shooters.filter(function (n) { return n.typeId === 'CHEONGUNG2'; });
 assert(msam.every(function (n) { return !!n.mfrSensorId; }), '천궁-II 포대는 전속 MFR 보유');
 
-// ── 4. 두 충실도 실행 + 물리 계층 실제 사용 ──
-console.log('# 충실도별 실행');
-var compat = run('HANBANDO_LEGACY_NORMAL', 'asis', 'compat');
+// ── 4. 정본 충실도(iads-c2) 실행 + 물리 계층 실제 사용 (ADR-061: compat 폐기) ──
+console.log('# 정본 충실도 실행');
 var physics = run('HANBANDO_LEGACY_NORMAL', 'asis', 'iads-c2');
-assert(compat.config.compatibilityMode === 'native-iads-c2-engagement-v1',
-  'compat도 native 교전 파이프라인을 사용(고해상도 배치)');
-assert(!compat.global.sensorPhysics, 'compat은 센서 물리 계층을 쓰지 않음');
+assert(physics.config.compatibilityMode === 'native-iads-c2-engagement-v1',
+  'native 교전 파이프라인 사용(고해상도 배치)');
 assert(physics.global.sensorPhysics && physics.global.sensorPhysics.scans > 0,
   'iads-c2는 SNR/RCS 센서 스캔을 실제로 수행 — legacy 배치에서 물리 충실도 동작');
 assert(physics.global.sensorPhysics.gated > 0,
   '거리·고도·수평선·섹터 게이팅이 실제로 발화');
 assert(physics.global.trackQuality && physics.global.c2Orders,
   'iads-c2는 상관·식별과 명령 수명주기를 계정');
-assert(physics.eventCount > compat.eventCount,
-  '물리 계층이 이벤트 수를 늘림(compat ' + compat.eventCount + ' → iads-c2 ' + physics.eventCount + ')');
-assert(physics.global.killed > 0 && compat.global.killed > 0,
-  '두 충실도 모두 실제 격추가 발생(전 위협 미탐지로 끝나지 않음)');
+assert(physics.global.killed > 0,
+  '실제 격추가 발생(전 위협 미탐지로 끝나지 않음)');
 
 // ── 5. 노드 파괴 시 책임 C2 대체 ──
 console.log('# 노드 파괴 변형');
@@ -102,19 +98,15 @@ assert(normal.ARMY_LOCAL_AD > 0, '국지방공(군단·수방사 AOC) 축이 실
 var tobe = run('HANBANDO_LEGACY_NORMAL', 'tobe', 'iads-c2');
 assert(tobe.global.commanderAssignments.IAOC > 0,
   'To-Be 한국군 책임 C2가 IAOC(융합 허브)로 통합');
-assert(tobe.global.leaked / tobe.global.spawned < compat.global.leaked / compat.global.spawned,
-  'To-Be 누출률이 As-Is compat보다 낮음(방향성 face validity)');
+assert(tobe.global.leaked / tobe.global.spawned <= physics.global.leaked / physics.global.spawned,
+  'To-Be 누출률이 As-Is 이하(방향성 face validity)');
 
-// ── 7. 기존 경로 불변 ──
-console.log('# 기존 경로 영향 없음');
-var legacyCompat = KJ.runDES({
-  scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1, seed: 12345, endTimeSec: 1800
-});
-assert(!legacyCompat.config.deploymentId && !legacyCompat.config.compatibilityMode,
-  'legacy(compat) 실행은 고해상도 카탈로그를 타지 않음');
-assert(legacyCompat.nodes.every(function (n) {
-  return !n.rhoByKind || Object.keys(n.rhoByKind).join(',') === 'track,approval,engage';
-}), 'legacy 결과의 kind 키가 종전 3종 그대로');
+// ── 7. legacy 폐기 확인 (ADR-061) ──
+console.log('# legacy·compat 폐기 확인');
+var compatRejected = false;
+try { KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1, seed: 12345, endTimeSec: 60, modelFidelity: 'compat' }); }
+catch (e) { compatRejected = /ADR-061/.test(e.message); }
+assert(compatRejected, 'compat 충실도는 명시적 오류로 폐기됨 (ADR-061)');
 var full = catalogOf('HANBANDO_FULL_NORMAL');
 assert(full.nativeCounts.batteries === 84, 'FULL 배치 구성 불변(포대 84)');
 

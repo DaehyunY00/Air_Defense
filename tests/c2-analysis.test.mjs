@@ -1,16 +1,23 @@
 /**
  * C2 구조화 계측·순수 분석·paired MC 회귀.
  */
-'use strict';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { installIadsKernel } from '../js/model/iads/index.js';
+const require = createRequire(import.meta.url);
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 global.window = global;
 var path = require('path');
 var root = path.join(__dirname, '..', 'js');
 [
-  'data/nodes.js', 'data/links.js', 'data/threats.js', 'data/scenarios.js',
-  'core/rng.js', 'core/heap.js', 'analysis/c2-report.js',
+  // ADR-061: 엔진이 고해상도 카탈로그만 지원하므로 어댑터 의존을 전부 적재한다.
+  'config/system-types.js', 'config/geo-mdl.js', 'config/deployments.js',
+  'data/nodes.js', 'data/links.js', 'data/threats.js', 'data/scenarios.js', 'data/axes.js',
+  'config/deployment-adapter.js', 'core/rng.js', 'core/heap.js', 'analysis/c2-report.js',
   'engine/sim-engine.js', 'analysis/mc-runner.js'
 ].forEach(function (f) { require(path.join(root, f)); });
 var KJ = global.KJ;
+installIadsKernel(KJ);
 var fail = 0;
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
 function near(a, b, tol) { return Math.abs(a - b) <= tol; }
@@ -144,9 +151,12 @@ assert(paired.asis.metrics.censoredRate.n === paired.tobe.metrics.censoredRate.n
   '관측 종료 미해결률도 동일 paired 표본으로 집계');
 assert(paired.c2Mop.enabled && paired.c2Mop.delta.neverEngagedLeakedRate.n === 6,
   'C2 MOP도 같은 6개 paired seed 교집합으로 Δ 집계');
-assert(paired.c2Mop.delta.directiveExpiryRate.available === false &&
-  paired.c2Mop.excludedByMetric.directiveExpiryRate === 6,
-  '미계측 명령 만료율은 0으로 위장하지 않고 seed별 제외');
+// ADR-061: native 경로는 명령 수명주기를 항상 계측 — 만료율이 전 seed에서 관측된다.
+// (legacy 시절의 "미계측 seed 제외" 방어 로직은 excludedByMetric이 비는 것으로 확인.)
+assert(paired.c2Mop.delta.directiveExpiryRate.available === true &&
+  paired.c2Mop.delta.directiveExpiryRate.n === 6 &&
+  Object.keys(paired.c2Mop.excludedByMetric).length === 0,
+  'native 명령 만료율이 전 paired seed에서 계측됨(미계측 제외 0건, ADR-061)');
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

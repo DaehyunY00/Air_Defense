@@ -7,8 +7,12 @@
  * 승인권자 대기열이 임계(C2-DELEG-THRESH-01, As-Is는 서버수×4)를 넘으면 결심을 하위/자동으로
  * 위임해 승인 홉을 건너뛰므로, 고부하에서 결심 지연이 짧아지고 교전 개시율이 오른다.
  *
+ * ADR-061: legacy 배치·compat 폐기 후에는 고해상도 기본 배치 × iads-c2 위에서 승인 계선을
+ * 켜고(ADR-058 `approvalChain`) 같은 현상을 측정한다 — 위임·승인 대기열은 native 승인
+ * 게이트(`_iadsApprovalGate`)가 계상한다. 구 legacy 측정치는 delegation-legacy-sc3.json 기록.
+ *
  * 실행: node scripts/experiment-delegation.mjs
- * 산출: artifacts/experiment/delegation-legacy-sc3.json
+ * 산출: artifacts/experiment/delegation-hires-sc3.json
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -24,7 +28,8 @@ for (const intensity of INTENSITIES) {
   const acc = { deleg: 0, decision: 0, apprRho: 0, engaged: 0, spawned: 0, killed: 0, leaked: 0, censored: 0 };
   for (let i = 0; i < REPS; i++) {
     const r = KJ.runDES(cellConfig(KJ, {
-      scenario: 'sc3', mode: 'asis', deployment: 'legacy', intensity, seed: repSeed(BASE_SEED, i)
+      scenario: 'sc3', mode: 'asis', deployment: 'HANBANDO_LEGACY_NORMAL', intensity,
+      seed: repSeed(BASE_SEED, i), features: { approvalChain: true }
     }));
     const g = r.global;
     acc.deleg += g.delegation.count;
@@ -52,11 +57,12 @@ for (const intensity of INTENSITIES) {
     `kill=${((acc.killed / acc.spawned) * 100).toFixed(1)}%`);
 }
 
-const out = path.join(ROOT, 'artifacts', 'experiment', 'delegation-legacy-sc3.json');
+const out = path.join(ROOT, 'artifacts', 'experiment', 'delegation-hires-sc3.json');
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, JSON.stringify({
-  scenario: 'sc3', deployment: 'legacy', fidelity: 'compat', mode: 'asis',
+  scenario: 'sc3', deployment: 'HANBANDO_LEGACY_NORMAL', fidelity: 'iads-c2', mode: 'asis',
+  features: { approvalChain: true },
   reps: REPS, baseSeed: BASE_SEED, points,
-  note: 'As-Is 동적 분권 전환(C2-DELEG-THRESH-01)의 부하 의존성. 승인 대기열이 서버수×4를 넘으면 전환.'
+  note: 'As-Is 동적 분권 전환(C2-DELEG-THRESH-01)의 부하 의존성 — ADR-058 승인 계선(native) 기준. 승인 대기열이 서버수×4를 넘으면 전환.'
 }, null, 2) + '\n');
 console.log('→', out);

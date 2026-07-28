@@ -33,11 +33,14 @@
 
   function catalogFor(state) {
     if (!KJ.resolveModelCatalog) return null;
-    var high = state && state.dep && state.dep !== 'legacy';
-    return KJ.resolveModelCatalog(high ? {
-      deploymentId: state.dep,
+    // ADR-061: legacy 지도 데이터 폐기 — 항상 고해상도 카탈로그를 그린다.
+    // 미지·구식 배치 ID(예: 'legacy')는 기본 배치(HANBANDO_LEGACY_NORMAL)로 정규화한다.
+    var dep = state && state.dep;
+    if (!dep || (KJ.DEPLOYMENT_IDS || []).indexOf(dep) === -1) dep = undefined;
+    return KJ.resolveModelCatalog({
+      deploymentId: dep,
       features: { highResolutionDeployment: true }
-    } : {});
+    });
   }
 
   function coordKey(n) {
@@ -92,11 +95,10 @@
     var by = { c2: 0, sensor: 0, shooter: 0 };
     nodes.forEach(function (n) { if (by[n.category] !== undefined) by[n.category]++; });
     var sites = groupBySite(nodes), stacked = sites.filter(function (g) { return g.length > 1; }).length;
-    var legacy = !state.dep || state.dep === 'legacy';
-    el.textContent = (legacy ? 'legacy 확장 배치' : state.dep) + ' · 활성 ' + nodes.length + '노드' +
+    // ADR-061: legacy 배치 폐기 — 요약 라벨은 실제로 그려진 카탈로그 ID를 쓴다.
+    el.textContent = (catalog && catalog.id ? catalog.id : state.dep) + ' · 활성 ' + nodes.length + '노드' +
       ' (C2 ' + by.c2 + ' · 센서 ' + by.sensor + ' · 무기 ' + by.shooter + ')' +
-      ' · 지도 ' + sites.length + '사이트' + (stacked ? ' (중첩 ' + stacked + ')' : '') +
-      (legacy ? ' · ICC–ECS–MFR–포대 10세트 포함' : '');
+      ' · 지도 ' + sites.length + '사이트' + (stacked ? ' (중첩 ' + stacked + ')' : '');
   }
 
   KJ.mapView = {

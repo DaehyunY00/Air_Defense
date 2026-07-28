@@ -129,7 +129,13 @@ var regionOf = {};
 regions.forEach(function (r, i) { r.axes.forEach(function (k) { regionOf[k] = i; }); });
 console.log('    표적권역 ' + regions.length + '개: ' +
   regions.map(function (r) { return r.axes.join('+'); }).join(' / '));
-assert(regions.length === 3, '표적권역은 3개 — 서울(west+seoul) · 오산·평택(central) · 강릉(east)');
+// 권역 수를 상수로 박지 않는다 — 축선이 늘면(ADR-064 대구·부산) 권역도 늘기 때문이다.
+// 검증의 실질은 "서울을 공유하는 west·seoul만 하나로 묶이고 나머지는 각자 권역"이다.
+var seoulRegion = regions.find(function (r) { return r.axes.indexOf('seoul') !== -1; });
+assert(seoulRegion && seoulRegion.axes.indexOf('west') !== -1 && seoulRegion.axes.length === 2,
+  'west·seoul은 같은 표적권역(서울)으로 묶임');
+assert(regions.length === axisKeys.length - 1,
+  '나머지 축선은 각자 독립 권역 — 축선 ' + axisKeys.length + '개 → 권역 ' + regions.length + '개');
 var minPair = Infinity;
 regions.forEach(function (a, i) {
   regions.forEach(function (b, j) {

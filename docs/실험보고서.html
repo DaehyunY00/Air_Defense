@@ -30,7 +30,7 @@
 <body>
 
 <h1>K-JAMDS 시뮬레이터 — As-Is ↔ To-Be 실험보고서</h1>
-<p class="small">보고서 버전: v3.1 (2026-07-28 실측) · 코드: <code>v3</code> 브랜치(ADR-055·056·057 반영) ·
+<p class="small">보고서 버전: v3.2 (2026-07-28 실측) · 코드: <code>v3</code> 브랜치(ADR-055·056·057·058 반영) ·
 실험 원자료: <code>artifacts/experiment/*.json</code>(동일 명령으로 재현 가능)</p>
 
 <div class="box warn"><span class="bt">디스클레이머</span>
@@ -45,6 +45,15 @@
 폐기한 "일률 16초 지연"으로 실제보다 나쁘게 모델링돼 있었고, 그만큼 To-Be 개선폭이
 과대평가되고 있었다. 상세는 §5, 원자료는 <code>phase2-linkv2-*.json</code>. 기본값은 OFF다
 (이 보고서의 §2~§4 기본 수치는 OFF 상태). 후속 Phase에서 기본 전환을 검토한다.</div>
+
+<div class="box red"><span class="bt">🔴 개선폭 이동 공지 (ADR-058 — 승인 계선 이식)</span>
+native 경로에 As-Is 승인 계선(협조 홉·승인 서비스·동적 위임)을 이식한 반사실 실행에서
+<b>결심지연 개선폭이 SC1 −4.0→−6.9초(상대 +72%, 절대 +2.9초), SC3 +7.5%</b>로 움직였다
+(상대 20% 규칙에 따라 명시). <b>임무 지표(격추·누수)의 개선폭은 이동하지 않았다</b>
+(SC3 격추율 Δ +18.8→+18.7pp). 반증 실험이 결정적이다: To-Be에 같은 계선을 강제해도
+결과가 사실상 불변(결심지연 124.0→124.0초) — 차이의 원천은 계선의 존재가 아니라
+<b>in-loop 절차·승인 대기행렬(Wq 36.8초)·늦은 분권 전환</b>이다. 상세 §6, 원자료
+<code>phase3-*.json</code>. 기본값 OFF.</div>
 
 <div class="box red"><span class="bt">🔴 편향 방향 공지 (ADR-056)</span>
 이번 판은 <b>To-Be에 유리한 방향의 결함 수정</b>(ADR-056)을 포함한다. 수정 전에는 To-Be가
@@ -182,18 +191,48 @@ ON에서 반전된다(14.2 vs 22.2). §6에 남겼던 이례가 링크 의미론
 톱니 신선도(0~주기 변동)는 미구현 — 고정 지연 근사는 항상 주기 상한만큼 늦게 보는 보수적
 가정이다. <code>docs/adr/ADR-057</code> §한계 참조.</p>
 
-<h2 id="s5">6. G6 — 결론 불변 4종 재산출</h2>
+<h2 id="s55">6. ADR-058 — 승인 계선 이식의 단독 효과 (2-베이스)</h2>
+<p>legacy 9단계 파이프라인에만 있던 승인 계선(승인권자 해소→coord 협조 홉→<code>approval</code>
+서비스→동적 권한위임)을 native 경로의 As-Is LOCAL_AD 축(군단 AOC)에 이식했다
+(플래그 <code>approvalChain</code>, 기본 OFF · USFK 축 제외 어서션 고정).</p>
+<h3>6.1 주 베이스(ADR-056+057 ON) 위 단독 효과</h3>
+<table>
+<thead><tr><th>지표</th><th class="num">SC1: OFF → ON</th><th class="num">SC3: OFF → ON</th></tr></thead>
+<tbody>
+<tr><td>As-Is 협조몫 (meanCoordDelaySec)</td><td class="num">0 → <b>34.6초</b></td><td class="num">0 → <b>19.1초</b></td></tr>
+<tr><td>As-Is 승인 대기 Wq (approval)</td><td class="num">0 → 1.3초</td><td class="num">0 → <b>36.8초</b></td></tr>
+<tr><td>결심지연 Δ(To-Be−As-Is)</td><td class="num">−4.0 → −6.9초</td><td class="num">−41.9 → −45.0초</td></tr>
+<tr><td>격추율 Δ</td><td class="num"><span class="ns">+0.6pp → +0.7pp (무이동)</span></td><td class="num"><span class="ns">+18.8pp → +18.7pp (무이동)</span></td></tr>
+<tr><td>As-Is 중복교전</td><td class="num">16.1 → 14.8</td><td class="num">33.2 → <b>19.7</b> (승인 직렬화 효과)</td></tr>
+<tr><td>MCRC approval ρ (As-Is)</td><td class="num">0 → 0.28</td><td class="num">0 → 0.51 (track ρ 0.95 불변)</td></tr>
+</tbody>
+</table>
+<h3>6.2 반증·민감도</h3>
+<div class="box"><span class="bt">반증 (approvalChainTobe)</span> To-Be에 동일 계선을 강제해도
+결심지연 124.0→124.0초·격추율 62.3→62.1%로 사실상 불변 — To-Be의 위임 임계(×1)와
+automation(on-loop/auto-preauth)이 계선 비용을 0에 수렴시킨다. <b>As-Is↔To-Be 차이는 "승인
+계선의 존재"가 아니라 in-loop 절차(음성 왕복)·승인 대기행렬·늦은 분권 전환에서 나온다.</b></div>
+<div class="box"><span class="bt">2-베이스 대조</span> 같은 토글을 <b>전 플래그 OFF 베이스</b>(구
+기준선) 위에서 재면 효과가 3~4배 과장된다(SC1 결심지연 Δ −7.5→−26.1초 vs 주 베이스
+−4.0→−6.9초). 낡은 링크 의미론 위에서는 어떤 As-Is 페널티든 중첩 과장된다 — 결함 수정·정본
+정합 상태를 분석 기준선으로 삼는 이유의 실증.</div>
+<div class="box warn"><span class="bt">operator.mid 민감도 (10 seed 스윕)</span> 승인 계선 효과의
+크기는 C2 운용자 처리시간(등급 C·독립 출처 없음)에 민감하다: As-Is 결심지연 증가가 high(22.5초)
++2.8초 ↔ low(57.5초) +16.0초. <b>방향은 세 수준 모두 동일</b>(To-Be 우위 확대). 크기 인용 시
+등급 C 명기 필수.</div>
+
+<h2 id="s5">7. G6 — 결론 불변 4종 재산출</h2>
 <table>
 <thead><tr><th style="width:36%">결론</th><th>이번 판 재산출 결과</th></tr></thead>
 <tbody>
-<tr><td>① As-Is 핵심 병목은 협조·승인 경로(①⑥⑦)</td><td><b>유지</b> — legacy·compat 결심지연 145~153초 중 승인 파이프라인 몫이 지배적(As-Is→To-Be −135초). LEGACY_HIRES에서도 SC3 대기행렬 해소 −87초.</td></tr>
+<tr><td>① As-Is 핵심 병목은 협조·승인 경로(①⑥⑦)</td><td><b>유지·강화</b> — ADR-058 ON에서 native 최초로 협조몫(19~35초)·승인 Wq(36.8초) 관측, legacy 발견 재현. — legacy·compat 결심지연 145~153초 중 승인 파이프라인 몫이 지배적(As-Is→To-Be −135초). LEGACY_HIRES에서도 SC3 대기행렬 해소 −87초.</td></tr>
 <tr><td>② To-Be 병목은 C2에서 무기체계로 이동</td><td><b>유지</b> — To-Be에서 구조적 실패(책임공백류) 0이 되고 잔여 누수가 timeout(교전창)·missed로 이동(legacy·compat 누수 사유 분포).</td></tr>
 <tr><td>③ 무인기 비용 비대칭 미해소 (exchangeSat &gt; 1)</td><td><b>유지</b> — SC2 exchangeSat: legacy 72.6→68.5, LEGACY_HIRES 71.6→70.8. SC1/SC3 iads-c2에서도 20.4~20.6, 4.7~5.8 — 어느 셀·어느 플래그(ADR-056·057 ON 포함)에서도 1 밑으로 내려가지 않음.</td></tr>
 <tr><td>④ 신궁·천마 탄도탄 교전 불가</td><td><b>유지</b> — 제약 어서션(<code>tests/constraints.test.js</code>) 통과, 전 회귀 35스위트 856어서션 녹색.</td></tr>
 </tbody>
 </table>
 
-<h2 id="s6">7. 이 판에서 새로 남긴 관측 (후속 분석 대상)</h2>
+<h2 id="s6">8. 이 판에서 새로 남긴 관측 (후속 분석 대상)</h2>
 <ul>
 <li><b>SC3 LEGACY_HIRES·iads-c2에서 구조적실패 절대 건수는 To-Be(28~29)가 As-Is(19.9)보다 많다</b>
  — ADR-056 이전부터 존재하고 ADR-056 ON이 소폭만 줄인다(29.1→28.1). <b>후속 관측(§5):
@@ -205,7 +244,7 @@ ON에서 반전된다(14.2 vs 22.2). §6에 남겼던 이례가 링크 의미론
  — native 사수 선정의 모드 의존성 분석 과제로 남아 있다.</li>
 </ul>
 
-<h2 id="s7">8. 한계</h2>
+<h2 id="s7">9. 한계</h2>
 <ol>
 <li>FULL(84포대) 배치는 이번 판 매트릭스에서 제외 — 셀당 실행 시간 문제. 결론은 LEGACY_HIRES
   기준이며 FULL 일반화는 미검증.</li>
@@ -217,7 +256,7 @@ ON에서 반전된다(14.2 vs 22.2). §6에 남겼던 이례가 링크 의미론
 </ol>
 
 <p class="small">원자료: <code>artifacts/experiment/phase1-confirm-*.json</code>(OFF) · <code>phase1-on-*.json</code>(ADR-056 ON)
-· <code>phase2-linkv2-*.json</code>(ADR-057 ON) · <code>report-*.json</code>(compat 축) — 전부 명령 한 줄로 재현
+· <code>phase2-linkv2-*.json</code>(ADR-057 ON) · <code>phase3-*.json</code>(ADR-058 2-베이스·반증·스윕) · <code>report-*.json</code>(compat 축) — 전부 명령 한 줄로 재현
 가능(§1). 모델 구조·지표 정의: <code>모의논리서.html</code> · 파라미터 근거: <code>docs/params.md</code>.</p>
 
 </body>

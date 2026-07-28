@@ -32,7 +32,7 @@
 <body>
 
 <h1>K-JAMDS 시뮬레이터 — 모의논리서</h1>
-<p class="small">문서 버전: v3.1 (Phase 2 — ADR-057 반영) · 대상 코드: <code>v3</code> 브랜치 ·
+<p class="small">문서 버전: v3.2 (Phase 3 — ADR-058 반영) · 대상 코드: <code>v3</code> 브랜치 ·
 배치 6종(FULL 3 + LEGACY_HIRES 3) · 충실도 compat / iads-c2</p>
 
 <div class="box warn"><span class="bt">디스클레이머</span>
@@ -340,6 +340,8 @@ To-Be=IFCN 네트워크 주기(<code>IADS-LINK-IFCN-01</code>)</td></tr>
 <td>구 4초의 조정 근거 불명 → codex 값 환원(<code>IADS-LINK-SHORT-01</code>)</td></tr>
 <tr><td>교전현황(status) — 군단 AOC→상급</td><td>음성/VTC 대표 180초 · Triangular(90,180,270) · <b>서버 1·용량 4</b>(초과 드롭) · 신선도 300초</td>
 <td>데이터링크 2초 · 무손실</td><td>M/M/1/K 메시지 채널. <b>소비처</b>: As-Is=MCRC, To-Be=KILL_WEB(ADR-056, 플래그)</td></tr>
+<tr><td>승인 협조(coord) — 군단AOC→상급 <b>(ADR-058, 플래그 <code>approvalChain</code>)</b></td><td>음성 대표 20초·Uniform(10,30) — <b>절차 지연</b>(전선 아님·codex 정합 비대상)</td><td>DL 2초 (v2 ON: IFCN 1초)</td>
+<td>As-Is LOCAL_AD 축의 human-in-loop 교전만 통과. 승인권자(MCRC)에서 <code>kind='approval'</code> M/M/c/K 서비스 + 동적 권한위임(임계 As-Is 4/To-Be 1)</td></tr>
 <tr><td>역방향 COP(상급→국지) </td><td><b>없음</b> (정보 비대칭)</td><td>계획 생성 2초 후 가시화(ADR-056)</td><td>To-Be 전용 — 통합 COP의 양방향성</td></tr>
 <tr><td>명령(command)</td><td colspan="2">ECS→발사대 내부 링크(공통)</td><td>대표지연 고정</td></tr>
 </tbody>
@@ -478,7 +480,7 @@ To-Be=IFCN 네트워크 주기(<code>IADS-LINK-IFCN-01</code>)</td></tr>
   모델 붕괴로 취급.</li>
 <li><b>편향 원장</b> — 각 변경의 As-Is↔To-Be 이동 방향을 단독 측정해 기록(우호 편향 감시).</li>
 <li><b>ADR</b> — 설계 갈림길마다 맥락/선택지/결정/검증/되돌리는 법을 <code>docs/adr/</code>에 기록.
-  현재 ADR-001~009, 036, 049~057.</li>
+  현재 ADR-001~009, 036, 049~058.</li>
 </ul>
 
 <h2 id="s7">7. 알려진 한계</h2>

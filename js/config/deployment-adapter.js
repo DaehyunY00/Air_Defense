@@ -311,7 +311,9 @@
     config = config || {};
     var features = config.features || {};
     if (features.highResolutionDeployment !== true) return KJ.LEGACY_CATALOG;
-    return buildDeploymentCatalog(config.deploymentId || 'HANBANDO_MINI_NORMAL');
+    // ADR-055: MINI 폐기 이후의 기본 고해상도 배치. LEGACY_HIRES는 legacy와 자산 편성이
+    // 같아, 배치 ID를 생략한 호출이 legacy 결과와 가장 가까운 편성을 보게 된다.
+    return buildDeploymentCatalog(config.deploymentId || 'HANBANDO_LEGACY_NORMAL');
   };
   KJ.resolveRoleId = function (id, catalog) {
     catalog = catalog || KJ.LEGACY_CATALOG;

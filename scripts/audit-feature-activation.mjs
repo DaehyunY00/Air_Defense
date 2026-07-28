@@ -10,7 +10,7 @@ const execution = {
   fixedExperiment: FIXED,
   uiDefaults: { deployment: 'legacy', scenario: 'sc1', architecture: 'asis', seed: 12345, intensity: 1, durationSec: 1800 },
   engineDefaults: { deployment: 'legacy', intensity: 1, seed: 1, durationSec: 1800, highResolutionDeployment: false },
-  auditApplied: { deployment: ['legacy', 'HANBANDO_MINI_NORMAL', 'HANBANDO_FULL_NORMAL', 'HANBANDO_FULL_MCRC_DOWN', 'HANBANDO_FULL_KAMDOC_DOWN'], scenario: 'sc3', architecture: ['asis', 'tobe'], seed: 42, intensity: 1.5, durationSec: 1800 },
+  auditApplied: { deployment: ['legacy', 'HANBANDO_LEGACY_NORMAL', 'HANBANDO_FULL_NORMAL', 'HANBANDO_FULL_MCRC_DOWN', 'HANBANDO_FULL_KAMDOC_DOWN'], scenario: 'sc3', architecture: ['asis', 'tobe'], seed: 42, intensity: 1.5, durationSec: 1800 },
   urlState: { scheme: '#tab=&sc=&mode=&dep=&t=&open=&x=&seed=&dur=', invalidDeploymentFallsBackTo: 'legacy' },
   notes: [
     'UI deployment selection is converted to deploymentId plus features.highResolutionDeployment=true.',

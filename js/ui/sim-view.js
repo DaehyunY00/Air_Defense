@@ -440,7 +440,7 @@
       return;
     }
     // FULL 배치에서는 수백 개 Leaflet 객체를 매 rAF마다 갱신하지 않는다. 시간 진행은
-    // rAF로 유지하되 화면 그리기만 10fps, legacy/MINI는 30fps로 제한한다.
+    // rAF로 유지하되 화면 그리기만 10fps, legacy/LEGACY_HIRES는 30fps로 제한한다.
     var objectCount = run.threats.length + Object.keys(run.nodeMeta).length;
     var renderEveryMs = objectCount > 160 ? 100 : 33;
     if (cur - anim.lastRenderWall >= renderEveryMs) {

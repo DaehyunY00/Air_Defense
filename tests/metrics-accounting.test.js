@@ -28,9 +28,13 @@ function assert(c, m, extra) {
 
 // ════════ F1: native(고해상도) 경로에서 고가유도탄($≥5M, L-SAM) 소모가 계상되는가 ════════
 console.log('# F1 — native 고가유도탄 보존율');
+// ADR-055: 종전 MINI_NORMAL(L-SAM 2문) 셀을 LEGACY_HIRES로 이관했다. LEGACY_HIRES의 L-SAM은
+// MDU_L 1문뿐이고 As-Is에서는 이 셀에서 한 번도 선정되지 않아(실측 hv=0.0) mode='tobe'를 쓴다.
+// As-Is에서 단일 L-SAM이 선정되지 않는 것 자체는 native 사수 선정식의 관측 사실이며,
+// 여기서 고치지 않는다(ADR-055 §한계).
 var nativeCfg = {
-  scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1.5, seed: 42, endTimeSec: 900,
-  deploymentId: 'HANBANDO_MINI_NORMAL', features: { highResolutionDeployment: true }
+  scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 1.5, seed: 42, endTimeSec: 900,
+  deploymentId: 'HANBANDO_LEGACY_NORMAL', features: { highResolutionDeployment: true }
 };
 var nat = KJ.runDES(nativeCfg).global;
 console.log('    native: interceptM=' + nat.cost.interceptM.toFixed(1) +
@@ -128,7 +132,7 @@ function maxC2NodeRho(res) {
 }
 var nativeRun = KJ.runDES({
   scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1, seed: 12345,
-  endTimeSec: 1800, deploymentId: 'HANBANDO_MINI_NORMAL',
+  endTimeSec: 1800, deploymentId: 'HANBANDO_LEGACY_NORMAL',
   features: { highResolutionDeployment: true }
 });
 var nativeNodeRho = maxC2NodeRho(nativeRun);

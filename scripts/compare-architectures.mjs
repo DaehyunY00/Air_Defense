@@ -1,7 +1,7 @@
 import { ROOT, FIXED, AUDIT_GENERATED_AT, loadProject, runFixed, metricSummary, delta, traceSummary, pairedThreatDiff, writeArtifact } from './audit-lib.mjs';
 
 const KJ = loadProject(ROOT);
-const deployments = ['legacy', 'HANBANDO_MINI_NORMAL', 'HANBANDO_FULL_NORMAL', 'HANBANDO_FULL_MCRC_DOWN', 'HANBANDO_FULL_KAMDOC_DOWN'];
+const deployments = ['legacy', 'HANBANDO_LEGACY_NORMAL', 'HANBANDO_FULL_NORMAL', 'HANBANDO_FULL_MCRC_DOWN', 'HANBANDO_FULL_KAMDOC_DOWN'];
 const comparisons = [];
 for (const deployment of deployments) {
   const asis = runFixed(KJ, { deployment, mode: 'asis', trace: true });

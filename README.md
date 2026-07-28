@@ -18,7 +18,7 @@ DES(이산사건 시뮬레이션) 엔진 위에서 9단계 F2T2EA 파이프라�
 ## 사용 흐름
 
 ```
-① 시나리오·배치(legacy 또는 9개 고해상도: MINI/FULL/LEGACY_HIRES 각 3종)·체계모드(토글)·강도 선택
+① 시나리오·배치(legacy 또는 6개 고해상도: FULL/LEGACY_HIRES 각 3종)·체계모드(토글)·강도 선택
 ② [▶ 시뮬레이션 시작] → 지도 위 위협궤적·노드 재고 링 실시간 애니메이션
    (백그라운드: DES 양모드 비교 + Monte Carlo 수렴)
 ③ 재생 종료(또는 [결과 보기]) → 결과창: 요약·As-Is↔To-Be 비교·MC 95% CI·
@@ -74,7 +74,7 @@ Carlo처럼 계산량이 큰 실행은 **방법 A**를 사용해야 DES·MC·민
 
 서버 실행에서는 ES module 기반 `js/workers/sim-worker.mjs`가 연산을 전담하고, 구형 환경용
 `js/workers/sim-worker.js`는 Classic Worker 호환 경계로 남습니다. 입력 강도 슬라이더도 120ms로
-디바운스하고, FULL 지도는 수백 개 객체를 10fps(legacy/MINI 30fps), 재고 링을 4Hz로 제한해
+디바운스하고, FULL 지도는 수백 개 객체를 10fps(legacy/LEGACY_HIRES 30fps), 재고 링을 4Hz로 제한해
 드래그·지도 조작과 애니메이션의 경합을 줄였습니다. 결과창의 중복교전 그래프도 Worker에서 한 번만
 선계산하며, 결과 계산식·seed·wire shape는 바뀌지 않습니다. 화면의 `계산 모드`가
 `Web Worker`인지 확인하면 됩니다. 상단 **모델 충실도**에서 `IADS_C2 물리`를 고르면
@@ -175,8 +175,9 @@ K-JAMDS_시뮬레이터_단일본.html    # ★ 자기완결 단일본(서버 �
 css/style.css                    # 레이아웃·테마
 js/
   config/ system-types.js · geo-mdl.js · deployments.js · deployment-adapter.js
-         # 고해상도 체계 타입 · MDL 개념 벨트 · 9개 배치 · C2/센서/사수/링크 catalog
-         #   (MINI/FULL 각 3종 + LEGACY_HIRES 3종 — legacy 자산 배치의 고해상도 이식, ADR-054)
+         # 고해상도 체계 타입 · MDL 개념 벨트 · 6개 배치 · C2/센서/사수/링크 catalog
+         #   (FULL 3종 + LEGACY_HIRES 3종 — legacy 자산 배치의 고해상도 이식, ADR-054.
+         #    HANBANDO_MINI 3종은 ADR-055로 폐기)
   data/  nodes.js · links.js · threats.js · scenarios.js · axes.js
          # 노드(대기행렬·pk·wtaSuit·costPerShotM·magazine)·모드별 링크·위협·시나리오·축선 좌표
   core/  router.js · constraints.js · rng.js · heap.js · sim-worker-client.js
@@ -254,20 +255,25 @@ node tests/run-all.js            # 전체 회귀 — JS/ESM 39개 구문검증 +
 |---|---|---|---|
 | `legacy` | ✅ 9단계 파이프라인 | ❌ | 승인권자까지 **coord 홉 + 승인 대기**(중복교전·승인 병목 관측 가능) |
 | `HANBANDO_LEGACY_*` | ✅ native 교전 | ✅ | **책임 C2 자체 승인**(제거할 홉 없음) |
-| `HANBANDO_MINI_*` · `HANBANDO_FULL_*` | ✅ native 교전 | ✅ | 〃 |
+| `HANBANDO_FULL_*` | ✅ native 교전 | ✅ | 〃 |
 
 > ⚠️ **배치는 규모만 바꾸지 않습니다 — ⑥ 결심 절차의 모델이 다릅니다.** 그래서 같은
 > `meanDecisionDelaySec` 지표라도 **To-Be 개선폭이 한 자릿수 배 차이**가 납니다(21셀 실측 평균):
 > legacy **−120초**(부하와 무관하게 일정 — 승인 홉이라는 고정 비용이 사라짐) vs
-> LEGACY_HIRES −30초 · MINI −52초 · FULL −21초(저부하 −10초 안팎, 포화 SC3에서만 −88~−95초 —
+> LEGACY_HIRES −30초 · MINI −52초(ADR-055로 폐기된 배치의 기록값) · FULL −21초(저부하 −10초 안팎, 포화 SC3에서만 −88~−95초 —
 > 이득이 홉 제거가 아니라 **대기행렬 해소**에서 나오므로 부하의 함수).
 > **"통합 C2가 결심을 N초 앞당긴다"고 인용할 때는 어느 배치에서 잰 값인지 반드시 명시하십시오.**
 > 상세는 `docs/실험보고서_AsIs_ToBe.pdf` §8.2 · `docs/모의논리서.pdf` §13.7.
 
 ### As-Is ↔ To-Be 비교 실험 (재현 가능)
 
-시나리오(SC1~3) × 배치(legacy/LEGACY_HIRES/MINI/FULL) × 모델충실도(compat/iads-c2) 21개 셀에서 **동일 seed로
+시나리오(SC1~3) × 배치(legacy/LEGACY_HIRES/FULL) × 모델충실도(compat/iads-c2) 15개 셀에서 **동일 seed로
 짝지은(paired) 복제**를 실행하고, seed별 Δ(To-Be−As-Is)의 95% CI로 구조 차이를 판정합니다.
+
+> ⚠️ **이 절에 인용된 21셀 실측치는 ADR-055(`HANBANDO_MINI` 3종 폐기) 이전의 기록입니다.**
+> MINI 6셀(SC1~3 × compat/iads-c2)은 배치가 사라졌으므로 **재현할 수 없습니다.** 아래 숫자는
+> 측정 당시의 기록으로 그대로 남겨 두었고, 지금 명령을 다시 돌리면 15셀 결과가 나옵니다.
+> MINI가 등장하는 문장은 폐기된 배치의 관측이라는 뜻입니다.
 
 ```bash
 node scripts/experiment-run.mjs --cell "sc3|legacy|compat|1|30"   # 셀 1개 (시나리오|배치|충실도|강도|복제수)
@@ -295,7 +301,7 @@ V&V 종합은 **`docs/vv-report.md`**, 통합 감사(되돌리기·편향원장�
 
 ### 고해상도 결과의 요격 실패율 읽기
 
-결과 모달은 `격추`, `확정 누출`, `관측 종료 미해결`을 전체 생성 위협 기준으로 따로 표시합니다. `global.killRate/leakRate`는 종료 시점 미해결을 제외한 **해결분 기준** 파생지표이므로, 전체 생성 기준 비율과 구분해야 합니다. native 고해상도 경로는 무한 재교전을 막기 위해 표적당 전 책임 C2 축 합산 최대 2발을 발사합니다. `fid=iads-c2`는 정본의 센서 거리·SNR/RCS·추적상실 hazard·MFR FC·PSSEK/PIP·재밍/ECM·상관/식별·명령 상태를 사용하지만, 경도·위도 진행률과 체공시간은 아직 Air_Defense 개념 축선/dwell 함수이고 false merge/split은 포함하지 않습니다. 따라서 FULL/MINI 절대값은 전술 성능치가 아니라 배치·파이프라인 비교값으로만 사용하십시오.
+결과 모달은 `격추`, `확정 누출`, `관측 종료 미해결`을 전체 생성 위협 기준으로 따로 표시합니다. `global.killRate/leakRate`는 종료 시점 미해결을 제외한 **해결분 기준** 파생지표이므로, 전체 생성 기준 비율과 구분해야 합니다. native 고해상도 경로는 무한 재교전을 막기 위해 표적당 전 책임 C2 축 합산 최대 2발을 발사합니다. `fid=iads-c2`는 정본의 센서 거리·SNR/RCS·추적상실 hazard·MFR FC·PSSEK/PIP·재밍/ECM·상관/식별·명령 상태를 사용하지만, 경도·위도 진행률과 체공시간은 아직 Air_Defense 개념 축선/dwell 함수이고 false merge/split은 포함하지 않습니다. 따라서 FULL/LEGACY_HIRES 절대값은 전술 성능치가 아니라 배치·파이프라인 비교값으로만 사용하십시오.
 
 ### 통계·시각화 방법론 (요약)
 

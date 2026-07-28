@@ -115,8 +115,8 @@ assert(!legacyCompat.config.deploymentId && !legacyCompat.config.compatibilityMo
 assert(legacyCompat.nodes.every(function (n) {
   return !n.rhoByKind || Object.keys(n.rhoByKind).join(',') === 'track,approval,engage';
 }), 'legacy 결과의 kind 키가 종전 3종 그대로');
-var mini = catalogOf('HANBANDO_MINI_NORMAL');
-assert(mini.nativeCounts.batteries === 8, 'MINI 배치 구성 불변(포대 8)');
+var full = catalogOf('HANBANDO_FULL_NORMAL');
+assert(full.nativeCounts.batteries === 84, 'FULL 배치 구성 불변(포대 84)');
 
 console.log(fail === 0 ? '\nOK — LEGACY_HIRES 배치 전체 통과' : '\n실패 ' + fail + '건');
 process.exit(fail ? 1 : 0);

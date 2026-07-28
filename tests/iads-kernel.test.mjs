@@ -122,7 +122,7 @@ assert(KJ.SHOOTER_TYPES.LSAM.missiles.AAM.missileSpeed === 1700 &&
 
 const cfg = {
   scenario: KJ.scenarioById('sc2'), mode: 'asis', intensity: 0.5, seed: 42, endTimeSec: 180,
-  deploymentId: 'HANBANDO_MINI_NORMAL', features: { highResolutionDeployment: true },
+  deploymentId: 'HANBANDO_LEGACY_NORMAL', features: { highResolutionDeployment: true },
   modelFidelity: 'iads-c2', trace: true, traceCap: 30
 };
 const first = KJ.runDES(cfg);

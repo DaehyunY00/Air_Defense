@@ -11,9 +11,6 @@ var fail = 0;
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
 
 var expected = {
-  HANBANDO_MINI_NORMAL: [11, 8, 14, 8, 0],
-  HANBANDO_MINI_MCRC_DOWN: [11, 8, 13, 8, 0],
-  HANBANDO_MINI_KAMDOC_DOWN: [11, 8, 13, 8, 0],
   HANBANDO_FULL_NORMAL: [71, 84, 98, 84, 45],
   HANBANDO_FULL_MCRC_DOWN: [71, 84, 97, 84, 45],
   HANBANDO_FULL_KAMDOC_DOWN: [71, 84, 97, 84, 45],
@@ -24,7 +21,7 @@ var expected = {
   HANBANDO_LEGACY_KAMDOC_DOWN: [19, 15, 31, 15, 7]
 };
 
-assert(JSON.stringify(KJ.DEPLOYMENT_IDS) === JSON.stringify(Object.keys(expected)), '9개 배치 ID·순서 고정');
+assert(JSON.stringify(KJ.DEPLOYMENT_IDS) === JSON.stringify(Object.keys(expected)), '6개 배치 ID·순서 고정 (ADR-055: MINI 3종 폐기)');
 KJ.DEPLOYMENT_IDS.forEach(function (id) {
   var d = KJ.deploymentById(id), e = expected[id];
   var ecs = d.c2Nodes.filter(function (c) { return c.typeId === 'ECS'; }).length;
@@ -34,7 +31,7 @@ KJ.DEPLOYMENT_IDS.forEach(function (id) {
   assert(Object.isFrozen(d) && Object.isFrozen(d.positions) && Object.isFrozen(d.batteries) && Object.isFrozen(d.sensors), id + ' 불변 선언');
 });
 
-['MINI', 'FULL', 'LEGACY'].forEach(function (size) {
+['FULL', 'LEGACY'].forEach(function (size) {
   var n = KJ.deploymentById('HANBANDO_' + size + '_NORMAL');
   var m = KJ.deploymentById('HANBANDO_' + size + '_MCRC_DOWN');
   var k = KJ.deploymentById('HANBANDO_' + size + '_KAMDOC_DOWN');
@@ -98,7 +95,13 @@ assert(nonShorad.every(function (b) {
 
 var usfkBatteries = full.batteries.filter(function (b) { return b.forceOwner === 'USFK'; });
 assert(usfkBatteries.filter(function (b) { return b.shooterTypeId === 'THAAD'; }).length === 1 && usfkBatteries.filter(function (b) { return b.shooterTypeId === 'USFK_PAC3'; }).length === 5, 'USFK THAAD 1·Patriot 5 독립축 선언');
-assert(KJ.deploymentById('HANBANDO_MINI_NORMAL').positions.GREEN_PINE.confidence === 'estimated', 'MINI 비공개 메타 estimated 표시');
+// ADR-055: 종전에는 MINI의 confidence 미선언 좌표로 `confidence || 'estimated'` 기본값 분기를
+// 검사했으나, MINI 폐기 후 남은 6배치는 모든 좌표가 confidence를 명시 선언한다. 그래서 여기서는
+// 살아 있는 분기 — confidence 값에 따라 coordNote 문구가 갈리는 쪽 — 를 검사한다.
+// (기본값 분기 자체는 live case가 사라졌다. ADR-055 §한계에 기록.)
+assert(full.positions.GREEN_PINE_BUSAN.confidence === 'public' && /공개자료/.test(full.positions.GREEN_PINE_BUSAN.coordNote) &&
+  full.positions.GREEN_PINE_CHUNGNAM.confidence === 'estimated' && /추정/.test(full.positions.GREEN_PINE_CHUNGNAM.coordNote),
+  'confidence(public/estimated)별 coordNote 문구 분기');
 
 var mdl = KJ.sampleMdlDefensePoints(126.80, 128.30, 25);
 assert(mdl.length === 25 && mdl.every(function (p) {

@@ -319,7 +319,7 @@ story.append(audit_table(["실행", "그래프", "주요 함수 경로", "핵심
 story.append(sub("경우의 수 분기 행렬"))
 case_rows = [
     ["배치 선택", "OFF 또는 dep=legacy", "legacy 대표 노드/링크. 결과 wire shape와 SHA-256 기준선 보존."],
-    ["배치 선택", "ON + ID 생략", "HANBANDO_MINI_NORMAL 기본. 잘못된 ID는 명시적 오류."],
+    ["배치 선택", "ON + ID 생략", "HANBANDO_LEGACY_NORMAL 기본. 잘못된 ID는 명시적 오류."],
     ["배치 상태", "NORMAL", "KAMD_OPS/MCRC 생존. 한국군 ROK root가 전역 책임."],
     ["배치 상태", "MCRC_DOWN", "ABT 한국군 root 부재. 생존 ICC별 권역 책임으로 전환."],
     ["배치 상태", "KAMDOC_DOWN", "탄도 한국군 root 부재. 생존 ICC별 권역 책임으로 전환."],
@@ -585,7 +585,7 @@ story.append(audit_table(["우선", "작업", "내용", "완료 게이트"], roa
 
 story.append(sub("권장 검증 조합"))
 story.append(bullet([
-    "배치: MINI/FULL x NORMAL/MCRC_DOWN/KAMDOC_DOWN x As-Is/To-Be.",
+    "배치: LEGACY_HIRES/FULL x NORMAL/MCRC_DOWN/KAMDOC_DOWN x As-Is/To-Be.",
     "위협: UAV 단일, ABT 경계, 탄도 단일, 복합 포화, sensor/path/shooter/ammo 강제 부재 합성 케이스.",
     "시간: 저부하 정상상태, 짧은 burst peak, endTime censoring, 900초 재장전 경계 전후.",
     "확률: Pd=0/1, Pk=0/1, delay=0, service=0 근사, seed replay, domain draw count.",
@@ -631,7 +631,7 @@ story.append(audit_table(
     alignments={0},
 ))
 story += [Spacer(1, 8 * mm)]
-story.append(P("이 세 게이트가 완료되기 전에는 FULL/MINI 결과를 배치와 지휘통제 구조의 상대 비교로만 보고하고, 전술적 절대 격추율, 특정 방어구역의 안전성, '구조적 문제 없음' 판정으로 사용하지 않는 것이 타당하다."))
+story.append(P("이 세 게이트가 완료되기 전에는 FULL/LEGACY_HIRES 결과를 배치와 지휘통제 구조의 상대 비교로만 보고하고, 전술적 절대 격추율, 특정 방어구역의 안전성, '구조적 문제 없음' 판정으로 사용하지 않는 것이 타당하다."))
 
 doc.build(story)
 print(f"PDF generated: {OUT}")

@@ -1,5 +1,9 @@
 # Air_Defense_v2 고해상도 구현 실효성 감사
 
+> **ADR-055(2026-07-28) 이후 주의**: 이 문서에 나오는 `HANBANDO_MINI_*` 배치 3종은 폐기되었다.
+> 본문의 MINI 관측치는 **폐기 전 측정 기록**이며 지금은 재현할 수 없다. 현재 배치는
+> `HANBANDO_FULL_*` 3종 + `HANBANDO_LEGACY_*` 3종 = 6종이다.
+
 > **2026-07-19 후속 구현 업데이트**: 이 문서의 본문은 후속 구현 전 상태를 기록한 스냅샷이다. 현재 고해상도 경로에는 ① 위협 종류·아키텍처·C2 생존상태로 KAMDOC/MCRC/ICC/IAOC/지역방공/USFK 독립 축을 결정하는 Resolver, ② command scope별 사수선정·중복 차단, ③ 개념 3D 축선·고도·요격체 속도·R/H 봉투의 PIP 가능성, ④ MFR 화력통제 상태, ⑤ 발사대별 탄약·900초 개별 재장전, ⑥ 실제 발사·BDA 기반 중복교전이 구현되었다. legacy/OFF는 구현 전 SHA-256 기준선과 bit-exact다.
 >
 > 아직 원본과 완전히 동일하지 않은 부분은 canonical event schema, 도메인별 RNG, 실시간 센서 손실·오차·항적 freshness/상관, 교차각·편란을 포함한 정밀 운동학, 전체 PSSEK 테이블이다. 따라서 FULL/MINI 결과는 고해상도 배치·C2·교전 로직 검증용이며 전술적 절대값이 아니다. 현행 구현 기록은 `docs/tasks/2026-07-19-iads-native-pipeline-unification.md`를 본다.

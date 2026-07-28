@@ -19,7 +19,6 @@ const SC_NAME = { sc1: 'SC1 경계 침투(교전 중복·책임공백)', sc2: 'S
 const DEP_NAME = {
   legacy: 'legacy(64노드 개념배치)',
   HANBANDO_LEGACY_NORMAL: 'LEGACY_HIRES(legacy 편성 고해상도)',
-  HANBANDO_MINI_NORMAL: 'MINI(8포대 고해상도)',
   HANBANDO_FULL_NORMAL: 'FULL(84포대 고해상도)'
 };
 const FID_NAME = { compat: 'compat(개념 교전)', 'iads-c2': 'iads-c2(물리 충실도)' };
@@ -54,8 +53,6 @@ const ORDER = [
   ['legacy', 'compat'],
   ['HANBANDO_LEGACY_NORMAL', 'compat'],
   ['HANBANDO_LEGACY_NORMAL', 'iads-c2'],
-  ['HANBANDO_MINI_NORMAL', 'compat'],
-  ['HANBANDO_MINI_NORMAL', 'iads-c2'],
   ['HANBANDO_FULL_NORMAL', 'compat'],
   ['HANBANDO_FULL_NORMAL', 'iads-c2']
 ];
@@ -351,7 +348,7 @@ const html = `<!doctype html>
   </div>
   <div class="disc">⚠️ <b>디스클레이머</b> — 본 보고서의 모든 수치는 공개자료 기반 <b>정책연구용 개념값</b>으로 수행한
   시뮬레이션 결과이며 실제 작전 성능이 아닙니다. 절대값이 아니라 <b>동일 조건에서의 As-Is↔To-Be 상대비교</b>로만
-  해석해야 합니다. 고해상도(MINI/FULL) 절대값은 배치·파이프라인 비교값입니다.</div>
+  해석해야 합니다. 고해상도(LEGACY_HIRES/FULL) 절대값은 배치·파이프라인 비교값입니다.</div>
 </div>
 
 <div class="page">
@@ -362,7 +359,7 @@ const html = `<!doctype html>
   <tr><th style="width:16%">축</th><th style="width:34%">수준</th><th>의도</th></tr>
   <tr><td>시나리오</td><td>SC1 경계 침투 · SC2 무인기 동시 남파 · SC3 전략적 섞어쏘기</td>
       <td>KJADS 구축안 3대 문제 상황. 부하(λ)와 위협 구성이 다르다</td></tr>
-  <tr><td>배치</td><td>legacy(64노드) · <b>LEGACY_HIRES</b>(legacy 편성 고해상도) · MINI(8포대) · FULL(84포대)</td>
+  <tr><td>배치</td><td>legacy(64노드) · <b>LEGACY_HIRES</b>(legacy 편성 고해상도) · FULL(84포대)</td>
       <td>전력 규모와 지리적 밀도가 결과를 지배하는지 분리. LEGACY_HIRES는 legacy와 <b>자산 편성이 같고
       충실도만 다른</b> 대조를 만들기 위해 추가했다(ADR-054)</td></tr>
   <tr><td>모델 충실도</td><td>compat(개념 교전) · iads-c2(SNR/RCS·PIP·화력통제 물리)</td>
@@ -375,7 +372,7 @@ const html = `<!doctype html>
 <b>seed별 Δ(To-Be−As-Is)의 95% 신뢰구간이 0을 제외하는지</b>로 판정했습니다(표에서 <code>n.s.</code>는
 분리되지 않음). 강도·지속시간·seed 격자는 전 셀에서 동일합니다(기본 강도 ×1.0, 1800초, baseSeed 12345).</div>
 <div class="box warn"><b class="t">복제 수의 비대칭 — 계산 비용 때문입니다</b>
-legacy·LEGACY_HIRES·MINI는 30복제, FULL은 <b>10복제</b>로 실행했습니다. FULL 셀은 실행 1회가 8~37초로
+legacy·LEGACY_HIRES는 30복제, FULL은 <b>10복제</b>로 실행했습니다. FULL 셀은 실행 1회가 8~37초로
 legacy(0.01~0.08초)보다 세 자릿수 비쌉니다. 복제가 적은 셀은 신뢰구간이 넓어 <code>n.s.</code>가
 나오기 쉬우므로, <b>"차이 없음"이 아니라 "이 표본으로는 분리되지 않음"</b>으로 읽어야 합니다.</div>
 
@@ -435,7 +432,7 @@ function summaryBlock() {
 function fidelityTable() {
   let rows = '';
   for (const sc of ['sc1', 'sc2', 'sc3']) {
-    for (const dep of ['HANBANDO_LEGACY_NORMAL', 'HANBANDO_MINI_NORMAL', 'HANBANDO_FULL_NORMAL']) {
+    for (const dep of ['HANBANDO_LEGACY_NORMAL', 'HANBANDO_FULL_NORMAL']) {
       const cc = byKey.get(`${sc}|${dep}|compat`), ci = byKey.get(`${sc}|${dep}|iads-c2`);
       if (!cc || !ci) continue;
       const dirOf = c => {
@@ -499,24 +496,23 @@ function decisionDelayTable() {
   </tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-/** 배치 축: 같은 시나리오·충실도에서 legacy/MINI/FULL 절대값 비교 */
+/** 배치 축: 같은 시나리오·충실도에서 legacy/LEGACY_HIRES/FULL 절대값 비교 */
 function deploymentTable() {
   let rows = '';
   for (const sc of ['sc1', 'sc2', 'sc3']) {
     for (const fid of ['compat', 'iads-c2']) {
-      const cells3 = ['legacy', 'HANBANDO_LEGACY_NORMAL', 'HANBANDO_MINI_NORMAL', 'HANBANDO_FULL_NORMAL']
+      const cells3 = ['legacy', 'HANBANDO_LEGACY_NORMAL', 'HANBANDO_FULL_NORMAL']
         .map(dep => byKey.get(`${sc}|${dep}|${fid}`));
       if (!cells3.some(Boolean)) continue;
       const cellFor = c => c ? `${pct(c.asis.leakRateSpawn.mean)} → ${pct(c.tobe.leakRateSpawn.mean)}` : '—';
       rows += `<tr><td>${esc(sc.toUpperCase())} · ${esc(FID_NAME[fid])}</td>
         <td class="num">${cellFor(cells3[0])}</td>
         <td class="num">${cellFor(cells3[1])}</td>
-        <td class="num">${cellFor(cells3[2])}</td>
-        <td class="num">${cellFor(cells3[3])}</td></tr>`;
+        <td class="num">${cellFor(cells3[2])}</td></tr>`;
     }
   }
   return `<table><thead><tr><th>시나리오 · 충실도</th>
-    <th>legacy</th><th>LEGACY_HIRES</th><th>MINI</th><th>FULL</th>
+    <th>legacy</th><th>LEGACY_HIRES</th><th>FULL</th>
   </tr></thead><tbody>${rows}</tbody></table>
   <p class="small">각 칸은 <b>As-Is → To-Be</b> 요격 실패율. <code>legacy</code>는 iads-c2를 지원하지 않으므로
   물리 행에서 '—'이고, <b>LEGACY_HIRES는 legacy와 전력 구성이 달라</b>(전투기·이지스·조기경보기·광학감시 제외)
@@ -608,7 +604,7 @@ ${deploymentTable()}
   <li><b>개념값 모델</b>입니다. 절대 성능 예측이 아니라 구조 비교로만 사용해야 하며,
     특히 음성 교전협조 지연이 실험 설정(10~30초 균등)으로 단축되어 있어 과거 보고서(≥180초)와
     직접 비교할 수 없습니다.</li>
-  <li><b>MINI/FULL 절대값</b>은 배치·파이프라인 비교값이며 전술 성능치가 아닙니다.</li>
+  <li><b>LEGACY_HIRES/FULL 절대값</b>은 배치·파이프라인 비교값이며 전술 성능치가 아닙니다.</li>
 </ul>
 <h3>8.6 초판 이후의 코드 변경과 수치 유효성 (2026-07-27 재검증)</h3>
 <p class="small">이 보고서를 처음 낸 뒤 코드가 네 군데 바뀌었습니다. 실험 결과를 담은 문서는

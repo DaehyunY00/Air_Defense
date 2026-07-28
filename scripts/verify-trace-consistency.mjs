@@ -3,7 +3,7 @@ import path from 'node:path';
 import { ROOT, FIXED, AUDIT_GENERATED_AT, loadProject, runFixed, aggregateOnly, hash, traceSummary, catalogSummary, writeArtifact } from './audit-lib.mjs';
 
 const KJ = loadProject(ROOT);
-const deployments = ['legacy', 'HANBANDO_MINI_NORMAL', 'HANBANDO_FULL_NORMAL'];
+const deployments = ['legacy', 'HANBANDO_LEGACY_NORMAL', 'HANBANDO_FULL_NORMAL'];
 const checks = [];
 for (const deployment of deployments) {
   for (const mode of ['asis', 'tobe']) {
@@ -37,7 +37,7 @@ writeArtifact('visualization-path.json', {
   deploymentVisualization: {
     source: 'resolveModelCatalog → nodesInMode/linksInMode → Leaflet or SVG fallback',
     connected: files.map.includes('catalogFor(state)') && files.map.includes('KJ.nodesInMode(mode, catalog)'),
-    catalogs: ['legacy', 'HANBANDO_MINI_NORMAL', 'HANBANDO_FULL_NORMAL'].flatMap(id => ['asis', 'tobe'].map(mode => catalogSummary(KJ, id, mode)))
+    catalogs: ['legacy', 'HANBANDO_LEGACY_NORMAL', 'HANBANDO_FULL_NORMAL'].flatMap(id => ['asis', 'tobe'].map(mode => catalogSummary(KJ, id, mode)))
   },
   threatReplay: {
     source: 'runDES(trace=true) → threatTraces → buildThreats → KJ.axisPosition',

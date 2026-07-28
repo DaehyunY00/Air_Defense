@@ -8,17 +8,17 @@
  *
  * 본 파일 = 배치 좌표 + 자산 선언 단일 권위.
  * Phase 4.1 단계 2 (2026-05-27): CURRENT_DEMO / STRESS_TEST / HANBANDO_DEMO 폐기.
- * 신규 3 시나리오 = HANBANDO_MINI (같은 배치 + 본사장 활성화 토글) — 4 상황 매트릭스 시연용.
+ * ADR-055 (2026-07-28): HANBANDO_MINI 3종 폐기 — 단거리방공·국지방공 축이 없어
+ * KJADS 문제상황 1(육↔공 경계 책임공백)·2(무인기)의 원인 구조를 담지 못했다.
+ * 4 상황 시연 역할은 HANBANDO_LEGACY_* 3종이 동일 구조로 대체한다.
  *
- * 배치 목록:
- *  - DEPLOYMENT_HANBANDO_MINI_NORMAL       (상황 A: KAMDOC + MCRC 둘 다 정상)
- *  - DEPLOYMENT_HANBANDO_MINI_MCRC_DOWN    (상황 B: KAMDOC 정상 + MCRC 부재)
- *  - DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN  (상황 C: KAMDOC 부재 + MCRC 정상)
+ * 배치 목록 (6종 = 2 편성 × 3 상황):
+ *  - DEPLOYMENT_HANBANDO_FULL_{NORMAL, MCRC_DOWN, KAMDOC_DOWN}
+ *  - DEPLOYMENT_HANBANDO_LEGACY_{NORMAL, MCRC_DOWN, KAMDOC_DOWN}
  *
  * 본질:
- *  - positions / batteries / sensors = 단일 출처 공유 (같은 배치)
- *  - c2Nodes 만 분기 (본사장 활성화 토글로 4 상황 시연)
- *  - Phase 4.2 진입 시 HANBANDO_FULL 3 시나리오 (1여단 영남/호남 추가) 동일 패턴으로 확장
+ *  - positions / batteries / sensors = 편성별 단일 출처 공유 (같은 배치)
+ *  - c2Nodes 만 분기 (본사장 활성화 토글로 3 상황 시연)
  *
  * 형식:
  *  - 모든 객체 Object.freeze (불변)
@@ -31,108 +31,6 @@
  */
 
 // ADR-049 SHORAD 벨트: 방어측 배치 전용 고정밀 MDL 궤적 (잎 모듈 — import 순환 없음).
-
-// ════════════════════════════════════════════════════════════════
-// HANBANDO_MINI 공통 데이터 (positions + batteries + sensors)
-// ════════════════════════════════════════════════════════════════
-//
-// 본 데이터는 NORMAL / MCRC_DOWN / KAMDOC_DOWN 3 시나리오가 모두 공유 (단일 출처).
-// 변경 시 3 시나리오 모두 영향.
-
-const HANBANDO_MINI_POSITIONS = Object.freeze({
-  // 공통 C2 / 조기경보
-  KAMD_OPS:   { lon: 127.07, lat: 36.99, alt: 100 }, // 평택 오산 (ADR-022 §16.1)
-  MCRC:       { lon: 127.0297, lat: 37.0903, alt: 50 }, // 오산 (ROK AF MCRC 공개)
-  ICC:        { lon: 127.05, lat: 37.05, alt: 100 }, // sim 단일 (backward compat)
-  ECS:        { lon: 127.03, lat: 37.08, alt: 100 }, // sim 단일
-  GREEN_PINE: { lon: 127.0,  lat: 36.0,  alt: 200 },
-  FPS117:     { lon: 127.50, lat: 36.50, alt: 300 },
-  TPS880K:    { lon: 127.20, lat: 37.30, alt: 80  },
-  // ADR-024 다중 ICC (2여단 충청·강원 + 3여단 수도권, ADR-022 §16.1 단일 권위)
-  ICC_BRIGADE_2: { lon: 127.13, lat: 36.92, alt: 80 }, // 충남 천안 성환 (2여단)
-  ICC_BRIGADE_3: { lon: 126.90, lat: 37.47, alt: 80 }, // 서울 금천구 (3여단)
-  // N 클러스터: 수도권 3여단 산하 5 포대 (LSAM 1 + 천궁-II 3 + PAC-3 1)
-  LSAM_BAT_N1: { lon: 126.95, lat: 37.55, alt: 150 }, // 안양/성남 권역
-  C2_BAT_N1:   { lon: 127.00, lat: 37.40, alt: 150 },
-  C2_BAT_N2:   { lon: 127.10, lat: 37.50, alt: 150 },
-  C2_BAT_N3:   { lon: 127.20, lat: 37.35, alt: 150 },
-  PAC3_BAT_N1: { lon: 127.20, lat: 37.20, alt: 100 },
-  // S 클러스터: 충청·강원 2여단 산하 3 포대 (LSAM 강원평창 1 + 천궁-II 충청 2)
-  LSAM_BAT_PYEONGCHANG: { lon: 128.50, lat: 37.50, alt: 250 }, // 강원 평창 (2여단)
-  C2_BAT_S1:   { lon: 127.30, lat: 36.65, alt: 150 },
-  C2_BAT_S2:   { lon: 126.90, lat: 36.60, alt: 150 },
-  // ── 포대별 자기 MFR (단계 1 박제, handoff §2.2) ─────────
-  // 본질: 사수마다 자기 레이더 = ADR-024 ECS 패턴 정합. 포대 BAT 위치에서 ~500m 옆 별도 좌표.
-  LSAM_MFR_N1:          { lon: 126.955, lat: 37.555, alt: 180 },
-  LSAM_MFR_PYEONGCHANG: { lon: 128.505, lat: 37.505, alt: 280 },
-  MSAM_MFR_N1:          { lon: 127.005, lat: 37.405, alt: 160 },
-  MSAM_MFR_N2:          { lon: 127.105, lat: 37.505, alt: 160 },
-  MSAM_MFR_N3:          { lon: 127.205, lat: 37.355, alt: 160 },
-  MSAM_MFR_S1:          { lon: 127.305, lat: 36.655, alt: 160 },
-  MSAM_MFR_S2:          { lon: 126.905, lat: 36.605, alt: 160 },
-  PATRIOT_MFR_N1:       { lon: 127.205, lat: 37.205, alt: 120 },
-  SRBM_ORIGIN: { lon: 127.0,  lat: 39.5,  alt: 0 },
-  SRBM_TARGET: { lon: 127.03, lat: 37.0,  alt: 0 },
-});
-
-const HANBANDO_MINI_BATTERIES = Object.freeze([
-  // N 클러스터: 3여단 수도권 (5 포대) — mfrSensorPosKey = 포대별 unique MFR (단계 1)
-  Object.freeze({ shooterTypeId: 'LSAM',       posKey: 'LSAM_BAT_N1', mfrSensorTypeId: 'LSAM_MFR',     mfrSensorPosKey: 'LSAM_MFR_N1',     maxSimultaneous: 10, totalRounds: { ABM: 12, AAM: 12 }, iccPosKey: 'ICC_BRIGADE_3' }),
-  Object.freeze({ shooterTypeId: 'CHEONGUNG2', posKey: 'C2_BAT_N1',   mfrSensorTypeId: 'MSAM_MFR',     mfrSensorPosKey: 'MSAM_MFR_N1',     maxSimultaneous: 10, totalRounds: { ABM: 16, AAM: 16 }, iccPosKey: 'ICC_BRIGADE_3' }),
-  Object.freeze({ shooterTypeId: 'CHEONGUNG2', posKey: 'C2_BAT_N2',   mfrSensorTypeId: 'MSAM_MFR',     mfrSensorPosKey: 'MSAM_MFR_N2',     maxSimultaneous: 10, totalRounds: { ABM: 16, AAM: 16 }, iccPosKey: 'ICC_BRIGADE_3' }),
-  Object.freeze({ shooterTypeId: 'CHEONGUNG2', posKey: 'C2_BAT_N3',   mfrSensorTypeId: 'MSAM_MFR',     mfrSensorPosKey: 'MSAM_MFR_N3',     maxSimultaneous: 10, totalRounds: { ABM: 16, AAM: 16 }, iccPosKey: 'ICC_BRIGADE_3' }),
-  Object.freeze({ shooterTypeId: 'PAC3',       posKey: 'PAC3_BAT_N1', mfrSensorTypeId: 'PATRIOT_RADAR', mfrSensorPosKey: 'PATRIOT_MFR_N1',  maxSimultaneous: 9,  totalRounds: { ABM: 72 },           iccPosKey: 'ICC_BRIGADE_3' }),
-  // S 클러스터: 2여단 충청·강원 (3 포대)
-  Object.freeze({ shooterTypeId: 'LSAM',       posKey: 'LSAM_BAT_PYEONGCHANG', mfrSensorTypeId: 'LSAM_MFR', mfrSensorPosKey: 'LSAM_MFR_PYEONGCHANG', maxSimultaneous: 10, totalRounds: { ABM: 12, AAM: 12 }, iccPosKey: 'ICC_BRIGADE_2' }),
-  Object.freeze({ shooterTypeId: 'CHEONGUNG2', posKey: 'C2_BAT_S1',   mfrSensorTypeId: 'MSAM_MFR',     mfrSensorPosKey: 'MSAM_MFR_S1',     maxSimultaneous: 10, totalRounds: { ABM: 16, AAM: 16 }, iccPosKey: 'ICC_BRIGADE_2' }),
-  Object.freeze({ shooterTypeId: 'CHEONGUNG2', posKey: 'C2_BAT_S2',   mfrSensorTypeId: 'MSAM_MFR',     mfrSensorPosKey: 'MSAM_MFR_S2',     maxSimultaneous: 10, totalRounds: { ABM: 16, AAM: 16 }, iccPosKey: 'ICC_BRIGADE_2' }),
-]);
-
-const HANBANDO_MINI_SENSORS = Object.freeze([
-  Object.freeze({ typeId: 'GREEN_PINE_B',  posKey: 'GREEN_PINE', radarRangeKm: 900, radarColor: '#44cc44' }),
-  // 포대별 자기 MFR (typeId 동일, posKey 만 unique = 포대별 인스턴스)
-  Object.freeze({ typeId: 'LSAM_MFR',      posKey: 'LSAM_MFR_N1',          radarRangeKm: 310, radarColor: '#00aaff' }),
-  Object.freeze({ typeId: 'LSAM_MFR',      posKey: 'LSAM_MFR_PYEONGCHANG', radarRangeKm: 310, radarColor: '#00aaff' }),
-  Object.freeze({ typeId: 'MSAM_MFR',      posKey: 'MSAM_MFR_N1',          radarRangeKm: 100, radarColor: '#ff66cc' }),
-  Object.freeze({ typeId: 'MSAM_MFR',      posKey: 'MSAM_MFR_N2',          radarRangeKm: 100, radarColor: '#ff66cc' }),
-  Object.freeze({ typeId: 'MSAM_MFR',      posKey: 'MSAM_MFR_N3',          radarRangeKm: 100, radarColor: '#ff66cc' }),
-  Object.freeze({ typeId: 'MSAM_MFR',      posKey: 'MSAM_MFR_S1',          radarRangeKm: 100, radarColor: '#ff66cc' }),
-  Object.freeze({ typeId: 'MSAM_MFR',      posKey: 'MSAM_MFR_S2',          radarRangeKm: 100, radarColor: '#ff66cc' }),
-  Object.freeze({ typeId: 'PATRIOT_RADAR', posKey: 'PATRIOT_MFR_N1',       radarRangeKm: 180, radarColor: '#ffaa00' }),
-  Object.freeze({ typeId: 'FPS117',        posKey: 'FPS117',               radarRangeKm: 470, radarColor: '#88ccff' }),
-  Object.freeze({ typeId: 'TPS880K',       posKey: 'TPS880K',              radarRangeKm: 40,  radarColor: '#ccff88' }),
-]);
-
-// c2Nodes 공통 부분 (ICC × 2 + ECS × 8 + Kill-web 추상화). 3 시나리오 모두 동일.
-// KAMDOC / MCRC entry 는 시나리오별로 토글됨.
-const HANBANDO_MINI_C2_BASE = Object.freeze([
-  // ADR-024 다중 ICC (2여단 + 3여단)
-  Object.freeze({ typeId: 'ICC', posKey: 'ICC_BRIGADE_2', showNetworkNode: true, instanceLabel: 'ICC 2여단' }),
-  Object.freeze({ typeId: 'ICC', posKey: 'ICC_BRIGADE_3', showNetworkNode: true, instanceLabel: 'ICC 3여단' }),
-  // 포대별 ECS × 8 (N 클러스터 5 + S 클러스터 3)
-  Object.freeze({ typeId: 'ECS', posKey: 'LSAM_BAT_N1', showNetworkNode: true, instanceLabel: 'ECS L-SAM N1' }),
-  Object.freeze({ typeId: 'ECS', posKey: 'C2_BAT_N1',   showNetworkNode: true, instanceLabel: 'ECS 천궁 N1' }),
-  Object.freeze({ typeId: 'ECS', posKey: 'C2_BAT_N2',   showNetworkNode: true, instanceLabel: 'ECS 천궁 N2' }),
-  Object.freeze({ typeId: 'ECS', posKey: 'C2_BAT_N3',   showNetworkNode: true, instanceLabel: 'ECS 천궁 N3' }),
-  Object.freeze({ typeId: 'ECS', posKey: 'PAC3_BAT_N1', showNetworkNode: true, instanceLabel: 'ECS PAC-3 N1' }),
-  Object.freeze({ typeId: 'ECS', posKey: 'LSAM_BAT_PYEONGCHANG', showNetworkNode: true, instanceLabel: 'ECS L-SAM 평창' }),
-  Object.freeze({ typeId: 'ECS', posKey: 'C2_BAT_S1',   showNetworkNode: true, instanceLabel: 'ECS 천궁 S1' }),
-  Object.freeze({ typeId: 'ECS', posKey: 'C2_BAT_S2',   showNetworkNode: true, instanceLabel: 'ECS 천궁 S2' }),
-  // Kill-web 추상화 (Phase 4 first-class 분리 예정, 시각 중복 방지)
-  Object.freeze({ typeId: 'IAOC', posKey: 'KAMD_OPS', showNetworkNode: false }),
-  Object.freeze({ typeId: 'EOC',  posKey: 'ICC',      showNetworkNode: false }),
-]);
-
-// KAMDOC entry (탄도탄 본사장) — NORMAL / MCRC_DOWN 에 포함, KAMDOC_DOWN 에서 제외
-const KAMDOC_ENTRY = Object.freeze({
-  typeId: 'KAMD_OPS', posKey: 'KAMD_OPS', showNetworkNode: true, instanceLabel: 'KAMD_OPS',
-});
-
-// MCRC entry (비행기 본사장) — NORMAL / KAMDOC_DOWN 에 포함, MCRC_DOWN 에서 제외
-const MCRC_ENTRY = Object.freeze({
-  typeId: 'MCRC', posKey: 'MCRC', showNetworkNode: true, instanceLabel: 'MCRC 중앙방공통제소',
-});
-
 
 
 // ════════════════════════════════════════════════════════════════
@@ -637,50 +535,6 @@ const RAW_DEPLOYMENT_HANBANDO_FULL_KAMDOC_DOWN = Object.freeze({
 });
 
 // ════════════════════════════════════════════════════════════════
-// 시나리오 1: DEPLOYMENT_HANBANDO_MINI_NORMAL (상황 A)
-// ════════════════════════════════════════════════════════════════
-// 탄도탄 본사장 + 비행기 본사장 둘 다 정상. 측정 본체 = dual-mission 이중지휘 비효율.
-const RAW_DEPLOYMENT_HANBANDO_MINI_NORMAL = Object.freeze({
-  id: 'HANBANDO_MINI_NORMAL',
-  name: '한반도 미니 — 정상',
-  description: '상황 A: KAMDOC + MCRC 둘 다 정상. 8 포대 + 다중 ICC. dual-mission 이중지휘 측정.',
-  positions: HANBANDO_MINI_POSITIONS,
-  batteries: HANBANDO_MINI_BATTERIES,
-  sensors: HANBANDO_MINI_SENSORS,
-  c2Nodes: Object.freeze([KAMDOC_ENTRY, MCRC_ENTRY, ...HANBANDO_MINI_C2_BASE]),
-});
-
-// ════════════════════════════════════════════════════════════════
-// 시나리오 2: DEPLOYMENT_HANBANDO_MINI_MCRC_DOWN (상황 B)
-// ════════════════════════════════════════════════════════════════
-// 비행기 본사장(MCRC) 부재 → 각 권역 ICC 가 비행기 위협 직접 판단.
-// 측정 본체 = ABT cross-ICC 중복교전 자연 발현.
-const RAW_DEPLOYMENT_HANBANDO_MINI_MCRC_DOWN = Object.freeze({
-  id: 'HANBANDO_MINI_MCRC_DOWN',
-  name: '한반도 미니 — MCRC 무력화',
-  description: '상황 B: KAMDOC 정상 + MCRC 부재. ABT 위협 = 각 ICC 권역 독립 → cross-ICC 중복교전 측정.',
-  positions: HANBANDO_MINI_POSITIONS,
-  batteries: HANBANDO_MINI_BATTERIES,
-  sensors: HANBANDO_MINI_SENSORS,
-  c2Nodes: Object.freeze([KAMDOC_ENTRY, ...HANBANDO_MINI_C2_BASE]),
-});
-
-// ════════════════════════════════════════════════════════════════
-// 시나리오 3: DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN (상황 C)
-// ════════════════════════════════════════════════════════════════
-// 탄도탄 본사장(KAMDOC) 부재 → 각 권역 ICC 가 탄도탄 위협 직접 판단.
-// 측정 본체 = ballistic cross-ICC 중복교전 자연 발현. Phase 4.4 노드파괴 시연.
-const RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = Object.freeze({
-  id: 'HANBANDO_MINI_KAMDOC_DOWN',
-  name: '한반도 미니 — KAMDOC 무력화',
-  description: '상황 C: KAMDOC 부재 + MCRC 정상. ballistic 위협 = 각 ICC 권역 독립 → cross-ICC 중복교전 측정.',
-  positions: HANBANDO_MINI_POSITIONS,
-  batteries: HANBANDO_MINI_BATTERIES,
-  sensors: HANBANDO_MINI_SENSORS,
-  c2Nodes: Object.freeze([MCRC_ENTRY, ...HANBANDO_MINI_C2_BASE]),
-});
-
-// ════════════════════════════════════════════════════════════════
 // LEGACY_HIRES — legacy 자산 배치를 고해상도 카탈로그로 이식 (ADR-054)
 // ════════════════════════════════════════════════════════════════
 // 목적: legacy(js/data/nodes.js) 배치의 **자산 위치·편성만** 그대로 두고, 교전·센서 물리는
@@ -757,7 +611,7 @@ const HANBANDO_LEGACY_POSITIONS = Object.freeze({
   LAR_C:  { lon: 127.31, lat: 38.15, alt: 250, confidence: 'scenario', sourceNote: 'legacy LAR-C(저고도 탐지레이더 중부)' },
   LLR_1C: { lon: 126.86, lat: 37.70, alt: 80,  confidence: 'scenario', sourceNote: 'legacy LLR-1C(국지방공레이더 1군단)' },
   LLR_CD: { lon: 126.97, lat: 37.55, alt: 80,  confidence: 'scenario', sourceNote: 'legacy LLR-CD(국지방공레이더 수방사)' },
-  // 포대 전속 MFR — MINI 패턴과 동일하게 포대에서 ~500m 옆(+0.005°) 별도 좌표
+  // 포대 전속 MFR — FULL 패턴과 동일하게 포대에서 ~500m 옆(+0.005°) 별도 좌표
   MFR_W2: { lon: 126.705, lat: 37.455, alt: 120, confidence: 'scenario', sourceNote: 'legacy MFR-W2(천궁-II 다기능레이더)' },
   MFR_W4: { lon: 127.055, lat: 37.255, alt: 120, confidence: 'scenario', sourceNote: 'legacy MFR-W4' },
   MFR_C2: { lon: 127.555, lat: 37.555, alt: 170, confidence: 'scenario', sourceNote: 'legacy MFR-C2' },
@@ -910,7 +764,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 // ════════════════════════════════════════════════════════════════
 // DEPLOYMENTS — 레지스트리 (index.html 토글)
 // ════════════════════════════════════════════════════════════════
-// Phase 4.2 진입: HANBANDO_MINI 3종 + HANBANDO_FULL 3종.
+// ADR-055 이후: HANBANDO_FULL 3종 + HANBANDO_LEGACY 3종 = 6종.
 
 
   var positionMemo = new WeakMap();
@@ -1044,9 +898,6 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     });
   }
 
-  const DEPLOYMENT_HANBANDO_MINI_NORMAL = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_MINI_NORMAL);
-  const DEPLOYMENT_HANBANDO_MINI_MCRC_DOWN = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_MINI_MCRC_DOWN);
-  const DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN);
   const DEPLOYMENT_HANBANDO_FULL_NORMAL = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_FULL_NORMAL);
   const DEPLOYMENT_HANBANDO_FULL_MCRC_DOWN = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_FULL_MCRC_DOWN);
   const DEPLOYMENT_HANBANDO_FULL_KAMDOC_DOWN = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_FULL_KAMDOC_DOWN);
@@ -1055,9 +906,6 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   const DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN);
 
   KJ.DEPLOYMENTS = Object.freeze({
-    HANBANDO_MINI_NORMAL: DEPLOYMENT_HANBANDO_MINI_NORMAL,
-    HANBANDO_MINI_MCRC_DOWN: DEPLOYMENT_HANBANDO_MINI_MCRC_DOWN,
-    HANBANDO_MINI_KAMDOC_DOWN: DEPLOYMENT_HANBANDO_MINI_KAMDOC_DOWN,
     HANBANDO_FULL_NORMAL: DEPLOYMENT_HANBANDO_FULL_NORMAL,
     HANBANDO_FULL_MCRC_DOWN: DEPLOYMENT_HANBANDO_FULL_MCRC_DOWN,
     HANBANDO_FULL_KAMDOC_DOWN: DEPLOYMENT_HANBANDO_FULL_KAMDOC_DOWN,

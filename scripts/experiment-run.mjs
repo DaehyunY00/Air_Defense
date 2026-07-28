@@ -2,7 +2,7 @@
 /**
  * K-JAMDS 시뮬레이터 — As-Is ↔ To-Be 비교 실험 러너
  *
- * 시나리오(SC1/SC2/SC3) × 배치(legacy/MINI/FULL) × 모델충실도(compat/iads-c2)의
+ * 시나리오(SC1/SC2/SC3) × 배치(legacy/LEGACY_HIRES/FULL) × 모델충실도(compat/iads-c2)의
  * 각 셀에서 As-Is와 To-Be를 **동일 seed로 짝지어(paired)** 반복 실행하고,
  * seed별 Δ(To-Be − As-Is)의 95% 신뢰구간으로 구조 차이의 통계적 분리를 판정한다.
  *

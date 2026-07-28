@@ -15,7 +15,7 @@ function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fa
 function stable(r) { return JSON.stringify({ global: r.global, flow: r.flow, nodes: r.nodes, links: r.links, eventCount: r.eventCount }); }
 
 assert(KJ.resolveModelCatalog({}).id === 'legacy' && KJ.resolveModelCatalog({ deploymentId: 'HANBANDO_FULL_NORMAL', features: { highResolutionDeployment: false } }).id === 'legacy', '플래그 생략/OFF는 legacy 카탈로그');
-assert(KJ.resolveModelCatalog({ features: { highResolutionDeployment: true } }).id === 'HANBANDO_MINI_NORMAL', 'ON+ID 생략은 MINI_NORMAL');
+assert(KJ.resolveModelCatalog({ features: { highResolutionDeployment: true } }).id === 'HANBANDO_LEGACY_NORMAL', 'ON+ID 생략은 LEGACY_NORMAL (ADR-055: MINI 폐기 후 기본 배치)');
 var bad = false;
 try { KJ.resolveModelCatalog({ deploymentId: 'NO_SUCH_DEPLOYMENT', features: { highResolutionDeployment: true } }); } catch (e) { bad = /Unknown high-resolution deployment/.test(e.message); }
 assert(bad, '잘못된 배치 ID는 명시적 오류');
@@ -34,7 +34,7 @@ KJ.DEPLOYMENT_IDS.forEach(function (id) {
   }), id + ' USFK 사수는 독립 C2 축에서만 실제 교전 가능');
 });
 
-['MINI', 'FULL'].forEach(function (size) {
+['FULL', 'LEGACY'].forEach(function (size) {
   ['MCRC', 'KAMDOC'].forEach(function (rootName) {
     var id = 'HANBANDO_' + size + '_' + rootName + '_DOWN';
     var c = KJ.buildDeploymentCatalog(id);

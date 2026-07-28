@@ -12,7 +12,7 @@ var KJ = global.KJ;
 var fail = 0;
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
 
-['HANBANDO_MINI_NORMAL', 'HANBANDO_FULL_NORMAL'].forEach(function (id) {
+['HANBANDO_LEGACY_NORMAL', 'HANBANDO_FULL_NORMAL'].forEach(function (id) {
   var catalog = KJ.buildDeploymentCatalog(id);
   var roots = [catalog.roles.KAMDOC, catalog.roles.MCRC].filter(Boolean);
   var iccs = catalog.nodes.filter(function (n) { return n.typeId === 'ICC'; });
@@ -27,12 +27,12 @@ function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fa
 
 var cfg = {
   scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1.5,
-  seed: 42, endTimeSec: 1800, deploymentId: 'HANBANDO_MINI_NORMAL',
+  seed: 42, endTimeSec: 1800, deploymentId: 'HANBANDO_LEGACY_NORMAL',
   features: { highResolutionDeployment: true }
 };
 var result = KJ.runDES(cfg);
 assert(result.global.everEngaged > 0 && result.global.shotsFired > 0,
-  'MINI_NORMAL As-Is 주 교전 경로가 실제 발사를 생성');
+  'LEGACY_NORMAL As-Is 주 교전 경로가 실제 발사를 생성');
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

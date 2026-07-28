@@ -39,13 +39,13 @@ export function loadEngine() {
 
 /** 실험 셀 config 생성. deployment='legacy'면 고해상도 플래그를 붙이지 않는다. */
 export function cellConfig(KJ, { scenario, mode, deployment, fidelity = 'compat',
-  intensity = 1, seed = 12345, endTimeSec = 1800, c2Analysis = false }) {
+  intensity = 1, seed = 12345, endTimeSec = 1800, c2Analysis = false, features = null }) {
   const cfg = {
     scenario: KJ.scenarioById(scenario), mode, intensity, seed, endTimeSec
   };
   if (deployment !== 'legacy') {
     cfg.deploymentId = deployment;
-    cfg.features = { highResolutionDeployment: true };
+    cfg.features = Object.assign({ highResolutionDeployment: true }, features || {});
     cfg.modelFidelity = fidelity;
   } else if (fidelity !== 'compat') {
     throw new Error('legacy 배치는 iads-c2 충실도를 지원하지 않는다');

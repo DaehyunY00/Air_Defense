@@ -45,6 +45,9 @@ if (cellSpec) {
     scenario, deployment, fidelity,
     intensity: Number(intensity), endTimeSec: DURATION
   };
+  // 기능 플래그 반사실 실행용(예: --features '{"unifiedEngagementState":true}').
+  const featuresArg = arg('features');
+  if (featuresArg) spec.features = JSON.parse(featuresArg);
   const result = runCell(KJ, spec, Number(reps), BASE_SEED);
   const out = writeOut(arg('out', `artifacts/experiment/${scenario}-${deployment}-${fidelity}-x${intensity}.json`), result);
   console.log(`[cell] ${cellSpec} reps=${reps} ${(result.elapsedMs / 1000).toFixed(1)}s → ${out}`);

@@ -204,8 +204,12 @@
     this.commandLifecycle = ff('commandLifecycle', this.modelFidelity === 'iads-c2');
     this.commandReceptionQueue = ff('commandReceptionQueue', this.modelFidelity === 'iads-c2');
     this.emergencyEngagement = ff('emergencyEngagement', false);
+    // ADR-056: To-Be 통합 축(KILL_WEB)이 군단 AOC 교전현황을 소비하는가. OFF면 As-Is의 MCRC만
+    // 소비한다(=수정 전과 bit-exact). ON이어도 As-Is 결과는 변하지 않는다(KILL_WEB 축은 To-Be 전용).
+    this.unifiedEngagementState = ff('unifiedEngagementState', false);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
     if (this.highResolutionDeployment) this.features.highResolutionDeployment = true;
+    if (this.unifiedEngagementState) this.features.unifiedEngagementState = true;
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
@@ -1439,7 +1443,15 @@
   };
 
   Simulation.prototype._iadsSharedLocalEngagement = function (threat, commander, t) {
-    if (!commander || commander.axis !== 'MCRC') return null;
+    if (!commander) return null;
+    // ADR-056: 군단 AOC 교전현황의 소비처. As-Is는 MCRC(공중위협 상급 C2)만 소비한다.
+    // To-Be의 상급 C2는 axis='KILL_WEB'(IAOC)라 종전 조건이 항상 false였고, 그 결과
+    // To-Be는 2초/무손실로 전달받은 교전현황을 한 번도 소비하지 않았다(중복교전이 As-Is보다
+    // 많아지는 결함 — paired MC 30 seed로 확정). unifiedEngagementState ON이면 통합 COP가
+    // 국지방공 교전상태를 본다는 해석으로 KILL_WEB 축도 같은 상태를 소비한다.
+    var consumes = commander.axis === 'MCRC' ||
+      (this.unifiedEngagementState && commander.axis === 'KILL_WEB');
+    if (!consumes) return null;
     var states = threat._engagementStatusBySender || {}, best = null;
     Object.keys(states).forEach(function (id) {
       var s = states[id];
@@ -1493,6 +1505,14 @@
     this._mark(msg.threat, '교전현황수신:MCRC←' + msg.from + '/' + msg.phase, t);
     if (msg.phase === 'released' && msg.threat.alive) {
       var commander = msg.threat._iadsCommandersById && msg.threat._iadsCommandersById[msg.to];
+      // ADR-056: To-Be에서는 수신 노드(MCRC 역할)가 책임 C2가 아니므로 id 조회가 빗나간다.
+      // 플래그 ON이면 통합 축(KILL_WEB) 책임 C2가 국지방공 해제를 받아 재교전을 잇는다(As-Is 대칭).
+      if (!commander && this.unifiedEngagementState && msg.threat._iadsCommandersById) {
+        var byId = msg.threat._iadsCommandersById, ids = Object.keys(byId);
+        for (var ci = 0; ci < ids.length; ci++) {
+          if (byId[ids[ci]].axis === 'KILL_WEB') { commander = byId[ids[ci]]; break; }
+        }
+      }
       if (commander) this._scheduleIadsRetry(msg.threat, commander, t + 0.5);
     }
     if (channel.queue.length) this._startIadsStatus(channel, channel.queue.shift(), t);
@@ -1623,6 +1643,25 @@
       this._mark(threat, '교전중복해소:MCRC/' + shared.from + '/' + shared.phase, t);
       this._scheduleIadsRetry(threat, commander, shared.freshUntil + 0.5);
       return;
+    }
+    // ADR-056(역방향): 통합 COP는 양방향이다 — 국지방공(군단 AOC)도 통합 축(KILL_WEB)의
+    // 교전을 데이터링크 지연(C2-DL-DLY-01 대표 2초) 후에 본다. As-Is에는 이 가시성이 없다
+    // (국지방공은 MCRC 교전을 보지 못함 — 정보 비대칭 보존). 진단 실측: ON 순방향만으로는
+    // 잔여 중복이 전부 역방향(KILL_WEB 선발사 → 군단 AOC 후발사)이었다.
+    if (this.unifiedEngagementState && commander.axis === 'LOCAL_AD') {
+      var copDelay = 2; // C2-DL-DLY-01 datalink 대표 지연(기존 등록 파라미터 재사용)
+      var visiblePlan = (threat._iadsPlans || []).find(function (p) {
+        return p.commander.axis === 'KILL_WEB' && this._iadsActivePlan(p) &&
+          (t - p.createdAt) >= copDelay;
+      }, this);
+      if (visiblePlan) {
+        this.global.coordAttempts++;
+        this.global.deconflicted++;
+        this.copDeconflicted = (this.copDeconflicted || 0) + 1;
+        this._mark(threat, '교전중복해소:COP/' + visiblePlan.issuedByC2Id, t);
+        this._scheduleIadsRetry(threat, commander, t + copDelay + 0.5);
+        return;
+      }
     }
     if (this._iadsPlanBlocks(threat, commander)) {
       this.global.coordAttempts++;
@@ -2682,13 +2721,14 @@
         },
         // Phase 2(⑥⑦): 교전협조 관측. coordAttempts=협조 판정 발생, deconflicted=협조 성립(중복 회피),
         // coordGaps=협조 실패(책임공백), duplicateEngagements=중복교전(요격탄 이중 소모) 건수.
-        coordination: this.highResolutionDeployment ? {
+        coordination: this.highResolutionDeployment ? Object.assign({
           attempts: this.global.coordAttempts, deconflicted: this.global.deconflicted,
           gaps: this.global.coordGaps, duplicates: this.global.duplicateEngagements,
           realDuplicates: this.global.realDuplicateEngagements,
           trackFusion: this.global.trackFusion,
           statusSharing: this.global.statusSharing
-        } : {
+          // ADR-056: 역방향 COP 해소 카운터 — ON일 때만 노출(OFF wire shape 불변)
+        }, this.unifiedEngagementState ? { copDeconflicted: this.copDeconflicted || 0 } : {}) : {
           attempts: this.global.coordAttempts, deconflicted: this.global.deconflicted,
           gaps: this.global.coordGaps, duplicates: this.global.duplicateEngagements
         },

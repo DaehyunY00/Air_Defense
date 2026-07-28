@@ -1283,6 +1283,10 @@ li.chk-fail { background: #43140f; }
       <input type="checkbox" id="target-dispersion-toggle">
       표적권역 산포 (ADR-063)
     </label>
+    <label class="ctl-check" title="북측 종심 발사권에서 대구·부산 권역을 노리는 남부 축선 2종을 추가합니다(ADR-064). 개념 사거리 정합상 탄도탄·방사포·순항미사일·전투기만 배정되며, 무인기·헬기는 사거리 미달로 제외됩니다. SC3(섞어쏘기)에만 적용됩니다.">
+      <input type="checkbox" id="southern-axes-toggle">
+      남부 종심 축선 (ADR-064)
+    </label>
   </div>
   <div id="deployment-warning" class="deployment-warning hidden" role="status"></div>
 
@@ -3854,6 +3858,21 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         { type: 'fighter', axis: 'west', ratePerMin: 0.5 },
         { type: 'fighter', axis: 'central', ratePerMin: 0.3 }
       ],
+      // ── ADR-064: 남부 종심 축선 배분 (features.southernAxes ON일 때만 도착 예약) ──
+      // λ는 새로 지어내지 않고 **수도권 대응 축선 λ × 남부 배분비 0.1**(THREAT-SOUTH-SHARE-01,
+      // 등급 C)로 파생한다: srbm 1.5→0.15, mrl_large(central) 1.0→0.10, cruise 0.3→0.03,
+      // fighter(central) 0.3→0.03. 무인기·헬기는 개념 사거리 미달로 배정 불가이고
+      // (ENV-AXIS-FIT-01가 거부), mrl_large는 부산축(400km)에서 산포 포함 최악거리 415km >
+      // 개념 최대사거리 400km라 **대구축에만** 배정한다.
+      southernMix: [
+        { type: 'srbm', axis: 'southcentral', ratePerMin: 0.15 },
+        { type: 'mrl_large', axis: 'southcentral', ratePerMin: 0.10 },
+        { type: 'cruise', axis: 'southcentral', ratePerMin: 0.03 },
+        { type: 'fighter', axis: 'southcentral', ratePerMin: 0.03 },
+        { type: 'srbm', axis: 'southeast', ratePerMin: 0.15 },
+        { type: 'cruise', axis: 'southeast', ratePerMin: 0.03 },
+        { type: 'fighter', axis: 'southeast', ratePerMin: 0.03 }
+      ],
       defaultMode: 'asis'
     }
   ];
@@ -3933,7 +3952,45 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       target: [37.56, 126.99], targetNote: '서울 도심 개념좌표',
       launchZones: ['dmz'], conceptReachKm: 70,
       reachNote: '북측 DMZ 인접 근거리 개념 발사권→서울 도심 개념거리 — 근거리 위협 전용 축선 (ENV-AXIS-FIT-01)'
+    },
+    // ── ADR-064: 남부 종심 축선 2종 ──
+    // 종전 4개 축선의 표적은 서울·오산평택·강릉 3권역뿐이라, 남부 배치 자산(대구·부산·울산·
+    // 포항·광주 등 14문)은 어떤 seed에서도 교전 기회가 없었다. 종심 발사권에서 남부 산업·항만
+    // 권역을 노리는 축선을 추가한다. 사거리 정합(ENV-AXIS-FIT-01)상 **장거리 위협만** 배정
+    // 가능하다(무인기·헬기는 개념 최대사거리 미달 — checkAxisThreatFit가 거부).
+    southcentral: {
+      label: '남부중앙축(대구·구미)',
+      entry: [38.42, 127.30], entryNote: '평강 인근 개념좌표(북측 중부 종심 발사권 — central과 동일 발사권)',
+      target: [35.87, 128.60], targetNote: '대구 개념좌표(남부 내륙 산업·군수 권역)',
+      launchZones: ['deep'], conceptReachKm: 306,
+      reachNote: '북측 중부 종심 개념 발사권→남부 내륙 표적 개념거리 (ENV-AXIS-FIT-01, ADR-064)'
+    },
+    southeast: {
+      label: '남동축(부산·울산)',
+      entry: [38.42, 127.30], entryNote: '평강 인근 개념좌표(북측 중부 종심 발사권)',
+      target: [35.18, 129.08], targetNote: '부산 개념좌표(항만·병참 권역)',
+      launchZones: ['deep'], conceptReachKm: 400,
+      reachNote: '북측 중부 종심 개념 발사권→남동 항만 표적 개념거리 (ENV-AXIS-FIT-01, ADR-064)'
     }
+  };
+
+  // ADR-064: 남부 축선 키 — 시나리오 mix 배정·회귀 검증이 이 목록을 정본으로 쓴다.
+  KJ.SOUTHERN_AXIS_KEYS = Object.freeze(['southcentral', 'southeast']);
+
+  /**
+   * ADR-064: 축선 거리에 비례한 체공시간(dwell) 환산.
+   * 위협 위치는 lerp(entry, target, (t−spawnT)/dwellSec)이므로 **거리와 무관하게 dwellSec을
+   * 그대로 쓰면 먼 축선일수록 함의 속도가 비례해 빨라진다**(예: 순항미사일 120초에 400km =
+   * 3.3km/s — 자기 baseSpeed 272m/s의 12배). 남부 축선은 기존 중부축(140km)을 기준으로
+   * 거리에 비례해 체공시간을 늘려, 모델이 이미 쓰던 함의 속도를 그대로 유지한다.
+   * 새 속도 값을 만들지 않는다 — 기준거리만 정의한다(THREAT-AXIS-DWELL-SCALE-01, 등급 C).
+   */
+  KJ.AXIS_DWELL_REFERENCE_KM = 140;
+  KJ.axisDwellSec = function (axisKey, baseDwellSec) {
+    var a = KJ.AXES[axisKey];
+    if (!a || !a.conceptReachKm || !KJ.AXIS_DWELL_REFERENCE_KM) return baseDwellSec;
+    if (KJ.SOUTHERN_AXIS_KEYS.indexOf(axisKey) === -1) return baseDwellSec; // 기존 축선 불변
+    return baseDwellSec * (a.conceptReachKm / KJ.AXIS_DWELL_REFERENCE_KM);
   };
 
   /**
@@ -4067,9 +4124,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     return Math.hypot(p.x - x, p.y - y);
   }
 
-  function axesFor(pos, rangeKm) {
+  // ADR-064: coverage는 KJ.AXES에서 **파생**되므로, 남부 축선을 정의하는 것만으로 기존 자산의
+  // coverage가 바뀐다(종전 [] = 무제한 → ['southcentral',...] = 남부 전용). 그러면 플래그 OFF
+  // 결과까지 달라지므로, 남부 축선은 변형 카탈로그에서만 포함한다(linkSemanticsV2·approvalChain과 동일 패턴).
+  function axesFor(pos, rangeKm, includeSouthern) {
     var axes = KJ.AXES || {};
+    var southern = KJ.SOUTHERN_AXIS_KEYS || [];
     return Object.keys(axes).filter(function (key) {
+      if (!includeSouthern && southern.indexOf(key) !== -1) return false;
       return distancePointSegmentKm(pos, axes[key]) <= rangeKm;
     });
   }
@@ -4122,8 +4184,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   function buildDeploymentCatalog(id, opts) {
     var v2 = !!(opts && opts.linkSemanticsV2);
     var appr = !!(opts && opts.approvalChain);
+    var southern = !!(opts && opts.southernAxes); // ADR-064
     var opLevel = (opts && opts.c2OperatorLevel) || null; // 'high'|'low' (null=mid, 종전 동일)
-    var cacheKey = id + (v2 ? '|linkV2' : '') + (appr ? '|appr' : '') + (opLevel ? '|op:' + opLevel : '');
+    var cacheKey = id + (v2 ? '|linkV2' : '') + (appr ? '|appr' : '') +
+      (southern ? '|south' : '') + (opLevel ? '|op:' + opLevel : '');
     if (cache[cacheKey]) return cache[cacheKey];
     var deployment = KJ.deploymentById(id);
     if (!deployment) throw new Error('Unknown high-resolution deployment: ' + id);
@@ -4172,7 +4236,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         service: decl.forceOwner === 'USFK' ? 'usfk' : 'joint', echelon: 'sensor',
         coord: [pos.lat, pos.lon], position: { lon: pos.lon, lat: pos.lat, alt: pos.alt || 0 }, coordNote: pos.coordNote,
         role: type.role + ' · 개념 기하 탐지·화력통제 상태',
-        detects: type.detectableThreats.slice(), coverage: axesFor(pos, rangeKm),
+        detects: type.detectableThreats.slice(), coverage: axesFor(pos, rangeKm, southern),
         detectProb: { value: type.detectionProbability, paramRef: type.paramRef },
         rangeKm: rangeKm, rangeNote: '원본 개념 사거리의 정적 축선 호환 투영',
         c2Axis: decl.c2Axis || null, forceOwner: decl.forceOwner || 'ROK',
@@ -4202,7 +4266,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         service: decl.forceOwner === 'USFK' ? 'usfk' : (decl.forceOwner === 'ROK_LOCAL_AD' ? 'army' : 'af'),
         echelon: 'battery', coord: [pos.lat, pos.lon], position: { lon: pos.lon, lat: pos.lat, alt: pos.alt || 0 }, coordNote: pos.coordNote,
         role: '원본 책임 C2·PIP·발사대 자원 모델 실행',
-        coverage: axesFor(pos, rangeKm),
+        coverage: axesFor(pos, rangeKm, southern),
         controlledBy: { asis: controller ? [controller.id] : [], tobe: controller ? [controller.id] : [] },
         canEngage: boolMap(type.engageableThreats, eligible),
         wtaSuit: type.compatibility.wtaSuit,
@@ -4353,6 +4417,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       { linkSemanticsV2: features.linkSemanticsV2 === true,
         // ADR-058: 승인 계선용 coord 링크는 변형 카탈로그에서만 생성(OFF wire shape 불변).
         approvalChain: features.approvalChain === true || features.approvalChainTobe === true,
+        // ADR-064: 남부 종심 축선 — coverage 파생에 포함할지 결정(OFF면 종전 wire shape)
+        southernAxes: features.southernAxes === true,
         // ADR-058 동반 스윕: 운용자 처리시간 high/mid/low (기본 mid — 종전 동일)
         c2OperatorLevel: features.c2OperatorLevel === 'high' || features.c2OperatorLevel === 'low'
           ? features.c2OperatorLevel : null });
@@ -4381,8 +4447,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 /**
  * K-JAMDS 시뮬레이터 — 딥링크 라우터 (Phase 1, Phase 4에서 t= 실제 활용)
  *
- * URL 해시 스킴: #tab=<탭ID>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&t=<재생시각(초)>&open=<노드ID>&x=<강도>&seed=&dur=
- *   (ADR-061: 구 dep=legacy·fid= 파라미터는 기본값으로 정규화 / ADR-062: appr = 승인 계선 토글 / ADR-063: disp = 표적 산포 토글, 둘 다 기본 0)
+ * URL 해시 스킴: #tab=<탭ID>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&south=<0|1>&t=<재생시각(초)>&open=<노드ID>&x=<강도>&seed=&dur=
+ *   (ADR-061: 구 dep=legacy·fid= 파라미터는 기본값으로 정규화 / ADR-062: appr = 승인 계선 토글 / ADR-063: disp = 표적 산포 / ADR-064: south = 남부 축선, 전부 기본 0)
  *   - t    : [playback 탭] 재생 스크러버 시각(초). 다른 탭에서는 보존만 됨
  *   - open : 지도에서 팝업을 열 노드 ID
  *   - x    : 위협 강도 배수
@@ -4396,7 +4462,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   // ADR-061: dep 기본값은 주 분석 배치, fid는 하위호환 파싱만 남기고 항상 iads-c2로 고정된다.
   // ADR-062: appr = 승인 계선(ADR-058 approvalChain) 토글. 기본 '0'(OFF) — 기본 결과는 종전과 bit-exact.
   // ADR-063: disp = 표적권역 산포 토글. 기본 '0'(OFF) — 기본 결과는 종전과 bit-exact.
-  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '0', disp: '0', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
+  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '0', disp: '0', south: '0', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
   var VALID_TABS = ['sim', 'analysis', 'mc', 'data'];
   // 구 딥링크 호환: 지도/시나리오/DES/재생 탭은 통합 [시뮬레이션] 탭으로 흡수
   var LEGACY_TAB = { map: 'sim', scenario: 'sim', des: 'sim', playback: 'sim' };
@@ -4427,6 +4493,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       state.fid = 'iads-c2'; // 구 딥링크 fid=compat 하위호환 — 항상 iads-c2로 정규화(ADR-061)
       state.appr = (state.appr === '1' || state.appr === true) ? '1' : '0'; // ADR-062: 알 수 없는 값은 OFF
       state.disp = (state.disp === '1' || state.disp === true) ? '1' : '0'; // ADR-063: 〃
+      state.south = (state.south === '1' || state.south === true) ? '1' : '0'; // ADR-064: 〃
       if (!KJ.DEPLOYMENT_IDS || KJ.DEPLOYMENT_IDS.indexOf(state.dep) === -1) {
         state.dep = DEFAULTS.dep; // 구 dep=legacy·HANBANDO_MINI_* 딥링크 폴백
       }
@@ -5857,6 +5924,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // seed를 바꿔도 착탄점이 불변이었다. ON이면 위협마다 표적권역(disk) 안에서 착탄점을 뽑는다.
     // 반경은 features.targetSpreadKm로 스윕 가능(기본 THREAT-TARGET-DISP-01 = 15km, 등급 C).
     this.threatTargetDispersion = ff('threatTargetDispersion', false);
+    // ADR-064: 남부 종심 축선(대구·부산) 활성화. 시나리오의 southernMix를 도착 예약에 추가한다.
+    // OFF면 남부 축선 위협이 하나도 생성되지 않아 종전과 bit-exact.
+    this.southernAxes = ff('southernAxes', false);
     this.targetSpreadKm = (typeof f.targetSpreadKm === 'number' && f.targetSpreadKm >= 0)
       ? f.targetSpreadKm : (KJ.THREAT_TARGET_SPREAD_KM || 0);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
@@ -5871,6 +5941,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       this.features.threatTargetDispersion = true;
       this.features.targetSpreadKm = this.targetSpreadKm;
     }
+    if (this.southernAxes) this.features.southernAxes = true;
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
@@ -5895,6 +5966,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     //    도메인의 난수 소비 순서가 바뀌지 않게 한다(OFF에서는 한 번도 뽑지 않는다).
     //    arrRng와 같은 이유로 모드 무관 파생 — As-Is/To-Be가 동일 착탄점 집합을 마주한다.
     this.dispRng = KJ.makeRng((Math.imul(this.seed ^ 0x632BE5AB, 0xC2B2AE35) >>> 0));
+    //  · southRng — ADR-064 남부 종심 축선 도착 전용. arrRng를 공유하면 남부 스트림의 난수
+    //    소비가 기존 축선의 후속 도착 시각을 전부 밀어(실측: east 113→79건) "추가"가 아니라
+    //    "재추첨"이 된다. 별도 스트림이면 기존 축선 도착 스케줄이 완전히 보존된다.
+    this.southRng = KJ.makeRng((Math.imul(this.seed ^ 0x27D4EB2F, 0x165667B1) >>> 0));
     this.heap = this.iadsSensorPhysics ? KJ.createIadsEventQueue() : new KJ.MinHeap();
     this.now = 0;
     this.seq = 0;
@@ -7597,6 +7672,12 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     return Math.max(0, Math.min(1, pk * this.mult.pk)); // 민감도 배수 적용, [0,1] 클램프
   };
 
+  /** ADR-064: 축선별 도착 스트림 선택 — 남부 종심 축선은 전용 스트림(기존 축선 불변). */
+  Simulation.prototype._arrivalRng = function (entry) {
+    return (this.southernAxes && KJ.SOUTHERN_AXIS_KEYS &&
+      KJ.SOUTHERN_AXIS_KEYS.indexOf(entry.axis) !== -1) ? this.southRng : this.arrRng;
+  };
+
   // ── 발생·이탈 ──
   Simulation.prototype._spawn = function (t, d) {
     var entry = d.entry;
@@ -7611,7 +7692,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var threat = {
       id: entry.type + '#' + this.threatSeq, type: entry.type, axis: entry.axis,
       target: impact || undefined,
-      spawnT: t, dwellSec: tt.dwellSec, alive: true, killed: false,
+      // ADR-064: 남부 축선은 거리에 비례해 체공시간을 늘린다(함의 속도 유지). 기존 축선은 불변.
+      spawnT: t, dwellSec: KJ.axisDwellSec(entry.axis, tt.dwellSec), alive: true, killed: false,
       detected: false, pipelineDead: false, tries: 0, leakReason: null,
       _frailty: null, // Phase 5(pkCorrelated): 표적별 공유 잠재(재교전 상관) — ON일 때 최초 교전에서 지연 추출
       _trace: null, _countedC2: false, _countedEngaged: false, _detectT: null, _coordDelay: 0,
@@ -7638,7 +7720,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 다음 도착 (포아송: 지수 도착간격) — burst 전용 항목(ratePerMin 부재)은 후속 도착 없음
     var ratePerSec = ((entry.ratePerMin || 0) * this.intensity) / 60;
     if (ratePerSec > 0) {
-      var next = t + this.arrRng.exponential(1 / ratePerSec); // 도착 전용 스트림(CRN) — 모드 불변
+      var next = t + this._arrivalRng(entry).exponential(1 / ratePerSec); // 도착 전용 스트림(CRN) — 모드 불변
       if (next <= this.endTime) this.schedule(next, PRI.SPAWN, 'SPAWN', { entry: entry });
     }
   };
@@ -7725,8 +7807,12 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   // ── 실행 ──
   Simulation.prototype.run = function () {
     var self = this;
-    // 각 위협 스트림 최초 도착 예약
-    this.scenario.mix.forEach(function (entry) {
+    // 각 위협 스트림 최초 도착 예약.
+    // ADR-064: 남부 축선은 기존 항목 뒤에 붙고 **전용 스트림(southRng)**을 쓴다 — 기존 축선의
+    // 도착 스케줄(시각·유형·수)이 완전히 보존되어, ON/OFF 차이가 "추가된 남부 위협"뿐이다.
+    var mix = (this.southernAxes && this.scenario.southernMix)
+      ? this.scenario.mix.concat(this.scenario.southernMix) : this.scenario.mix;
+    mix.forEach(function (entry) {
       // 일회성 동시 다발(burst) — 문제 상황 2 "무인기 8대 동시 남파" 유형.
       // 강도 배수로 반올림 스케일(강도 0 → 0대), 동시 이벤트는 (t, pri, seq)로 결정론 해소.
       if (entry.burst) {
@@ -7738,7 +7824,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       }
       var ratePerSec = ((entry.ratePerMin || 0) * self.intensity) / 60;
       if (ratePerSec <= 0) return;
-      var first = self.arrRng.exponential(1 / ratePerSec); // 도착 전용 스트림(CRN) — 모드 불변
+      var first = self._arrivalRng(entry).exponential(1 / ratePerSec); // 도착 전용 스트림(CRN) — 모드 불변
       if (first <= self.endTime) self.schedule(first, PRI.SPAWN, 'SPAWN', { entry: entry });
     });
 
@@ -9500,6 +9586,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var features = { highResolutionDeployment: true };
     if (state && state.appr === '1') features.approvalChain = true;
     if (state && state.disp === '1') features.threatTargetDispersion = true; // ADR-063
+    if (state && state.south === '1') features.southernAxes = true; // ADR-064
     return { deploymentId: state && state.dep, features: features, modelFidelity: 'iads-c2' };
   }
   function catalogFor(state) {
@@ -9524,7 +9611,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   function pipelineData(state, onReady) {
     var key = [state.sc, state.x, state.seed, state.dur, state.dep, 'iads-c2',
       state.appr === '1' ? 'appr' : '',
-      state.disp === '1' ? 'disp' : ''].join('|'); // ADR-062·063: 토글도 캐시 키
+      state.disp === '1' ? 'disp' : '',
+      state.south === '1' ? 'south' : ''].join('|'); // ADR-062·063·064: 토글도 캐시 키
     if (desCache.key === key) return desCache.data;
     if (desCache.errorKey === key) return null;
     if (desCache.pendingKey === key) return null;
@@ -10309,6 +10397,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var features = { highResolutionDeployment: true };
     if (cfg && cfg.appr === '1') features.approvalChain = true;
     if (cfg && cfg.disp === '1') features.threatTargetDispersion = true; // ADR-063
+    if (cfg && cfg.south === '1') features.southernAxes = true; // ADR-064
     return { deploymentId: cfg && cfg.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -10319,7 +10408,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   function contextLabel(cfg) {
     return KJ.scenarioById(cfg.sc).name + ' · ' +
       (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형') +
-      ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 승인계선 ON' : '') + (cfg.disp === '1' ? ' · 표적산포 ON' : '') +
+      ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 승인계선 ON' : '') + (cfg.disp === '1' ? ' · 표적산포 ON' : '') + (cfg.south === '1' ? ' · 남부축선 ON' : '') +
       ' · 강도 ×' + Number(cfg.x).toFixed(1) + ' · seed ' + cfg.seed;
   }
 
@@ -10354,7 +10443,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       var dur = Math.min(7200, Math.max(60, Math.floor(parseFloat(el('sim-dur').value) || 1800)));
       var cfg = { sc: state.sc, mode: state.mode, dep: state.dep, fid: 'iads-c2',
         appr: state.appr === '1' ? '1' : '0', disp: state.disp === '1' ? '1' : '0',
-        x: state.x, seed: seed, dur: dur };
+        south: state.south === '1' ? '1' : '0', x: state.x, seed: seed, dur: dur };
       var btn = el('sim-run');
       btn.disabled = true; btn.textContent = '⏳ DES 실행 중...';
       setStatus('DES 실행 중 (trace 모드)...');
@@ -11719,6 +11808,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var features = { highResolutionDeployment: true };
     if (state.appr === '1') features.approvalChain = true;
     if (state.disp === '1') features.threatTargetDispersion = true; // ADR-063
+    if (state.south === '1') features.southernAxes = true; // ADR-064
     return { deploymentId: state.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -11767,6 +11857,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (apprBox) apprBox.checked = state.appr === '1'; // ADR-062
     var dispBox = document.getElementById('target-dispersion-toggle');
     if (dispBox) dispBox.checked = state.disp === '1'; // ADR-063
+    var southBox = document.getElementById('southern-axes-toggle');
+    if (southBox) southBox.checked = state.south === '1'; // ADR-064
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
     document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
@@ -11816,6 +11908,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (dispToggle) {
       dispToggle.addEventListener('change', function (e) {
         setState({ disp: e.target.checked ? '1' : '0' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-064: 남부 종심 축선 토글 — 위협 집합 자체가 늘어나므로 실행 조건 변경으로 취급.
+    var southToggle = document.getElementById('southern-axes-toggle');
+    if (southToggle) {
+      southToggle.addEventListener('change', function (e) {
+        setState({ south: e.target.checked ? '1' : '0', open: '' });
         if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
       });
     }

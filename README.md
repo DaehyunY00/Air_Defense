@@ -29,6 +29,8 @@ DES(이산사건 시뮬레이션) 엔진이 IADS_C2 계열 물리(SNR/RCS·레�
 | `HANBANDO_FULL_MCRC_DOWN` / `HANBANDO_FULL_KAMDOC_DOWN` | 〃 의 C2 파괴 변형 | 〃 |
 
 - 전투기·이지스·조기경보기·광학감시는 **의도적으로 제외**됩니다(ADR-060 — 지상배치 방공 C2 한정).
+- ⚠️ **기본 표적은 서울·오산평택·강릉 3권역뿐입니다** — 남부 배치 자산(대구·부산·광주 등)은
+  위협 회랑이 닿지 않아 유휴 상태입니다. `southernAxes`(ADR-064)를 켜면 대구·부산 축선이 추가됩니다.
 - 링크 의미론은 codex(IADS_codex) 정본을 따릅니다(ADR-057): 센서→C2 보고주기 차등(GREEN_PINE 16s /
   FPS117 8s / TPS880K 4s / MFR 1s), C2↔C2 1초, To-Be 킬웹 IFCN 전 링크 1초. As-Is 육↔공 협조는
   음성 **절차** 지연(대표 20초, Uniform 10~30 — 전선 성능이 아님)으로 모델링합니다(ADR-058).
@@ -139,6 +141,7 @@ legacy C2 이론은 **정책 계층으로 이식**되었고, 전부 기능 플�
 | `nativeWtaMode` (+반증 `nativeWtaCostAsis`) | WTA 모드 차등 — As-Is는 관측 가능한 것만(자기 탄약·부하), To-Be는 물리 점수×비용 인식 | ADR-059 |
 | `c2OperatorLevel` ('high'/'low') | 운용자 처리시간 스윕 노브 | ADR-058 |
 | `threatTargetDispersion` (+반경 `targetSpreadKm`) | 표적권역 산포 — 위협마다 착탄점을 권역(반경 15km 개념) 안에서 추첨. 끄면 같은 축선의 모든 위협이 정확히 같은 한 점으로 향한다 | ADR-063 |
+| `southernAxes` | 남부 종심 축선 2종(대구 306km·부산 400km) — SC3에 종심 위협 추가. 끄면 표적은 서울·오산평택·강릉 3권역뿐이라 남부 배치 자산이 유휴 상태다 | ADR-064 |
 
 - 모든 무작위성은 `seed` 기반 Mulberry32에서만 나오고, 도착·센서 스트림을 분리(CRN)해
   As-Is↔To-Be가 **같은 위협열**을 마주하게 합니다 → **동일 config는 항상 동일 결과**(재현성·딥링크 공유·짝지은 비교).
@@ -206,10 +209,12 @@ tests/  run-all.js + 27개 스위트  # 아래 [검증] 참조. 폐기 스위트
 
 ## 딥링크 스킴
 
-`#tab=<sim|analysis|mc|data>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&x=<강도배수>&seed=<정수>&dur=<초>`
+`#tab=<sim|analysis|mc|data>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&south=<0|1>&x=<강도배수>&seed=<정수>&dur=<초>`
 
 - `dep`은 고해상도 6종 ID(기본 `HANBANDO_LEGACY_NORMAL`). 구 딥링크의 `dep=legacy`·MINI ID·
   `fid=` 파라미터는 기본값으로 자동 흡수됩니다(ADR-061).
+- `south=1`은 **남부 종심 축선**(ADR-064)을 켭니다(기본 0) — SC3에 대구·부산 표적이 추가되어
+  남부 배치 자산이 교전에 참여합니다(FULL 기준 발사 사수 10→15문).
 - `appr=1`은 **승인 계선 모델**(ADR-058)을 켭니다(기본 0). 끄면 ⑥⑦ 승인·협조 지표가 0이
   아니라 **"미측정"**으로 표시됩니다(ADR-062) — 상단 컨트롤의 체크박스와 같은 스위치입니다.
 - `disp=1`은 **표적권역 산포**(ADR-063)를 켭니다(기본 0). 끄면 같은 축선의 모든 위협이 seed와
@@ -236,6 +241,7 @@ node tests/run-all.js            # 전체 회귀 — js/ 구문검증 + 27개 �
 | `iads-failure-realism` · `failure-classification` · `metrics-accounting` · `c2-analysis` | 실패 현실성(SLS 2발) / 실패 분류 v2 / 지표 계정 / C2 계측·paired MC |
 | `legacy-hires-deployment` | LEGACY_HIRES 편성·물리 동작·DOWN 대체·**legacy/compat 거부(ADR-061)** |
 | `engagement-state-unification` · `link-semantics` · `approval-chain` · `native-wta` | ADR-056~059 플래그별 OFF bit-exact·ON 거동·반증 |
+| `target-dispersion` · `southern-axes` | ADR-063 표적권역 산포(균등원판·스트림 분리·권역 무결성) / ADR-064 남부 종심 축선(coverage 파생 분리·사거리 정합·체공 환산) |
 | `analysis-metric-honesty` | ADR-062 분석 탭 지표 정직성 — 死 지표 제거 근거(포화에도 사수 Wq=0)·"미측정" 표기·승인계선 토글 배선·OFF bit-exact |
 | `target-dispersion` | ADR-063 표적권역 산포 — OFF bit-exact·균등원판 분포·seed 의존성·도착 스트림 분리·권역 무결성·제약 불변 |
 | `map-visualization` · `ui-performance` · `vendor-leaflet` · `overlap-performance` | 지도 렌더 정합(카탈로그 기준) / Worker·범례 / Leaflet 동봉 무결성 / FULL 성능 |

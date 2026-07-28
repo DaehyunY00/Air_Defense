@@ -72,6 +72,13 @@ Carlo처럼 계산량이 큰 실행은 **방법 A**를 사용해야 DES·MC·민
 ./scripts/serve.sh                 # http://127.0.0.1:8000 접속 (포트 변경: ./scripts/serve.sh 9000)
 ```
 
+> 🪟 **Windows 사용자**: `serve.sh`는 bash 전용이라 더블클릭하면 **메모장이 열립니다**(Windows에
+> `.sh` 실행기가 연결돼 있지 않기 때문 — 파일 연결을 바꿔도 해결되지 않습니다).
+> **`scripts\serve.bat`을 더블클릭**하세요 — Windows 기본 탑재 PowerShell(.NET HttpListener)로
+> 같은 서버를 띄웁니다. **Python·Node·git·bash 설치가 전혀 필요 없습니다.**
+> 포트 변경은 `serve.bat 9000`, 중지는 창에서 Ctrl+C.
+> 서버 없이 보려면 **방법 B(단일본 HTML 더블클릭)** 가 가장 간단합니다.
+
 `scripts/serve.sh`는 `python3 -m http.server`를 127.0.0.1에 명시적으로 바인딩합니다. `--bind` 없이
 직접 실행하면(특히 macOS) IPv6 주소(`http://[::]:8000/`)가 떠서 클릭해도 안 열리는 경우가 있는데,
 이 스크립트를 쓰면 항상 바로 열리는 링크가 출력됩니다. (`python3 -m http.server 8000 --bind 127.0.0.1`도 동일.)
@@ -193,7 +200,8 @@ docs/
   compat-retirement-readiness.md # Phase 5 폐기 조건 판정 원장
   adr/ADR-001~009, 036, 049~063  # 결정 기록
 scripts/
-  serve.sh · build-single.mjs · bias-ledger.mjs · experiment-lib/run/report.mjs 등
+  serve.sh (macOS·Linux) · serve.bat + serve.ps1 (Windows 내장 PowerShell, 설치 불요)
+  build-single.mjs · bias-ledger.mjs · experiment-lib/run/report.mjs 등
 tests/  run-all.js + 27개 스위트  # 아래 [검증] 참조. 폐기 스위트 원장: tests/retired-legacy-suites.md
 ```
 

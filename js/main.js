@@ -55,17 +55,11 @@
     document.getElementById('scenario-select').value = state.sc;
     document.getElementById('deployment-select').value = state.dep;
     var depWarning = document.getElementById('deployment-warning');
-    depWarning.classList.remove('hidden'); // ADR-061: 고해상도 배치만 존재 — 경고 상시 표출
-    // LEGACY_HIRES는 legacy 자산 배치를 고해상도 타입으로 이식한 계열이라, 제외 자산군 때문에
-    // legacy(compat)와 절대값을 직접 비교할 수 없다는 경고를 따로 붙인다(ADR-054).
-    var legacyHires = state.dep.indexOf('HANBANDO_LEGACY_') === 0;
-    depWarning.textContent = '⚠️ ' + state.dep +
-      ': IADS_C2식 모듈 Worker·이벤트 큐·SNR/RCS/수평선/센서상태 물리를 실행합니다.' +
-      (legacyHires
-        ? ' legacy 자산 편성을 고해상도 타입으로 이식한 배치입니다(ADR-054).'
-        : '') +
-      ' 본 모델은 지상배치 방공 C2에 한정하며 요격기·해상 자산을 포함하지 않습니다(ADR-060).' +
-      ' 좌표와 수치는 공개자료 기반 정책연구용 개념값이며 전술적 절대값이 아닙니다.';
+    depWarning.classList.remove('hidden');
+    // 배치별 경고문(물리 실행 안내·ADR-054 이식 배치·ADR-060 범위)은 사용자 요청으로 삭제했다.
+    // 개념값 고지만 남긴다 — 상단 #disclaimer가 실제 작전자료 아님·ADR-060 범위·제약을
+    // 상시 표출하므로(제약 어서션 c가 고정) 고지 의무는 그대로 충족된다.
+    depWarning.textContent = '좌표와 수치는 공개자료 기반 정책연구용 개념값이며 전술적 절대값이 아닙니다.';
     var apprBox = document.getElementById('approval-chain-toggle');
     if (apprBox) apprBox.checked = state.appr === '1'; // ADR-062
     var dispBox = document.getElementById('target-dispersion-toggle');

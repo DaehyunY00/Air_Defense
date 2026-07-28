@@ -5685,12 +5685,19 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // automation 3단계 차등 포함. approvalChainTobe는 반증 전용 — To-Be에도 As-Is 계선 강제.
     this.approvalChain = ff('approvalChain', false);
     this.approvalChainTobe = ff('approvalChainTobe', false);
+    // ADR-059: native WTA 모드 차등 — As-Is는 COP 부재로 무기별 적합도(pk·PIP) 비교가 불가하다는
+    // 이론을 사수 선정에 이식. To-Be는 현행 물리 점수식 + 비용 인식(탄도 위협 한정).
+    // nativeWtaCostAsis는 반증 전용(As-Is에도 비용항 적용 — 선례 costAwareWtaAsis).
+    this.nativeWtaMode = ff('nativeWtaMode', false);
+    this.nativeWtaCostAsis = ff('nativeWtaCostAsis', false);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
     if (this.highResolutionDeployment) this.features.highResolutionDeployment = true;
     if (this.unifiedEngagementState) this.features.unifiedEngagementState = true;
     if (this.linkSemanticsV2) this.features.linkSemanticsV2 = true;
     if (this.approvalChain) this.features.approvalChain = true;
     if (this.approvalChainTobe) this.features.approvalChainTobe = true;
+    if (this.nativeWtaMode) this.features.nativeWtaMode = true;
+    if (this.nativeWtaCostAsis) this.features.nativeWtaCostAsis = true;
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
@@ -6740,6 +6747,17 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     return { ready: t >= fcAt, readyAt: fcAt, state: t >= fcAt ? 'FIRE_CONTROL' : 'TRACKED' };
   };
 
+  /** ADR-059: 비용 인식 항 ((1−W)+W·costFit), costFit=min(1, 위협가치/요격탄가). legacy Step 1과
+   *  동일 정의·동일 국한(탄도 altBand 한정 — C2-COST-WTA-01 계열 근거 승계). W=costWtaWeight. */
+  Simulation.prototype._iadsCostTerm = function (shooter, ev, threat) {
+    var tt = KJ.threatType(threat.type);
+    if ((tt.altBand || null) !== 'ballistic') return 1;
+    var cps = (ev.missile && ev.missile.costPerShot) || (shooter.engage && shooter.engage.costPerShotM) || 0;
+    var costFit = cps > 0 ? Math.min(1, (tt.unitCostM || 0) / cps) : 1;
+    var W = this.costWtaWeight;
+    return (1 - W) + W * costFit;
+  };
+
   Simulation.prototype._iadsEvaluate = function (shooter, threat, t) {
     if (!this._iadsCanEngage(shooter, threat)) return { feasible: false, reason: 'no_missile_for_threat' };
     var resource = this.iadsResources[shooter.id];
@@ -7166,7 +7184,20 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         var r = self.iadsResources[id], ammoRatio = r.initialAmmo ? ev.ammo / r.initialAmmo : 0;
         var load = r.maxSimultaneous ? r.active / r.maxSimultaneous : 1;
         var priority = Number(shooter.shooterPriority) || 9;
-        ev.score = ev.pk * ammoRatio * (1 - load) / Math.max(1, ev.pip.rangeKm) - priority * 0.000001;
+        if (self.nativeWtaMode && self.mode === 'asis') {
+          // ADR-059 As-Is: COP 부재 — 무기별 pk·PIP(교전 포락선 적합도)를 비교할 수단이 없다.
+          // 관측 가능한 것(자기 탄약·자기 부하)만으로 선택한다. 물리 실현가능성 필터(_iadsEvaluate의
+          // canEngage·봉투·FC 게이트)는 선행 적용됨 — 선호 순서만 바뀐다.
+          ev.score = ammoRatio * (1 - load) - priority * 0.000001;
+          if (self.nativeWtaCostAsis) ev.score *= self._iadsCostTerm(shooter, ev, threat); // 반증 전용
+        } else if (self.nativeWtaMode) {
+          // ADR-059 To-Be: 현행 물리 점수식 + 비용 인식((1−W)+W·costFit, 탄도 위협 한정 —
+          // legacy Step 1의 국한 논리 승계: 고가 낭비는 탄도(하층/상층 요격탄 선택)에서만 발생).
+          ev.score = (ev.pk * ammoRatio * (1 - load) / Math.max(1, ev.pip.rangeKm) - priority * 0.000001) *
+            self._iadsCostTerm(shooter, ev, threat);
+        } else {
+          ev.score = ev.pk * ammoRatio * (1 - load) / Math.max(1, ev.pip.rangeKm) - priority * 0.000001;
+        }
         ev.shooter = shooter;
         candidates.push(ev);
       } else {

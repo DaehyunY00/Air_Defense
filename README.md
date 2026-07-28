@@ -187,10 +187,10 @@ docs/
   params.md                      # 파라미터 근거표 (ID·출처·인용·신뢰도 A/B/C)
   high-resolution-iads-architecture.md  # 목표 아키텍처(§6은 ADR-061로 개정)
   compat-retirement-readiness.md # Phase 5 폐기 조건 판정 원장
-  adr/ADR-001~009, 036, 049~061  # 결정 기록
+  adr/ADR-001~009, 036, 049~062  # 결정 기록
 scripts/
   serve.sh · build-single.mjs · bias-ledger.mjs · experiment-lib/run/report.mjs 등
-tests/  run-all.js + 25개 스위트  # 아래 [검증] 참조. 폐기 스위트 원장: tests/retired-legacy-suites.md
+tests/  run-all.js + 26개 스위트  # 아래 [검증] 참조. 폐기 스위트 원장: tests/retired-legacy-suites.md
 ```
 
 ## 설계 원칙: 병목은 고정이 아니라 도출된다
@@ -205,10 +205,12 @@ tests/  run-all.js + 25개 스위트  # 아래 [검증] 참조. 폐기 스위트
 
 ## 딥링크 스킴
 
-`#tab=<sim|analysis|mc|data>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&x=<강도배수>&seed=<정수>&dur=<초>`
+`#tab=<sim|analysis|mc|data>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&x=<강도배수>&seed=<정수>&dur=<초>`
 
 - `dep`은 고해상도 6종 ID(기본 `HANBANDO_LEGACY_NORMAL`). 구 딥링크의 `dep=legacy`·MINI ID·
   `fid=` 파라미터는 기본값으로 자동 흡수됩니다(ADR-061).
+- `appr=1`은 **승인 계선 모델**(ADR-058)을 켭니다(기본 0). 끄면 ⑥⑦ 승인·협조 지표가 0이
+  아니라 **"미측정"**으로 표시됩니다(ADR-062) — 상단 컨트롤의 체크박스와 같은 스위치입니다.
 - 구 `tab=map|scenario|des|playback`은 `sim` 탭으로 흡수됩니다.
 - [`#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345`](index.html#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345) — 섞어쏘기 As-Is 1.5배.
 - [`#tab=analysis&sc=sc1&mode=asis`](index.html#tab=analysis&sc=sc1&mode=asis) — 경계 침투 해석 분석.
@@ -217,7 +219,7 @@ tests/  run-all.js + 25개 스위트  # 아래 [검증] 참조. 폐기 스위트
 ## 검증
 
 ```bash
-node tests/run-all.js            # 전체 회귀 — js/ 구문검증 + 25개 스위트 (CI 게이트)
+node tests/run-all.js            # 전체 회귀 — js/ 구문검증 + 26개 스위트 (CI 게이트)
 ```
 
 | 스위트 | 검증 내용 |
@@ -230,6 +232,7 @@ node tests/run-all.js            # 전체 회귀 — js/ 구문검증 + 25개 �
 | `iads-failure-realism` · `failure-classification` · `metrics-accounting` · `c2-analysis` | 실패 현실성(SLS 2발) / 실패 분류 v2 / 지표 계정 / C2 계측·paired MC |
 | `legacy-hires-deployment` | LEGACY_HIRES 편성·물리 동작·DOWN 대체·**legacy/compat 거부(ADR-061)** |
 | `engagement-state-unification` · `link-semantics` · `approval-chain` · `native-wta` | ADR-056~059 플래그별 OFF bit-exact·ON 거동·반증 |
+| `analysis-metric-honesty` | ADR-062 분석 탭 지표 정직성 — 死 지표 제거 근거(포화에도 사수 Wq=0)·"미측정" 표기·승인계선 토글 배선·OFF bit-exact |
 | `map-visualization` · `ui-performance` · `vendor-leaflet` · `overlap-performance` | 지도 렌더 정합(카탈로그 기준) / Worker·범례 / Leaflet 동봉 무결성 / FULL 성능 |
 
 폐기된 legacy 스위트 16종의 목록·사유·대체 커버리지는 **`tests/retired-legacy-suites.md`** 원장 참조.

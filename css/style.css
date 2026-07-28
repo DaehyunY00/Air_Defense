@@ -541,6 +541,12 @@ li.chk-fail { background: #43140f; }
 .pl-m-fill.asis { background: #e05545; }
 .pl-m-fill.tobe { background: #3d8b40; }
 .pl-m-delta { font-size: 10px; text-align: right; white-space: nowrap; }
+/* ADR-062: 모델이 측정하지 않는 지표는 0 대신 사유를 표시한다(값 4칸을 병합). */
+.pl-m-na { cursor: help; }
+.pl-m-na-note {
+  grid-column: span 4; font-size: 10px; color: var(--muted); font-style: italic;
+  border: 1px dashed #2c3540; border-radius: 3px; padding: 1px 6px; text-align: center;
+}
 
 .pl-codes { font-size: 10px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 5px 8px; align-items: center; }
 .pl-code {
@@ -554,10 +560,15 @@ li.chk-fail { background: #43140f; }
 .pl-code-good { border-color: #2e5c33; }
 .pl-code-bad { border-color: #6b2018; }
 
+/* ADR-062: 승인 계선 토글 — 상단 컨트롤의 체크박스 라벨 */
+.ctl-check { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; cursor: pointer; }
+.ctl-check input { cursor: pointer; }
+
 .policy-list { margin: 4px 0 4px 18px; font-size: 12px; }
 .policy-list li { margin-bottom: 8px; word-break: keep-all; }
 
 @media (max-width: 900px) {
   .pl-m { grid-template-columns: 34px 1fr 52px 52px 90px; }
   .pl-m-track { display: none; }
+  .pl-m-na-note { grid-column: span 2; }
 }

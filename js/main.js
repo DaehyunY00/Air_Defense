@@ -16,7 +16,11 @@
 
   function modelConfig() {
     // ADR-061: 충실도 1종(iads-c2)·고해상도 6배치만 존재한다.
-    return { deploymentId: state.dep, features: { highResolutionDeployment: true }, modelFidelity: 'iads-c2' };
+    // ADR-062: 승인 계선(ADR-058)은 화면에서 켤 수 있어야 한다 — 끈 채로 두면 ⑥⑦ 승인·협조
+    // 지표가 영구 0이 되어 "승인 병목 없음"으로 오독된다. 기본값은 OFF(종전과 bit-exact).
+    var features = { highResolutionDeployment: true };
+    if (state.appr === '1') features.approvalChain = true;
+    return { deploymentId: state.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
   function analyze() {
@@ -60,6 +64,8 @@
         : '') +
       ' 본 모델은 지상배치 방공 C2에 한정하며 요격기·해상 자산을 포함하지 않습니다(ADR-060).' +
       ' 좌표와 수치는 공개자료 기반 정책연구용 개념값이며 전술적 절대값이 아닙니다.';
+    var apprBox = document.getElementById('approval-chain-toggle');
+    if (apprBox) apprBox.checked = state.appr === '1'; // ADR-062
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
     document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
@@ -96,6 +102,14 @@
     document.getElementById('deployment-select').addEventListener('change', function (e) {
       setState({ dep: e.target.value, open: '' });
     });
+    // ADR-062: 승인 계선 토글 — 실행 조건이 바뀌므로 분석 탭 DES 캐시도 무효화된다(설정 키에 포함).
+    var apprToggle = document.getElementById('approval-chain-toggle');
+    if (apprToggle) {
+      apprToggle.addEventListener('change', function (e) {
+        setState({ appr: e.target.checked ? '1' : '0' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
     document.getElementById('intensity-slider').addEventListener('input', function (e) {
       var value = parseFloat(e.target.value);
       document.getElementById('intensity-value').textContent = '×' + value.toFixed(1);

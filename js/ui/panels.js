@@ -17,7 +17,10 @@
   function el(id) { return document.getElementById(id); }
   function modelConfig(state) {
     // ADR-061: 충실도 1종(iads-c2)·고해상도 배치만 존재한다.
-    return { deploymentId: state && state.dep, features: { highResolutionDeployment: true }, modelFidelity: 'iads-c2' };
+    // ADR-062: 승인 계선(ADR-058) 토글 — 기본 OFF.
+    var features = { highResolutionDeployment: true };
+    if (state && state.appr === '1') features.approvalChain = true;
+    return { deploymentId: state && state.dep, features: features, modelFidelity: 'iads-c2' };
   }
   function catalogFor(state) {
     return KJ.resolveModelCatalog ? KJ.resolveModelCatalog(modelConfig(state)) : null;
@@ -39,7 +42,8 @@
   // DES 양모드 캐시 (설정이 같으면 재계산하지 않음 — 탭 전환·재렌더 대비)
   var desCache = { key: null, data: null, pendingKey: null, requestId: 0, error: null, errorKey: null };
   function pipelineData(state, onReady) {
-    var key = [state.sc, state.x, state.seed, state.dur, state.dep, 'iads-c2'].join('|');
+    var key = [state.sc, state.x, state.seed, state.dur, state.dep, 'iads-c2',
+      state.appr === '1' ? 'appr' : ''].join('|'); // ADR-062: 승인 계선 토글도 캐시 키
     if (desCache.key === key) return desCache.data;
     if (desCache.errorKey === key) return null;
     if (desCache.pendingKey === key) return null;
@@ -207,8 +211,17 @@
     return av + '건';
   }
 
-  /** 지표 1행: [MoM][라벨][As-Is 값][좌막대][우막대][To-Be 값][Δ판정] */
+  /** 지표 1행: [MoM][라벨][As-Is 값][좌막대][우막대][To-Be 값][Δ판정]
+   * m.na가 있으면 값 대신 사유를 표시한다 — 모델이 이 지표를 **측정하지 않는 설정**일 때
+   * 0을 그대로 보여주면 "지연 없음/병목 없음"으로 오독되기 때문이다(ADR-062). */
   function metricRow(m) {
+    if (m.na) {
+      return '<div class="pl-m pl-m-na" title="' + esc(m.tip || '') + '">' +
+        '<span class="mom mom-' + m.mom.toLowerCase() + '" title="' + esc(MOM_TIP[m.mom]) + '">' + m.mom + '</span>' +
+        '<span class="pl-m-label">' + esc(m.label) + '</span>' +
+        '<span class="pl-m-na-note">' + esc(m.na) + '</span>' +
+        '<span class="pl-m-delta vs-flat">미측정</span></div>';
+    }
     var aN = (typeof m.a === 'number' && isFinite(m.a)) ? m.a : null;
     var bN = (typeof m.b === 'number' && isFinite(m.b)) ? m.b : null;
     var max = m.max || Math.max(aN || 0, bN || 0, 1e-9);
@@ -305,6 +318,11 @@
       ' seed·시간은 [시뮬레이션] 탭 입력값을 따릅니다.';
 
     var delegA = ga.delegation, delegB = gb.delegation;
+    // ADR-062: 승인 계선(ADR-058)이 꺼진 실행에서 ⑥⑦ 승인·협조 지표는 "0"이 아니라 "미측정"이다.
+    // 실행 결과가 스스로 신고한 features를 근거로 판정한다(UI 상태가 아니라 실제 실행 조건).
+    var apprOn = !!((ga.features && ga.features.approvalChain) || (gb.features && gb.features.approvalChain));
+    var APPR_NA = '미측정 — 승인 계선(ADR-058) OFF';
+    var apprNa = apprOn ? null : APPR_NA;
     var stages = [
       {
         no: '①', name: '탐지 (Detect)', fn: '_beginDetect · _onDetect',
@@ -373,22 +391,25 @@
           { label: '결심 지연 (탐지→교전개시)', mom: 'MoP', kind: 'sec', lower: true,
             a: ga.meanDecisionDelaySec, b: gb.meanDecisionDelaySec,
             tip: 'F2T2EA Find→Engage 평균 소요. 협조·승인·권한위임 홉과 C2 대기(Wq)가 모두 포함 — As-Is 음성 협조 부담이 여기서 발생.' },
-          { label: '그중 협조 홉 지연', mom: 'MoP', kind: 'sec', lower: true,
+          { label: '그중 협조 홉 지연', mom: 'MoP', kind: 'sec', lower: true, na: apprNa,
             a: ga.meanCoordDelaySec, b: gb.meanCoordDelaySec,
-            tip: '결심 지연 중 coord 협조 경로(육↔공 음성 등) 홉 지연 몫. legacy 결심 경로(_decision)에서만 집계되며, ' +
-              '고해상도 native 경로(모델 충실도 iads-c2)는 협조를 상태공유·plan 차단으로 모델링해 이 값이 항상 0으로 표시된다(협조 지연 부재 아님). ' +
+            tip: '결심 지연 중 coord 협조 경로(육↔공 음성 등) 홉 지연 몫. ' +
+              '승인 계선(ADR-058)이 켜진 실행에서만 집계된다 — 꺼진 실행은 협조를 상태공유·plan 차단으로만 모델링하므로 ' +
+              '"0"이 아니라 "미측정"으로 표시한다(ADR-062). 실측(승인계선 ON): As-Is 20~37초. ' +
               '**잔여(결심지연−협조)는 C2 처리·승인권자 대기(큐)·승인 서비스**다. ' +
               '실측: As-Is 결심지연의 협조 홉은 17~38%뿐이고 나머지 62~83%가 승인 대기다 — ' +
               '"데이터링크만 깔면 해결된다"는 함의는 절반만 맞다(승인권자 처리용량도 함께 봐야 한다). To-Be는 협조 홉이 대부분 생략되어 0에 가깝다.' },
-          { label: '승인 노드 최대 ρ (approval)', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
+          { label: '승인 노드 최대 ρ (approval)', mom: 'MoP', kind: 'raw2', lower: true, max: 1, na: apprNa,
             a: maxRhoByKind(a, 'c2', 'approval'), b: maxRhoByKind(b, 'c2', 'approval'),
             tip: '교전승인권자 노드가 승인 처리(⑥⑦)로 점유된 이용률 — C2 서버풀 공유 부하 중 approval만 분리. ' +
-              '고해상도 native 경로는 별도 승인 홉 없이 책임 C2가 자체 승인하므로 이 값이 0이며, 그 부하는 ③④⑤ 카드(항적처리)에 포함된다. ' +
+              '승인 계선(ADR-058) OFF 실행은 책임 C2가 자체 승인해 승인 홉 자체가 없으므로 미측정으로 표시한다(그 부하는 ③④⑤ 카드에 포함). ' +
+              '실측(ON): ρ 0.18~0.44. ' +
               '종전 ③④⑤ 카드의 C2 ρ에는 이 승인 부하가 섞여 있어(예: KAOC는 승인 전용에 가깝다) 항적처리 부하를 과대표시했다. ' +
               '이 지표가 ⑥⑦(한국 이원화 C2의 승인 병목)을 직접 측정한다.' },
-          { label: '승인 대기 (Wq·approval)', mom: 'MoP', kind: 'sec', lower: true,
+          { label: '승인 대기 (Wq·approval)', mom: 'MoP', kind: 'sec', lower: true, na: apprNa,
             a: maxWqByKind(a, 'c2', 'approval'), b: maxWqByKind(b, 'c2', 'approval'),
             tip: '승인 대기행렬에서 승인권자 서버를 기다린 평균 시간(초) — ⑥⑦ 결심 병목의 직접 증거. ' +
+              '승인 계선(ADR-058) ON에서만 측정된다(실측 18~184초, 부하의 함수). ' +
               'To-Be는 사전승인 자동교전·동적 분권으로 승인 홉이 줄어 대기가 감소한다.' },
           { label: 'coord 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
             a: commMeanDelay(a, 'coord'), b: commMeanDelay(b, 'coord'),
@@ -415,7 +436,7 @@
             a: ga.cost.duplicateInterceptM, b: gb.cost.duplicateInterceptM,
             tip: '중복교전으로 이중 소모된 요격탄 개념 비용(백만$). ⑨ 비용교환비(MoFE)를 As-Is에서 악화시키는 요인 — ' +
               '종전 모델은 이 비용을 전혀 계상하지 않아 As-Is 중복교전 비용을 과소평가했다(To-Be는 0).' },
-          { label: '분권 전환 (횟수)', mom: 'MoCE', kind: 'cnt', lower: null,
+          { label: '분권 전환 (횟수)', mom: 'MoCE', kind: 'cnt', lower: null, na: apprNa,
             a: delegA.count, b: delegB.count,
             tip: '승인권자 대기열 임계(C2-DELEG-THRESH-01) 초과 시 중앙↔분권 동적 전환 횟수' +
               (delegA.firstT !== null ? ' · As-Is 최초 전환 t=' + delegA.firstT.toFixed(0) + 's' : '') +
@@ -433,15 +454,17 @@
           { label: '무기 최대 관측 ρ', mom: 'MoP', kind: 'raw2', lower: true, max: 1,
             a: maxRho(a, 'shooter'), b: maxRho(b, 'shooter'),
             tip: '교전 무기 노드 중 최대 채널 이용률.' },
-          { label: '무기 최대 평균대기 (Wq)', mom: 'MoP', kind: 'sec', lower: true,
-            a: maxWq(a, 'shooter'), b: maxWq(b, 'shooter'),
-            tip: '교전 대기실에서 채널을 기다린 평균 시간(초). ρ와 달리 포화의 체감 비용을 직접 표현한다.' },
+          // ADR-062: '무기 최대 평균대기(Wq)' 삭제 — native 교전 모델에는 사수 대기행렬이 없다.
+          // 동시교전 슬롯이 차면 대기가 아니라 즉시 차단(capacity_full) 후 1초 뒤 재시도하므로
+          // 대기시간이라는 관측량 자체가 존재하지 않는다(드롭 999건 셀에서도 Wq=0.00으로 실측).
           { label: 'command 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
             a: commMeanDelay(a, 'command'), b: commMeanDelay(b, 'command'),
             tip: '⑧단계 command(교전명령) 링크 전달의 평균 지연만 집계(C2→무기체계).' },
-          { label: '교전채널 포화 드롭 합', mom: 'MoP', kind: 'cnt', lower: true,
+          { label: '동시교전 슬롯 차단 (재시도)', mom: 'MoP', kind: 'cnt', lower: true,
             a: dropSum(a, 'shooter'), b: dropSum(b, 'shooter'),
-            tip: '교전 대기실(K=채널×2) 초과로 상실된 교전 기회.' }
+            tip: '동시교전 채널(maxSimultaneous)이 모두 점유돼 교전 개시가 차단된 횟수(capacityBlocks). ' +
+              '⚠️ 영구 상실이 아니라 1초 뒤 재시도로 회복될 수 있는 차단이다 — 종전 라벨 "포화 드롭 합"은 ' +
+              '상실로 오독될 수 있어 정정했다(ADR-062). 실제 상실은 실패코드 overflow:<노드>·timeout으로 따로 계상된다.' }
         ]
       },
       {

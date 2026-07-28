@@ -37,6 +37,10 @@
     <label>위협 강도</label>
     <input type="range" id="intensity-slider" min="0.5" max="3" step="0.1" value="1">
     <span id="intensity-value">×1.0</span>
+    <label class="ctl-check" title="As-Is 승인 계선(군단·수방사 AOC→MCRC 협조 홉 + 승인 대기 + 동적 위임)을 모델에 포함합니다(ADR-058). 끄면 ⑥⑦ 승인·협조 지표는 0이 아니라 '미측정'으로 표시됩니다.">
+      <input type="checkbox" id="approval-chain-toggle">
+      승인 계선 모델 (ADR-058)
+    </label>
   </div>
   <div id="deployment-warning" class="deployment-warning hidden" role="status"></div>
 

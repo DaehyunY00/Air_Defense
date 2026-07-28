@@ -1279,6 +1279,10 @@ li.chk-fail { background: #43140f; }
       <input type="checkbox" id="approval-chain-toggle">
       승인 계선 모델 (ADR-058)
     </label>
+    <label class="ctl-check" title="위협의 착탄점을 표적권역(반경 15km 개념) 안에서 위협마다 다르게 추첨합니다(ADR-063). 끄면 같은 축선의 모든 위협이 정확히 같은 한 점으로 향합니다. 표적권역 내부만 다양해질 뿐 새 표적(부산·대구 등)이 생기지는 않습니다.">
+      <input type="checkbox" id="target-dispersion-toggle">
+      표적권역 산포 (ADR-063)
+    </label>
   </div>
   <div id="deployment-warning" class="deployment-warning hidden" role="status"></div>
 
@@ -3963,15 +3967,42 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     return violations;
   };
 
-  /** 위협 위치(t) 선형보간: entry→target, [0,1] 클램프 진행률 */
-  KJ.axisPosition = function (axisKey, progress) {
+  /** 위협 위치(t) 선형보간: entry→target, [0,1] 클램프 진행률.
+   * target을 넘기면 축선 표적점 대신 그 좌표를 종점으로 쓴다(ADR-063 표적 산포).
+   * 생략하면 종전과 동일하게 축선의 고정 표적점을 쓴다(하위호환·OFF bit-exact). */
+  KJ.axisPosition = function (axisKey, progress, target) {
     var a = KJ.AXES[axisKey];
     if (!a) return null;
+    var tgt = (target && target.length === 2) ? target : a.target;
     var p = Math.max(0, Math.min(1, progress));
     return [
-      a.entry[0] + (a.target[0] - a.entry[0]) * p,
-      a.entry[1] + (a.target[1] - a.entry[1]) * p
+      a.entry[0] + (tgt[0] - a.entry[0]) * p,
+      a.entry[1] + (tgt[1] - a.entry[1]) * p
     ];
+  };
+
+  // ── ADR-063: 표적권역 산포 ──
+  // 종전에는 같은 축선의 모든 위협이 **정확히 같은 한 점**으로 향해, seed를 바꿔도 착탄점이
+  // 변하지 않고 표적권역 주변 자산만 반복 교전했다. 표적을 권역(disk) 안에서 뽑아 위협마다
+  // 다른 착탄점을 갖게 한다. 반경은 THREAT-TARGET-DISP-01(개념 설정·등급 C, docs/params.md).
+  KJ.THREAT_TARGET_SPREAD_KM = 15;
+
+  /**
+   * 표적권역 내 균등(면적 기준) 착탄점. u1·u2는 [0,1) 난수 2개 — 호출자가 스트림을 소유한다.
+   * r = R√u1 이 균등 면적 분포이며(단순 R·u1은 중심 편향), θ = 2π·u2.
+   * @returns [lat, lon] — 산포 반경이 0 이하이면 축선 표적점 그대로
+   */
+  KJ.axisImpactPoint = function (axisKey, u1, u2, spreadKm) {
+    var a = KJ.AXES[axisKey];
+    if (!a) return null;
+    var R = (typeof spreadKm === 'number' && spreadKm >= 0) ? spreadKm : KJ.THREAT_TARGET_SPREAD_KM;
+    if (!R) return [a.target[0], a.target[1]];
+    var r = R * Math.sqrt(Math.max(0, Math.min(1, u1)));
+    var th = 2 * Math.PI * Math.max(0, Math.min(1, u2));
+    var dLatKm = r * Math.cos(th), dLonKm = r * Math.sin(th);
+    var lat = a.target[0] + dLatKm / 110.574;
+    var lon = a.target[1] + dLonKm / (111.320 * Math.cos(a.target[0] * Math.PI / 180));
+    return [lat, lon];
   };
 })();
 </script>
@@ -4350,8 +4381,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 /**
  * K-JAMDS 시뮬레이터 — 딥링크 라우터 (Phase 1, Phase 4에서 t= 실제 활용)
  *
- * URL 해시 스킴: #tab=<탭ID>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&t=<재생시각(초)>&open=<노드ID>&x=<강도>&seed=&dur=
- *   (ADR-061: 구 dep=legacy·fid= 파라미터는 기본값으로 정규화 / ADR-062: appr = 승인 계선 토글, 기본 0)
+ * URL 해시 스킴: #tab=<탭ID>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&t=<재생시각(초)>&open=<노드ID>&x=<강도>&seed=&dur=
+ *   (ADR-061: 구 dep=legacy·fid= 파라미터는 기본값으로 정규화 / ADR-062: appr = 승인 계선 토글 / ADR-063: disp = 표적 산포 토글, 둘 다 기본 0)
  *   - t    : [playback 탭] 재생 스크러버 시각(초). 다른 탭에서는 보존만 됨
  *   - open : 지도에서 팝업을 열 노드 ID
  *   - x    : 위협 강도 배수
@@ -4364,7 +4395,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 
   // ADR-061: dep 기본값은 주 분석 배치, fid는 하위호환 파싱만 남기고 항상 iads-c2로 고정된다.
   // ADR-062: appr = 승인 계선(ADR-058 approvalChain) 토글. 기본 '0'(OFF) — 기본 결과는 종전과 bit-exact.
-  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '0', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
+  // ADR-063: disp = 표적권역 산포 토글. 기본 '0'(OFF) — 기본 결과는 종전과 bit-exact.
+  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '0', disp: '0', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
   var VALID_TABS = ['sim', 'analysis', 'mc', 'data'];
   // 구 딥링크 호환: 지도/시나리오/DES/재생 탭은 통합 [시뮬레이션] 탭으로 흡수
   var LEGACY_TAB = { map: 'sim', scenario: 'sim', des: 'sim', playback: 'sim' };
@@ -4394,6 +4426,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       if (state.mode !== 'asis' && state.mode !== 'tobe') state.mode = DEFAULTS.mode;
       state.fid = 'iads-c2'; // 구 딥링크 fid=compat 하위호환 — 항상 iads-c2로 정규화(ADR-061)
       state.appr = (state.appr === '1' || state.appr === true) ? '1' : '0'; // ADR-062: 알 수 없는 값은 OFF
+      state.disp = (state.disp === '1' || state.disp === true) ? '1' : '0'; // ADR-063: 〃
       if (!KJ.DEPLOYMENT_IDS || KJ.DEPLOYMENT_IDS.indexOf(state.dep) === -1) {
         state.dep = DEFAULTS.dep; // 구 dep=legacy·HANBANDO_MINI_* 딥링크 폴백
       }
@@ -5705,16 +5738,18 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 
   function iadsThreatPosition(threat, at) {
     var progress = Math.max(0, Math.min(1, (at - threat.spawnT) / threat.dwellSec));
-    var ll = KJ.axisPosition(threat.axis, progress);
+    // ADR-063: threat.target(산포 착탄점)이 있으면 그 점을 종점으로 쓴다. 없으면 축선 표적점.
+    var ll = KJ.axisPosition(threat.axis, progress, threat.target);
     var cat = iadsThreatCategory(threat.type);
     var altKm;
     if (threat._iadsPhysical && KJ.IADS) {
       var axis = KJ.AXES[threat.axis];
       var distanceKm = threat._iadsAxisDistanceKm;
       if (!Number.isFinite(distanceKm) && axis) {
+        var endPt = threat.target || axis.target;
         distanceKm = haversineKm(
           { lat: axis.entry[0], lon: axis.entry[1], altKm: 0 },
-          { lat: axis.target[0], lon: axis.target[1], altKm: 0 });
+          { lat: endPt[0], lon: endPt[1], altKm: 0 });
         threat._iadsAxisDistanceKm = distanceKm;
       }
       altKm = KJ.IADS.threatPhysics(threat.type, progress, distanceKm).altitude / 1000;
@@ -5818,6 +5853,12 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // nativeWtaCostAsis는 반증 전용(As-Is에도 비용항 적용 — 선례 costAwareWtaAsis).
     this.nativeWtaMode = ff('nativeWtaMode', false);
     this.nativeWtaCostAsis = ff('nativeWtaCostAsis', false);
+    // ADR-063: 표적권역 산포 — 종전에는 같은 축선의 모든 위협이 정확히 같은 한 점으로 향해
+    // seed를 바꿔도 착탄점이 불변이었다. ON이면 위협마다 표적권역(disk) 안에서 착탄점을 뽑는다.
+    // 반경은 features.targetSpreadKm로 스윕 가능(기본 THREAT-TARGET-DISP-01 = 15km, 등급 C).
+    this.threatTargetDispersion = ff('threatTargetDispersion', false);
+    this.targetSpreadKm = (typeof f.targetSpreadKm === 'number' && f.targetSpreadKm >= 0)
+      ? f.targetSpreadKm : (KJ.THREAT_TARGET_SPREAD_KM || 0);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
     if (this.highResolutionDeployment) this.features.highResolutionDeployment = true;
     if (this.unifiedEngagementState) this.features.unifiedEngagementState = true;
@@ -5826,6 +5867,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (this.approvalChainTobe) this.features.approvalChainTobe = true;
     if (this.nativeWtaMode) this.features.nativeWtaMode = true;
     if (this.nativeWtaCostAsis) this.features.nativeWtaCostAsis = true;
+    if (this.threatTargetDispersion) {
+      this.features.threatTargetDispersion = true;
+      this.features.targetSpreadKm = this.targetSpreadKm;
+    }
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
@@ -5846,6 +5891,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 위협표본이 아니라 오직 C2 구조 차이에서만 비롯됨을 보장한다(공통난수 분산감소·짝지은 비교).
     this.rng = KJ.makeRng(this.seed);
     this.arrRng = KJ.makeRng((Math.imul(this.seed ^ 0x9E3779B9, 0x85EBCA6B) >>> 0));
+    //  · dispRng — ADR-063 표적 산포 전용. 도착·처리 스트림과 분리해, 산포를 켜도 다른
+    //    도메인의 난수 소비 순서가 바뀌지 않게 한다(OFF에서는 한 번도 뽑지 않는다).
+    //    arrRng와 같은 이유로 모드 무관 파생 — As-Is/To-Be가 동일 착탄점 집합을 마주한다.
+    this.dispRng = KJ.makeRng((Math.imul(this.seed ^ 0x632BE5AB, 0xC2B2AE35) >>> 0));
     this.heap = this.iadsSensorPhysics ? KJ.createIadsEventQueue() : new KJ.MinHeap();
     this.now = 0;
     this.seq = 0;
@@ -7554,8 +7603,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var tt = KJ.threatType(entry.type);
     this.threatSeq++;
     this.global.spawned++;
+    // ADR-063: 표적권역 산포 — ON일 때만 전용 스트림에서 2개 뽑아 착탄점을 정한다.
+    // OFF면 threat.target이 undefined이고 위치 계산은 종전처럼 축선 표적점을 쓴다(bit-exact).
+    var impact = this.threatTargetDispersion
+      ? KJ.axisImpactPoint(entry.axis, this.dispRng.raw(), this.dispRng.raw(), this.targetSpreadKm)
+      : null;
     var threat = {
       id: entry.type + '#' + this.threatSeq, type: entry.type, axis: entry.axis,
+      target: impact || undefined,
       spawnT: t, dwellSec: tt.dwellSec, alive: true, killed: false,
       detected: false, pipelineDead: false, tries: 0, leakReason: null,
       _frailty: null, // Phase 5(pkCorrelated): 표적별 공유 잠재(재교전 상관) — ON일 때 최초 교전에서 지연 추출
@@ -7571,6 +7626,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
           id: threat.id, type: threat.type, axis: threat.axis,
           spawnT: t, exitT: null, outcome: null, stages: [{ name: '생성', t: t }]
         };
+        // ADR-063: 산포 ON일 때만 착탄점을 trace에 노출한다(지도 애니메이션·검증용).
+        if (impact) threat._trace.target = impact;
         this.threatTraces.push(threat._trace);
       } else {
         this.traceTruncated = true;
@@ -9442,6 +9499,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // ADR-062: 승인 계선(ADR-058) 토글 — 기본 OFF.
     var features = { highResolutionDeployment: true };
     if (state && state.appr === '1') features.approvalChain = true;
+    if (state && state.disp === '1') features.threatTargetDispersion = true; // ADR-063
     return { deploymentId: state && state.dep, features: features, modelFidelity: 'iads-c2' };
   }
   function catalogFor(state) {
@@ -9465,7 +9523,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   var desCache = { key: null, data: null, pendingKey: null, requestId: 0, error: null, errorKey: null };
   function pipelineData(state, onReady) {
     var key = [state.sc, state.x, state.seed, state.dur, state.dep, 'iads-c2',
-      state.appr === '1' ? 'appr' : ''].join('|'); // ADR-062: 승인 계선 토글도 캐시 키
+      state.appr === '1' ? 'appr' : '',
+      state.disp === '1' ? 'disp' : ''].join('|'); // ADR-062·063: 토글도 캐시 키
     if (desCache.key === key) return desCache.data;
     if (desCache.errorKey === key) return null;
     if (desCache.pendingKey === key) return null;
@@ -10249,6 +10308,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // ADR-062: 승인 계선(ADR-058) 토글 — 기본 OFF.
     var features = { highResolutionDeployment: true };
     if (cfg && cfg.appr === '1') features.approvalChain = true;
+    if (cfg && cfg.disp === '1') features.threatTargetDispersion = true; // ADR-063
     return { deploymentId: cfg && cfg.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -10259,7 +10319,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   function contextLabel(cfg) {
     return KJ.scenarioById(cfg.sc).name + ' · ' +
       (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형') +
-      ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 승인계선 ON' : '') +
+      ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 승인계선 ON' : '') + (cfg.disp === '1' ? ' · 표적산포 ON' : '') +
       ' · 강도 ×' + Number(cfg.x).toFixed(1) + ' · seed ' + cfg.seed;
   }
 
@@ -10293,7 +10353,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       var seed = Math.max(0, Math.floor(parseFloat(el('sim-seed').value) || 0));
       var dur = Math.min(7200, Math.max(60, Math.floor(parseFloat(el('sim-dur').value) || 1800)));
       var cfg = { sc: state.sc, mode: state.mode, dep: state.dep, fid: 'iads-c2',
-        appr: state.appr === '1' ? '1' : '0', x: state.x, seed: seed, dur: dur };
+        appr: state.appr === '1' ? '1' : '0', disp: state.disp === '1' ? '1' : '0',
+        x: state.x, seed: seed, dur: dur };
       var btn = el('sim-run');
       btn.disabled = true; btn.textContent = '⏳ DES 실행 중...';
       setStatus('DES 실행 중 (trace 모드)...');
@@ -10531,7 +10592,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 
     // 위협 마커 (실행당 1회 생성, 프레임마다 위치·투명도만 갱신)
     run.threats.forEach(function (th) {
-      var entry = KJ.axisPosition(th.axis, 0);
+      var entry = KJ.axisPosition(th.axis, 0, th.target); // ADR-063: 산포 ON이면 위협별 착탄점
       if (!entry) return;
       var m = L.circleMarker(entry, {
         renderer: renderer, radius: 5,
@@ -10626,7 +10687,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       var endT = th.exitT != null ? th.exitT : Math.min(t, th.spawnT + th.dwellSec);
       var clampT = Math.min(t, endT);
       var progress = (clampT - th.spawnT) / th.dwellSec;
-      var pos = KJ.axisPosition(th.axis, progress);
+      var pos = KJ.axisPosition(th.axis, progress, th.target); // ADR-063
       if (pos) m.setLatLng([pos[0] + th.offLat, pos[1] + th.offLon]);
       var op = 1;
       if (th.exitT != null && t > th.exitT) op = Math.max(0, 1 - (t - th.exitT) / FADE_SEC);
@@ -11657,6 +11718,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 지표가 영구 0이 되어 "승인 병목 없음"으로 오독된다. 기본값은 OFF(종전과 bit-exact).
     var features = { highResolutionDeployment: true };
     if (state.appr === '1') features.approvalChain = true;
+    if (state.disp === '1') features.threatTargetDispersion = true; // ADR-063
     return { deploymentId: state.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -11703,6 +11765,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       ' 좌표와 수치는 공개자료 기반 정책연구용 개념값이며 전술적 절대값이 아닙니다.';
     var apprBox = document.getElementById('approval-chain-toggle');
     if (apprBox) apprBox.checked = state.appr === '1'; // ADR-062
+    var dispBox = document.getElementById('target-dispersion-toggle');
+    if (dispBox) dispBox.checked = state.disp === '1'; // ADR-063
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
     document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
@@ -11744,6 +11808,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (apprToggle) {
       apprToggle.addEventListener('change', function (e) {
         setState({ appr: e.target.checked ? '1' : '0' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-063: 표적 산포 토글 — 착탄점 집합이 바뀌므로 실행 조건 변경으로 취급한다.
+    var dispToggle = document.getElementById('target-dispersion-toggle');
+    if (dispToggle) {
+      dispToggle.addEventListener('change', function (e) {
+        setState({ disp: e.target.checked ? '1' : '0' });
         if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
       });
     }

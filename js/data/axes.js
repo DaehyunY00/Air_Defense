@@ -96,14 +96,41 @@
     return violations;
   };
 
-  /** 위협 위치(t) 선형보간: entry→target, [0,1] 클램프 진행률 */
-  KJ.axisPosition = function (axisKey, progress) {
+  /** 위협 위치(t) 선형보간: entry→target, [0,1] 클램프 진행률.
+   * target을 넘기면 축선 표적점 대신 그 좌표를 종점으로 쓴다(ADR-063 표적 산포).
+   * 생략하면 종전과 동일하게 축선의 고정 표적점을 쓴다(하위호환·OFF bit-exact). */
+  KJ.axisPosition = function (axisKey, progress, target) {
     var a = KJ.AXES[axisKey];
     if (!a) return null;
+    var tgt = (target && target.length === 2) ? target : a.target;
     var p = Math.max(0, Math.min(1, progress));
     return [
-      a.entry[0] + (a.target[0] - a.entry[0]) * p,
-      a.entry[1] + (a.target[1] - a.entry[1]) * p
+      a.entry[0] + (tgt[0] - a.entry[0]) * p,
+      a.entry[1] + (tgt[1] - a.entry[1]) * p
     ];
+  };
+
+  // ── ADR-063: 표적권역 산포 ──
+  // 종전에는 같은 축선의 모든 위협이 **정확히 같은 한 점**으로 향해, seed를 바꿔도 착탄점이
+  // 변하지 않고 표적권역 주변 자산만 반복 교전했다. 표적을 권역(disk) 안에서 뽑아 위협마다
+  // 다른 착탄점을 갖게 한다. 반경은 THREAT-TARGET-DISP-01(개념 설정·등급 C, docs/params.md).
+  KJ.THREAT_TARGET_SPREAD_KM = 15;
+
+  /**
+   * 표적권역 내 균등(면적 기준) 착탄점. u1·u2는 [0,1) 난수 2개 — 호출자가 스트림을 소유한다.
+   * r = R√u1 이 균등 면적 분포이며(단순 R·u1은 중심 편향), θ = 2π·u2.
+   * @returns [lat, lon] — 산포 반경이 0 이하이면 축선 표적점 그대로
+   */
+  KJ.axisImpactPoint = function (axisKey, u1, u2, spreadKm) {
+    var a = KJ.AXES[axisKey];
+    if (!a) return null;
+    var R = (typeof spreadKm === 'number' && spreadKm >= 0) ? spreadKm : KJ.THREAT_TARGET_SPREAD_KM;
+    if (!R) return [a.target[0], a.target[1]];
+    var r = R * Math.sqrt(Math.max(0, Math.min(1, u1)));
+    var th = 2 * Math.PI * Math.max(0, Math.min(1, u2));
+    var dLatKm = r * Math.cos(th), dLonKm = r * Math.sin(th);
+    var lat = a.target[0] + dLatKm / 110.574;
+    var lon = a.target[1] + dLonKm / (111.320 * Math.cos(a.target[0] * Math.PI / 180));
+    return [lat, lon];
   };
 })();

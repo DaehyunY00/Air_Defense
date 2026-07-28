@@ -20,6 +20,7 @@
     // 지표가 영구 0이 되어 "승인 병목 없음"으로 오독된다. 기본값은 OFF(종전과 bit-exact).
     var features = { highResolutionDeployment: true };
     if (state.appr === '1') features.approvalChain = true;
+    if (state.disp === '1') features.threatTargetDispersion = true; // ADR-063
     return { deploymentId: state.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -66,6 +67,8 @@
       ' 좌표와 수치는 공개자료 기반 정책연구용 개념값이며 전술적 절대값이 아닙니다.';
     var apprBox = document.getElementById('approval-chain-toggle');
     if (apprBox) apprBox.checked = state.appr === '1'; // ADR-062
+    var dispBox = document.getElementById('target-dispersion-toggle');
+    if (dispBox) dispBox.checked = state.disp === '1'; // ADR-063
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
     document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
@@ -107,6 +110,14 @@
     if (apprToggle) {
       apprToggle.addEventListener('change', function (e) {
         setState({ appr: e.target.checked ? '1' : '0' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-063: 표적 산포 토글 — 착탄점 집합이 바뀌므로 실행 조건 변경으로 취급한다.
+    var dispToggle = document.getElementById('target-dispersion-toggle');
+    if (dispToggle) {
+      dispToggle.addEventListener('change', function (e) {
+        setState({ disp: e.target.checked ? '1' : '0' });
         if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
       });
     }

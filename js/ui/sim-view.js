@@ -100,6 +100,7 @@
     // ADR-062: 승인 계선(ADR-058) 토글 — 기본 OFF.
     var features = { highResolutionDeployment: true };
     if (cfg && cfg.appr === '1') features.approvalChain = true;
+    if (cfg && cfg.disp === '1') features.threatTargetDispersion = true; // ADR-063
     return { deploymentId: cfg && cfg.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -110,7 +111,7 @@
   function contextLabel(cfg) {
     return KJ.scenarioById(cfg.sc).name + ' · ' +
       (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형') +
-      ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 승인계선 ON' : '') +
+      ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 승인계선 ON' : '') + (cfg.disp === '1' ? ' · 표적산포 ON' : '') +
       ' · 강도 ×' + Number(cfg.x).toFixed(1) + ' · seed ' + cfg.seed;
   }
 
@@ -144,7 +145,8 @@
       var seed = Math.max(0, Math.floor(parseFloat(el('sim-seed').value) || 0));
       var dur = Math.min(7200, Math.max(60, Math.floor(parseFloat(el('sim-dur').value) || 1800)));
       var cfg = { sc: state.sc, mode: state.mode, dep: state.dep, fid: 'iads-c2',
-        appr: state.appr === '1' ? '1' : '0', x: state.x, seed: seed, dur: dur };
+        appr: state.appr === '1' ? '1' : '0', disp: state.disp === '1' ? '1' : '0',
+        x: state.x, seed: seed, dur: dur };
       var btn = el('sim-run');
       btn.disabled = true; btn.textContent = '⏳ DES 실행 중...';
       setStatus('DES 실행 중 (trace 모드)...');
@@ -382,7 +384,7 @@
 
     // 위협 마커 (실행당 1회 생성, 프레임마다 위치·투명도만 갱신)
     run.threats.forEach(function (th) {
-      var entry = KJ.axisPosition(th.axis, 0);
+      var entry = KJ.axisPosition(th.axis, 0, th.target); // ADR-063: 산포 ON이면 위협별 착탄점
       if (!entry) return;
       var m = L.circleMarker(entry, {
         renderer: renderer, radius: 5,
@@ -477,7 +479,7 @@
       var endT = th.exitT != null ? th.exitT : Math.min(t, th.spawnT + th.dwellSec);
       var clampT = Math.min(t, endT);
       var progress = (clampT - th.spawnT) / th.dwellSec;
-      var pos = KJ.axisPosition(th.axis, progress);
+      var pos = KJ.axisPosition(th.axis, progress, th.target); // ADR-063
       if (pos) m.setLatLng([pos[0] + th.offLat, pos[1] + th.offLon]);
       var op = 1;
       if (th.exitT != null && t > th.exitT) op = Math.max(0, 1 - (t - th.exitT) / FADE_SEC);

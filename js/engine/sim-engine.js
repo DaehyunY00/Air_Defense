@@ -110,16 +110,18 @@
 
   function iadsThreatPosition(threat, at) {
     var progress = Math.max(0, Math.min(1, (at - threat.spawnT) / threat.dwellSec));
-    var ll = KJ.axisPosition(threat.axis, progress);
+    // ADR-063: threat.target(산포 착탄점)이 있으면 그 점을 종점으로 쓴다. 없으면 축선 표적점.
+    var ll = KJ.axisPosition(threat.axis, progress, threat.target);
     var cat = iadsThreatCategory(threat.type);
     var altKm;
     if (threat._iadsPhysical && KJ.IADS) {
       var axis = KJ.AXES[threat.axis];
       var distanceKm = threat._iadsAxisDistanceKm;
       if (!Number.isFinite(distanceKm) && axis) {
+        var endPt = threat.target || axis.target;
         distanceKm = haversineKm(
           { lat: axis.entry[0], lon: axis.entry[1], altKm: 0 },
-          { lat: axis.target[0], lon: axis.target[1], altKm: 0 });
+          { lat: endPt[0], lon: endPt[1], altKm: 0 });
         threat._iadsAxisDistanceKm = distanceKm;
       }
       altKm = KJ.IADS.threatPhysics(threat.type, progress, distanceKm).altitude / 1000;
@@ -223,6 +225,12 @@
     // nativeWtaCostAsis는 반증 전용(As-Is에도 비용항 적용 — 선례 costAwareWtaAsis).
     this.nativeWtaMode = ff('nativeWtaMode', false);
     this.nativeWtaCostAsis = ff('nativeWtaCostAsis', false);
+    // ADR-063: 표적권역 산포 — 종전에는 같은 축선의 모든 위협이 정확히 같은 한 점으로 향해
+    // seed를 바꿔도 착탄점이 불변이었다. ON이면 위협마다 표적권역(disk) 안에서 착탄점을 뽑는다.
+    // 반경은 features.targetSpreadKm로 스윕 가능(기본 THREAT-TARGET-DISP-01 = 15km, 등급 C).
+    this.threatTargetDispersion = ff('threatTargetDispersion', false);
+    this.targetSpreadKm = (typeof f.targetSpreadKm === 'number' && f.targetSpreadKm >= 0)
+      ? f.targetSpreadKm : (KJ.THREAT_TARGET_SPREAD_KM || 0);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
     if (this.highResolutionDeployment) this.features.highResolutionDeployment = true;
     if (this.unifiedEngagementState) this.features.unifiedEngagementState = true;
@@ -231,6 +239,10 @@
     if (this.approvalChainTobe) this.features.approvalChainTobe = true;
     if (this.nativeWtaMode) this.features.nativeWtaMode = true;
     if (this.nativeWtaCostAsis) this.features.nativeWtaCostAsis = true;
+    if (this.threatTargetDispersion) {
+      this.features.threatTargetDispersion = true;
+      this.features.targetSpreadKm = this.targetSpreadKm;
+    }
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
@@ -251,6 +263,10 @@
     // 위협표본이 아니라 오직 C2 구조 차이에서만 비롯됨을 보장한다(공통난수 분산감소·짝지은 비교).
     this.rng = KJ.makeRng(this.seed);
     this.arrRng = KJ.makeRng((Math.imul(this.seed ^ 0x9E3779B9, 0x85EBCA6B) >>> 0));
+    //  · dispRng — ADR-063 표적 산포 전용. 도착·처리 스트림과 분리해, 산포를 켜도 다른
+    //    도메인의 난수 소비 순서가 바뀌지 않게 한다(OFF에서는 한 번도 뽑지 않는다).
+    //    arrRng와 같은 이유로 모드 무관 파생 — As-Is/To-Be가 동일 착탄점 집합을 마주한다.
+    this.dispRng = KJ.makeRng((Math.imul(this.seed ^ 0x632BE5AB, 0xC2B2AE35) >>> 0));
     this.heap = this.iadsSensorPhysics ? KJ.createIadsEventQueue() : new KJ.MinHeap();
     this.now = 0;
     this.seq = 0;
@@ -1959,8 +1975,14 @@
     var tt = KJ.threatType(entry.type);
     this.threatSeq++;
     this.global.spawned++;
+    // ADR-063: 표적권역 산포 — ON일 때만 전용 스트림에서 2개 뽑아 착탄점을 정한다.
+    // OFF면 threat.target이 undefined이고 위치 계산은 종전처럼 축선 표적점을 쓴다(bit-exact).
+    var impact = this.threatTargetDispersion
+      ? KJ.axisImpactPoint(entry.axis, this.dispRng.raw(), this.dispRng.raw(), this.targetSpreadKm)
+      : null;
     var threat = {
       id: entry.type + '#' + this.threatSeq, type: entry.type, axis: entry.axis,
+      target: impact || undefined,
       spawnT: t, dwellSec: tt.dwellSec, alive: true, killed: false,
       detected: false, pipelineDead: false, tries: 0, leakReason: null,
       _frailty: null, // Phase 5(pkCorrelated): 표적별 공유 잠재(재교전 상관) — ON일 때 최초 교전에서 지연 추출
@@ -1976,6 +1998,8 @@
           id: threat.id, type: threat.type, axis: threat.axis,
           spawnT: t, exitT: null, outcome: null, stages: [{ name: '생성', t: t }]
         };
+        // ADR-063: 산포 ON일 때만 착탄점을 trace에 노출한다(지도 애니메이션·검증용).
+        if (impact) threat._trace.target = impact;
         this.threatTraces.push(threat._trace);
       } else {
         this.traceTruncated = true;

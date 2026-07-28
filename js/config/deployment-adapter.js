@@ -58,9 +58,14 @@
     return Math.hypot(p.x - x, p.y - y);
   }
 
-  function axesFor(pos, rangeKm) {
+  // ADR-064: coverage는 KJ.AXES에서 **파생**되므로, 남부 축선을 정의하는 것만으로 기존 자산의
+  // coverage가 바뀐다(종전 [] = 무제한 → ['southcentral',...] = 남부 전용). 그러면 플래그 OFF
+  // 결과까지 달라지므로, 남부 축선은 변형 카탈로그에서만 포함한다(linkSemanticsV2·approvalChain과 동일 패턴).
+  function axesFor(pos, rangeKm, includeSouthern) {
     var axes = KJ.AXES || {};
+    var southern = KJ.SOUTHERN_AXIS_KEYS || [];
     return Object.keys(axes).filter(function (key) {
+      if (!includeSouthern && southern.indexOf(key) !== -1) return false;
       return distancePointSegmentKm(pos, axes[key]) <= rangeKm;
     });
   }
@@ -113,8 +118,10 @@
   function buildDeploymentCatalog(id, opts) {
     var v2 = !!(opts && opts.linkSemanticsV2);
     var appr = !!(opts && opts.approvalChain);
+    var southern = !!(opts && opts.southernAxes); // ADR-064
     var opLevel = (opts && opts.c2OperatorLevel) || null; // 'high'|'low' (null=mid, 종전 동일)
-    var cacheKey = id + (v2 ? '|linkV2' : '') + (appr ? '|appr' : '') + (opLevel ? '|op:' + opLevel : '');
+    var cacheKey = id + (v2 ? '|linkV2' : '') + (appr ? '|appr' : '') +
+      (southern ? '|south' : '') + (opLevel ? '|op:' + opLevel : '');
     if (cache[cacheKey]) return cache[cacheKey];
     var deployment = KJ.deploymentById(id);
     if (!deployment) throw new Error('Unknown high-resolution deployment: ' + id);
@@ -163,7 +170,7 @@
         service: decl.forceOwner === 'USFK' ? 'usfk' : 'joint', echelon: 'sensor',
         coord: [pos.lat, pos.lon], position: { lon: pos.lon, lat: pos.lat, alt: pos.alt || 0 }, coordNote: pos.coordNote,
         role: type.role + ' · 개념 기하 탐지·화력통제 상태',
-        detects: type.detectableThreats.slice(), coverage: axesFor(pos, rangeKm),
+        detects: type.detectableThreats.slice(), coverage: axesFor(pos, rangeKm, southern),
         detectProb: { value: type.detectionProbability, paramRef: type.paramRef },
         rangeKm: rangeKm, rangeNote: '원본 개념 사거리의 정적 축선 호환 투영',
         c2Axis: decl.c2Axis || null, forceOwner: decl.forceOwner || 'ROK',
@@ -193,7 +200,7 @@
         service: decl.forceOwner === 'USFK' ? 'usfk' : (decl.forceOwner === 'ROK_LOCAL_AD' ? 'army' : 'af'),
         echelon: 'battery', coord: [pos.lat, pos.lon], position: { lon: pos.lon, lat: pos.lat, alt: pos.alt || 0 }, coordNote: pos.coordNote,
         role: '원본 책임 C2·PIP·발사대 자원 모델 실행',
-        coverage: axesFor(pos, rangeKm),
+        coverage: axesFor(pos, rangeKm, southern),
         controlledBy: { asis: controller ? [controller.id] : [], tobe: controller ? [controller.id] : [] },
         canEngage: boolMap(type.engageableThreats, eligible),
         wtaSuit: type.compatibility.wtaSuit,
@@ -344,6 +351,8 @@
       { linkSemanticsV2: features.linkSemanticsV2 === true,
         // ADR-058: 승인 계선용 coord 링크는 변형 카탈로그에서만 생성(OFF wire shape 불변).
         approvalChain: features.approvalChain === true || features.approvalChainTobe === true,
+        // ADR-064: 남부 종심 축선 — coverage 파생에 포함할지 결정(OFF면 종전 wire shape)
+        southernAxes: features.southernAxes === true,
         // ADR-058 동반 스윕: 운용자 처리시간 high/mid/low (기본 mid — 종전 동일)
         c2OperatorLevel: features.c2OperatorLevel === 'high' || features.c2OperatorLevel === 'low'
           ? features.c2OperatorLevel : null });

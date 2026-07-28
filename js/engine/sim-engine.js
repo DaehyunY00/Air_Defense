@@ -229,6 +229,9 @@
     // seed를 바꿔도 착탄점이 불변이었다. ON이면 위협마다 표적권역(disk) 안에서 착탄점을 뽑는다.
     // 반경은 features.targetSpreadKm로 스윕 가능(기본 THREAT-TARGET-DISP-01 = 15km, 등급 C).
     this.threatTargetDispersion = ff('threatTargetDispersion', false);
+    // ADR-064: 남부 종심 축선(대구·부산) 활성화. 시나리오의 southernMix를 도착 예약에 추가한다.
+    // OFF면 남부 축선 위협이 하나도 생성되지 않아 종전과 bit-exact.
+    this.southernAxes = ff('southernAxes', false);
     this.targetSpreadKm = (typeof f.targetSpreadKm === 'number' && f.targetSpreadKm >= 0)
       ? f.targetSpreadKm : (KJ.THREAT_TARGET_SPREAD_KM || 0);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
@@ -243,6 +246,7 @@
       this.features.threatTargetDispersion = true;
       this.features.targetSpreadKm = this.targetSpreadKm;
     }
+    if (this.southernAxes) this.features.southernAxes = true;
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
@@ -267,6 +271,10 @@
     //    도메인의 난수 소비 순서가 바뀌지 않게 한다(OFF에서는 한 번도 뽑지 않는다).
     //    arrRng와 같은 이유로 모드 무관 파생 — As-Is/To-Be가 동일 착탄점 집합을 마주한다.
     this.dispRng = KJ.makeRng((Math.imul(this.seed ^ 0x632BE5AB, 0xC2B2AE35) >>> 0));
+    //  · southRng — ADR-064 남부 종심 축선 도착 전용. arrRng를 공유하면 남부 스트림의 난수
+    //    소비가 기존 축선의 후속 도착 시각을 전부 밀어(실측: east 113→79건) "추가"가 아니라
+    //    "재추첨"이 된다. 별도 스트림이면 기존 축선 도착 스케줄이 완전히 보존된다.
+    this.southRng = KJ.makeRng((Math.imul(this.seed ^ 0x27D4EB2F, 0x165667B1) >>> 0));
     this.heap = this.iadsSensorPhysics ? KJ.createIadsEventQueue() : new KJ.MinHeap();
     this.now = 0;
     this.seq = 0;
@@ -1969,6 +1977,12 @@
     return Math.max(0, Math.min(1, pk * this.mult.pk)); // 민감도 배수 적용, [0,1] 클램프
   };
 
+  /** ADR-064: 축선별 도착 스트림 선택 — 남부 종심 축선은 전용 스트림(기존 축선 불변). */
+  Simulation.prototype._arrivalRng = function (entry) {
+    return (this.southernAxes && KJ.SOUTHERN_AXIS_KEYS &&
+      KJ.SOUTHERN_AXIS_KEYS.indexOf(entry.axis) !== -1) ? this.southRng : this.arrRng;
+  };
+
   // ── 발생·이탈 ──
   Simulation.prototype._spawn = function (t, d) {
     var entry = d.entry;
@@ -1983,7 +1997,8 @@
     var threat = {
       id: entry.type + '#' + this.threatSeq, type: entry.type, axis: entry.axis,
       target: impact || undefined,
-      spawnT: t, dwellSec: tt.dwellSec, alive: true, killed: false,
+      // ADR-064: 남부 축선은 거리에 비례해 체공시간을 늘린다(함의 속도 유지). 기존 축선은 불변.
+      spawnT: t, dwellSec: KJ.axisDwellSec(entry.axis, tt.dwellSec), alive: true, killed: false,
       detected: false, pipelineDead: false, tries: 0, leakReason: null,
       _frailty: null, // Phase 5(pkCorrelated): 표적별 공유 잠재(재교전 상관) — ON일 때 최초 교전에서 지연 추출
       _trace: null, _countedC2: false, _countedEngaged: false, _detectT: null, _coordDelay: 0,
@@ -2010,7 +2025,7 @@
     // 다음 도착 (포아송: 지수 도착간격) — burst 전용 항목(ratePerMin 부재)은 후속 도착 없음
     var ratePerSec = ((entry.ratePerMin || 0) * this.intensity) / 60;
     if (ratePerSec > 0) {
-      var next = t + this.arrRng.exponential(1 / ratePerSec); // 도착 전용 스트림(CRN) — 모드 불변
+      var next = t + this._arrivalRng(entry).exponential(1 / ratePerSec); // 도착 전용 스트림(CRN) — 모드 불변
       if (next <= this.endTime) this.schedule(next, PRI.SPAWN, 'SPAWN', { entry: entry });
     }
   };
@@ -2097,8 +2112,12 @@
   // ── 실행 ──
   Simulation.prototype.run = function () {
     var self = this;
-    // 각 위협 스트림 최초 도착 예약
-    this.scenario.mix.forEach(function (entry) {
+    // 각 위협 스트림 최초 도착 예약.
+    // ADR-064: 남부 축선은 기존 항목 뒤에 붙고 **전용 스트림(southRng)**을 쓴다 — 기존 축선의
+    // 도착 스케줄(시각·유형·수)이 완전히 보존되어, ON/OFF 차이가 "추가된 남부 위협"뿐이다.
+    var mix = (this.southernAxes && this.scenario.southernMix)
+      ? this.scenario.mix.concat(this.scenario.southernMix) : this.scenario.mix;
+    mix.forEach(function (entry) {
       // 일회성 동시 다발(burst) — 문제 상황 2 "무인기 8대 동시 남파" 유형.
       // 강도 배수로 반올림 스케일(강도 0 → 0대), 동시 이벤트는 (t, pri, seq)로 결정론 해소.
       if (entry.burst) {
@@ -2110,7 +2129,7 @@
       }
       var ratePerSec = ((entry.ratePerMin || 0) * self.intensity) / 60;
       if (ratePerSec <= 0) return;
-      var first = self.arrRng.exponential(1 / ratePerSec); // 도착 전용 스트림(CRN) — 모드 불변
+      var first = self._arrivalRng(entry).exponential(1 / ratePerSec); // 도착 전용 스트림(CRN) — 모드 불변
       if (first <= self.endTime) self.schedule(first, PRI.SPAWN, 'SPAWN', { entry: entry });
     });
 

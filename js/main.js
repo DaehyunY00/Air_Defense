@@ -21,6 +21,7 @@
     var features = { highResolutionDeployment: true };
     if (state.appr === '1') features.approvalChain = true;
     if (state.disp === '1') features.threatTargetDispersion = true; // ADR-063
+    if (state.south === '1') features.southernAxes = true; // ADR-064
     return { deploymentId: state.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -69,6 +70,8 @@
     if (apprBox) apprBox.checked = state.appr === '1'; // ADR-062
     var dispBox = document.getElementById('target-dispersion-toggle');
     if (dispBox) dispBox.checked = state.disp === '1'; // ADR-063
+    var southBox = document.getElementById('southern-axes-toggle');
+    if (southBox) southBox.checked = state.south === '1'; // ADR-064
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
     document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
@@ -118,6 +121,14 @@
     if (dispToggle) {
       dispToggle.addEventListener('change', function (e) {
         setState({ disp: e.target.checked ? '1' : '0' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-064: 남부 종심 축선 토글 — 위협 집합 자체가 늘어나므로 실행 조건 변경으로 취급.
+    var southToggle = document.getElementById('southern-axes-toggle');
+    if (southToggle) {
+      southToggle.addEventListener('change', function (e) {
+        setState({ south: e.target.checked ? '1' : '0', open: '' });
         if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
       });
     }

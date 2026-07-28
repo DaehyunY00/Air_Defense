@@ -62,7 +62,45 @@
       target: [37.56, 126.99], targetNote: '서울 도심 개념좌표',
       launchZones: ['dmz'], conceptReachKm: 70,
       reachNote: '북측 DMZ 인접 근거리 개념 발사권→서울 도심 개념거리 — 근거리 위협 전용 축선 (ENV-AXIS-FIT-01)'
+    },
+    // ── ADR-064: 남부 종심 축선 2종 ──
+    // 종전 4개 축선의 표적은 서울·오산평택·강릉 3권역뿐이라, 남부 배치 자산(대구·부산·울산·
+    // 포항·광주 등 14문)은 어떤 seed에서도 교전 기회가 없었다. 종심 발사권에서 남부 산업·항만
+    // 권역을 노리는 축선을 추가한다. 사거리 정합(ENV-AXIS-FIT-01)상 **장거리 위협만** 배정
+    // 가능하다(무인기·헬기는 개념 최대사거리 미달 — checkAxisThreatFit가 거부).
+    southcentral: {
+      label: '남부중앙축(대구·구미)',
+      entry: [38.42, 127.30], entryNote: '평강 인근 개념좌표(북측 중부 종심 발사권 — central과 동일 발사권)',
+      target: [35.87, 128.60], targetNote: '대구 개념좌표(남부 내륙 산업·군수 권역)',
+      launchZones: ['deep'], conceptReachKm: 306,
+      reachNote: '북측 중부 종심 개념 발사권→남부 내륙 표적 개념거리 (ENV-AXIS-FIT-01, ADR-064)'
+    },
+    southeast: {
+      label: '남동축(부산·울산)',
+      entry: [38.42, 127.30], entryNote: '평강 인근 개념좌표(북측 중부 종심 발사권)',
+      target: [35.18, 129.08], targetNote: '부산 개념좌표(항만·병참 권역)',
+      launchZones: ['deep'], conceptReachKm: 400,
+      reachNote: '북측 중부 종심 개념 발사권→남동 항만 표적 개념거리 (ENV-AXIS-FIT-01, ADR-064)'
     }
+  };
+
+  // ADR-064: 남부 축선 키 — 시나리오 mix 배정·회귀 검증이 이 목록을 정본으로 쓴다.
+  KJ.SOUTHERN_AXIS_KEYS = Object.freeze(['southcentral', 'southeast']);
+
+  /**
+   * ADR-064: 축선 거리에 비례한 체공시간(dwell) 환산.
+   * 위협 위치는 lerp(entry, target, (t−spawnT)/dwellSec)이므로 **거리와 무관하게 dwellSec을
+   * 그대로 쓰면 먼 축선일수록 함의 속도가 비례해 빨라진다**(예: 순항미사일 120초에 400km =
+   * 3.3km/s — 자기 baseSpeed 272m/s의 12배). 남부 축선은 기존 중부축(140km)을 기준으로
+   * 거리에 비례해 체공시간을 늘려, 모델이 이미 쓰던 함의 속도를 그대로 유지한다.
+   * 새 속도 값을 만들지 않는다 — 기준거리만 정의한다(THREAT-AXIS-DWELL-SCALE-01, 등급 C).
+   */
+  KJ.AXIS_DWELL_REFERENCE_KM = 140;
+  KJ.axisDwellSec = function (axisKey, baseDwellSec) {
+    var a = KJ.AXES[axisKey];
+    if (!a || !a.conceptReachKm || !KJ.AXIS_DWELL_REFERENCE_KM) return baseDwellSec;
+    if (KJ.SOUTHERN_AXIS_KEYS.indexOf(axisKey) === -1) return baseDwellSec; // 기존 축선 불변
+    return baseDwellSec * (a.conceptReachKm / KJ.AXIS_DWELL_REFERENCE_KM);
   };
 
   /**

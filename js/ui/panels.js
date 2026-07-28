@@ -21,6 +21,7 @@
     var features = { highResolutionDeployment: true };
     if (state && state.appr === '1') features.approvalChain = true;
     if (state && state.disp === '1') features.threatTargetDispersion = true; // ADR-063
+    if (state && state.south === '1') features.southernAxes = true; // ADR-064
     return { deploymentId: state && state.dep, features: features, modelFidelity: 'iads-c2' };
   }
   function catalogFor(state) {
@@ -45,7 +46,8 @@
   function pipelineData(state, onReady) {
     var key = [state.sc, state.x, state.seed, state.dur, state.dep, 'iads-c2',
       state.appr === '1' ? 'appr' : '',
-      state.disp === '1' ? 'disp' : ''].join('|'); // ADR-062·063: 토글도 캐시 키
+      state.disp === '1' ? 'disp' : '',
+      state.south === '1' ? 'south' : ''].join('|'); // ADR-062·063·064: 토글도 캐시 키
     if (desCache.key === key) return desCache.data;
     if (desCache.errorKey === key) return null;
     if (desCache.pendingKey === key) return null;

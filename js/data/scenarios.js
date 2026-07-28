@@ -94,6 +94,21 @@
         { type: 'fighter', axis: 'west', ratePerMin: 0.5 },
         { type: 'fighter', axis: 'central', ratePerMin: 0.3 }
       ],
+      // ── ADR-064: 남부 종심 축선 배분 (features.southernAxes ON일 때만 도착 예약) ──
+      // λ는 새로 지어내지 않고 **수도권 대응 축선 λ × 남부 배분비 0.1**(THREAT-SOUTH-SHARE-01,
+      // 등급 C)로 파생한다: srbm 1.5→0.15, mrl_large(central) 1.0→0.10, cruise 0.3→0.03,
+      // fighter(central) 0.3→0.03. 무인기·헬기는 개념 사거리 미달로 배정 불가이고
+      // (ENV-AXIS-FIT-01가 거부), mrl_large는 부산축(400km)에서 산포 포함 최악거리 415km >
+      // 개념 최대사거리 400km라 **대구축에만** 배정한다.
+      southernMix: [
+        { type: 'srbm', axis: 'southcentral', ratePerMin: 0.15 },
+        { type: 'mrl_large', axis: 'southcentral', ratePerMin: 0.10 },
+        { type: 'cruise', axis: 'southcentral', ratePerMin: 0.03 },
+        { type: 'fighter', axis: 'southcentral', ratePerMin: 0.03 },
+        { type: 'srbm', axis: 'southeast', ratePerMin: 0.15 },
+        { type: 'cruise', axis: 'southeast', ratePerMin: 0.03 },
+        { type: 'fighter', axis: 'southeast', ratePerMin: 0.03 }
+      ],
       defaultMode: 'asis'
     }
   ];

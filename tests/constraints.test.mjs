@@ -104,11 +104,15 @@ KJ.DEPLOYMENT_IDS.forEach(function (id) {
       typeof n.coordNote === 'string' && n.coordNote.indexOf('개념') !== -1;
   }), id + ' 전 노드(' + c.nodes.length + '개) coord + "개념" 명시 coordNote 보유');
 });
+// ADR-064: 남부 종심 축선 2종 추가 — 개념좌표 주석 의무는 전 축선에 동일하게 적용된다.
 var axisKeys = Object.keys(KJ.AXES);
-assert(axisKeys.length === 4 && axisKeys.every(function (k) {
+assert(axisKeys.length === 6 && axisKeys.every(function (k) {
   var a = KJ.AXES[k];
   return a.entryNote.indexOf('개념') !== -1 && a.targetNote.indexOf('개념') !== -1;
 }), '전 축선(' + axisKeys.length + '개) 진입/표적 좌표 "개념" 명시');
+assert(KJ.SOUTHERN_AXIS_KEYS.every(function (k) { return KJ.AXES[k]; }) &&
+  KJ.SOUTHERN_AXIS_KEYS.length === 2,
+  '남부 종심 축선 2종(대구·부산)이 등록됨 (ADR-064)');
 
 // ── (e) 지상배치 방공 C2 한정 (ADR-060) — 전투기·이지스·조기경보기 미포함 ──
 console.log('# (e) 전투기류 미포함 (ADR-060 범위 선언)');

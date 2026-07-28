@@ -27,7 +27,7 @@
 <body>
 
 <h1>K-JAMDS 시뮬레이터 — 사용자 가이드</h1>
-<p class="small">문서 버전: v3 · 처음 쓰는 분을 위한 안내입니다. 기술 배경 없이 읽을 수 있게 썼습니다.</p>
+<p class="small">문서 버전: v3.4 (Phase 6 — ADR-061 반영) · 처음 쓰는 분을 위한 안내입니다. 기술 배경 없이 읽을 수 있게 썼습니다.</p>
 
 <div class="box warn"><span class="bt">먼저 알아둘 것</span>
 이 시뮬레이터의 모든 수치는 <b>공개자료 기반의 연구용 개념값</b>입니다. 실제 무기 성능이나 실제 배치가
@@ -50,11 +50,11 @@
 <h3>2.1 로컬 서버로 실행 (권장)</h3>
 <pre>./scripts/serve.sh     # 또는: python3 -m http.server 8000
 # 브라우저에서 http://localhost:8000 접속</pre>
-<div class="box warn"><span class="bt">주의</span> 모델 충실도 <b>IADS_C2 물리</b>는 반드시 서버 실행이
-필요합니다(브라우저 보안 정책상 <code>file://</code>로 열면 물리 모듈이 로드되지 않습니다).</div>
 <h3>2.2 단일본 파일</h3>
 <p><code>K-JAMDS_시뮬레이터_단일본.html</code>을 더블클릭하면 서버 없이 열립니다.
-단, 위 이유로 <b>IADS_C2 물리 충실도는 동작하지 않습니다</b>(개념 교전 compat만 가능).</p>
+물리 모듈(IADS_C2 커널)은 단일본 안에 함께 들어 있어 <b>서버 없이도 동일한 물리 시뮬레이션이
+동작합니다</b>. 다만 계산을 백그라운드로 분리하지 못해(브라우저 보안 정책) 큰 배치·자동
+Monte Carlo는 서버 실행을 권장합니다.</p>
 
 <h2>3. 화면 사용법</h2>
 <h3>3.1 상단 컨트롤</h3>
@@ -66,8 +66,8 @@
   (=<code>HANBANDO_LEGACY_NORMAL</code>). FULL은 84개 포대 전면 배치라 느립니다.
   MCRC/KAMDOC 무력화 변형은 지휘소가 파괴된 상황을 봅니다.</td></tr>
 <tr><td>체계 모드</td><td>토글 OFF = As-Is(현 체계) / ON = To-Be(통합 체계)</td></tr>
-<tr><td>모델 충실도</td><td><b>compat(개념 교전)</b>: 빠르고 간단한 확률 모델 /
-  <b>IADS_C2 물리</b>: 레이더 물리(SNR·수평선)·요격점 계산·발사대 재장전까지 모사(서버 필요)</td></tr>
+<!-- ADR-061: 모델 충실도 선택은 폐기 — 모든 실행이 IADS_C2 물리(레이더 SNR·수평선·요격점
+     계산·발사대 재장전)로 돕니다. -->
 <tr><td>위협 강도 ×</td><td>위협 수 배수. 크게 할수록 지휘소가 포화되는 모습을 볼 수 있습니다</td></tr>
 </tbody>
 </table>
@@ -81,14 +81,14 @@
 </ol>
 <h3>3.3 딥링크</h3>
 <p>주소창 해시로 상태를 공유할 수 있습니다:</p>
-<pre>#tab=sim&sc=sc3&mode=asis&dep=HANBANDO_LEGACY_NORMAL&fid=iads-c2&x=1.5&seed=12345&dur=1800</pre>
+<pre>#tab=sim&sc=sc3&mode=asis&dep=HANBANDO_LEGACY_NORMAL&x=1.5&seed=12345&dur=1800</pre>
 <table>
 <thead><tr><th>키</th><th>값</th></tr></thead>
 <tbody>
 <tr><td><code>sc</code></td><td>sc1 | sc2 | sc3</td></tr>
 <tr><td><code>mode</code></td><td>asis | tobe</td></tr>
-<tr><td><code>dep</code></td><td>legacy | HANBANDO_LEGACY_* | HANBANDO_FULL_* (모르는 값은 legacy로 폴백)</td></tr>
-<tr><td><code>fid</code></td><td>compat | iads-c2</td></tr>
+<tr><td><code>dep</code></td><td>HANBANDO_LEGACY_* | HANBANDO_FULL_* (모르는 값·구 legacy는 기본 배치로 폴백)</td></tr>
+<tr><td><code>fid</code></td><td>(폐기 — ADR-061) 어떤 값이든 iads-c2로 정규화됩니다</td></tr>
 <tr><td><code>x</code> / <code>seed</code> / <code>dur</code></td><td>강도(0.5~3) / 난수 시드 / 시뮬레이션 시간(초)</td></tr>
 </tbody>
 </table>

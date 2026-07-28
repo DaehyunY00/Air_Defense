@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * K-JAMDS 시뮬레이터 — 지표 시각화 감사용 스크린샷 캡처 (docs/metrics-verification.md 부속)
+ * K-JAMDS 시뮬레이터 — 지표 시각화 감사용 스크린샷 캡처 (docs/screenshots/에 생성)
  *
  * 로컬 서버(python3 -m http.server 8000 등)를 미리 띄운 뒤 실행한다:
  *   node scripts/capture-metrics.mjs [baseUrl]   (기본 baseUrl: http://localhost:8000)

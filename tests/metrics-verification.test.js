@@ -1,5 +1,5 @@
 /**
- * K-JAMDS 시뮬레이터 — 지표 구현·시각화 검증 감사 (docs/metrics-verification.md 부속)
+ * K-JAMDS 시뮬레이터 — 지표 구현·시각화 검증 감사 (지표 정의는 docs/모의논리서.html §5)
  * 실행:  node tests/metrics-verification.test.js   (저장소 루트에서)
  *
  * 이 파일은 새 기능이 아니라 §1 체크리스트(18개 지표)의 "행위 검증(§2-2)" 중,

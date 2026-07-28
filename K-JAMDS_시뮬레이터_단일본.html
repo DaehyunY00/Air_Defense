@@ -7643,7 +7643,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     } else {
       // As-Is WTA (Phase 3 결정: 안 D 유지 — 변경 없음, 한계 문서화). 관측 가능한 최소부하 선택.
       // ⚠️ 한계: 전군 무기의 실시간 부하를 완벽 조회하는 것은 "COP 부재" 전제(KJADS GAP 5, 자산
-      // 미통합)와 모순된다. 대안(A 자기계통·C 낡은부하 등)의 편향 원장 영향은 측정해 docs/vv-report.md
+      // 미통합)와 모순된다. 대안(A 자기계통·C 낡은부하 등)의 편향 원장 영향은 측정해 ADR 원장
       // §4-5에 기록했고, 결론에 유리한 방향(To-Be 개선폭 확대)이라 근거 없이 채택하지 않는다.
       // 3C: 동점은 id 사전순(To-Be와 통일 — 종전 strict< 배열순 의존 제거).
       shooters.forEach(function (sh) {
@@ -10173,7 +10173,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
           { label: '비용교환비 (저가 포화위협)', mom: 'MoFE', kind: 'ratio', lower: true,
             a: ga.cost.exchangeSat, b: gb.cost.exchangeSat,
             tip: '무인기·장사정포 대응 소모 요격탄 비용 ÷ 격추 위협가치 (개념 단가, 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모. ' +
-              '⚠️ 함정: 분모에 "격추한" 위협만 들어가 **아무것도 안 쏘면 0으로 "최적"이 된다**(패배가 경제성으로 계상) — 반드시 "방어효율"·격추율과 함께 읽어라. To-Be가 항상 개선되는 지표가 아님(docs/metrics-verification.md).' },
+              '⚠️ 함정: 분모에 "격추한" 위협만 들어가 **아무것도 안 쏘면 0으로 "최적"이 된다**(패배가 경제성으로 계상) — 반드시 "방어효율"·격추율과 함께 읽어라. To-Be가 항상 개선되는 지표가 아님(docs/모의논리서.html §5).' },
           { label: '고가유도탄 보존율 (자원최적화)', mom: 'MoFE', kind: 'rate', lower: false, max: 1,
             a: ga.highValuePreservation, b: gb.highValuePreservation,
             tip: '1 − 고가 유도탄($≥5M, L-SAM) 소모액 ÷ 전체 요격탄 소모액 — 높을수록 고가 자산 보존(KJADS 원칙 5-1 직접 지표). ' +
@@ -11459,7 +11459,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         tip: '서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합.' },
       { label: '비용교환비 (저가 포화위협)', mom: 'MoFE', a: asisG.cost.exchangeSat, b: tobeG.cost.exchangeSat, kind: 'ratio', lower: true,
         tip: '무인기·장사정포 대응에 소모한 개념 요격탄 비용 ÷ 격추 위협가치 (WPN/THR-*-COST-01, 타 전역 공개수치 기반 개념값 — 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모. ' +
-          '⚠️ 함정: 분모에 "격추한" 위협만 들어가 아무것도 안 쏘면 0으로 "최적"이 된다(패배가 경제성으로 계상) — 반드시 아래 "방어효율"·격추율과 함께 읽어라. To-Be가 항상 개선되는 지표가 아님(docs/metrics-verification.md).' },
+          '⚠️ 함정: 분모에 "격추한" 위협만 들어가 아무것도 안 쏘면 0으로 "최적"이 된다(패배가 경제성으로 계상) — 반드시 아래 "방어효율"·격추율과 함께 읽어라. To-Be가 항상 개선되는 지표가 아님(docs/모의논리서.html §5).' },
       { label: '방어효율 (방어한 위협가치 비율)', mom: 'MoFE', a: asisG.cost.defenseEfficiency, b: tobeG.cost.defenseEfficiency, kind: 'rate', lower: false, max: 1,
         tip: '격추 위협가치 ÷ (격추 + 누수 위협가치) — 전체 위협가치 중 실제로 방어(격추)한 비율. 비용교환비의 "안 쏘면 최적" 함정을 반전한다(안 쏘면 방어효율 0=최악). exchange가 누수를 경제성으로 보상하던 결함(⑨ 사실 c)의 보완 지표 — exchange는 회귀 안전을 위해 그대로 유지.' },
       // ── 보조 지표 ──

@@ -41,7 +41,7 @@ assert(g6on.detected === g6def.detected, 'sensorPdFusion 기본 = 명시 ON (기
 var g6off = KJ.runDES({ scenario: KJ.scenarioById('sc1'), mode: 'tobe', intensity: 2.5, seed: 3, endTimeSec: 1800, features: { sensorPdFusion: false } }).global;
 assert(typeof g6off.detected === 'number',
   'sensorPdFusion OFF 실행 가능 — 통합前 탐지식(detectFactor만)으로 복귀(그리기 수 동일, 탐지 계층 bit-clean). ' +
-  '⚠️ 전체 bit-exact 기준선 복원은 CRN이 도착 스트림을 바꿔 불가(docs/integration-audit.md G2)');
+  '⚠️ 전체 bit-exact 기준선 복원은 CRN이 도착 스트림을 바꿔 불가(ADR 원장·docs/params.md CRN-01 참조)');
 
 // ══════════ Phase 1 — 무기별 pk 차등 (문서값 배선) ══════════
 console.log('# Phase 1 — 무기별 pk 차등');

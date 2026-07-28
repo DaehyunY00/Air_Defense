@@ -13,7 +13,9 @@ import path from 'node:path';
 import { ROOT } from './experiment-lib.mjs';
 
 const DIR = path.join(ROOT, 'artifacts', 'experiment');
-const OUT = path.join(ROOT, 'docs', '실험보고서_AsIs_ToBe.html');
+// 정리된 실험보고서(docs/실험보고서.html)는 수기 작성 단일 권위다. 이 생성기는 아티팩트에서
+// 표를 재생성하는 데이터 부록만 만든다(문서 삭제·재작성 2026-07-28).
+const OUT = path.join(ROOT, 'docs', '실험보고서_부록_자동생성.html');
 
 const SC_NAME = { sc1: 'SC1 경계 침투(교전 중복·책임공백)', sc2: 'SC2 무인기 동시 남파', sc3: 'SC3 전략적 섞어쏘기' };
 const DEP_NAME = {
@@ -632,13 +634,13 @@ ${deploymentTable()}
 <p class="small">참고로 이 재실행은 <b>결정론 회귀 시험</b>도 겸합니다 — 엔진·난수·집계 어디에도
 의도치 않은 변화가 없었음을 21셀 1,020회 규모로 확인한 셈입니다. 시정 1~7은 초판 실험을
 돌리기 <i>전에</i> 이미 반영돼 있었고(시정 7은 이 실험 도중 발견돼 반영 후 재실행),
-그 내역은 <code>docs/metrics-verification.md</code> §6에 있습니다.</p>
+그 내역은 <code>docs/모의논리서.html</code> §5(지표 계산 방식)를 참조하십시오.</p>
 
 <div class="box"><b class="t">재현 방법</b>
 전 셀은 결정론적입니다. 동일 명령으로 같은 수치를 재현할 수 있습니다.<br>
 <code>node scripts/experiment-run.mjs --cell "sc3|legacy|compat|1|30"</code><br>
 <code>node scripts/experiment-run.mjs --sweep "legacy|compat|20"</code><br>
-<code>node scripts/experiment-report.mjs</code> → <code>docs/실험보고서_AsIs_ToBe.html</code></div>`;
+<code>node scripts/experiment-report.mjs</code> → <code>docs/실험보고서_부록_자동생성.html</code></div>`;
 }
 
 fs.writeFileSync(OUT, html);

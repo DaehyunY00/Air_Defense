@@ -2,7 +2,7 @@
 /**
  * K-JAMDS 시뮬레이터 — As-Is↔To-Be 실험 보고서 PDF 빌드
  *
- * docs/실험보고서_AsIs_ToBe.html(experiment-report.mjs 산출)을 headless Chromium으로
+ * docs/실험보고서_부록_자동생성.html(experiment-report.mjs 산출)을 headless Chromium으로
  * 렌더해 같은 이름의 PDF를 만든다. 표가 넓어 A4 가로(landscape)로 출력한다.
  *
  * 실행:  node scripts/build-experiment-pdf.mjs   (저장소 루트에서)
@@ -27,8 +27,8 @@ async function loadChromium() {
 const chromium = await loadChromium();
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const src = path.join(root, 'docs', '실험보고서_AsIs_ToBe.html');
-const out = path.join(root, 'docs', '실험보고서_AsIs_ToBe.pdf');
+const src = path.join(root, 'docs', '실험보고서_부록_자동생성.html');
+const out = path.join(root, 'docs', '실험보고서_부록_자동생성.pdf');
 
 const browser = await chromium.launch({ headless: true, executablePath: process.env.PW_CHROMIUM_PATH || undefined });
 const page = await browser.newPage();

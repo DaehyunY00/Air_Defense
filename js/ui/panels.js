@@ -473,7 +473,7 @@
           { label: '비용교환비 (저가 포화위협)', mom: 'MoFE', kind: 'ratio', lower: true,
             a: ga.cost.exchangeSat, b: gb.cost.exchangeSat,
             tip: '무인기·장사정포 대응 소모 요격탄 비용 ÷ 격추 위협가치 (개념 단가, 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모. ' +
-              '⚠️ 함정: 분모에 "격추한" 위협만 들어가 **아무것도 안 쏘면 0으로 "최적"이 된다**(패배가 경제성으로 계상) — 반드시 "방어효율"·격추율과 함께 읽어라. To-Be가 항상 개선되는 지표가 아님(docs/metrics-verification.md).' },
+              '⚠️ 함정: 분모에 "격추한" 위협만 들어가 **아무것도 안 쏘면 0으로 "최적"이 된다**(패배가 경제성으로 계상) — 반드시 "방어효율"·격추율과 함께 읽어라. To-Be가 항상 개선되는 지표가 아님(docs/모의논리서.html §5).' },
           { label: '고가유도탄 보존율 (자원최적화)', mom: 'MoFE', kind: 'rate', lower: false, max: 1,
             a: ga.highValuePreservation, b: gb.highValuePreservation,
             tip: '1 − 고가 유도탄($≥5M, L-SAM) 소모액 ÷ 전체 요격탄 소모액 — 높을수록 고가 자산 보존(KJADS 원칙 5-1 직접 지표). ' +

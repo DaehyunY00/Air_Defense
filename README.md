@@ -113,15 +113,14 @@ K-JAMDS_시뮬레이터_단일본.html
   종전에는 직전 단일본에서 Leaflet 블록을 추출해 재사용했으나, 단일본이 자기 자신의 입력이 되는
   구조라 동봉으로 대체했습니다(`vendor/leaflet-1.9.4/README.md`).
 
-> 📘 **처음 사용한다면**: [`docs/사용자_가이드.pdf`](docs/사용자_가이드.pdf) — 기초 조작·용어 사전·화면별 설명·
-> 지표 읽는 법·결과 해석 레시피(원본 `docs/사용자_가이드.html`, 재생성 `node scripts/build-guide-pdf.mjs`).
+> 📘 **처음 사용한다면**: [`docs/사용자_가이드.html`](docs/사용자_가이드.html) — 실행법·화면 조작·
+> 지표 읽는 법(일상어)·자주 오해되는 지표·FAQ.
 >
-> 📐 **모델 내부가 궁금하다면**: [`docs/모의논리서.pdf`](docs/모의논리서.pdf) — 9단계 파이프라인의 처리 논리,
-> M/M/c/K·Erlang-C·SNR/RCS 수식, 난수·재현성, 지표 산출식, 고해상도 물리, 감사 방법론. 각 장이
-> "쉽게 말하면" 요약과 코드 수준 수식을 함께 제시합니다.
+> 📐 **모델 내부가 궁금하다면**: [`docs/모의논리서.html`](docs/모의논리서.html) — IADS_C2 원본에서
+> 가져온 것/가져오지 않은 것, As-Is/To-Be C2 파이프라인 다이어그램, 지표 계산식 전체, V&V 장치, 한계.
 >
-> 📊 **실험 결과**: [`docs/실험보고서_AsIs_ToBe.pdf`](docs/실험보고서_AsIs_ToBe.pdf) — 시나리오 × 배치 ×
-> 충실도 21셀 · 1,020회 paired 실행의 As-Is↔To-Be 비교와 유의성 판정.
+> 📊 **실험 결과**: [`docs/실험보고서.html`](docs/실험보고서.html) — paired MC(30 seed) As-Is↔To-Be
+> 비교(v3 재실측), ADR-056 결함 확정·수정의 단독 효과 공개, G6 결론 재산출.
 
 ## 9단계 C2 파이프라인 + 단계별 정밀화(①~⑨)
 
@@ -152,7 +151,7 @@ DES 엔진(`js/engine/sim-engine.js`)은 개별 위협 객체를 이벤트 구�
 
 ## 감사 추적 방법론 — "고쳤더니 좋아졌다"는 비판의 방어
 
-단계별 개선이 결론을 유리하게만 움직이지 않았음을 **정량 감사**로 증명합니다(`docs/integration-audit.md`).
+단계별 개선이 결론을 유리하게만 움직이지 않았음을 **정량 감사**로 증명합니다(감사 이력은 ADR과 커밋 로그가 원장입니다).
 
 - **기능 플래그 + 되돌리기 증명**: 모든 개선은 토글 가능하며, **플래그를 전부 끄면 개선 이전 지문과 완전 일치**(bit-clean).
   가장 중요한 불변으로 회귀 테스트에 고정합니다(`tests/reengage.test.js`·`resource.test.js`).
@@ -191,15 +190,14 @@ js/
   ui/    map-view.js · panels.js · sim-view.js · mc-panel.js · geo.js · table-sort.js
   main.js                        # 부트스트랩·상태 관리 (해시 = 상태 단일원천)
 docs/
-  모의논리서.pdf                  # ★ 모의논리서: 9단계 파이프라인·수식·난수·지표 산출식 전 계층 기술
-  사용자_가이드.pdf               # 기초 조작·용어 사전·화면별 설명·지표 읽는 법·해석 레시피
+  모의논리서.html                 # ★ IADS 이식 범위·C2 파이프라인 다이어그램·지표 계산식·V&V·한계
+  사용자_가이드.html              # 실행법·화면 조작·지표 읽는 법(일상어)·FAQ
+  실험보고서.html                # ★ paired MC As-Is↔To-Be 비교(v3 재실측)·ADR-056 효과·G6 재산출
   params.md                      # 파라미터 근거표 (ID·출처·인용·신뢰도 A/B/C·MC 적용방식)
-  vv-report.md                   # V&V 종합: 매핑표·극한값·민감도·face validity·단계별 잔여 한계
-  integration-audit.md           # ★ 통합 검증 감사(G1~G7): 회귀·되돌리기·死코드·제약·편향원장·결론 재산출·자원최적화 반증
-  adr/ADR-001~009, 036, 049~054  # 결정 기록(pk 스키마·누수비용·절단·timeout분해·pk상관·salvo·비용WTA·재고·재가중 /
-                                 #  USFK 독립축·SHORAD 벨트·실패분류v2·군단AOC·legacy 재배선·LEGACY_HIRES 이식)
-  metrics-verification.md        # 지표 검증 감사 (비용교환비 비단조성 등) + 지표 계정 결함 7건 시정
-  실험보고서_AsIs_ToBe.pdf       # ★ 시나리오×배치×충실도 21셀 As-Is↔To-Be 비교 실험 결과
+  high-resolution-iads-architecture.md  # 목표 아키텍처(정책 객체 분리 §5·어댑터 폐기 조건 §6)
+  adr/ADR-001~009, 036, 049~056  # 결정 기록(pk 스키마·누수비용·절단·timeout분해·pk상관·salvo·비용WTA·재고·재가중 /
+                                 #  USFK 독립축·SHORAD 벨트·실패분류v2·군단AOC·legacy 재배선·LEGACY_HIRES 이식 /
+                                 #  MINI 폐기·To-Be 교전상태 통합)
 scripts/
   serve.sh · build-single.mjs · build-guide-pdf.mjs · verify-vendor-leaflet.mjs · bias-ledger.mjs · step1~2·phase4~6 스윕
   experiment-lib.mjs · experiment-run.mjs · experiment-delegation.mjs
@@ -263,7 +261,7 @@ node tests/run-all.js            # 전체 회귀 — JS/ESM 39개 구문검증 +
 > LEGACY_HIRES −30초 · MINI −52초(ADR-055로 폐기된 배치의 기록값) · FULL −21초(저부하 −10초 안팎, 포화 SC3에서만 −88~−95초 —
 > 이득이 홉 제거가 아니라 **대기행렬 해소**에서 나오므로 부하의 함수).
 > **"통합 C2가 결심을 N초 앞당긴다"고 인용할 때는 어느 배치에서 잰 값인지 반드시 명시하십시오.**
-> 상세는 `docs/실험보고서_AsIs_ToBe.pdf` §8.2 · `docs/모의논리서.pdf` §13.7.
+> 상세는 `docs/실험보고서.html` §2 · `docs/모의논리서.html` §3.
 
 ### As-Is ↔ To-Be 비교 실험 (재현 가능)
 
@@ -282,7 +280,8 @@ node scripts/experiment-delegation.mjs                            # As-Is 분권
 node scripts/experiment-report.mjs && node scripts/build-experiment-pdf.mjs
 ```
 
-결과는 `artifacts/experiment/*.json`에 남고 보고서는 `docs/실험보고서_AsIs_ToBe.pdf`로 생성됩니다.
+결과는 `artifacts/experiment/*.json`에 남습니다. 정리된 결과는 `docs/실험보고서.html`이 단일 권위이며,
+`scripts/experiment-report.mjs`는 아티팩트에서 자동 생성되는 데이터 부록(`docs/실험보고서_부록_자동생성.html`)을 만듭니다.
 전 셀이 결정론적이라 동일 명령은 동일 수치를 재현합니다.
 
 주요 결과(21셀 · 1,020회 paired 실행): **11셀에서 To-Be 유의 개선, 0셀 악화, 10셀 미분리(n.s.)**.
@@ -297,7 +296,7 @@ As-Is 실패율이 오히려 70.1%→52.4%로 **낮아지는데**, 절단 효과
 "임계 이후 통합 C2의 가치가 비선형적으로 커진다"는 통상적 서사가 이 설정에서는 성립하지 않습니다.
 
 테스트는 `window.KJ` 네임스페이스를 Node에서 로드해 실행합니다. 브라우저에서는 4개 탭에서 대화형으로 확인합니다.
-V&V 종합은 **`docs/vv-report.md`**, 통합 감사(되돌리기·편향원장·반증·결론 재산출)는 **`docs/integration-audit.md`** 참조.
+V&V 장치 종합은 **`docs/모의논리서.html` §6**, 실험·결론 재산출은 **`docs/실험보고서.html`** 참조.
 
 ### 고해상도 결과의 요격 실패율 읽기
 

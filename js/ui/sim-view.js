@@ -1055,7 +1055,7 @@
         tip: '서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합.' },
       { label: '비용교환비 (저가 포화위협)', mom: 'MoFE', a: asisG.cost.exchangeSat, b: tobeG.cost.exchangeSat, kind: 'ratio', lower: true,
         tip: '무인기·장사정포 대응에 소모한 개념 요격탄 비용 ÷ 격추 위협가치 (WPN/THR-*-COST-01, 타 전역 공개수치 기반 개념값 — 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모. ' +
-          '⚠️ 함정: 분모에 "격추한" 위협만 들어가 아무것도 안 쏘면 0으로 "최적"이 된다(패배가 경제성으로 계상) — 반드시 아래 "방어효율"·격추율과 함께 읽어라. To-Be가 항상 개선되는 지표가 아님(docs/metrics-verification.md).' },
+          '⚠️ 함정: 분모에 "격추한" 위협만 들어가 아무것도 안 쏘면 0으로 "최적"이 된다(패배가 경제성으로 계상) — 반드시 아래 "방어효율"·격추율과 함께 읽어라. To-Be가 항상 개선되는 지표가 아님(docs/모의논리서.html §5).' },
       { label: '방어효율 (방어한 위협가치 비율)', mom: 'MoFE', a: asisG.cost.defenseEfficiency, b: tobeG.cost.defenseEfficiency, kind: 'rate', lower: false, max: 1,
         tip: '격추 위협가치 ÷ (격추 + 누수 위협가치) — 전체 위협가치 중 실제로 방어(격추)한 비율. 비용교환비의 "안 쏘면 최적" 함정을 반전한다(안 쏘면 방어효율 0=최악). exchange가 누수를 경제성으로 보상하던 결함(⑨ 사실 c)의 보완 지표 — exchange는 회귀 안전을 위해 그대로 유지.' },
       // ── 보조 지표 ──

@@ -248,6 +248,20 @@
 - **신뢰도 등급**: C(개념 임계)
 - **MC 적용방식**: 고정 (민감도스윕 후보)
 
+### [IADS-APPR-COORD-01] 고해상도 승인 협조 링크 — 군단AOC→MCRC coord (ADR-058, approvalChain)
+- **값/분포**: As-Is `VOICE`(대표 20 s · Uniform(10,30) — `C2-VOICE-COORD-01` 승계) / To-Be `DL_FAST` 2 s (linkSemanticsV2 ON이면 IFCN 1 s)
+- **단위**: 초
+- **출처**: legacy 승인 협조(`C2-COORD-HORIZ-01`)의 고해상도 이식. **⚠️ 이 값은 링크(전선) 성능이 아니라 음성/VTC 협조 절차 지연이다** — 교전의사 선언·책임구역 확인·중복 회피 협상의 왕복 협의. KJADS 문제 정의("각 군 개별 작전 → 음성 VTC 의존")의 **육↔공 계면에만** 적용하며, 군 내부 링크는 linkSemanticsV2가 codex 정합(1 s)을 따른다. IADS_codex는 Link-K(전선)를 "Link-16급 가정, 1초 보수"로 판정했으나 **육↔공 협조 절차는 codex가 모델링하지 않아 참고 정본이 없다** — 두 값이 다른 사유가 이것이다(전선 ≠ 절차).
+- **적용범위**: `approvalChain` ON일 때 고해상도 변형 카탈로그의 `군단AOC→MCRC` `kind='coord'` 링크. 교전현황(`status`) 채널과 의도적으로 분리 — 한 채널에 두 기능을 얹으면 효과 분해가 불가하고, status 채널은 As-Is에서 이미 88~91% 드롭 중이라 승인이 거의 내려오지 않게 된다(대안 '채널 공유'는 ADR-058에 기술).
+- **신뢰도 등급**: C(개념 절차 지연 — C2-VOICE-COORD-01 근거·변경 이력 승계)
+- **MC 적용방식**: 균등분포 샘플링(`_linkDelay`)
+
+### [IADS-APPR-CHAIN-01] 고해상도 승인 계선 이식 명세 (ADR-058)
+- **값/분포**: 수치 신규 없음 — 전부 기존 파라미터 승계: 승인권자·자동화 3단계 = `js/data/threats.js`(`approvalLevel`/`automation`, 위협별 원장 기등록), 위임 임계 = `C2-DELEG-THRESH-01`(As-Is 4/To-Be 1), 승인 서비스 = 승인권자 노드의 기존 처리시간·K(`IADS-C2-COMPAT-01`·`ENV-DES-C2K-01` — track·approval이 같은 K 공유, legacy 동일 의미론)
+- **적용범위**: `approvalChain` ON일 때 native `_iadsDecide`의 As-Is `LOCAL_AD` 축(ROK 국지방공)에만 홉+서비스. 타 한국군 축은 승인권자=자기 자신(홉 없음), **USFK 축은 ADR-036에 따라 계선 미적용**(어서션 고정). `approvalChainTobe`는 반증 전용(To-Be에 As-Is 계선 강제)
+- **신뢰도 등급**: 해당 없음(승계 명세)
+- **MC 적용방식**: 승계 파라미터의 방식을 따름
+
 ### [C2-COORD-HORIZ-01] 수평 교전협조 링크 (Phase 2 ⑥⑦, `js/data/links.js`)
 - **값/분포**: As-Is 신규 coord 링크 — `AOC-1C↔JAOC-CD`(양방향)·`MCRC→AOC-1C`·`MCRC→JAOC-CD`. As-Is=`VOICE_COORD`(Uniform min10/max30, 대표 20s — 2026-07-24 실험 변경, 원래 대칭 삼각분포 min90/mode180/max270·대표 180s), To-Be=`DL_FAST`(2s)
 - **단위**: 초(링크 전달 지연)

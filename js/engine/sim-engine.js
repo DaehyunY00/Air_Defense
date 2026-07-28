@@ -210,10 +210,17 @@
     // ADR-057: 링크 의미론 codex 정합 — 센서→C2는 보고 주기(reportingPeriod), C2↔C2는 전송
     // 지연(codex shortRange 1초). 실제 분기는 어댑터의 변형 카탈로그가 수행한다(캐시 분리).
     this.linkSemanticsV2 = ff('linkSemanticsV2', false);
+    // ADR-058: 승인 계선 이식 — As-Is LOCAL_AD 축(군단 AOC)의 교전이 승인권자(KAOC→MCRC)
+    // 협조 홉 + 승인 서비스(kind='approval')를 거친다. 동적 권한위임(DELEG_QUEUE_MULT)·
+    // automation 3단계 차등 포함. approvalChainTobe는 반증 전용 — To-Be에도 As-Is 계선 강제.
+    this.approvalChain = ff('approvalChain', false);
+    this.approvalChainTobe = ff('approvalChainTobe', false);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
     if (this.highResolutionDeployment) this.features.highResolutionDeployment = true;
     if (this.unifiedEngagementState) this.features.unifiedEngagementState = true;
     if (this.linkSemanticsV2) this.features.linkSemanticsV2 = true;
+    if (this.approvalChain) this.features.approvalChain = true;
+    if (this.approvalChainTobe) this.features.approvalChainTobe = true;
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
@@ -538,7 +545,8 @@
       }
       // Native IADS may have several mutually unaware ICC/USFK branches for the
       // same real threat.  Saturating one branch must not kill the other branch.
-      var branchLocalFailure = job.kind === 'iads_track' || job.kind === 'directive_reception';
+      var branchLocalFailure = job.kind === 'iads_track' || job.kind === 'directive_reception' ||
+        (job.kind === 'approval' && this.nativeIads); // ADR-058: native 다계통 — 한 축의 승인 드롭이 전 계통을 죽이지 않는다
       if (!branchLocalFailure) job.threat.pipelineDead = true;
       if (!branchLocalFailure && !job.threat.leakReason) job.threat.leakReason = 'overflow:' + nsId;
       disposition = 'dropped';
@@ -1672,6 +1680,14 @@
       this.global.deconflicted++;
       return;
     }
+    // ADR-058: 승인 계선 — 계획 수립 전에 승인권한을 해소한다. LOCAL_AD 축(ROK 국지방공)에만
+    // 적용된다: 다른 한국군 축은 승인권자가 자기 자신으로 해소되어 홉이 없고(§0-(6) 실측),
+    // USFK 축은 ADR-036(권한 자동 통합 금지)에 따라 계선 자체를 적용하지 않는다.
+    if (this.approvalChain && commander.axis === 'LOCAL_AD') {
+      var gate = this._iadsApprovalGate(threat, commander, t);
+      if (gate === 'wait' || gate === 'blocked') return;
+      // 'granted'/'skip' → 기존 경로 계속
+    }
     var self = this, candidates = [], nextAt = Infinity, reasons = {};
     commander.batteryIds.forEach(function (id) {
       var shooter = self._nodeById(id);
@@ -1759,6 +1775,99 @@
   Simulation.prototype._onIadsRetry = function (t, d) {
     if (d.threat._iadsRetryAt) delete d.threat._iadsRetryAt[d.key];
     this._iadsDecide(d.threat, t, d.commander);
+  };
+
+  /**
+   * ADR-058: 승인 계선 게이트 — legacy `_decision`의 이식.
+   * 반환: 'skip'(계선 비대상) | 'granted'(승인 완료/불필요/위임) | 'wait'(홉·서비스 진행 중)
+   *       | 'blocked'(협조 경로 부재 → responsibility_gap 확정).
+   * 정책 조회는 c2-policy 모듈(KJ.IADS)을 쓰고, 모듈이 없는 compat 실행에서는 동일 데이터
+   * (threats.js automation/approvalLevel)를 직접 읽는 동치 폴백을 쓴다.
+   */
+  Simulation.prototype._iadsApprovalGate = function (threat, commander, t) {
+    var key = commander.id + '|' + commander.axis;
+    threat._iadsApproval = threat._iadsApproval || {};
+    var st = threat._iadsApproval[key];
+    if (st === 'granted' || st === 'delegated') return 'granted';
+    if (st === 'pending') return 'wait';
+    if (st === 'blocked' || st === 'dropped') return 'blocked';
+    var tt = KJ.threatType(threat.type);
+    var counterfactual = this.approvalChainTobe;
+    var policy = (KJ.IADS && KJ.IADS.approvalPolicy)
+      ? KJ.IADS.approvalPolicy(tt, this.mode, counterfactual)
+      : (function (mode) {
+          var pm = counterfactual && mode === 'tobe' ? 'asis' : mode;
+          return { auto: tt.automation ? tt.automation[pm] || null : null,
+                   approvalRole: tt.approvalLevel ? tt.approvalLevel[pm] || null : null,
+                   policyMode: pm };
+        })(this.mode);
+    var approvalId = policy.approvalRole ? this._resolveRole(policy.approvalRole) : null;
+    // 사전승인 자동교전 / 승인권자 부재 / 자기 자신 승인 → 홉·서비스 없음 (legacy 동치)
+    if (policy.auto === 'auto-preauth' || !approvalId || approvalId === commander.id || !this.nodeState[approvalId]) {
+      threat._iadsApproval[key] = 'granted';
+      return 'granted';
+    }
+    // B-2: 부하 기반 동적 권한위임 — legacy DELEG_QUEUE_MULT(asis 4/tobe 1) 승계.
+    // 임계는 정책 모드 기준(반증 실행에서는 asis 임계) — c2-policy.delegationThreshold와 동치.
+    var apprNs = this.nodeState[approvalId];
+    if (apprNs.busy >= apprNs.c &&
+        apprNs.queue.length >= apprNs.c * DELEG_QUEUE_MULT[policy.policyMode]) {
+      this.deleg.count++;
+      if (this.deleg.firstT === null) this.deleg.firstT = t;
+      this.deleg.byNode[approvalId] = (this.deleg.byNode[approvalId] || 0) + 1;
+      this._mark(threat, '권한위임:' + approvalId, t);
+      threat._iadsApproval[key] = 'delegated';
+      return 'granted';
+    }
+    if (policy.auto === 'human-on-loop') {
+      // 감독하 자동교전: 협조 홉 생략, 승인권자 서비스만 (legacy 동치)
+      threat._iadsApproval[key] = 'pending';
+      this._mark(threat, '감독승인개시:' + approvalId, t);
+      this.schedule(t, PRI.LINK_ARRIVE, 'IADS_APPROVE_ARRIVE',
+        { threat: threat, commander: commander, appr: approvalId, key: key });
+      return 'wait';
+    }
+    // human-in-loop: coord 협조 홉(다익스트라 최소지연) → 승인 서비스
+    var path = this._iadsShortestPath(commander.id, approvalId, ['coord']);
+    if (path === null) {
+      if (!threat.leakReason) threat.leakReason = 'responsibility_gap';
+      this._recordFailureEvidence(threat, 'responsibility_gap',
+        { commanderId: commander.id, approvalId: approvalId, reason: 'no_coordination_path' });
+      this._metricEvent('RESPONSIBILITY_UNRESOLVED', t, threat, {
+        fromC2Id: commander.id, toC2Id: approvalId, reason: 'no_coordination_path'
+      });
+      threat._iadsApproval[key] = 'blocked';
+      return 'blocked';
+    }
+    var self = this, delay = 0;
+    path.forEach(function (l) {
+      delay += self._linkDelay(l.comm[self.mode]);
+      self._recordLink(l.from, l.to, l.comm[self.mode], 'coord');
+    });
+    // 결심지연 분해(legacy 1B 동치): coord 협조 홉 몫 누적 → meanCoordDelaySec
+    threat._coordDelay = (threat._coordDelay || 0) + delay;
+    threat._iadsApproval[key] = 'pending';
+    this._mark(threat, '협조개시:' + commander.id + '→' + approvalId, t);
+    this.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_APPROVE_ARRIVE',
+      { threat: threat, commander: commander, appr: approvalId, key: key });
+    return 'wait';
+  };
+
+  Simulation.prototype._onIadsApproveArrive = function (t, d) {
+    var self = this, threat = d.threat;
+    if (!threat.alive || threat.pipelineDead) return;
+    var disp = this._nodeArrive(d.appr, t, { threat: threat, kind: 'approval' }, function (t2, job) {
+      self._mark(job.threat, '승인완료:' + d.appr, t2);
+      job.threat._iadsApproval[d.key] = 'granted';
+      self._iadsDecide(job.threat, t2, d.commander);
+    });
+    if (disp === 'dropped') {
+      // native 다계통 구조: 승인 요청 드롭은 해당 축(LOCAL_AD)의 교전 기회 상실로 한정한다
+      // (_nodeArrive의 approval branch-local 처리). 실패 증거로 계상.
+      threat._iadsApproval[d.key] = 'dropped';
+      this._recordFailureEvidence(threat, 'approval_dropped',
+        { commanderId: d.commander.id, approvalId: d.appr });
+    }
   };
 
   Simulation.prototype._onIadsFire = function (t, d) {
@@ -1949,7 +2058,10 @@
       this.global.everEngaged++;
       this.global.engagedThreatValueM += KJ.threatType(threat.type).unitCostM || 0;
       this.global.timeToEngage.push(t - threat.spawnT);
-      if (threat._detectT != null) { this.decisionDelaySum += t - threat._detectT; this.decisionDelayCount++; }
+      if (threat._detectT != null) {
+        this.decisionDelaySum += t - threat._detectT; this.decisionDelayCount++;
+        this.coordDelaySum += (threat._coordDelay || 0); // ADR-058: 협조 홉 몫(OFF에서는 항상 0)
+      }
     }
     var cps = (ev.missile && ev.missile.costPerShot) || (shooter.engage && shooter.engage.costPerShotM) || 0;
     this.cost.interceptM += cps;
@@ -2524,6 +2636,7 @@
       case 'IADS_BDA': this._onIadsBda(ev.t, ev.data); break;
       case 'IADS_RELOAD': this._onIadsReload(ev.t, ev.data); break;
       case 'IADS_STATUS_ARRIVE': this._onIadsStatusArrive(ev.t, ev.data); break;
+      case 'IADS_APPROVE_ARRIVE': this._onIadsApproveArrive(ev.t, ev.data); break;
       case 'C2_ARRIVE_DUP': this._onC2ArriveDup(ev.t, ev.data); break;
       case 'FUSION_ARRIVE': this._onFusionArrive(ev.t, ev.data); break;
       case 'APPROVE_ARRIVE': this._onApproveArrive(ev.t, ev.data); break;

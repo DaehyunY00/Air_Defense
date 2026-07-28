@@ -71,10 +71,13 @@
     return out;
   }
 
-  function c2Service(type) {
+  // ADR-058 동반 스윕: 운용자 처리시간 성분(high/mid/low)을 변형 카탈로그로 선택.
+  // 기본 'mid'(종전과 동일 — bit-exact). IADS-C2-COMPAT-01 operator 값(등급 C) 민감도 분리용.
+  function c2Service(type, operatorLevel) {
     var p = type.processing;
     var sys = (p.system[0] + p.system[1]) / 2;
-    return sys + p.operator.mid;
+    var op = p.operator[operatorLevel || 'mid'];
+    return sys + (typeof op === 'number' ? op : p.operator.mid);
   }
 
   function c2Capacity(type) {
@@ -109,7 +112,9 @@
 
   function buildDeploymentCatalog(id, opts) {
     var v2 = !!(opts && opts.linkSemanticsV2);
-    var cacheKey = v2 ? id + '|linkV2' : id;
+    var appr = !!(opts && opts.approvalChain);
+    var opLevel = (opts && opts.c2OperatorLevel) || null; // 'high'|'low' (null=mid, 종전 동일)
+    var cacheKey = id + (v2 ? '|linkV2' : '') + (appr ? '|appr' : '') + (opLevel ? '|op:' + opLevel : '');
     if (cache[cacheKey]) return cache[cacheKey];
     var deployment = KJ.deploymentById(id);
     if (!deployment) throw new Error('Unknown high-resolution deployment: ' + id);
@@ -122,7 +127,7 @@
       var type = KJ.C2_TYPES[decl.typeId];
       if (!type) throw new Error(id + ': unknown C2 type ' + decl.typeId);
       var pos = positions[decl.posKey];
-      var svc = c2Service(type);
+      var svc = c2Service(type, opLevel);
       var node = {
         id: decl.id, instanceId: decl.id, typeId: decl.typeId,
         name: decl.instanceLabel || type.name,
@@ -250,6 +255,13 @@
       localAds.forEach(function (aoc) {
         addLink(links, mcrc.id, aoc.id, 'report', v2 ? C2_TRANSFER : LONG, v2 ? IFCN : DL_FAST, 'mcrc_to_corps_aoc_track');
         addLink(links, aoc.id, mcrc.id, 'status', VOICE_STATUS, v2 ? IFCN : DL_FAST, 'corps_aoc_engagement_status');
+        // ADR-058(approvalChain): 승인 협조 채널 — 교전현황(status) 채널과 의도적으로 분리.
+        // As-Is VOICE(대표 20초·Uniform(10,30))는 링크(전선) 성능이 아니라 **음성/VTC 협조
+        // 절차 지연**(교전의사 선언·책임구역 확인·중복 회피 협상)이다. 따라서 linkSemanticsV2가
+        // 켜져도 As-Is 측은 codex 정합(1초) 대상이 아니다 — codex는 육↔공 협조 절차를
+        // 모델링하지 않아 참고 정본이 없다(C2-VOICE-COORD-01 비고 참조).
+        // To-Be 측은 킬웹 네트워크를 따른다(v2 ON이면 IFCN 1초, OFF면 DL_FAST 2초).
+        if (appr) addLink(links, aoc.id, mcrc.id, 'coord', VOICE, v2 ? IFCN : DL_FAST, 'corps_aoc_approval');
       });
     }
     sensorNodes(['TPS880K']).forEach(function (s) {
@@ -334,7 +346,12 @@
     // 같아, 배치 ID를 생략한 호출이 legacy 결과와 가장 가까운 편성을 보게 된다.
     // ADR-057: linkSemanticsV2 ON이면 codex ADR-014 정합 링크 변형 카탈로그를 쓴다(캐시 분리).
     return buildDeploymentCatalog(config.deploymentId || 'HANBANDO_LEGACY_NORMAL',
-      { linkSemanticsV2: features.linkSemanticsV2 === true });
+      { linkSemanticsV2: features.linkSemanticsV2 === true,
+        // ADR-058: 승인 계선용 coord 링크는 변형 카탈로그에서만 생성(OFF wire shape 불변).
+        approvalChain: features.approvalChain === true || features.approvalChainTobe === true,
+        // ADR-058 동반 스윕: 운용자 처리시간 high/mid/low (기본 mid — 종전 동일)
+        c2OperatorLevel: features.c2OperatorLevel === 'high' || features.c2OperatorLevel === 'low'
+          ? features.c2OperatorLevel : null });
   };
   KJ.resolveRoleId = function (id, catalog) {
     catalog = catalog || KJ.LEGACY_CATALOG;

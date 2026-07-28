@@ -5,6 +5,7 @@ import * as physics from './physics.js';
 import * as track from './track-model.js';
 import * as engagement from './engagement-model.js';
 import * as c2 from './c2-agent.js';
+import * as c2policy from './c2-policy.js';
 
 export { EventQueue, LegacyEventQueueAdapter, RNG_DOMAIN, RngRegistry, deriveStream };
 export * from './sensor-model.js';
@@ -12,6 +13,7 @@ export * from './physics.js';
 export * from './track-model.js';
 export * from './engagement-model.js';
 export * from './c2-agent.js';
+export * from './c2-policy.js';
 
 export const MODEL_REVISION = 'iads-c2-physics-probability-parity-command-mop-2026-07-23';
 

@@ -99,6 +99,47 @@
 - **신뢰도 등급**: C
 - **MC 적용방식**: 고정
 
+### [IADS-LINK-RP-01] 센서 보고 주기 소비 — codex ADR-014 정합 (linkSemanticsV2, ADR-057)
+- **값/분포**: 센서 타입별 `reportingPeriod` — 그린파인 16 s · FPS-117 8 s · TPS-880K 4 s · 포대 MFR(L-SAM/MSAM/Patriot/AN-TPY2) 1 s
+- **단위**: 초
+- **출처**: `IADS_codex/src/config/weapon-data.js` `SENSOR_TYPES.<sensor>.reportingPeriod` — Air_Defense `js/config/system-types.js`가 동일 값으로 선언(종전에는 소비처 0건인 죽은 필드).
+- **인용문**: codex ADR-014 — "탐지자산→상위 C2 정보 전달은 일률 지연이 아니라 보고 주기 — 그림 나이가 0~P 톱니(sawtooth)로 변동. 탐지자산별 주기는 SENSOR_TYPES.<sensor>.reportingPeriod가 단일 출처."
+- **적용범위**: 플래그 `linkSemanticsV2` ON일 때 고해상도 카탈로그의 **As-Is** 센서→C2 `report` 링크. To-Be는 IADS-LINK-IFCN-01(킬웹 IFCN 1 s)이 지배한다 — codex "킬웹 보고주기 전부 1s".
+- **신뢰도 등급**: **C** — codex 정본 값 승계이나 codex 스스로 이 주기들을 "ADR-014 모델값(§0.13 D-5 — **가상 placeholder, 추후 실측 자료조사**)"라고 명시한다. 정본 승계 ≠ 공개근거 확보.
+- **MC 적용방식**: 고정(1단계 근사 — "센서별 고정 지연 = reportingPeriod". 톱니 신선도(0~P 변동)는 후속 과제로 ADR-057 §한계에 기록)
+
+### [IADS-LINK-IFCN-01] 킬웹(To-Be) IFCN 네트워크 주기 (linkSemanticsV2, ADR-057)
+- **값/분포**: 1 s (고정)
+- **단위**: 초
+- **출처**: `IADS_codex` `LINK_DELAYS.ifcn: 1` — 인용: "Kill Web 모든 링크 (ADR-014: 킬웹 보고주기 전부 1s)". IBCS류 IFCN 개념 — 네트워크가 융합 항적을 1초 주기로 공급.
+- **적용범위**: 플래그 `linkSemanticsV2` ON일 때 고해상도 To-Be 전 링크(센서→C2·C2↔C2·status To-Be 측). OFF는 기존 `C2-DL-DLY-01`(2 s) 유지.
+- **신뢰도 등급**: **C** — codex 정본 판정 승계이나 IFCN 1 s 자체는 개념 모델값(공개 실측 아님)
+- **MC 적용방식**: 고정
+
+### [IADS-LINK-SHORT-01] 고해상도 C2↔C2 전송 지연
+- **값/분포**: 플래그 OFF: 4 s(구 SHORT — **조정 근거 불명**) / 플래그 `linkSemanticsV2` ON: **1 s** (codex 환원)
+- **단위**: 초
+- **출처**: `IADS_codex` `LINK_DELAYS.shortRange: 1`(ICC→ECS·ECS→발사대). Air_Defense가 4 s로 조정한 근거를 저장소 전체에서 찾지 못함 → codex 값 환원을 기본으로 함(작업 지침 "조정 근거 불명 — codex 값으로 환원").
+- **적용범위**: ON일 때 고해상도 As-Is C2↔C2 `coord`·C2→C2 항적 중계(구 LONG 16 s 일률 적용 구간 포함). To-Be 측은 IADS-LINK-IFCN-01이 지배.
+- **신뢰도 등급**: B(codex 판정 승계 — codex는 Link-K를 "Link-16급 가정, 1초 보수"로 판정: Link-16 실측 3 ms, Link-K 미공개)
+- **MC 적용방식**: 고정
+
+### [IADS-LINK-INTERNAL-01] 고해상도 내부·명령 링크 지연
+- **값/분포**: 1 s (고정, 플래그 무관)
+- **단위**: 초
+- **출처**: codex `LINK_DELAYS.shortRange: 1`(ECS→발사대)·`internal: 0.5`(MFR→ECS). 하향 명령(ECS→발사대) 1 s는 codex와 일치 — ADR-014 "하향은 사건기반 즉시발송 + 중계 C2 처리시간(≠0)"에 부합. MFR→ECS는 ON일 때 IADS-LINK-RP-01(MFR 보고주기 1 s)로 대체되므로 codex internal 0.5 s와의 차이는 소멸 구간이 됨.
+- **적용범위**: 고해상도 `command` 링크(ECS→발사대) 및 OFF 상태의 MFR→ECS·국지/USFK ECS↔상급
+- **신뢰도 등급**: C(개념 설정)
+- **MC 적용방식**: 고정
+
+### [IADS-LINK-LONG-01] (구) 고해상도 일률 보고·협조 지연 — ADR-057로 대체 경로 신설
+- **값/분포**: 16 s (고정) — 플래그 `linkSemanticsV2` OFF에서만 사용
+- **단위**: 초
+- **출처**: codex `LINK_DELAYS.longRange: 16`의 승계. 단 codex ADR-014가 이 "일률 지연" 해석을 명시적으로 폐기하고 보고 주기(reportingPeriod)로 재라벨했다 — OFF 경로는 그 폐기된 해석을 유지하는 호환 상태다.
+- **적용범위**: OFF일 때 고해상도 센서→C2·C2↔C2 As-Is 링크 일률 적용(TPS-880K 4 s급도 16 s로 과대)
+- **신뢰도 등급**: C(폐기된 해석의 잔존 — 회귀 호환 목적)
+- **MC 적용방식**: 고정
+
 ### [C2-L16-UPD-01] Link-16 항적 갱신주기
 - **값/분포**: ≤12 s (고정)
 - **단위**: 초

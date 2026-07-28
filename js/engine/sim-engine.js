@@ -207,9 +207,13 @@
     // ADR-056: To-Be 통합 축(KILL_WEB)이 군단 AOC 교전현황을 소비하는가. OFF면 As-Is의 MCRC만
     // 소비한다(=수정 전과 bit-exact). ON이어도 As-Is 결과는 변하지 않는다(KILL_WEB 축은 To-Be 전용).
     this.unifiedEngagementState = ff('unifiedEngagementState', false);
+    // ADR-057: 링크 의미론 codex 정합 — 센서→C2는 보고 주기(reportingPeriod), C2↔C2는 전송
+    // 지연(codex shortRange 1초). 실제 분기는 어댑터의 변형 카탈로그가 수행한다(캐시 분리).
+    this.linkSemanticsV2 = ff('linkSemanticsV2', false);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
     if (this.highResolutionDeployment) this.features.highResolutionDeployment = true;
     if (this.unifiedEngagementState) this.features.unifiedEngagementState = true;
+    if (this.linkSemanticsV2) this.features.linkSemanticsV2 = true;
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.

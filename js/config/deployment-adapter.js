@@ -90,8 +90,27 @@
     links.push({ from: from, to: to, kind: kind, comm: comm, axis: axis || null });
   }
 
-  function buildDeploymentCatalog(id) {
-    if (cache[id]) return cache[id];
+  // ADR-057(linkSemanticsV2): IADS_codex ADR-014 정합 — As-Is 센서→C2는 "일률 지연"이 아니라
+  // 그 센서의 보고 주기(reportingPeriod)가 정보 나이를 지배한다. 1단계 근사로
+  // "센서별 고정 지연 = reportingPeriod"를 적용한다(톱니 신선도는 후속 과제 — ADR-057 §한계).
+  // To-Be(킬웹)는 codex 판정대로 IFCN 1초가 지배한다("킬웹 보고주기 전부 1s") — 아래 IFCN 참조.
+  function reportCycleComm(typeId) {
+    var t = (KJ.SENSOR_TYPES || {})[typeId];
+    var rp = t && Number.isFinite(t.reportingPeriod) ? t.reportingPeriod : 1;
+    return Object.freeze({ type: 'report-cycle', delaySec: rp, paramRef: 'IADS-LINK-RP-01' });
+  }
+  // C2↔C2 전송 지연 — codex LINK_DELAYS.shortRange 1초로 환원(구 SHORT 4초·LONG 16초의
+  // 조정 근거를 저장소 어디에서도 찾지 못함 — "조정 근거 불명 — codex 값으로 환원").
+  var C2_TRANSFER = Object.freeze({ type: 'datalink', delaySec: 1, paramRef: 'IADS-LINK-SHORT-01' });
+  // To-Be(킬웹) 측 — codex LINK_DELAYS.ifcn 1초: "Kill Web 모든 링크 (ADR-014: 킬웹 보고주기
+  // 전부 1s)". 킬웹에서는 IFCN 네트워크가 융합 항적을 1초 주기로 밀어내므로 센서 자체 주기가
+  // 아니라 네트워크 주기가 정보 나이를 지배한다는 것이 codex 정본의 판정이다.
+  var IFCN = Object.freeze({ type: 'ifcn', delaySec: 1, paramRef: 'IADS-LINK-IFCN-01' });
+
+  function buildDeploymentCatalog(id, opts) {
+    var v2 = !!(opts && opts.linkSemanticsV2);
+    var cacheKey = v2 ? id + '|linkV2' : id;
+    if (cache[cacheKey]) return cache[cacheKey];
     var deployment = KJ.deploymentById(id);
     if (!deployment) throw new Error('Unknown high-resolution deployment: ' + id);
 
@@ -209,34 +228,34 @@
     function c2ForPos(key) { return key ? c2ByPos[key] || null : null; }
 
     if (kamdoc) {
-      sensorNodes(['GREEN_PINE_B', 'GREEN_PINE_C']).forEach(function (s) { addLink(links, s.id, kamdoc.id, 'report', LONG, DL_FAST, 'korean_kamd'); });
+      sensorNodes(['GREEN_PINE_B', 'GREEN_PINE_C']).forEach(function (s) { addLink(links, s.id, kamdoc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_kamd'); });
       iccs.forEach(function (icc) {
-        addLink(links, kamdoc.id, icc.id, 'coord', LONG, DL_FAST, 'korean_kamd');
+        addLink(links, kamdoc.id, icc.id, 'coord', v2 ? C2_TRANSFER : LONG, v2 ? IFCN : DL_FAST, 'korean_kamd');
         // The legacy decision stage searches from the reporting/controller C2
         // upward to the approval role.  Preserve the same physical ICC link in
         // both directions; without this return edge every MFR→ECS main track
         // terminates as responsibility_gap before the shooter can be tasked.
-        addLink(links, icc.id, kamdoc.id, 'coord', LONG, DL_FAST, 'korean_kamd');
+        addLink(links, icc.id, kamdoc.id, 'coord', v2 ? C2_TRANSFER : LONG, v2 ? IFCN : DL_FAST, 'korean_kamd');
       });
     }
     if (mcrc) {
-      sensorNodes(['FPS117']).forEach(function (s) { addLink(links, s.id, mcrc.id, 'report', LONG, DL_FAST, 'korean_mcrc'); });
+      sensorNodes(['FPS117']).forEach(function (s) { addLink(links, s.id, mcrc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc'); });
       iccs.forEach(function (icc) {
-        addLink(links, mcrc.id, icc.id, 'coord', LONG, DL_FAST, 'korean_mcrc');
-        addLink(links, icc.id, mcrc.id, 'coord', LONG, DL_FAST, 'korean_mcrc');
+        addLink(links, mcrc.id, icc.id, 'coord', v2 ? C2_TRANSFER : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc');
+        addLink(links, icc.id, mcrc.id, 'coord', v2 ? C2_TRANSFER : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc');
       });
       // As-Is 군단 AOC는 MCRC 공중항적과 자체 국지레이더 항적을 C2A에서
       // 함께 접수한다. 항적 전파는 16초 개념 데이터링크, 반대 방향의 교전현황은
       // 제한형 음성/VTC 메시지로 분리해 정보의 비대칭을 보존한다.
       localAds.forEach(function (aoc) {
-        addLink(links, mcrc.id, aoc.id, 'report', LONG, DL_FAST, 'mcrc_to_corps_aoc_track');
-        addLink(links, aoc.id, mcrc.id, 'status', VOICE_STATUS, DL_FAST, 'corps_aoc_engagement_status');
+        addLink(links, mcrc.id, aoc.id, 'report', v2 ? C2_TRANSFER : LONG, v2 ? IFCN : DL_FAST, 'mcrc_to_corps_aoc_track');
+        addLink(links, aoc.id, mcrc.id, 'status', VOICE_STATUS, v2 ? IFCN : DL_FAST, 'corps_aoc_engagement_status');
       });
     }
     sensorNodes(['TPS880K']).forEach(function (s) {
       var owner = c2ForPos(s.localAdPosKey);
-      if (mcrc) addLink(links, s.id, mcrc.id, 'report', LONG, DL_FAST, 'korean_mcrc');
-      if (owner) addLink(links, s.id, owner.id, 'report', INTERNAL, DL_FAST, 'abt_local');
+      if (mcrc) addLink(links, s.id, mcrc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc');
+      if (owner) addLink(links, s.id, owner.id, 'report', v2 ? reportCycleComm(s.typeId) : INTERNAL, v2 ? IFCN : DL_FAST, 'abt_local');
     });
 
     deployment.batteries.forEach(function (b) {
@@ -244,11 +263,11 @@
       var ecs = ecsByBattery[b.id];
       var sensor = b.mfrSensorPosKey ? nodeMap['SENSOR_' + b.mfrSensorPosKey] : null;
       var upper = c2ForPos(b.commandC2PosKey || b.iccPosKey || b.localAdPosKey);
-      if (sensor && ecs) addLink(links, sensor.id, ecs.id, 'report', INTERNAL, DL_FAST, 'battery_mfr');
+      if (sensor && ecs) addLink(links, sensor.id, ecs.id, 'report', v2 ? reportCycleComm(sensor.typeId) : INTERNAL, v2 ? IFCN : DL_FAST, 'battery_mfr');
       if (upper && ecs) {
-        var upAsIs = (b.c2Axis === 'LOCAL_AD' || b.forceOwner === 'USFK') ? INTERNAL : SHORT;
-        addLink(links, ecs.id, upper.id, 'coord', upAsIs, DL_FAST, b.c2Axis || 'korean');
-        addLink(links, upper.id, ecs.id, 'coord', upAsIs, DL_FAST, b.c2Axis || 'korean');
+        var upAsIs = v2 ? C2_TRANSFER : ((b.c2Axis === 'LOCAL_AD' || b.forceOwner === 'USFK') ? INTERNAL : SHORT);
+        addLink(links, ecs.id, upper.id, 'coord', upAsIs, v2 ? IFCN : DL_FAST, b.c2Axis || 'korean');
+        addLink(links, upper.id, ecs.id, 'coord', upAsIs, v2 ? IFCN : DL_FAST, b.c2Axis || 'korean');
       }
       if (ecs && shooterNode) addLink(links, ecs.id, shooterNode.id, 'command', INTERNAL, INTERNAL, b.c2Axis || 'battery');
     });
@@ -258,22 +277,22 @@
     // reporting path, not cross-ICC engagement-state sharing.
     if (!kamdoc) {
       sensorNodes(['GREEN_PINE_B', 'GREEN_PINE_C']).forEach(function (s) {
-        iccs.forEach(function (icc) { addLink(links, s.id, icc.id, 'report', LONG, DL_FAST, 'korean_kamd'); });
+        iccs.forEach(function (icc) { addLink(links, s.id, icc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_kamd'); });
       });
     }
     if (!mcrc) {
       sensorNodes(['FPS117', 'TPS880K']).forEach(function (s) {
-        iccs.forEach(function (icc) { addLink(links, s.id, icc.id, 'report', LONG, DL_FAST, 'korean_mcrc'); });
+        iccs.forEach(function (icc) { addLink(links, s.id, icc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc'); });
       });
     }
 
     if (iaoc) {
       nodes.filter(function (n) { return n.category === 'sensor' && n.forceOwner !== 'USFK'; }).forEach(function (s) {
-        addLink(links, s.id, iaoc.id, 'report', null, DL_FAST, 'killweb');
+        addLink(links, s.id, iaoc.id, 'report', null, v2 ? IFCN : DL_FAST, 'killweb');
       });
       nodes.filter(function (n) { return n.category === 'c2' && n.id !== iaoc.id && n.forceOwner !== 'USFK'; }).forEach(function (c) {
-        addLink(links, c.id, iaoc.id, 'report', null, DL_FAST, 'killweb');
-        addLink(links, iaoc.id, c.id, 'coord', null, DL_FAST, 'killweb');
+        addLink(links, c.id, iaoc.id, 'report', null, v2 ? IFCN : DL_FAST, 'killweb');
+        addLink(links, iaoc.id, c.id, 'coord', null, v2 ? IFCN : DL_FAST, 'killweb');
       });
     }
 
@@ -297,7 +316,7 @@
         shorad: deployment.batteries.filter(function (b) { return b.shooterTypeId === 'BIHO' || b.shooterTypeId === 'CHUNMA'; }).length
       }
     });
-    cache[id] = catalog;
+    cache[cacheKey] = catalog;
     return catalog;
   }
 
@@ -313,7 +332,9 @@
     if (features.highResolutionDeployment !== true) return KJ.LEGACY_CATALOG;
     // ADR-055: MINI 폐기 이후의 기본 고해상도 배치. LEGACY_HIRES는 legacy와 자산 편성이
     // 같아, 배치 ID를 생략한 호출이 legacy 결과와 가장 가까운 편성을 보게 된다.
-    return buildDeploymentCatalog(config.deploymentId || 'HANBANDO_LEGACY_NORMAL');
+    // ADR-057: linkSemanticsV2 ON이면 codex ADR-014 정합 링크 변형 카탈로그를 쓴다(캐시 분리).
+    return buildDeploymentCatalog(config.deploymentId || 'HANBANDO_LEGACY_NORMAL',
+      { linkSemanticsV2: features.linkSemanticsV2 === true });
   };
   KJ.resolveRoleId = function (id, catalog) {
     catalog = catalog || KJ.LEGACY_CATALOG;

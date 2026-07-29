@@ -103,6 +103,7 @@
     features.approvalChain = cfg && cfg.appr !== '0';
     features.threatTargetDispersion = cfg && cfg.disp !== '0';
     features.southernAxes = cfg && cfg.south !== '0';
+    features.linkSemanticsV2 = !cfg || cfg.linkv2 !== '0'; // ADR-066
     return { deploymentId: cfg && cfg.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -114,6 +115,8 @@
     return KJ.scenarioById(cfg.sc).name + ' · ' +
       (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형') +
       ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 승인계선 ON' : '') + (cfg.disp === '1' ? ' · 표적산포 ON' : '') + (cfg.south === '1' ? ' · 남부축선 ON' : '') +
+      // ADR-066: 기본 ON이라 해제했을 때만 표시한다 — 구 링크 의미론 실행임을 놓치지 않게.
+      (cfg.linkv2 === '0' ? ' · 구 링크의미론(OFF)' : '') +
       ' · 강도 ×' + Number(cfg.x).toFixed(1) + ' · seed ' + cfg.seed;
   }
 
@@ -148,7 +151,9 @@
       var dur = Math.min(7200, Math.max(60, Math.floor(parseFloat(el('sim-dur').value) || 1800)));
       var cfg = { sc: state.sc, mode: state.mode, dep: state.dep, fid: 'iads-c2',
         appr: state.appr === '1' ? '1' : '0', disp: state.disp === '1' ? '1' : '0',
-        south: state.south === '1' ? '1' : '0', x: state.x, seed: seed, dur: dur };
+        south: state.south === '1' ? '1' : '0',
+        linkv2: state.linkv2 === '0' ? '0' : '1', // ADR-066: 기본 ON
+        x: state.x, seed: seed, dur: dur };
       var btn = el('sim-run');
       btn.disabled = true; btn.textContent = '⏳ DES 실행 중...';
       setStatus('DES 실행 중 (trace 모드)...');

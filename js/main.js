@@ -23,6 +23,7 @@
     features.approvalChain = state.appr !== '0';
     features.threatTargetDispersion = state.disp !== '0';
     features.southernAxes = state.south !== '0';
+    features.linkSemanticsV2 = state.linkv2 !== '0'; // ADR-066
     return { deploymentId: state.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -67,6 +68,8 @@
     if (dispBox) dispBox.checked = state.disp === '1'; // ADR-063
     var southBox = document.getElementById('southern-axes-toggle');
     if (southBox) southBox.checked = state.south === '1'; // ADR-064
+    var linkBox = document.getElementById('link-semantics-toggle');
+    if (linkBox) linkBox.checked = state.linkv2 === '1'; // ADR-066
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
     document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
@@ -124,6 +127,15 @@
     if (southToggle) {
       southToggle.addEventListener('change', function (e) {
         setState({ south: e.target.checked ? '1' : '0', open: '' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-066: 링크 의미론 토글 — 링크 지연 집합이 바뀌므로 실행 조건 변경으로 취급한다.
+    // 지도 연결선 툴팁의 지연값도 달라지므로 open은 유지하되 카탈로그는 재해석된다.
+    var linkToggle = document.getElementById('link-semantics-toggle');
+    if (linkToggle) {
+      linkToggle.addEventListener('change', function (e) {
+        setState({ linkv2: e.target.checked ? '1' : '0' });
         if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
       });
     }

@@ -104,7 +104,7 @@
 - **단위**: 초
 - **출처**: `IADS_codex/src/config/weapon-data.js` `SENSOR_TYPES.<sensor>.reportingPeriod` — Air_Defense `js/config/system-types.js`가 동일 값으로 선언(종전에는 소비처 0건인 죽은 필드).
 - **인용문**: codex ADR-014 — "탐지자산→상위 C2 정보 전달은 일률 지연이 아니라 보고 주기 — 그림 나이가 0~P 톱니(sawtooth)로 변동. 탐지자산별 주기는 SENSOR_TYPES.<sensor>.reportingPeriod가 단일 출처."
-- **적용범위**: 플래그 `linkSemanticsV2` ON일 때 고해상도 카탈로그의 **As-Is** 센서→C2 `report` 링크. To-Be는 IADS-LINK-IFCN-01(킬웹 IFCN 1 s)이 지배한다 — codex "킬웹 보고주기 전부 1s".
+- **적용범위**: `linkSemanticsV2`(ADR-066으로 **기본 ON**) 카탈로그의 센서→C2 `report` 링크. **ADR-067로 양 모드 공통이 되었다** — 종전에는 As-Is만 이 값을 쓰고 To-Be는 IADS-LINK-IFCN-01(1 s)로 덮였는데, 같은 레이더가 To-Be에서 최대 16배 빨리 보고하는 셈이었다. 킬웹 `센서→IAOC` 50링크를 포함한다. 대칭화 제외 대상은 C2 발신 링크(C2↔C2는 IADS-LINK-SHORT-01)와 음성 절차 링크(C2-COORD-HORIZ-01)다. 플래그 `sensorReportParity`(기본 ON, `rp=0`으로 해제)로 감쌌다.
 - **신뢰도 등급**: **C** — codex 정본 값 승계이나 codex 스스로 이 주기들을 "ADR-014 모델값(§0.13 D-5 — **가상 placeholder, 추후 실측 자료조사**)"라고 명시한다. 정본 승계 ≠ 공개근거 확보.
 - **MC 적용방식**: 고정(1단계 근사 — "센서별 고정 지연 = reportingPeriod". 톱니 신선도(0~P 변동)는 후속 과제로 ADR-057 §한계에 기록)
 
@@ -112,8 +112,9 @@
 - **값/분포**: 1 s (고정)
 - **단위**: 초
 - **출처**: `IADS_codex` `LINK_DELAYS.ifcn: 1` — 인용: "Kill Web 모든 링크 (ADR-014: 킬웹 보고주기 전부 1s)". IBCS류 IFCN 개념 — 네트워크가 융합 항적을 1초 주기로 공급.
-- **적용범위**: 플래그 `linkSemanticsV2` ON일 때 고해상도 To-Be 전 링크(센서→C2·C2↔C2·status To-Be 측). OFF는 기존 `C2-DL-DLY-01`(2 s) 유지.
+- **적용범위**: `linkSemanticsV2`(기본 ON) 상태의 고해상도 To-Be 링크 중 **C2↔C2·status·coord**. 해제 시 기존 `C2-DL-DLY-01`(2 s). ⚠️ **ADR-067로 센서→C2 `report` 링크는 이 값의 적용 대상에서 빠졌다** — 그 구간은 IADS-LINK-RP-01(보고 주기)이 양 모드 공통으로 지배한다.
 - **신뢰도 등급**: **C** — codex 정본 판정 승계이나 IFCN 1 s 자체는 개념 모델값(공개 실측 아님)
+- **⚠️ 정본 이탈 기록(ADR-067)**: codex는 `ifcn: 1`에 "킬웹 보고주기 전부 1s"를 명시하지만, Air_Defense 엔진은 이미 센서별 보고 경로 중 **최속 경로를 선택**한다(`js/engine/sim-engine.js:786,796`). 따라서 융합 신선도는 링크 구조에서 자연 발생하며, To-Be 보고 링크를 일괄 1 s로 덮는 것은 **이중 계상**이다. 단일 센서만 보는 표적(그린파인 단독 탄도탄)에는 융합 논거 자체가 없다. 불변 규칙 7(정본 우선)에 대한 저장소 최초의 의도적 이탈이며 사유를 여기와 ADR-067에 기록한다.
 - **MC 적용방식**: 고정
 
 ### [IADS-LINK-SHORT-01] 고해상도 C2↔C2 전송 지연

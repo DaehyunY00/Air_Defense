@@ -46,7 +46,8 @@
         highResolutionDeployment: true,
         approvalChain: !state || state.appr !== '0',
         threatTargetDispersion: !state || state.disp !== '0',
-        southernAxes: !state || state.south !== '0'
+        southernAxes: !state || state.south !== '0',
+        linkSemanticsV2: !state || state.linkv2 !== '0' // ADR-066: 연결선 툴팁 지연값도 같이 바뀐다
       }
     });
   }

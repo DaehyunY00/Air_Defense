@@ -71,15 +71,19 @@ assert(stripEcho(tOn) === stripEcho(tOff),
 // 어서션을 **신 기본값에서 실제로 발화하는 셀**로 옮긴다. 임계를 낮춘 것이 아니라
 // 현상이 일어나는 조건으로 관측 지점을 옮긴 것이며, 빈도 감소는 ADR-059의 원 결론
 // ("비용항은 거의 물지 않는다")을 오히려 강화한다.
-console.log('# 4 — 반증 (FULL · ×3 · 600초): 비용항이 실제로 무는 셀');
-var fOn = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true }, 3);
-var fCf = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true, nativeWtaCostAsis: true }, 3);
-assert(stripEcho(fOn) !== stripEcho(fCf), 'FULL As-Is(×3): 반증 플래그(비용항)가 결과를 바꿈');
-// 같은 배치·시나리오라도 저강도 셀에서는 무효과임을 함께 고정한다(빈도 감소의 증거).
-var lOn = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 900, { nativeWtaMode: true });
-var lCf = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 900, { nativeWtaMode: true, nativeWtaCostAsis: true });
+console.log('# 4 — 반증 (FULL · ×1.5 · 600초): 비용항이 실제로 무는 셀');
+// ADR-066 갱신: 무는 셀이 **또 이동했다**. ADR-065 판에서는 FULL·×3에서 물고 ×1.5에서 무효과였는데,
+// 링크 의미론 정합 후에는 정반대다(8셀 격자 실측: FULL ×1.5 600s·900s만 물고 ×3·LEGACY 전 셀 무효과
+// — 개입 2/8셀). **빈도(약 1/4)는 유지되고 위치만 바뀐다.**
+// 이 불안정성 자체가 ADR-059의 원 결론("비용항은 거의 물지 않는다 — 절약은 교전량·기하에서
+// 나온다")을 강화한다. 무는 셀과 무는 셀이 아닌 셀을 **함께** 고정해 빈도를 증거로 남긴다.
+var fOn = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true });
+var fCf = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true, nativeWtaCostAsis: true });
+assert(stripEcho(fOn) !== stripEcho(fCf), 'FULL As-Is(×1.5): 반증 플래그(비용항)가 결과를 바꿈');
+var lOn = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true }, 3);
+var lCf = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true, nativeWtaCostAsis: true }, 3);
 assert(stripEcho(lOn) === stripEcho(lCf),
-  '[정직 관측] 같은 배치 ×1.5 셀에서는 비용항 무효과 — 신 기본값에서 개입 빈도가 더 줄었다(ADR-065)');
+  '[정직 관측] 같은 배치 ×3 셀에서는 비용항 무효과 — 무는 셀은 판마다 이동하고 빈도는 2/8셀에 머문다');
 assert(fCf.global.features.nativeWtaCostAsis === true, '반증 플래그 노출');
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');

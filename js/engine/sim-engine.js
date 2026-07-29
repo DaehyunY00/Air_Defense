@@ -214,7 +214,11 @@
     this.unifiedEngagementState = ff('unifiedEngagementState', false);
     // ADR-057: 링크 의미론 codex 정합 — 센서→C2는 보고 주기(reportingPeriod), C2↔C2는 전송
     // 지연(codex shortRange 1초). 실제 분기는 어댑터의 변형 카탈로그가 수행한다(캐시 분리).
-    this.linkSemanticsV2 = ff('linkSemanticsV2', false);
+    // ADR-066: 기본 ON 전환. OFF 경로는 (1) codex ADR-014가 폐기한 "일률 16초"를 쓰고,
+    // (2) To-Be 전 링크에 DL_FAST 2초를 일괄 적용해 As-Is의 INTERNAL 1초보다 **느린** 링크가
+    // 16개 생기며(통합 C2가 포대 내부 링크를 느리게 만드는 셈), (3) As-Is를 실제보다 나쁘게
+    // 모델링해 To-Be 개선폭을 과대평가한다. 셋 다 기본값으로 둘 이유가 없다.
+    this.linkSemanticsV2 = ff('linkSemanticsV2', true);
     // ADR-058: 승인 계선 이식 — As-Is LOCAL_AD 축(군단 AOC)의 교전이 승인권자(KAOC→MCRC)
     // 협조 홉 + 승인 서비스(kind='approval')를 거친다. 동적 권한위임(DELEG_QUEUE_MULT)·
     // automation 3단계 차등 포함. approvalChainTobe는 반증 전용 — To-Be에도 As-Is 계선 강제.
@@ -242,7 +246,7 @@
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
     if (this.highResolutionDeployment) this.features.highResolutionDeployment = true;
     if (this.unifiedEngagementState) this.features.unifiedEngagementState = true;
-    if (this.linkSemanticsV2) this.features.linkSemanticsV2 = true;
+    this.features.linkSemanticsV2 = this.linkSemanticsV2; // ADR-066: 기본 ON — 항상 실제 해석값 신고
     // ADR-065: 기본 ON 3종은 "ON일 때만 노출"이 아니라 **실제 해석값을 항상 신고**한다 —
     // 소비 측(분석 탭의 미측정 표기 등)이 실행 조건을 정확히 읽어야 하기 때문이다.
     this.features.approvalChain = this.approvalChain;

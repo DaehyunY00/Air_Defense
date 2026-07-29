@@ -81,5 +81,65 @@ console.log('# 4 — ON 실행 (결정론·보존·노출)');
   assert(g.features.linkSemanticsV2 === true, 'sc1 ' + mode + ' ON 플래그 노출');
 });
 
+console.log('# 5 — ADR-066 기본 ON 전환');
+// (a) 엔진·어댑터 정합: features에 키가 없는 호출이 v2 카탈로그를 받아야 한다.
+//     `=== true` 판정을 되살리면 "엔진은 ON인데 카탈로그는 구 링크값"인 조용한 불일치가 생긴다.
+// 기본 실행은 ADR-065의 승인 계선·남부 축선도 함께 켜므로, 같은 변형 조합으로 비교해야 한다
+// (`on`은 linkV2 단독 변형이라 캐시 키가 다르다 — 동일성 비교의 대상이 아니다).
+var onFull = KJ.buildDeploymentCatalog('HANBANDO_LEGACY_NORMAL',
+  { linkSemanticsV2: true, approvalChain: true, southernAxes: true });
+var dflt = KJ.resolveModelCatalog({ deploymentId: 'HANBANDO_LEGACY_NORMAL',
+  features: { highResolutionDeployment: true } });
+assert(dflt === onFull, '키 생략 호출이 v2 변형 카탈로그를 받음 (어댑터가 엔진 기본값과 정합)');
+var explicitOff = KJ.resolveModelCatalog({ deploymentId: 'HANBANDO_LEGACY_NORMAL',
+  features: { highResolutionDeployment: true, linkSemanticsV2: false } });
+assert(explicitOff !== on, '명시적 false만 구 카탈로그로 되돌린다');
+
+// (b) 기본 실행이 플래그를 ON으로 신고하고, 명시적 OFF는 다른 결과를 낸다.
+var runCfg = function (f) {
+  return KJ.runDES({ scenario: KJ.scenarioById('sc1'), mode: 'asis', intensity: 1.5, seed: 12345,
+    endTimeSec: 900, deploymentId: 'HANBANDO_LEGACY_NORMAL', modelFidelity: 'iads-c2',
+    features: Object.assign({ highResolutionDeployment: true }, f || {}) });
+};
+var omitted = runCfg(null), forcedOff = runCfg({ linkSemanticsV2: false });
+assert(omitted.global.features.linkSemanticsV2 === true, '키 생략 실행이 linkSemanticsV2=true를 신고');
+assert(forcedOff.global.features.linkSemanticsV2 === false, '명시적 OFF 실행은 false를 신고(미측정 아님)');
+assert(JSON.stringify(omitted) !== JSON.stringify(forcedOff), '토글이 실제로 결과를 바꾼다 — 장식이 아님');
+
+// (c) 구 기본값(OFF)에는 As-Is가 To-Be보다 **빠른** 링크가 있었다 — 전환 사유의 실측 고정.
+//     통합 C2가 포대 내부 링크를 느리게 만든다는 뜻이라 어떤 해석으로도 정당화되지 않는다.
+function inverted(cat) {
+  return cat.links.filter(function (l) {
+    return l.comm.asis && l.comm.tobe && l.comm.asis.delaySec < l.comm.tobe.delaySec;
+  }).length;
+}
+assert(inverted(off) === 16, '구 카탈로그: As-Is가 To-Be보다 빠른 링크 16개 (ADR-066 전환 사유)');
+assert(inverted(on) === 0, 'v2 카탈로그: 역전 링크 0개');
+
+// (d) 전선(데이터링크)과 절차(음성)의 분리 — 남는 비대칭은 절차·보고 주기뿐이다.
+var voiceAsym = onFull.links.filter(function (l) {
+  return l.comm.asis && l.comm.tobe && /voice/.test(l.comm.asis.type);
+});
+assert(voiceAsym.length === 4 && voiceAsym.every(function (l) { return l.comm.tobe.delaySec === 1; }),
+  '음성 협조·교전현황 4링크는 비대칭 유지 — 링크(전선)가 아니라 절차이므로 대칭화 대상이 아님');
+assert(onFull.links.filter(function (l) {
+  return l.kind === 'coord' && l.comm.asis && l.comm.tobe &&
+    !/voice/.test(l.comm.asis.type) && l.comm.asis.delaySec !== l.comm.tobe.delaySec;
+}).length === 0, 'C2↔C2 데이터링크는 양 모드 동일(1초) — 전선 대칭 확보');
+
+// (e) UI·라우터 배선 — 반증 경로가 화면에 있어야 한다(ADR-065가 appr/disp/south에 준 것과 동일).
+var fs = require('node:fs');
+var repo = path.join(root, '..');
+var router = fs.readFileSync(path.join(repo, 'js', 'core', 'router.js'), 'utf8');
+assert(/linkv2: '1'/.test(router), "라우터 DEFAULTS에 linkv2 기본 ON ('1')");
+assert(/state\.linkv2 = \(state\.linkv2 === '0'/.test(router), "명시적 '0'만 해제로 정규화");
+assert(fs.readFileSync(path.join(repo, 'index.html'), 'utf8').indexOf('id="link-semantics-toggle"') !== -1,
+  '상단 컨트롤에 링크 의미론 토글 존재');
+['main.js', 'ui/panels.js', 'ui/sim-view.js', 'ui/map-view.js', 'ui/mc-panel.js'].forEach(function (f) {
+  // 대입(`x = ...`)과 객체 리터럴(`x: ...`) 두 형태를 모두 허용한다 — 지도·MC 탭은 후자다.
+  assert(/linkSemanticsV2\s*[:=]\s*.*linkv2 !== '0'/.test(fs.readFileSync(path.join(repo, 'js', f), 'utf8')),
+    f + " modelConfig가 linkv2 → features 전달 (기본 ON, '0'만 해제)");
+});
+
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

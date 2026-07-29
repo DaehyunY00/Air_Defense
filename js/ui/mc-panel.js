@@ -18,7 +18,21 @@
   function pp(x) { return (x * 100).toFixed(2) + '%p'; }
   function modelConfig(state) {
     var high = state && state.dep && state.dep !== 'legacy';
-    return high ? { deploymentId: state.dep, features: { highResolutionDeployment: true }, modelFidelity: state.fid || 'compat' } : {};
+    if (!high) return {};
+    // ADR-066: MC 탭도 상단 토글을 실행에 전달한다. 종전에는 features를 비워 보내 엔진 기본값을
+    // 그대로 썼고, 사용자가 토글을 꺼도 MC 결과만 켠 채로 나오는 불일치가 있었다(지도에서 고친
+    // 것과 같은 종류의 결함). 기본 상태에서는 전달값 == 엔진 기본값이라 결과가 변하지 않는다.
+    return {
+      deploymentId: state.dep,
+      features: {
+        highResolutionDeployment: true,
+        approvalChain: state.appr !== '0',
+        threatTargetDispersion: state.disp !== '0',
+        southernAxes: state.south !== '0',
+        linkSemanticsV2: state.linkv2 !== '0'
+      },
+      modelFidelity: 'iads-c2' // ADR-061: compat 폐기 — 충실도는 1종뿐이다
+    };
   }
 
   // MoM 계층 라벨(NATO COBP/SAS-026, ENV-MOM-COBP-01) — 결과 모달·[분석] 탭과 동일 분류

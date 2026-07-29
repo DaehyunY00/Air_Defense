@@ -1,8 +1,9 @@
 /**
  * K-JAMDS 시뮬레이터 — 딥링크 라우터 (Phase 1, Phase 4에서 t= 실제 활용)
  *
- * URL 해시 스킴: #tab=<탭ID>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&south=<0|1>&t=<재생시각(초)>&open=<노드ID>&x=<강도>&seed=&dur=
- *   (ADR-061: 구 dep=legacy·fid= 파라미터는 기본값으로 정규화 / ADR-065: appr·disp·south는 기본 1, '0'으로 해제)
+ * URL 해시 스킴: #tab=<탭ID>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&south=<0|1>&linkv2=<0|1>&t=<재생시각(초)>&open=<노드ID>&x=<강도>&seed=&dur=
+ *   (ADR-061: 구 dep=legacy·fid= 파라미터는 기본값으로 정규화 / ADR-065: appr·disp·south는 기본 1, '0'으로 해제
+ *    / ADR-066: linkv2도 기본 1, '0'으로 해제)
  *   - t    : [playback 탭] 재생 스크러버 시각(초). 다른 탭에서는 보존만 됨
  *   - open : 지도에서 팝업을 열 노드 ID
  *   - x    : 위협 강도 배수
@@ -15,7 +16,8 @@
 
   // ADR-061: dep 기본값은 주 분석 배치, fid는 하위호환 파싱만 남기고 항상 iads-c2로 고정된다.
   // ADR-065: appr(승인 계선)·disp(표적 산포)·south(남부 축선)는 **기본 ON**이다('0'으로 해제).
-  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '1', disp: '1', south: '1', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
+  // ADR-066: linkv2(링크 의미론 codex 정합)도 **기본 ON** — 반증용 해제 경로로 linkv2=0을 신설.
+  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '1', disp: '1', south: '1', linkv2: '1', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
   var VALID_TABS = ['sim', 'analysis', 'mc', 'data'];
   // 구 딥링크 호환: 지도/시나리오/DES/재생 탭은 통합 [시뮬레이션] 탭으로 흡수
   var LEGACY_TAB = { map: 'sim', scenario: 'sim', des: 'sim', playback: 'sim' };
@@ -48,6 +50,7 @@
       state.appr = (state.appr === '0' || state.appr === false) ? '0' : '1';
       state.disp = (state.disp === '0' || state.disp === false) ? '0' : '1';
       state.south = (state.south === '0' || state.south === false) ? '0' : '1';
+      state.linkv2 = (state.linkv2 === '0' || state.linkv2 === false) ? '0' : '1'; // ADR-066
       if (!KJ.DEPLOYMENT_IDS || KJ.DEPLOYMENT_IDS.indexOf(state.dep) === -1) {
         state.dep = DEFAULTS.dep; // 구 dep=legacy·HANBANDO_MINI_* 딥링크 폴백
       }

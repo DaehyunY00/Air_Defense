@@ -71,7 +71,22 @@ assert(sc1Low.bottlenecks.filter(function (b) { return b.kind === 'node'; }).len
 assert(!sc1Low.bottlenecks.some(function (b) {
   return b.kind === 'link' && /^ICC-[WCE]\d→MCRC$/.test(b.id);
 }), 'SC1 저강도(0.5×): 10~30s 음성협조에서는 ICC→MCRC 통신병목 신호 소멸 (실험 변경 정본)');
-['sc2', 'sc3'].forEach(function (id) {
+// ADR-066: SC2는 이 단조성을 담을 수 있는 신호가 아니다 — 실측상 SC2의 병목 목록은 거의 항상
+// 비어 있고, 37개 위협 중 **1개**가 교전창을 놓친 범주형 gap 1건으로만 채워졌다가 강도를 올리면
+// 그 1건이 재현되지 않아 0이 된다(x1: gap 1건 → x2.5: 0건). 임계를 느슨하게 하는 대신 SC2는
+// **지배 메커니즘**을 직접 어서션한다: SC2의 누수는 어느 강도에서도 사격통제 부족이 지배하며
+// 부하와 함께 증가한다(no_fire_control x1 9건 → x2.5 19건). "무인기 문제는 C2 통합이 아니라
+// 교전 수단의 한계"라는 G6 관측과 같은 방향이다.
+var sc2Low = run('sc2', 'asis', 1, 100), sc2High = run('sc2', 'asis', 2.5, 100);
+function leaks(r, code) { return (r.global.leakReasons || {})[code] || 0; }
+assert(leaks(sc2Low, 'no_fire_control') > 0 && leaks(sc2High, 'no_fire_control') > leaks(sc2Low, 'no_fire_control'),
+  'SC2: 지배 누수 사유가 no_fire_control이고 부하와 함께 증가 (' +
+  leaks(sc2Low, 'no_fire_control') + ' → ' + leaks(sc2High, 'no_fire_control') + '건)');
+assert(leaks(sc2High, 'no_fire_control') >
+  Object.keys(sc2High.global.leakReasons || {}).reduce(function (m, k) {
+    return k === 'no_fire_control' ? m : m + sc2High.global.leakReasons[k];
+  }, 0), 'SC2 고강도: 사격통제 부족이 나머지 누수 사유 합보다 큼 — C2가 아니라 교전 수단의 한계');
+['sc3'].forEach(function (id) {
   assert(run(id, 'asis', 2.5, 100).bottlenecks.length >= run(id, 'asis', 1, 100).bottlenecks.length,
     id + ': 강도↑ 병목 비감소');
 });

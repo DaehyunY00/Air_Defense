@@ -1,5 +1,5 @@
 {
-  "note": "ADR-065 기준선 재수립 — 승인 계선·표적 산포·남부 축선을 기본 ON으로 전환하면서 전 수치가 바뀌어, ADR-061 이관 기준선(전 OFF 기본값 지문)은 폐기했다. 구 지문은 git 이력(ADR-064 이전 커밋의 이 파일)에서 확인한다. 본 지문은 \"신규 기본값 확정 시점\"의 회귀 방지선이다.",
+  "note": "ADR-066 기준선 재수립 — linkSemanticsV2(링크 의미론 codex 정합)를 기본 ON으로 전환하면서 전 수치가 바뀌어 ADR-065 지문은 폐기했다. 구 지문은 git 이력에서 확인한다. 본 지문은 \"신규 기본값 확정 시점\"의 회귀 방지선이며, 재기준화는 이번이 세 번째다(ADR-061 이관 → ADR-065 → ADR-066).",
   "config": {
     "deploymentId": "HANBANDO_LEGACY_NORMAL",
     "modelFidelity": "iads-c2",
@@ -10,79 +10,86 @@
   "defaults": {
     "approvalChain": true,
     "threatTargetDispersion": true,
-    "southernAxes": true
+    "southernAxes": true,
+    "linkSemanticsV2": true
   },
   "cases": {
     "sc1|asis": {
-      "sha256": "6e60d394b36db98a7ea165eacc216a4dfb4603b94e8c2d40a8c760427b6a3ed5",
-      "killed": 22,
+      "sha256": "6f1339c2a1eebeabe5bae7fa2255986fea2919f19f12c4fe6e97b462e6605ddc",
+      "killed": 24,
       "leaked": 0,
       "spawned": 35,
-      "eventCount": 42925,
+      "eventCount": 40221,
       "features": {
         "approvalChain": true,
         "threatTargetDispersion": true,
-        "southernAxes": true
+        "southernAxes": true,
+        "linkSemanticsV2": true
       }
     },
     "sc1|tobe": {
-      "sha256": "7f8d7314c844857d6f6b4483851898a0dddabc3dae5eacec3c1a768ba78fee36",
+      "sha256": "d4a39bdd3e94936594b6febfde8e879830c2aea207d7e1d681183130873ca5bc",
       "killed": 25,
-      "leaked": 1,
+      "leaked": 0,
       "spawned": 35,
-      "eventCount": 42358,
+      "eventCount": 41906,
       "features": {
         "approvalChain": true,
         "threatTargetDispersion": true,
-        "southernAxes": true
+        "southernAxes": true,
+        "linkSemanticsV2": true
       }
     },
     "sc2|asis": {
-      "sha256": "1e4135f69c6d102aad4d1417370f4c08ced5511ad6bdd536cd0be580f0cb5a28",
+      "sha256": "4787e65669051bea1c9fc2ac73929ebd8f79eaa98187e7c8d12c92d104440749",
       "killed": 13,
       "leaked": 0,
       "spawned": 40,
-      "eventCount": 101069,
+      "eventCount": 101528,
       "features": {
         "approvalChain": true,
         "threatTargetDispersion": true,
-        "southernAxes": true
+        "southernAxes": true,
+        "linkSemanticsV2": true
       }
     },
     "sc2|tobe": {
-      "sha256": "120d4f0f9514c60179ab20660257be7251e36ce78979ddcbb7c15bd3325e674f",
+      "sha256": "bf0092f97ae990d8ec808ed91d971b5c6d4db8ce4f9c4bbcc857e4cd93bca692",
       "killed": 13,
       "leaked": 0,
       "spawned": 40,
-      "eventCount": 106901,
+      "eventCount": 106960,
       "features": {
         "approvalChain": true,
         "threatTargetDispersion": true,
-        "southernAxes": true
+        "southernAxes": true,
+        "linkSemanticsV2": true
       }
     },
     "sc3|asis": {
-      "sha256": "ef2d5e7c69f61ad320111704bdb5ae883df1a455705d836b00a5d574060a21e8",
-      "killed": 32,
-      "leaked": 138,
+      "sha256": "612c8fa107ecd7306f1feeb0c6e40140b45a67b8f6d9b1ce5fde4128b1c8f0c4",
+      "killed": 57,
+      "leaked": 114,
       "spawned": 214,
-      "eventCount": 182103,
+      "eventCount": 178268,
       "features": {
         "approvalChain": true,
         "threatTargetDispersion": true,
-        "southernAxes": true
+        "southernAxes": true,
+        "linkSemanticsV2": true
       }
     },
     "sc3|tobe": {
-      "sha256": "b8527640b66e1f3c5aef4b484bc18b23fd8f64049aaa9f4ca893032a485e06c9",
-      "killed": 107,
-      "leaked": 64,
+      "sha256": "ea592d1ff827b3a9659436adaca616dd3c5fe5abe869385ae846b8a214598517",
+      "killed": 118,
+      "leaked": 53,
       "spawned": 214,
-      "eventCount": 191613,
+      "eventCount": 190019,
       "features": {
         "approvalChain": true,
         "threatTargetDispersion": true,
-        "southernAxes": true
+        "southernAxes": true,
+        "linkSemanticsV2": true
       }
     }
   }

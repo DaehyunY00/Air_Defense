@@ -49,6 +49,10 @@
       <input type="checkbox" id="southern-axes-toggle" checked>
       남부 종심 축선 (ADR-064)
     </label>
+    <label class="ctl-check" title="링크 지연을 IADS_codex 정본(ADR-014)에 정합시킵니다(ADR-057). 켜면 센서→C2는 센서별 보고 주기(그린파인 16·FPS-117 8·TPS-880K 4·MFR 1초), C2↔C2는 양 모드 모두 1초입니다. 끄면 구 의미론(As-Is 일률 16초 · To-Be 전 링크 2초)으로 되돌아가며, As-Is가 실제보다 느리게 모델링되어 To-Be 개선폭이 과대평가됩니다.">
+      <input type="checkbox" id="link-semantics-toggle" checked>
+      링크 의미론 정본 정합 (ADR-057)
+    </label>
   </div>
   <div id="deployment-warning" class="deployment-warning hidden" role="status"></div>
 

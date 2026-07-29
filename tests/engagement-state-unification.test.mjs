@@ -38,12 +38,12 @@ function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fa
 // ⚠️ 이 어서션의 의미도 함께 약해진다: "unifiedEngagementState OFF == ADR-056 도입 전"이
 // 아니라 **"OFF == 현행 기본 기준선"**(이후 회귀 방지선)이다. 구 지문은 git 이력에 있다.
 var PHASE0_SHA = {
-  'sc1|asis': '6e60d394b36db98a7ea165eacc216a4dfb4603b94e8c2d40a8c760427b6a3ed5',
-  'sc1|tobe': '7f8d7314c844857d6f6b4483851898a0dddabc3dae5eacec3c1a768ba78fee36',
-  'sc3|asis': 'ef2d5e7c69f61ad320111704bdb5ae883df1a455705d836b00a5d574060a21e8',
-  'sc3|tobe': 'b8527640b66e1f3c5aef4b484bc18b23fd8f64049aaa9f4ca893032a485e06c9'
+  'sc1|asis': '6f1339c2a1eebeabe5bae7fa2255986fea2919f19f12c4fe6e97b462e6605ddc',
+  'sc1|tobe': 'd4a39bdd3e94936594b6febfde8e879830c2aea207d7e1d681183130873ca5bc',
+  'sc3|asis': '612c8fa107ecd7306f1feeb0c6e40140b45a67b8f6d9b1ce5fde4128b1c8f0c4',
+  'sc3|tobe': 'ea592d1ff827b3a9659436adaca616dd3c5fe5abe869385ae846b8a214598517'
 };
-var OFF_TOBE_DUP = { sc1: 12, sc3: 12 }; // OFF To-Be 중복교전(신 기본값 실측) — ON에서 이보다 작아야 함
+var OFF_TOBE_DUP = { sc1: 12, sc3: 13 }; // OFF To-Be 중복교전(신 기본값 실측) — ON에서 이보다 작아야 함
 
 function run(sc, mode, flags) {
   return KJ.runDES({

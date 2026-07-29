@@ -23,6 +23,7 @@
     features.approvalChain = state && state.appr !== '0';
     features.threatTargetDispersion = state && state.disp !== '0';
     features.southernAxes = state && state.south !== '0';
+    features.linkSemanticsV2 = !state || state.linkv2 !== '0'; // ADR-066
     return { deploymentId: state && state.dep, features: features, modelFidelity: 'iads-c2' };
   }
   function catalogFor(state) {
@@ -48,7 +49,8 @@
     var key = [state.sc, state.x, state.seed, state.dur, state.dep, 'iads-c2',
       state.appr === '1' ? 'appr' : '',
       state.disp === '1' ? 'disp' : '',
-      state.south === '1' ? 'south' : ''].join('|'); // ADR-062·063·064: 토글도 캐시 키
+      state.south === '1' ? 'south' : '',
+      state.linkv2 === '0' ? 'linkv1' : ''].join('|'); // ADR-062·063·064·066: 토글도 캐시 키
     if (desCache.key === key) return desCache.data;
     if (desCache.errorKey === key) return null;
     if (desCache.pendingKey === key) return null;

@@ -348,7 +348,9 @@
     // 같아, 배치 ID를 생략한 호출이 legacy 결과와 가장 가까운 편성을 보게 된다.
     // ADR-057: linkSemanticsV2 ON이면 codex ADR-014 정합 링크 변형 카탈로그를 쓴다(캐시 분리).
     return buildDeploymentCatalog(config.deploymentId || 'HANBANDO_LEGACY_NORMAL',
-      { linkSemanticsV2: features.linkSemanticsV2 === true,
+      // ADR-066: 기본 ON 전환 — 엔진 기본값과 반드시 일치해야 한다(`=== true`로 두면 features에
+      // 키가 없는 호출에서 엔진은 ON인데 카탈로그는 구 링크값인 조용한 불일치가 생긴다).
+      { linkSemanticsV2: features.linkSemanticsV2 !== false,
         // ADR-058: 승인 계선용 coord 링크는 변형 카탈로그에서만 생성(OFF wire shape 불변).
         // ADR-065: 기본 ON 전환 — 엔진 기본값과 반드시 일치해야 한다. `=== true`로 두면
         // features에 키가 없는 호출에서 엔진은 승인 계선 ON인데 카탈로그에는 coord 링크가

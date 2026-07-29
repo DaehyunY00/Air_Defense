@@ -84,6 +84,10 @@ Monte Carlo는 서버 실행을 권장합니다.</p>
   지휘소를 통합했다고 레이더가 더 빨리 돌지는 않기 때문입니다. <b>끄면</b> 통합 체계에서만 모든 레이더가 1초로 보고해,
   같은 그린파인이 통합 체계에서 16배 빨리 보고하는 상태가 됩니다.
   <span class="small">(실측상 결과 수치는 거의 바뀌지 않습니다 — 보고 지연이 결심 시간의 지배 요인이 아니기 때문입니다.)</span></td></tr>
+<tr><td>교전현황 공유 COP<br><span class="small">(기본 켜짐)</span></td><td>통합 체계에서 <b>"누가 지금 무엇을 쏘고 있는지"</b>를 지휘소끼리 공유합니다.
+  <b>끄면</b> 통합 지휘소가 그 정보를 받고도 읽지 않아 <b>중복 사격이 현 체계보다 많아집니다</b>(섞어쏘기 28.7회 vs 18.1회) —
+  이름표가 어긋나 있던 결함 상태입니다. 켜도 <b>격추율·요격 실패율은 바뀌지 않고</b> 중복 사격과 요격탄 소모만 줄어들며,
+  현 체계(As-Is)는 어느 쪽이든 완전히 동일합니다.</td></tr>
 <tr><td>위협 강도 ×</td><td>위협 수 배수. 크게 할수록 지휘소가 포화되는 모습을 볼 수 있습니다</td></tr>
 </tbody>
 </table>
@@ -98,7 +102,7 @@ Monte Carlo는 서버 실행을 권장합니다.</p>
 <h3>3.3 딥링크</h3>
 <p>주소창 해시로 상태를 공유할 수 있습니다:</p>
 <pre>#tab=sim&sc=sc3&mode=asis&dep=HANBANDO_LEGACY_NORMAL&x=1.5&seed=12345&dur=1800</pre>
-<p class="small">기본 켜짐 항목(<code>appr</code>·<code>disp</code>·<code>south</code>·<code>linkv2</code>·<code>rp</code>)은 <b>끌 때만</b> 주소에 나타납니다 — 예: <code>#linkv2=0&amp;rp=0</code>.</p>
+<p class="small">기본 켜짐 항목(<code>appr</code>·<code>disp</code>·<code>south</code>·<code>linkv2</code>·<code>rp</code>·<code>cop</code>)은 <b>끌 때만</b> 주소에 나타납니다 — 예: <code>#linkv2=0&amp;rp=0</code>.</p>
 <table>
 <thead><tr><th>키</th><th>값</th></tr></thead>
 <tbody>
@@ -110,6 +114,7 @@ Monte Carlo는 서버 실행을 권장합니다.</p>
 <tr><td><code>south</code></td><td><b>1(기본)</b> | 0 — 남부 종심 축선 대구·부산 (ADR-064·065)</td></tr>
 <tr><td><code>linkv2</code></td><td><b>1(기본)</b> | 0 — 링크 의미론 정본 정합 (ADR-057·066)</td></tr>
 <tr><td><code>rp</code></td><td><b>1(기본)</b> | 0 — 레이더→C2 보고 주기 양 모드 공통 (ADR-067)</td></tr>
+<tr><td><code>cop</code></td><td><b>1(기본)</b> | 0 — 교전현황 공유 COP (ADR-056·068)</td></tr>
 <tr><td><code>fid</code></td><td>(폐기 — ADR-061) 어떤 값이든 iads-c2로 정규화됩니다</td></tr>
 <tr><td><code>x</code> / <code>seed</code> / <code>dur</code></td><td>강도(0.5~3) / 난수 시드 / 시뮬레이션 시간(초)</td></tr>
 </tbody>

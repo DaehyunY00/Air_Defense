@@ -1295,6 +1295,10 @@ li.chk-fail { background: #43140f; }
       <input type="checkbox" id="sensor-parity-toggle" checked>
       보고 주기 양 모드 공통 (ADR-067)
     </label>
+    <label class="ctl-check" title="통합 체계(To-Be)의 공통 상황도가 교전현황을 실제로 공유합니다(ADR-056). 끄면 통합 지휘소가 군단 방공통제소의 교전현황을 받고도 소비하지 않아 중복 사격이 현 체계보다 많아집니다 — 축 이름 불일치(KILL_WEB↔MCRC)에서 온 결함 상태입니다. 켜도 격추율·누수율은 바뀌지 않고, 중복교전과 요격탄 소모만 줄어듭니다. 현 체계(As-Is)는 어느 쪽이든 완전히 동일합니다.">
+      <input type="checkbox" id="engagement-cop-toggle" checked>
+      교전현황 공유 COP (ADR-056)
+    </label>
   </div>
   <div id="deployment-warning" class="deployment-warning hidden" role="status"></div>
 
@@ -4497,7 +4501,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   // ADR-061: dep 기본값은 주 분석 배치, fid는 하위호환 파싱만 남기고 항상 iads-c2로 고정된다.
   // ADR-065: appr(승인 계선)·disp(표적 산포)·south(남부 축선)는 **기본 ON**이다('0'으로 해제).
   // ADR-066: linkv2(링크 의미론 codex 정합)도 **기본 ON** — 반증용 해제 경로로 linkv2=0을 신설.
-  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '1', disp: '1', south: '1', linkv2: '1', rp: '1', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
+  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '1', disp: '1', south: '1', linkv2: '1', rp: '1', cop: '1', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
   var VALID_TABS = ['sim', 'analysis', 'mc', 'data'];
   // 구 딥링크 호환: 지도/시나리오/DES/재생 탭은 통합 [시뮬레이션] 탭으로 흡수
   var LEGACY_TAB = { map: 'sim', scenario: 'sim', des: 'sim', playback: 'sim' };
@@ -4532,6 +4536,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       state.south = (state.south === '0' || state.south === false) ? '0' : '1';
       state.linkv2 = (state.linkv2 === '0' || state.linkv2 === false) ? '0' : '1'; // ADR-066
       state.rp = (state.rp === '0' || state.rp === false) ? '0' : '1'; // ADR-067
+      state.cop = (state.cop === '0' || state.cop === false) ? '0' : '1'; // ADR-068
       if (!KJ.DEPLOYMENT_IDS || KJ.DEPLOYMENT_IDS.indexOf(state.dep) === -1) {
         state.dep = DEFAULTS.dep; // 구 dep=legacy·HANBANDO_MINI_* 딥링크 폴백
       }
@@ -5944,7 +5949,11 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     this.emergencyEngagement = ff('emergencyEngagement', false);
     // ADR-056: To-Be 통합 축(KILL_WEB)이 군단 AOC 교전현황을 소비하는가. OFF면 As-Is의 MCRC만
     // 소비한다(=수정 전과 bit-exact). ON이어도 As-Is 결과는 변하지 않는다(KILL_WEB 축은 To-Be 전용).
-    this.unifiedEngagementState = ff('unifiedEngagementState', false);
+    // ADR-068: 기본 ON 전환. OFF는 **결함 상태**다 — To-Be 상급 C2의 축 이름이 KILL_WEB인데
+    // 소비 조건이 axis==='MCRC'라 교전현황을 받고도 버린다(이름 불일치이지 의도된 모델이 아니다).
+    // 그 결과 기본 화면이 "통합하면 중복교전이 늘어난다"는 사실 아닌 그림을 보여주고 있었다.
+    // 전환해도 임무 지표(격추·누수)는 움직이지 않고 As-Is는 완전 불변이다(KILL_WEB은 To-Be 전용).
+    this.unifiedEngagementState = ff('unifiedEngagementState', true);
     // ADR-057: 링크 의미론 codex 정합 — 센서→C2는 보고 주기(reportingPeriod), C2↔C2는 전송
     // 지연(codex shortRange 1초). 실제 분기는 어댑터의 변형 카탈로그가 수행한다(캐시 분리).
     // ADR-066: 기본 ON 전환. OFF 경로는 (1) codex ADR-014가 폐기한 "일률 16초"를 쓰고,
@@ -5983,7 +5992,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       ? f.targetSpreadKm : (KJ.THREAT_TARGET_SPREAD_KM || 0);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
     if (this.highResolutionDeployment) this.features.highResolutionDeployment = true;
-    if (this.unifiedEngagementState) this.features.unifiedEngagementState = true;
+    this.features.unifiedEngagementState = this.unifiedEngagementState; // ADR-068: 항상 실제 해석값 신고
     this.features.linkSemanticsV2 = this.linkSemanticsV2; // ADR-066: 기본 ON — 항상 실제 해석값 신고
     // ADR-065: 기본 ON 3종은 "ON일 때만 노출"이 아니라 **실제 해석값을 항상 신고**한다 —
     // 소비 측(분석 탭의 미측정 표기 등)이 실행 조건을 정확히 읽어야 하기 때문이다.
@@ -9653,6 +9662,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     features.southernAxes = state && state.south !== '0';
     features.linkSemanticsV2 = !state || state.linkv2 !== '0'; // ADR-066
     features.sensorReportParity = !state || state.rp !== '0'; // ADR-067
+    features.unifiedEngagementState = !state || state.cop !== '0'; // ADR-068
     return { deploymentId: state && state.dep, features: features, modelFidelity: 'iads-c2' };
   }
   function catalogFor(state) {
@@ -9680,7 +9690,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       state.disp === '1' ? 'disp' : '',
       state.south === '1' ? 'south' : '',
       state.linkv2 === '0' ? 'linkv1' : '',
-      state.rp === '0' ? 'norp' : ''].join('|'); // ADR-062·063·064·066·067: 토글도 캐시 키
+      state.rp === '0' ? 'norp' : '',
+      state.cop === '0' ? 'nocop' : ''].join('|'); // ADR-062~068: 토글도 캐시 키
     if (desCache.key === key) return desCache.data;
     if (desCache.errorKey === key) return null;
     if (desCache.pendingKey === key) return null;
@@ -10469,6 +10480,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     features.southernAxes = cfg && cfg.south !== '0';
     features.linkSemanticsV2 = !cfg || cfg.linkv2 !== '0'; // ADR-066
     features.sensorReportParity = !cfg || cfg.rp !== '0'; // ADR-067
+    features.unifiedEngagementState = !cfg || cfg.cop !== '0'; // ADR-068
     return { deploymentId: cfg && cfg.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -10481,7 +10493,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형') +
       ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 승인계선 ON' : '') + (cfg.disp === '1' ? ' · 표적산포 ON' : '') + (cfg.south === '1' ? ' · 남부축선 ON' : '') +
       // ADR-066: 기본 ON이라 해제했을 때만 표시한다 — 구 링크 의미론 실행임을 놓치지 않게.
-      (cfg.linkv2 === '0' ? ' · 구 링크의미론(OFF)' : '') + (cfg.rp === '0' ? ' · 보고주기 비대칭(OFF)' : '') +
+      (cfg.linkv2 === '0' ? ' · 구 링크의미론(OFF)' : '') + (cfg.rp === '0' ? ' · 보고주기 비대칭(OFF)' : '') + (cfg.cop === '0' ? ' · 교전현황 공유 OFF' : '') +
       ' · 강도 ×' + Number(cfg.x).toFixed(1) + ' · seed ' + cfg.seed;
   }
 
@@ -10519,6 +10531,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         south: state.south === '1' ? '1' : '0',
         linkv2: state.linkv2 === '0' ? '0' : '1', // ADR-066: 기본 ON
         rp: state.rp === '0' ? '0' : '1', // ADR-067: 기본 ON
+        cop: state.cop === '0' ? '0' : '1', // ADR-068: 기본 ON
         x: state.x, seed: seed, dur: dur };
       var btn = el('sim-run');
       btn.disabled = true; btn.textContent = '⏳ DES 실행 중...';
@@ -11553,7 +11566,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         threatTargetDispersion: state.disp !== '0',
         southernAxes: state.south !== '0',
         linkSemanticsV2: state.linkv2 !== '0',
-        sensorReportParity: state.rp !== '0'
+        sensorReportParity: state.rp !== '0',
+        unifiedEngagementState: state.cop !== '0'
       },
       modelFidelity: 'iads-c2' // ADR-061: compat 폐기 — 충실도는 1종뿐이다
     };
@@ -11903,6 +11917,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     features.southernAxes = state.south !== '0';
     features.linkSemanticsV2 = state.linkv2 !== '0'; // ADR-066
     features.sensorReportParity = state.rp !== '0'; // ADR-067
+    features.unifiedEngagementState = state.cop !== '0'; // ADR-068
     return { deploymentId: state.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -11951,6 +11966,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (linkBox) linkBox.checked = state.linkv2 === '1'; // ADR-066
     var rpBox = document.getElementById('sensor-parity-toggle');
     if (rpBox) rpBox.checked = state.rp === '1'; // ADR-067
+    var copBox = document.getElementById('engagement-cop-toggle');
+    if (copBox) copBox.checked = state.cop === '1'; // ADR-068
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
     document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
@@ -12025,6 +12042,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (rpToggle) {
       rpToggle.addEventListener('change', function (e) {
         setState({ rp: e.target.checked ? '1' : '0' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-068: 교전현황 공유(양방향 COP) 토글 — To-Be 중복교전 해소 경로. 실행 조건 변경.
+    var copToggle = document.getElementById('engagement-cop-toggle');
+    if (copToggle) {
+      copToggle.addEventListener('change', function (e) {
+        setState({ cop: e.target.checked ? '1' : '0' });
         if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
       });
     }

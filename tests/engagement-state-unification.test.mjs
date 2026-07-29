@@ -1,18 +1,23 @@
 /**
- * ADR-056 — To-Be 교전상태 통합(unifiedEngagementState) 회귀.
+ * ADR-056 — To-Be 교전상태 통합(unifiedEngagementState) 회귀. **ADR-068로 기본 ON.**
  *
- * 배경(확정된 결함): To-Be의 상급 C2는 axis='KILL_WEB'(IAOC)인데, 군단 AOC 교전현황의
+ * 배경(확정된 결함): To-Be의 상급 C2는 axis='KILL_WEB'(IAOC)인데 군단 AOC 교전현황의
  * 유일한 소비처 `_iadsSharedLocalEngagement`는 axis==='MCRC'만 소비했다. 그래서 To-Be는
- * 교전현황을 2초/무손실로 전달받고도 한 번도 소비하지 않았고(statusSharing.deconflicted=0),
- * 중복교전이 As-Is보다 많았다(paired MC 30 seed: SC1 Δ +8.53 [7.22, 9.85]).
+ * 교전현황을 전달받고도 한 번도 소비하지 않았고(statusSharing.deconflicted=0),
+ * 중복교전이 As-Is보다 많았다 — 이름 불일치에서 온 결함이지 의도된 모델이 아니다.
+ *
+ * ADR-068 이후 어서션 구조가 뒤집혔다: **기본(키 생략) == ON**이고, 반증 경로는 명시적
+ * `unifiedEngagementState:false`다. 지문도 두 벌을 함께 고정해 어느 쪽이 기본인지 못 헷갈리게 한다.
  *
  * 검증 관점:
- *  1) 플래그 OFF = Phase 0 종료 시점(ADR-055 직후)과 bit-exact — SHA-256 4케이스
- *  2) 플래그 ON에서 To-Be가 교전현황을 실제로 소비한다(deconflicted>0, 중복 감소)
- *  3) 플래그 ON이어도 As-Is 거동은 불변(KILL_WEB 축은 To-Be 전용) — features 에코 제외 bit-exact
- *  4) 보존법칙 유지
+ *  1) 명시적 OFF가 결함 상태를 그대로 보존한다(SHA-256 4케이스 + 중복교전 잔존)
+ *  2) 기본(ON)에서 To-Be가 교전현황을 실제로 소비하고 중복이 사라진다
+ *  3) 기본 == 명시적 ON, 기본 != 명시적 OFF (토글이 장식이 아님)
+ *  4) **As-Is는 ON/OFF가 거동 bit-exact** — KILL_WEB 축은 To-Be 전용이므로 비교의 공정성 보존
+ *  5) 보존법칙 · 반증 경로 배선(cop 딥링크·UI 토글)
  */
 import path from 'node:path';
+import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -20,7 +25,8 @@ import { installIadsKernel } from '../js/model/iads/index.js';
 
 globalThis.window = globalThis;
 const require = createRequire(import.meta.url);
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'js');
+const repo = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = path.join(repo, 'js');
 [
   'config/system-types.js', 'config/geo-mdl.js', 'config/deployments.js',
   'data/nodes.js', 'data/links.js', 'data/threats.js', 'data/scenarios.js', 'data/axes.js',
@@ -31,19 +37,16 @@ var KJ = globalThis.KJ, fail = 0;
 installIadsKernel(KJ);
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
 
-// Phase 0 종료 시점(ADR-055, MINI 폐기 직후) 지문 — LEGACY_HIRES × iads-c2 × ×1.5 × seed 12345 × 900초.
-// 갱신 규칙: 의도된 거동 변경으로 재기준선이 필요하면 ADR에 사유를 남기고 아래 값을 교체한다.
-// ADR-065 재기준화: 기본값 3종(승인 계선·표적 산포·남부 축선)을 ON으로 전환하면서 배경이
-// 바뀌어 구 지문(전 OFF 기본값 기준)은 재현 불가가 되었다. 지문을 신 기본값으로 다시 잡는다.
-// ⚠️ 이 어서션의 의미도 함께 약해진다: "unifiedEngagementState OFF == ADR-056 도입 전"이
-// 아니라 **"OFF == 현행 기본 기준선"**(이후 회귀 방지선)이다. 구 지문은 git 이력에 있다.
-var PHASE0_SHA = {
-  'sc1|asis': '664679d309f9188b3a4c5b259e2c5370d6ccf0d085e39ff278d01d29c462892c',
-  'sc1|tobe': 'af054c886f596b0730352d482e02b30c21eab4a8ba0c93c6bd2d658a2fc67e01',
-  'sc3|asis': '57bd539b6d7b23f63b1275bf50a48be54b5b8fe6937cde0be42ef3ed4f6ed3eb',
-  'sc3|tobe': '2199d7693dc6ec2ff2c34cffb74dd21b9b20fcf48bc9b3e6fa34056dce238838'
+// 명시적 OFF(= 결함 상태) 지문 — LEGACY_HIRES × iads-c2 × ×1.5 × seed 12345 × 900초.
+// ⚠️ 이 지문의 의미: "OFF == ADR-056 도입 전"이 아니라 **"OFF == 현행 기준선의 결함 팔"**이다.
+// 기본값이 다섯 번 재기준화되며(ADR-061 이관 → 065 → 066 → 067 → 068) 배경이 계속 바뀌었다.
+var OFF_SHA = {
+  'sc1|asis': 'e6ef98d8e722dbed6f7585a5ae2465d6b01cd8d7c1d285bf4af9a3ce3d0b10d3',
+  'sc1|tobe': 'b9d2f377cca5990410e4bacb0d1e056728c68cb7c98b537ede179cc17a838abb',
+  'sc3|asis': '63ee3164678ec928c6eae8d3d17c793a0b08b5b3e459f8dd7d8abd4430df831c',
+  'sc3|tobe': 'cd1e2a1fb57f7818ef04045fa5dff75e4d96da5a13bbbc06852ee6adc6f09814'
 };
-var OFF_TOBE_DUP = { sc1: 11, sc3: 13 }; // OFF To-Be 중복교전(신 기본값 실측) — ON에서 이보다 작아야 함
+var OFF_TOBE_DUP = { sc1: 11, sc3: 13 }; // OFF To-Be 중복교전 — 결함이 남아 있다는 증거
 
 function run(sc, mode, flags) {
   return KJ.runDES({
@@ -53,46 +56,72 @@ function run(sc, mode, flags) {
   });
 }
 function sha(r) { return crypto.createHash('sha256').update(JSON.stringify(r)).digest('hex'); }
-function shaNoFeatures(r) {
-  // ON일 때만 노출되는 키(features 에코·copDeconflicted 카운터)를 제외한 거동 비교.
+function behaviourSha(r) {
+  // features 에코와 ON 전용 카운터를 제외한 **거동** 비교.
   var clone = JSON.parse(JSON.stringify(r));
   delete clone.global.features;
   if (clone.global.coordination) delete clone.global.coordination.copDeconflicted;
   return crypto.createHash('sha256').update(JSON.stringify(clone)).digest('hex');
 }
 
-console.log('# 1 — OFF bit-exact (Phase 0 종료 시점 SHA-256)');
+console.log('# 1 — 명시적 OFF는 결함 상태를 보존한다 (반증 경로)');
 var offRuns = {};
 ['sc1', 'sc3'].forEach(function (sc) {
   ['asis', 'tobe'].forEach(function (mode) {
-    var r = run(sc, mode, null);
+    var r = run(sc, mode, { unifiedEngagementState: false });
     offRuns[sc + '|' + mode] = r;
-    assert(sha(r) === PHASE0_SHA[sc + '|' + mode], sc + ' ' + mode + ' OFF SHA-256 불변');
+    assert(sha(r) === OFF_SHA[sc + '|' + mode], sc + ' ' + mode + ' 명시적 OFF SHA-256 불변');
   });
 });
 ['sc1', 'sc3'].forEach(function (sc) {
   var c = offRuns[sc + '|tobe'].global.coordination;
   assert(c.statusSharing.deconflicted === 0 && c.duplicates === OFF_TOBE_DUP[sc],
-    sc + ' OFF To-Be: 결함 상태 보존(deconflicted=0, 중복=' + OFF_TOBE_DUP[sc] + ')');
+    sc + ' OFF To-Be: 결함 보존(교전현황 소비 0건 · 중복 ' + OFF_TOBE_DUP[sc] + ')');
 });
 
-console.log('# 2 — ON: To-Be가 교전현황을 소비');
+console.log('# 2 — 기본(ON): To-Be가 교전현황을 실제로 소비하고 중복이 사라진다');
+var onRuns = {};
 ['sc1', 'sc3'].forEach(function (sc) {
-  var r = run(sc, 'tobe', { unifiedEngagementState: true });
+  var r = run(sc, 'tobe', null); // 키 생략 = 기본 ON (ADR-068)
+  onRuns[sc] = r;
   var c = r.global.coordination, g = r.global;
-  assert(c.statusSharing.deconflicted > 0, sc + ' ON To-Be: statusSharing.deconflicted > 0 (순방향: KILL_WEB이 군단 AOC 현황 소비)');
+  assert(c.statusSharing.deconflicted > 0,
+    sc + ' 기본 To-Be: 순방향 소비 발생(KILL_WEB이 군단 AOC 현황을 읽음, ' + c.statusSharing.deconflicted + '건)');
   assert(c.copDeconflicted > 0,
-    sc + ' ON To-Be: 역방향 COP 해소 발생(copDeconflicted=' + c.copDeconflicted + ')');
-  assert(c.duplicates < OFF_TOBE_DUP[sc], sc + ' ON To-Be: 중복교전 감소(' + c.duplicates + ' < ' + OFF_TOBE_DUP[sc] + ')');
-  assert(g.spawned === g.killed + g.leaked + g.censoredRaw, sc + ' ON To-Be: 보존법칙');
-  assert(r.global.features.unifiedEngagementState === true, sc + ' ON To-Be: 플래그가 결과에 노출');
+    sc + ' 기본 To-Be: 역방향 COP 해소 발생(' + c.copDeconflicted + '건)');
+  assert(c.duplicates === 0,
+    sc + ' 기본 To-Be: 중복교전 완전 해소(' + OFF_TOBE_DUP[sc] + ' → ' + c.duplicates + ')');
+  assert(g.spawned === g.killed + g.leaked + g.censoredRaw, sc + ' 기본 To-Be: 보존법칙');
+  assert(r.global.features.unifiedEngagementState === true, sc + ' 기본 To-Be: 플래그 ON 신고');
 });
 
-console.log('# 3 — ON: As-Is 거동 불변(features 에코 제외 bit-exact)');
+console.log('# 3 — 토글이 장식이 아님 (기본 == 명시적 ON, != 명시적 OFF)');
 ['sc1', 'sc3'].forEach(function (sc) {
-  var on = run(sc, 'asis', { unifiedEngagementState: true });
-  assert(shaNoFeatures(on) === shaNoFeatures(offRuns[sc + '|asis']),
-    sc + ' ON As-Is == OFF As-Is (KILL_WEB 축 부재 → 거동 무변화)');
+  var explicitOn = run(sc, 'tobe', { unifiedEngagementState: true });
+  assert(sha(explicitOn) === sha(onRuns[sc]), sc + ' 키 생략 == 명시적 ON (ADR-068 기본값 전환)');
+  assert(sha(onRuns[sc]) !== sha(offRuns[sc + '|tobe']), sc + ' 기본(ON) != 명시적 OFF');
+  assert(offRuns[sc + '|tobe'].global.features.unifiedEngagementState === false,
+    sc + ' 명시적 OFF는 false를 신고(미측정 아님)');
+});
+
+console.log('# 4 — As-Is는 ON/OFF가 거동 bit-exact (비교의 공정성)');
+// 이 어서션이 ADR-068 전환의 핵심 근거다 — 전환이 As-Is를 전혀 건드리지 않으므로
+// "To-Be에 유리하게 기준을 옮긴 것"이 아니라 To-Be 전용 결함을 고친 것이다.
+['sc1', 'sc3'].forEach(function (sc) {
+  var on = run(sc, 'asis', null);
+  assert(behaviourSha(on) === behaviourSha(offRuns[sc + '|asis']),
+    sc + ' As-Is: 기본(ON) == 명시적 OFF (KILL_WEB 축 부재 → 거동 무변화)');
+});
+
+console.log('# 5 — 반증 경로 배선 (라우터·UI)');
+var router = fs.readFileSync(path.join(repo, 'js', 'core', 'router.js'), 'utf8');
+assert(/cop: '1'/.test(router), "라우터 DEFAULTS에 cop 기본 ON ('1')");
+assert(/state\.cop = \(state\.cop === '0'/.test(router), "명시적 '0'만 해제로 정규화");
+assert(fs.readFileSync(path.join(repo, 'index.html'), 'utf8').indexOf('id="engagement-cop-toggle"') !== -1,
+  '상단 컨트롤에 교전현황 공유 토글 존재');
+['main.js', 'ui/panels.js', 'ui/sim-view.js', 'ui/mc-panel.js'].forEach(function (f) {
+  assert(/unifiedEngagementState\s*[:=]\s*.*cop !== '0'/.test(fs.readFileSync(path.join(repo, 'js', f), 'utf8')),
+    f + " modelConfig가 cop → features 전달 (기본 ON, '0'만 해제)");
 });
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');

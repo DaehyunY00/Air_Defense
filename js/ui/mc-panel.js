@@ -30,7 +30,8 @@
         threatTargetDispersion: state.disp !== '0',
         southernAxes: state.south !== '0',
         linkSemanticsV2: state.linkv2 !== '0',
-        sensorReportParity: state.rp !== '0'
+        sensorReportParity: state.rp !== '0',
+        unifiedEngagementState: state.cop !== '0'
       },
       modelFidelity: 'iads-c2' // ADR-061: compat 폐기 — 충실도는 1종뿐이다
     };

@@ -105,6 +105,7 @@
     features.southernAxes = cfg && cfg.south !== '0';
     features.linkSemanticsV2 = !cfg || cfg.linkv2 !== '0'; // ADR-066
     features.sensorReportParity = !cfg || cfg.rp !== '0'; // ADR-067
+    features.unifiedEngagementState = !cfg || cfg.cop !== '0'; // ADR-068
     return { deploymentId: cfg && cfg.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -117,7 +118,7 @@
       (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형') +
       ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 승인계선 ON' : '') + (cfg.disp === '1' ? ' · 표적산포 ON' : '') + (cfg.south === '1' ? ' · 남부축선 ON' : '') +
       // ADR-066: 기본 ON이라 해제했을 때만 표시한다 — 구 링크 의미론 실행임을 놓치지 않게.
-      (cfg.linkv2 === '0' ? ' · 구 링크의미론(OFF)' : '') + (cfg.rp === '0' ? ' · 보고주기 비대칭(OFF)' : '') +
+      (cfg.linkv2 === '0' ? ' · 구 링크의미론(OFF)' : '') + (cfg.rp === '0' ? ' · 보고주기 비대칭(OFF)' : '') + (cfg.cop === '0' ? ' · 교전현황 공유 OFF' : '') +
       ' · 강도 ×' + Number(cfg.x).toFixed(1) + ' · seed ' + cfg.seed;
   }
 
@@ -155,6 +156,7 @@
         south: state.south === '1' ? '1' : '0',
         linkv2: state.linkv2 === '0' ? '0' : '1', // ADR-066: 기본 ON
         rp: state.rp === '0' ? '0' : '1', // ADR-067: 기본 ON
+        cop: state.cop === '0' ? '0' : '1', // ADR-068: 기본 ON
         x: state.x, seed: seed, dur: dur };
       var btn = el('sim-run');
       btn.disabled = true; btn.textContent = '⏳ DES 실행 중...';

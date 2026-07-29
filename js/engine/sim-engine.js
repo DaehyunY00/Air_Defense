@@ -211,7 +211,11 @@
     this.emergencyEngagement = ff('emergencyEngagement', false);
     // ADR-056: To-Be 통합 축(KILL_WEB)이 군단 AOC 교전현황을 소비하는가. OFF면 As-Is의 MCRC만
     // 소비한다(=수정 전과 bit-exact). ON이어도 As-Is 결과는 변하지 않는다(KILL_WEB 축은 To-Be 전용).
-    this.unifiedEngagementState = ff('unifiedEngagementState', false);
+    // ADR-068: 기본 ON 전환. OFF는 **결함 상태**다 — To-Be 상급 C2의 축 이름이 KILL_WEB인데
+    // 소비 조건이 axis==='MCRC'라 교전현황을 받고도 버린다(이름 불일치이지 의도된 모델이 아니다).
+    // 그 결과 기본 화면이 "통합하면 중복교전이 늘어난다"는 사실 아닌 그림을 보여주고 있었다.
+    // 전환해도 임무 지표(격추·누수)는 움직이지 않고 As-Is는 완전 불변이다(KILL_WEB은 To-Be 전용).
+    this.unifiedEngagementState = ff('unifiedEngagementState', true);
     // ADR-057: 링크 의미론 codex 정합 — 센서→C2는 보고 주기(reportingPeriod), C2↔C2는 전송
     // 지연(codex shortRange 1초). 실제 분기는 어댑터의 변형 카탈로그가 수행한다(캐시 분리).
     // ADR-066: 기본 ON 전환. OFF 경로는 (1) codex ADR-014가 폐기한 "일률 16초"를 쓰고,
@@ -250,7 +254,7 @@
       ? f.targetSpreadKm : (KJ.THREAT_TARGET_SPREAD_KM || 0);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
     if (this.highResolutionDeployment) this.features.highResolutionDeployment = true;
-    if (this.unifiedEngagementState) this.features.unifiedEngagementState = true;
+    this.features.unifiedEngagementState = this.unifiedEngagementState; // ADR-068: 항상 실제 해석값 신고
     this.features.linkSemanticsV2 = this.linkSemanticsV2; // ADR-066: 기본 ON — 항상 실제 해석값 신고
     // ADR-065: 기본 ON 3종은 "ON일 때만 노출"이 아니라 **실제 해석값을 항상 신고**한다 —
     // 소비 측(분석 탭의 미측정 표기 등)이 실행 조건을 정확히 읽어야 하기 때문이다.

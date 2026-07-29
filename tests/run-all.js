@@ -66,6 +66,7 @@ var suites = [
   ,['analysis-metric-honesty.test.mjs', 'ADR-062 분석 탭 지표 정직성 (死 지표 제거·미측정 표기·승인계선 토글·OFF bit-exact)']
   ,['target-dispersion.test.mjs', 'ADR-063 표적권역 산포 (OFF bit-exact·균등원판·seed 의존·스트림 분리·권역 무결성·제약 불변)']
   ,['southern-axes.test.mjs', 'ADR-064 남부 종심 축선 (OFF bit-exact·coverage 분리·사거리 정합·체공 환산·남부 자산 활성화)']
+  ,['sensor-report-parity.test.mjs', 'ADR-067 레이더→C2 보고 주기 양 모드 공통 (대칭·킬웹 포함·음성 비대칭 유지·As-Is 불변)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

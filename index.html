@@ -53,6 +53,10 @@
       <input type="checkbox" id="link-semantics-toggle" checked>
       링크 의미론 정본 정합 (ADR-057)
     </label>
+    <label class="ctl-check" title="레이더→C2 보고 주기를 As-Is·To-Be 동일하게 둡니다(ADR-067). 보고 주기는 센서의 물리 속성이므로 C2를 통합해도 레이더가 더 빨리 돌지는 않습니다. 끄면 To-Be만 전 보고 링크가 1초가 되어, 같은 그린파인이 To-Be에서 16배 빨리 보고하는 상태(codex ifcn 해석)로 돌아갑니다. 데이터링크 전송은 양 모드 모두 1초로 동일하며, 음성 협조 지연의 비대칭은 이 토글과 무관하게 유지됩니다.">
+      <input type="checkbox" id="sensor-parity-toggle" checked>
+      보고 주기 양 모드 공통 (ADR-067)
+    </label>
   </div>
   <div id="deployment-warning" class="deployment-warning hidden" role="status"></div>
 

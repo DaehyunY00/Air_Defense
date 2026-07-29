@@ -241,6 +241,11 @@
     // OFF면 남부 축선 위협이 하나도 생성되지 않아 종전과 bit-exact.
     // ADR-065: 기본 ON — 배치 자산의 1/6이 표적 회랑 밖이라 구조적으로 유휴인 상태를 해소한다.
     this.southernAxes = ff('southernAxes', true);
+    // ADR-067: 레이더→C2 보고 주기를 양 모드 공통으로. 종전에는 To-Be만 IFCN 1초로 덮여 같은
+    // 레이더가 To-Be에서 최대 16배 빨리 보고했다 — C2 구조가 센서 성능을 만들어내는 모델링이다.
+    // 엔진이 이미 최속 센서 경로를 고르므로(_iadsReportBundle) 융합 신선도는 링크 구조에서
+    // 자연 발생하고, 일괄 1초는 이중 계상이다. 분기는 어댑터가 수행한다(변형 카탈로그 |rp).
+    this.sensorReportParity = ff('sensorReportParity', true);
     this.targetSpreadKm = (typeof f.targetSpreadKm === 'number' && f.targetSpreadKm >= 0)
       ? f.targetSpreadKm : (KJ.THREAT_TARGET_SPREAD_KM || 0);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
@@ -256,6 +261,7 @@
     this.features.threatTargetDispersion = this.threatTargetDispersion;
     if (this.threatTargetDispersion) this.features.targetSpreadKm = this.targetSpreadKm;
     this.features.southernAxes = this.southernAxes;
+    this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.

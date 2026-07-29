@@ -1287,6 +1287,14 @@ li.chk-fail { background: #43140f; }
       <input type="checkbox" id="southern-axes-toggle" checked>
       남부 종심 축선 (ADR-064)
     </label>
+    <label class="ctl-check" title="링크 지연을 IADS_codex 정본(ADR-014)에 정합시킵니다(ADR-057). 켜면 센서→C2는 센서별 보고 주기(그린파인 16·FPS-117 8·TPS-880K 4·MFR 1초), C2↔C2는 양 모드 모두 1초입니다. 끄면 구 의미론(As-Is 일률 16초 · To-Be 전 링크 2초)으로 되돌아가며, As-Is가 실제보다 느리게 모델링되어 To-Be 개선폭이 과대평가됩니다.">
+      <input type="checkbox" id="link-semantics-toggle" checked>
+      링크 의미론 정본 정합 (ADR-057)
+    </label>
+    <label class="ctl-check" title="레이더→C2 보고 주기를 As-Is·To-Be 동일하게 둡니다(ADR-067). 보고 주기는 센서의 물리 속성이므로 C2를 통합해도 레이더가 더 빨리 돌지는 않습니다. 끄면 To-Be만 전 보고 링크가 1초가 되어, 같은 그린파인이 To-Be에서 16배 빨리 보고하는 상태(codex ifcn 해석)로 돌아갑니다. 데이터링크 전송은 양 모드 모두 1초로 동일하며, 음성 협조 지연의 비대칭은 이 토글과 무관하게 유지됩니다.">
+      <input type="checkbox" id="sensor-parity-toggle" checked>
+      보고 주기 양 모드 공통 (ADR-067)
+    </label>
   </div>
   <div id="deployment-warning" class="deployment-warning hidden" role="status"></div>
 
@@ -4186,9 +4194,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var v2 = !!(opts && opts.linkSemanticsV2);
     var appr = !!(opts && opts.approvalChain);
     var southern = !!(opts && opts.southernAxes); // ADR-064
+    var parity = !!(opts && opts.sensorReportParity); // ADR-067
     var opLevel = (opts && opts.c2OperatorLevel) || null; // 'high'|'low' (null=mid, 종전 동일)
     var cacheKey = id + (v2 ? '|linkV2' : '') + (appr ? '|appr' : '') +
-      (southern ? '|south' : '') + (opLevel ? '|op:' + opLevel : '');
+      (southern ? '|south' : '') + (parity ? '|rp' : '') + (opLevel ? '|op:' + opLevel : '');
     if (cache[cacheKey]) return cache[cacheKey];
     var deployment = KJ.deploymentById(id);
     if (!deployment) throw new Error('Unknown high-resolution deployment: ' + id);
@@ -4306,8 +4315,25 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     }
     function c2ForPos(key) { return key ? c2ByPos[key] || null : null; }
 
+    /**
+     * ADR-067 — 센서 발신 `report` 링크의 **To-Be 측** 지연.
+     *
+     * 보고 주기는 센서 물리이므로 양 모드 공통이어야 한다. 종전에는 To-Be만 IFCN 1초로 덮여
+     * 같은 레이더가 To-Be에서 최대 16배 빨리 보고했다. codex `ifcn:1`("킬웹 보고주기 전부 1s")의
+     * 논거는 융합 신선도인데, 엔진이 이미 센서별 보고 경로 중 **최속 경로를 고르므로**
+     * (sim-engine.js `_iadsReportBundle` — candidates.sort(delay) → candidates[0]) 그 이득은
+     * 링크 구조에서 자연 발생한다. 일괄 1초는 이중 계상이며, 단일 센서만 보는 표적에는
+     * 융합 논거 자체가 없다. 정본 이탈 사유는 ADR-067·params.md IADS-LINK-IFCN-01에 기록.
+     *
+     * ⚠️ C2 발신 `report`(MCRC→군단 AOC 항적 중계·킬웹 C2→IAOC)는 C2↔C2이므로 대상이 아니다.
+     */
+    function sensorReportTobe(typeId) {
+      if (!v2) return DL_FAST;
+      return parity ? reportCycleComm(typeId) : IFCN;
+    }
+
     if (kamdoc) {
-      sensorNodes(['GREEN_PINE_B', 'GREEN_PINE_C']).forEach(function (s) { addLink(links, s.id, kamdoc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_kamd'); });
+      sensorNodes(['GREEN_PINE_B', 'GREEN_PINE_C']).forEach(function (s) { addLink(links, s.id, kamdoc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, sensorReportTobe(s.typeId), 'korean_kamd'); });
       iccs.forEach(function (icc) {
         addLink(links, kamdoc.id, icc.id, 'coord', v2 ? C2_TRANSFER : LONG, v2 ? IFCN : DL_FAST, 'korean_kamd');
         // The legacy decision stage searches from the reporting/controller C2
@@ -4318,7 +4344,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       });
     }
     if (mcrc) {
-      sensorNodes(['FPS117']).forEach(function (s) { addLink(links, s.id, mcrc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc'); });
+      sensorNodes(['FPS117']).forEach(function (s) { addLink(links, s.id, mcrc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, sensorReportTobe(s.typeId), 'korean_mcrc'); });
       iccs.forEach(function (icc) {
         addLink(links, mcrc.id, icc.id, 'coord', v2 ? C2_TRANSFER : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc');
         addLink(links, icc.id, mcrc.id, 'coord', v2 ? C2_TRANSFER : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc');
@@ -4340,8 +4366,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     }
     sensorNodes(['TPS880K']).forEach(function (s) {
       var owner = c2ForPos(s.localAdPosKey);
-      if (mcrc) addLink(links, s.id, mcrc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc');
-      if (owner) addLink(links, s.id, owner.id, 'report', v2 ? reportCycleComm(s.typeId) : INTERNAL, v2 ? IFCN : DL_FAST, 'abt_local');
+      if (mcrc) addLink(links, s.id, mcrc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, sensorReportTobe(s.typeId), 'korean_mcrc');
+      if (owner) addLink(links, s.id, owner.id, 'report', v2 ? reportCycleComm(s.typeId) : INTERNAL, sensorReportTobe(s.typeId), 'abt_local');
     });
 
     deployment.batteries.forEach(function (b) {
@@ -4349,7 +4375,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       var ecs = ecsByBattery[b.id];
       var sensor = b.mfrSensorPosKey ? nodeMap['SENSOR_' + b.mfrSensorPosKey] : null;
       var upper = c2ForPos(b.commandC2PosKey || b.iccPosKey || b.localAdPosKey);
-      if (sensor && ecs) addLink(links, sensor.id, ecs.id, 'report', v2 ? reportCycleComm(sensor.typeId) : INTERNAL, v2 ? IFCN : DL_FAST, 'battery_mfr');
+      if (sensor && ecs) addLink(links, sensor.id, ecs.id, 'report', v2 ? reportCycleComm(sensor.typeId) : INTERNAL, sensorReportTobe(sensor.typeId), 'battery_mfr');
       if (upper && ecs) {
         var upAsIs = v2 ? C2_TRANSFER : ((b.c2Axis === 'LOCAL_AD' || b.forceOwner === 'USFK') ? INTERNAL : SHORT);
         addLink(links, ecs.id, upper.id, 'coord', upAsIs, v2 ? IFCN : DL_FAST, b.c2Axis || 'korean');
@@ -4363,18 +4389,18 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // reporting path, not cross-ICC engagement-state sharing.
     if (!kamdoc) {
       sensorNodes(['GREEN_PINE_B', 'GREEN_PINE_C']).forEach(function (s) {
-        iccs.forEach(function (icc) { addLink(links, s.id, icc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_kamd'); });
+        iccs.forEach(function (icc) { addLink(links, s.id, icc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, sensorReportTobe(s.typeId), 'korean_kamd'); });
       });
     }
     if (!mcrc) {
       sensorNodes(['FPS117', 'TPS880K']).forEach(function (s) {
-        iccs.forEach(function (icc) { addLink(links, s.id, icc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc'); });
+        iccs.forEach(function (icc) { addLink(links, s.id, icc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, sensorReportTobe(s.typeId), 'korean_mcrc'); });
       });
     }
 
     if (iaoc) {
       nodes.filter(function (n) { return n.category === 'sensor' && n.forceOwner !== 'USFK'; }).forEach(function (s) {
-        addLink(links, s.id, iaoc.id, 'report', null, v2 ? IFCN : DL_FAST, 'killweb');
+        addLink(links, s.id, iaoc.id, 'report', null, sensorReportTobe(s.typeId), 'killweb');
       });
       nodes.filter(function (n) { return n.category === 'c2' && n.id !== iaoc.id && n.forceOwner !== 'USFK'; }).forEach(function (c) {
         addLink(links, c.id, iaoc.id, 'report', null, v2 ? IFCN : DL_FAST, 'killweb');
@@ -4415,7 +4441,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 같아, 배치 ID를 생략한 호출이 legacy 결과와 가장 가까운 편성을 보게 된다.
     // ADR-057: linkSemanticsV2 ON이면 codex ADR-014 정합 링크 변형 카탈로그를 쓴다(캐시 분리).
     return buildDeploymentCatalog(config.deploymentId || 'HANBANDO_LEGACY_NORMAL',
-      { linkSemanticsV2: features.linkSemanticsV2 === true,
+      // ADR-066: 기본 ON 전환 — 엔진 기본값과 반드시 일치해야 한다(`=== true`로 두면 features에
+      // 키가 없는 호출에서 엔진은 ON인데 카탈로그는 구 링크값인 조용한 불일치가 생긴다).
+      { linkSemanticsV2: features.linkSemanticsV2 !== false,
         // ADR-058: 승인 계선용 coord 링크는 변형 카탈로그에서만 생성(OFF wire shape 불변).
         // ADR-065: 기본 ON 전환 — 엔진 기본값과 반드시 일치해야 한다. `=== true`로 두면
         // features에 키가 없는 호출에서 엔진은 승인 계선 ON인데 카탈로그에는 coord 링크가
@@ -4423,6 +4451,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         approvalChain: features.approvalChain !== false || features.approvalChainTobe === true,
         // ADR-064·065: 남부 종심 축선 — coverage 파생 포함 여부(명시적 false만 제외)
         southernAxes: features.southernAxes !== false,
+        // ADR-067: 센서→C2 보고 주기 양 모드 공통(기본 ON — 엔진 기본값과 정합)
+        sensorReportParity: features.sensorReportParity !== false,
         // ADR-058 동반 스윕: 운용자 처리시간 high/mid/low (기본 mid — 종전 동일)
         c2OperatorLevel: features.c2OperatorLevel === 'high' || features.c2OperatorLevel === 'low'
           ? features.c2OperatorLevel : null });
@@ -4451,8 +4481,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 /**
  * K-JAMDS 시뮬레이터 — 딥링크 라우터 (Phase 1, Phase 4에서 t= 실제 활용)
  *
- * URL 해시 스킴: #tab=<탭ID>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&south=<0|1>&t=<재생시각(초)>&open=<노드ID>&x=<강도>&seed=&dur=
- *   (ADR-061: 구 dep=legacy·fid= 파라미터는 기본값으로 정규화 / ADR-065: appr·disp·south는 기본 1, '0'으로 해제)
+ * URL 해시 스킴: #tab=<탭ID>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&south=<0|1>&linkv2=<0|1>&t=<재생시각(초)>&open=<노드ID>&x=<강도>&seed=&dur=
+ *   (ADR-061: 구 dep=legacy·fid= 파라미터는 기본값으로 정규화 / ADR-065: appr·disp·south는 기본 1, '0'으로 해제
+ *    / ADR-066: linkv2도 기본 1, '0'으로 해제)
  *   - t    : [playback 탭] 재생 스크러버 시각(초). 다른 탭에서는 보존만 됨
  *   - open : 지도에서 팝업을 열 노드 ID
  *   - x    : 위협 강도 배수
@@ -4465,7 +4496,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 
   // ADR-061: dep 기본값은 주 분석 배치, fid는 하위호환 파싱만 남기고 항상 iads-c2로 고정된다.
   // ADR-065: appr(승인 계선)·disp(표적 산포)·south(남부 축선)는 **기본 ON**이다('0'으로 해제).
-  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '1', disp: '1', south: '1', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
+  // ADR-066: linkv2(링크 의미론 codex 정합)도 **기본 ON** — 반증용 해제 경로로 linkv2=0을 신설.
+  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '1', disp: '1', south: '1', linkv2: '1', rp: '1', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
   var VALID_TABS = ['sim', 'analysis', 'mc', 'data'];
   // 구 딥링크 호환: 지도/시나리오/DES/재생 탭은 통합 [시뮬레이션] 탭으로 흡수
   var LEGACY_TAB = { map: 'sim', scenario: 'sim', des: 'sim', playback: 'sim' };
@@ -4498,6 +4530,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       state.appr = (state.appr === '0' || state.appr === false) ? '0' : '1';
       state.disp = (state.disp === '0' || state.disp === false) ? '0' : '1';
       state.south = (state.south === '0' || state.south === false) ? '0' : '1';
+      state.linkv2 = (state.linkv2 === '0' || state.linkv2 === false) ? '0' : '1'; // ADR-066
+      state.rp = (state.rp === '0' || state.rp === false) ? '0' : '1'; // ADR-067
       if (!KJ.DEPLOYMENT_IDS || KJ.DEPLOYMENT_IDS.indexOf(state.dep) === -1) {
         state.dep = DEFAULTS.dep; // 구 dep=legacy·HANBANDO_MINI_* 딥링크 폴백
       }
@@ -5913,7 +5947,11 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     this.unifiedEngagementState = ff('unifiedEngagementState', false);
     // ADR-057: 링크 의미론 codex 정합 — 센서→C2는 보고 주기(reportingPeriod), C2↔C2는 전송
     // 지연(codex shortRange 1초). 실제 분기는 어댑터의 변형 카탈로그가 수행한다(캐시 분리).
-    this.linkSemanticsV2 = ff('linkSemanticsV2', false);
+    // ADR-066: 기본 ON 전환. OFF 경로는 (1) codex ADR-014가 폐기한 "일률 16초"를 쓰고,
+    // (2) To-Be 전 링크에 DL_FAST 2초를 일괄 적용해 As-Is의 INTERNAL 1초보다 **느린** 링크가
+    // 16개 생기며(통합 C2가 포대 내부 링크를 느리게 만드는 셈), (3) As-Is를 실제보다 나쁘게
+    // 모델링해 To-Be 개선폭을 과대평가한다. 셋 다 기본값으로 둘 이유가 없다.
+    this.linkSemanticsV2 = ff('linkSemanticsV2', true);
     // ADR-058: 승인 계선 이식 — As-Is LOCAL_AD 축(군단 AOC)의 교전이 승인권자(KAOC→MCRC)
     // 협조 홉 + 승인 서비스(kind='approval')를 거친다. 동적 권한위임(DELEG_QUEUE_MULT)·
     // automation 3단계 차등 포함. approvalChainTobe는 반증 전용 — To-Be에도 As-Is 계선 강제.
@@ -5936,12 +5974,17 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // OFF면 남부 축선 위협이 하나도 생성되지 않아 종전과 bit-exact.
     // ADR-065: 기본 ON — 배치 자산의 1/6이 표적 회랑 밖이라 구조적으로 유휴인 상태를 해소한다.
     this.southernAxes = ff('southernAxes', true);
+    // ADR-067: 레이더→C2 보고 주기를 양 모드 공통으로. 종전에는 To-Be만 IFCN 1초로 덮여 같은
+    // 레이더가 To-Be에서 최대 16배 빨리 보고했다 — C2 구조가 센서 성능을 만들어내는 모델링이다.
+    // 엔진이 이미 최속 센서 경로를 고르므로(_iadsReportBundle) 융합 신선도는 링크 구조에서
+    // 자연 발생하고, 일괄 1초는 이중 계상이다. 분기는 어댑터가 수행한다(변형 카탈로그 |rp).
+    this.sensorReportParity = ff('sensorReportParity', true);
     this.targetSpreadKm = (typeof f.targetSpreadKm === 'number' && f.targetSpreadKm >= 0)
       ? f.targetSpreadKm : (KJ.THREAT_TARGET_SPREAD_KM || 0);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
     if (this.highResolutionDeployment) this.features.highResolutionDeployment = true;
     if (this.unifiedEngagementState) this.features.unifiedEngagementState = true;
-    if (this.linkSemanticsV2) this.features.linkSemanticsV2 = true;
+    this.features.linkSemanticsV2 = this.linkSemanticsV2; // ADR-066: 기본 ON — 항상 실제 해석값 신고
     // ADR-065: 기본 ON 3종은 "ON일 때만 노출"이 아니라 **실제 해석값을 항상 신고**한다 —
     // 소비 측(분석 탭의 미측정 표기 등)이 실행 조건을 정확히 읽어야 하기 때문이다.
     this.features.approvalChain = this.approvalChain;
@@ -5951,6 +5994,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     this.features.threatTargetDispersion = this.threatTargetDispersion;
     if (this.threatTargetDispersion) this.features.targetSpreadKm = this.targetSpreadKm;
     this.features.southernAxes = this.southernAxes;
+    this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
@@ -9252,7 +9296,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         highResolutionDeployment: true,
         approvalChain: !state || state.appr !== '0',
         threatTargetDispersion: !state || state.disp !== '0',
-        southernAxes: !state || state.south !== '0'
+        southernAxes: !state || state.south !== '0',
+        linkSemanticsV2: !state || state.linkv2 !== '0', // ADR-066: 연결선 툴팁 지연값도 같이 바뀐다
+        sensorReportParity: !state || state.rp !== '0' // ADR-067
       }
     });
   }
@@ -9605,6 +9651,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     features.approvalChain = state && state.appr !== '0';
     features.threatTargetDispersion = state && state.disp !== '0';
     features.southernAxes = state && state.south !== '0';
+    features.linkSemanticsV2 = !state || state.linkv2 !== '0'; // ADR-066
+    features.sensorReportParity = !state || state.rp !== '0'; // ADR-067
     return { deploymentId: state && state.dep, features: features, modelFidelity: 'iads-c2' };
   }
   function catalogFor(state) {
@@ -9630,7 +9678,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var key = [state.sc, state.x, state.seed, state.dur, state.dep, 'iads-c2',
       state.appr === '1' ? 'appr' : '',
       state.disp === '1' ? 'disp' : '',
-      state.south === '1' ? 'south' : ''].join('|'); // ADR-062·063·064: 토글도 캐시 키
+      state.south === '1' ? 'south' : '',
+      state.linkv2 === '0' ? 'linkv1' : '',
+      state.rp === '0' ? 'norp' : ''].join('|'); // ADR-062·063·064·066·067: 토글도 캐시 키
     if (desCache.key === key) return desCache.data;
     if (desCache.errorKey === key) return null;
     if (desCache.pendingKey === key) return null;
@@ -10417,6 +10467,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     features.approvalChain = cfg && cfg.appr !== '0';
     features.threatTargetDispersion = cfg && cfg.disp !== '0';
     features.southernAxes = cfg && cfg.south !== '0';
+    features.linkSemanticsV2 = !cfg || cfg.linkv2 !== '0'; // ADR-066
+    features.sensorReportParity = !cfg || cfg.rp !== '0'; // ADR-067
     return { deploymentId: cfg && cfg.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -10428,6 +10480,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     return KJ.scenarioById(cfg.sc).name + ' · ' +
       (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형') +
       ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 승인계선 ON' : '') + (cfg.disp === '1' ? ' · 표적산포 ON' : '') + (cfg.south === '1' ? ' · 남부축선 ON' : '') +
+      // ADR-066: 기본 ON이라 해제했을 때만 표시한다 — 구 링크 의미론 실행임을 놓치지 않게.
+      (cfg.linkv2 === '0' ? ' · 구 링크의미론(OFF)' : '') + (cfg.rp === '0' ? ' · 보고주기 비대칭(OFF)' : '') +
       ' · 강도 ×' + Number(cfg.x).toFixed(1) + ' · seed ' + cfg.seed;
   }
 
@@ -10462,7 +10516,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       var dur = Math.min(7200, Math.max(60, Math.floor(parseFloat(el('sim-dur').value) || 1800)));
       var cfg = { sc: state.sc, mode: state.mode, dep: state.dep, fid: 'iads-c2',
         appr: state.appr === '1' ? '1' : '0', disp: state.disp === '1' ? '1' : '0',
-        south: state.south === '1' ? '1' : '0', x: state.x, seed: seed, dur: dur };
+        south: state.south === '1' ? '1' : '0',
+        linkv2: state.linkv2 === '0' ? '0' : '1', // ADR-066: 기본 ON
+        rp: state.rp === '0' ? '0' : '1', // ADR-067: 기본 ON
+        x: state.x, seed: seed, dur: dur };
       var btn = el('sim-run');
       btn.disabled = true; btn.textContent = '⏳ DES 실행 중...';
       setStatus('DES 실행 중 (trace 모드)...');
@@ -11484,7 +11541,22 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   function pp(x) { return (x * 100).toFixed(2) + '%p'; }
   function modelConfig(state) {
     var high = state && state.dep && state.dep !== 'legacy';
-    return high ? { deploymentId: state.dep, features: { highResolutionDeployment: true }, modelFidelity: state.fid || 'compat' } : {};
+    if (!high) return {};
+    // ADR-066: MC 탭도 상단 토글을 실행에 전달한다. 종전에는 features를 비워 보내 엔진 기본값을
+    // 그대로 썼고, 사용자가 토글을 꺼도 MC 결과만 켠 채로 나오는 불일치가 있었다(지도에서 고친
+    // 것과 같은 종류의 결함). 기본 상태에서는 전달값 == 엔진 기본값이라 결과가 변하지 않는다.
+    return {
+      deploymentId: state.dep,
+      features: {
+        highResolutionDeployment: true,
+        approvalChain: state.appr !== '0',
+        threatTargetDispersion: state.disp !== '0',
+        southernAxes: state.south !== '0',
+        linkSemanticsV2: state.linkv2 !== '0',
+        sensorReportParity: state.rp !== '0'
+      },
+      modelFidelity: 'iads-c2' // ADR-061: compat 폐기 — 충실도는 1종뿐이다
+    };
   }
 
   // MoM 계층 라벨(NATO COBP/SAS-026, ENV-MOM-COBP-01) — 결과 모달·[분석] 탭과 동일 분류
@@ -11829,6 +11901,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     features.approvalChain = state.appr !== '0';
     features.threatTargetDispersion = state.disp !== '0';
     features.southernAxes = state.south !== '0';
+    features.linkSemanticsV2 = state.linkv2 !== '0'; // ADR-066
+    features.sensorReportParity = state.rp !== '0'; // ADR-067
     return { deploymentId: state.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -11873,6 +11947,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (dispBox) dispBox.checked = state.disp === '1'; // ADR-063
     var southBox = document.getElementById('southern-axes-toggle');
     if (southBox) southBox.checked = state.south === '1'; // ADR-064
+    var linkBox = document.getElementById('link-semantics-toggle');
+    if (linkBox) linkBox.checked = state.linkv2 === '1'; // ADR-066
+    var rpBox = document.getElementById('sensor-parity-toggle');
+    if (rpBox) rpBox.checked = state.rp === '1'; // ADR-067
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
     document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
@@ -11930,6 +12008,23 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (southToggle) {
       southToggle.addEventListener('change', function (e) {
         setState({ south: e.target.checked ? '1' : '0', open: '' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-066: 링크 의미론 토글 — 링크 지연 집합이 바뀌므로 실행 조건 변경으로 취급한다.
+    // 지도 연결선 툴팁의 지연값도 달라지므로 open은 유지하되 카탈로그는 재해석된다.
+    var linkToggle = document.getElementById('link-semantics-toggle');
+    if (linkToggle) {
+      linkToggle.addEventListener('change', function (e) {
+        setState({ linkv2: e.target.checked ? '1' : '0' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-067: 레이더→C2 보고 주기 대칭 토글 — To-Be 보고 링크 지연이 바뀌므로 실행 조건 변경.
+    var rpToggle = document.getElementById('sensor-parity-toggle');
+    if (rpToggle) {
+      rpToggle.addEventListener('change', function (e) {
+        setState({ rp: e.target.checked ? '1' : '0' });
         if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
       });
     }

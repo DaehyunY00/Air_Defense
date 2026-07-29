@@ -6,7 +6,7 @@
 시나리오 기반으로 C2 프로세스 병목을 도출·시각화하는 웹 시뮬레이터입니다.
 DES(이산사건 시뮬레이션) 엔진이 IADS_C2 계열 물리(SNR/RCS·레이더 수평선·센서상태·PSSEK/PIP)
 위에서 책임 C2 결정 → 항적 상관·식별 → 사수선정(WTA) → 승인·협조 → 발사대 단위 교전 → BDA의
-**native IADS 파이프라인**을 실행하며, **모든 신규 거동은 기능 플래그(기본 OFF)로 토글**하여
+**native IADS 파이프라인**을 실행하며, **모든 신규 거동은 기능 플래그로 토글**하여
 감사 추적을 남깁니다. 2026-07 Phase 6(ADR-061)로 legacy 9단계 파이프라인과 compat 충실도는
 폐기되었고, `modelFidelity`는 `iads-c2` 하나입니다.
 
@@ -138,8 +138,8 @@ DES 엔진(`js/engine/sim-engine.js`)은 개별 위협 객체를 이벤트 구�
   → PIP/PSSEK·발사대 탄약/재장전 → 교전(SLS 최대 2발) → BDA → 재교전/누출 분류
 ```
 
-legacy C2 이론은 **정책 계층으로 이식**되었습니다. 세 가지는 **기본 ON**(ADR-065 — 끄면 모델이
-As-Is를 실제보다 유리하게 표현합니다), 나머지는 기본 OFF입니다:
+legacy C2 이론은 **정책 계층으로 이식**되었습니다. 다섯 가지는 **기본 ON**(ADR-065·066·067 —
+끄면 모델이 As-Is를 실제보다 유리하게 표현하거나 정본과 어긋납니다), 나머지는 기본 OFF입니다:
 
 | 플래그 | 기본 | 내용 | ADR |
 |---|---|---|
@@ -147,7 +147,8 @@ As-Is를 실제보다 유리하게 표현합니다), 나머지는 기본 OFF입�
 | **`threatTargetDispersion`** (+반경 `targetSpreadKm`) | **ON** | 표적권역 산포 — 위협마다 착탄점을 권역(반경 15km 개념) 안에서 추첨. 끄면 같은 축선의 모든 위협이 정확히 같은 한 점으로 향합니다 | ADR-063·065 |
 | **`southernAxes`** | **ON** | 남부 종심 축선 2종(대구 306km·부산 400km). 끄면 표적이 서울·오산평택·강릉 3권역뿐이라 남부 배치 자산 14문이 유휴 상태가 됩니다 | ADR-064·065 |
 | `unifiedEngagementState` | OFF | To-Be 통합 교전상태(양방향 COP) — 중복해소 결함 수정 | ADR-056 |
-| `linkSemanticsV2` | OFF | codex 정합 링크 의미론(보고주기 차등·C2 1초·킬웹 IFCN 1초) | ADR-057 |
+| **`linkSemanticsV2`** | **ON** | codex 정합 링크 의미론 — 센서별 보고주기 차등·C2↔C2 양 모드 1초. **끄면 As-Is가 일률 16초로 느려져 To-Be 개선폭이 부풀려집니다**(SC3 격추율 개선 +18.4pp → +26.8pp) | ADR-057·066 |
+| **`sensorReportParity`** | **ON** | 레이더→C2 보고 주기를 양 모드 공통으로(킬웹 센서→IAOC 포함). 끄면 같은 그린파인이 To-Be에서 16배 빨리 보고합니다. ⚠️ codex `ifcn:1` 이탈 — 사유는 ADR-067 | ADR-067 |
 | `nativeWtaMode` (+반증 `nativeWtaCostAsis`) | OFF | WTA 모드 차등 — As-Is는 관측 가능한 것만, To-Be는 물리 점수×비용 인식 | ADR-059 |
 | `c2OperatorLevel` ('high'/'low') | mid | 운용자 처리시간 스윕 노브 | ADR-058 |
 
@@ -204,7 +205,7 @@ docs/
 scripts/
   serve.sh (macOS·Linux) · serve.bat + serve.ps1 (Windows 내장 PowerShell, 설치 불요)
   build-single.mjs · bias-ledger.mjs · experiment-lib/run/report.mjs 등
-tests/  run-all.js + 27개 스위트  # 아래 [검증] 참조. 폐기 스위트 원장: tests/retired-legacy-suites.md
+tests/  run-all.js + 29개 스위트  # 아래 [검증] 참조. 폐기 스위트 원장: tests/retired-legacy-suites.md
 ```
 
 ## 설계 원칙: 병목은 고정이 아니라 도출된다
@@ -219,16 +220,25 @@ tests/  run-all.js + 27개 스위트  # 아래 [검증] 참조. 폐기 스위트
 
 ## 딥링크 스킴
 
-`#tab=<sim|analysis|mc|data>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&south=<0|1>&x=<강도배수>&seed=<정수>&dur=<초>`
+`#tab=<sim|analysis|mc|data>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&south=<0|1>&linkv2=<0|1>&rp=<0|1>&x=<강도배수>&seed=<정수>&dur=<초>`
 
 - `dep`은 고해상도 6종 ID(기본 `HANBANDO_LEGACY_NORMAL`). 구 딥링크의 `dep=legacy`·MINI ID·
   `fid=` 파라미터는 기본값으로 자동 흡수됩니다(ADR-061).
-- `appr` · `disp` · `south`는 **기본 1(ON)** 입니다(ADR-065). **`=0`으로 끄면 구 기본값**
-  (승인 대기 0·착탄점 한 점·표적 3권역)이 재현되며, 감사·반증 목적으로만 쓰십시오. 끄면 ⑥⑦ 승인·협조 지표가 0이
-  아니라 **"미측정"**으로 표시됩니다(ADR-062) — 상단 컨트롤의 체크박스와 같은 스위치입니다.
-- `disp=1`은 **표적권역 산포**(ADR-063)를 켭니다(기본 0). 끄면 같은 축선의 모든 위협이 seed와
-  무관하게 정확히 같은 한 점으로 향합니다. ⚠️ 산포는 표적권역 **내부**만 다양화하며 새 표적
-  (부산·대구 등)을 만들지 않습니다 — 그것은 축선 추가(별도 사안)의 몫입니다.
+- `appr` · `disp` · `south` · `linkv2` · `rp`는 **전부 기본 1(ON)** 입니다(ADR-065·066·067).
+  **`=0`으로 끄면 각각의 구 기본값이 재현**되며, 감사·반증 목적으로만 쓰십시오 — 상단 컨트롤의
+  체크박스와 같은 스위치입니다.
+- `appr=0` 승인 계선 해제(ADR-058·065). 끄면 As-Is 승인 대기가 0이 되고, ⑥⑦ 승인·협조 지표는
+  0이 아니라 **"미측정"**으로 표시됩니다(ADR-062).
+- `disp=0` 표적권역 산포 해제(ADR-063·065). 끄면 같은 축선의 모든 위협이 seed와 무관하게 정확히
+  같은 한 점으로 향합니다. ⚠️ 산포는 표적권역 **내부**만 다양화하며 새 표적(부산·대구 등)을
+  만들지 않습니다 — 그것은 축선 추가(`south`)의 몫입니다.
+- `south=0` 남부 종심 축선 해제(ADR-064·065). 끄면 표적 회랑이 3권역으로 줄고 남부 14문이
+  어떤 seed에서도 교전 기회를 갖지 못합니다.
+- `linkv2=0` 링크 의미론 정본 정합 해제(ADR-057·066). 끄면 As-Is 센서 보고가 일률 16초로,
+  To-Be 전 링크가 2초로 돌아갑니다 — codex ADR-014가 폐기한 해석이며, As-Is를 실제보다 느리게
+  모델링해 **To-Be 개선폭을 부풀립니다**(SC3 격추율 개선 +18.4pp → +26.8pp).
+- `rp=0` 레이더→C2 보고 주기 대칭 해제(ADR-067). 끄면 To-Be 보고 링크만 전부 1초가 되어
+  같은 그린파인이 To-Be에서 16배 빨리 보고합니다(codex `ifcn:1` 해석).
 - 구 `tab=map|scenario|des|playback`은 `sim` 탭으로 흡수됩니다.
 - [`#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345`](index.html#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345) — 섞어쏘기 As-Is 1.5배.
 - [`#tab=analysis&sc=sc1&mode=asis`](index.html#tab=analysis&sc=sc1&mode=asis) — 경계 침투 해석 분석.
@@ -237,7 +247,7 @@ tests/  run-all.js + 27개 스위트  # 아래 [검증] 참조. 폐기 스위트
 ## 검증
 
 ```bash
-node tests/run-all.js            # 전체 회귀 — js/ 구문검증 + 27개 스위트 (CI 게이트)
+node tests/run-all.js            # 전체 회귀 — js/ 구문검증 + 29개 스위트 (CI 게이트)
 ```
 
 | 스위트 | 검증 내용 |

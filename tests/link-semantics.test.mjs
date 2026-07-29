@@ -84,16 +84,22 @@ console.log('# 4 — ON 실행 (결정론·보존·노출)');
 console.log('# 5 — ADR-066 기본 ON 전환');
 // (a) 엔진·어댑터 정합: features에 키가 없는 호출이 v2 카탈로그를 받아야 한다.
 //     `=== true` 판정을 되살리면 "엔진은 ON인데 카탈로그는 구 링크값"인 조용한 불일치가 생긴다.
-// 기본 실행은 ADR-065의 승인 계선·남부 축선도 함께 켜므로, 같은 변형 조합으로 비교해야 한다
-// (`on`은 linkV2 단독 변형이라 캐시 키가 다르다 — 동일성 비교의 대상이 아니다).
-var onFull = KJ.buildDeploymentCatalog('HANBANDO_LEGACY_NORMAL',
-  { linkSemanticsV2: true, approvalChain: true, southernAxes: true });
+// 기본 실행은 ADR-065·067의 다른 변형도 함께 켜므로 **객체 동일성으로 비교하면 안 된다** —
+// 변형이 하나 늘 때마다 캐시 키가 달라져 무관한 어서션이 깨진다(ADR-067에서 실제로 깨졌다).
+// v2 적용 여부는 **링크 의미론 자체**로 판정한다.
+function usesV2(cat) {
+  // v2의 식별 표지: As-Is 센서 보고가 report-cycle 타입이고 C2↔C2가 1초다(구 의미론은 16/4초).
+  var rep = cat.links.find(function (l) { return l.kind === 'report' && l.comm.asis && l.comm.asis.type === 'report-cycle'; });
+  var c2 = cat.links.find(function (l) { return l.axis === 'korean_kamd' && l.kind === 'coord'; });
+  return !!rep && !!c2 && c2.comm.asis.delaySec === 1;
+}
 var dflt = KJ.resolveModelCatalog({ deploymentId: 'HANBANDO_LEGACY_NORMAL',
   features: { highResolutionDeployment: true } });
-assert(dflt === onFull, '키 생략 호출이 v2 변형 카탈로그를 받음 (어댑터가 엔진 기본값과 정합)');
+assert(usesV2(dflt), '키 생략 호출이 v2 링크 의미론을 받음 (어댑터가 엔진 기본값과 정합)');
 var explicitOff = KJ.resolveModelCatalog({ deploymentId: 'HANBANDO_LEGACY_NORMAL',
   features: { highResolutionDeployment: true, linkSemanticsV2: false } });
-assert(explicitOff !== on, '명시적 false만 구 카탈로그로 되돌린다');
+assert(!usesV2(explicitOff), '명시적 false만 구 링크 의미론으로 되돌린다');
+assert(dflt !== explicitOff, 'ON/OFF 카탈로그가 캐시에서 분리됨');
 
 // (b) 기본 실행이 플래그를 ON으로 신고하고, 명시적 OFF는 다른 결과를 낸다.
 var runCfg = function (f) {
@@ -117,12 +123,12 @@ assert(inverted(off) === 16, '구 카탈로그: As-Is가 To-Be보다 빠른 링�
 assert(inverted(on) === 0, 'v2 카탈로그: 역전 링크 0개');
 
 // (d) 전선(데이터링크)과 절차(음성)의 분리 — 남는 비대칭은 절차·보고 주기뿐이다.
-var voiceAsym = onFull.links.filter(function (l) {
+var voiceAsym = dflt.links.filter(function (l) {
   return l.comm.asis && l.comm.tobe && /voice/.test(l.comm.asis.type);
 });
 assert(voiceAsym.length === 4 && voiceAsym.every(function (l) { return l.comm.tobe.delaySec === 1; }),
   '음성 협조·교전현황 4링크는 비대칭 유지 — 링크(전선)가 아니라 절차이므로 대칭화 대상이 아님');
-assert(onFull.links.filter(function (l) {
+assert(dflt.links.filter(function (l) {
   return l.kind === 'coord' && l.comm.asis && l.comm.tobe &&
     !/voice/.test(l.comm.asis.type) && l.comm.asis.delaySec !== l.comm.tobe.delaySec;
 }).length === 0, 'C2↔C2 데이터링크는 양 모드 동일(1초) — 전선 대칭 확보');

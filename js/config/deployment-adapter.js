@@ -119,9 +119,10 @@
     var v2 = !!(opts && opts.linkSemanticsV2);
     var appr = !!(opts && opts.approvalChain);
     var southern = !!(opts && opts.southernAxes); // ADR-064
+    var parity = !!(opts && opts.sensorReportParity); // ADR-067
     var opLevel = (opts && opts.c2OperatorLevel) || null; // 'high'|'low' (null=mid, 종전 동일)
     var cacheKey = id + (v2 ? '|linkV2' : '') + (appr ? '|appr' : '') +
-      (southern ? '|south' : '') + (opLevel ? '|op:' + opLevel : '');
+      (southern ? '|south' : '') + (parity ? '|rp' : '') + (opLevel ? '|op:' + opLevel : '');
     if (cache[cacheKey]) return cache[cacheKey];
     var deployment = KJ.deploymentById(id);
     if (!deployment) throw new Error('Unknown high-resolution deployment: ' + id);
@@ -239,8 +240,25 @@
     }
     function c2ForPos(key) { return key ? c2ByPos[key] || null : null; }
 
+    /**
+     * ADR-067 — 센서 발신 `report` 링크의 **To-Be 측** 지연.
+     *
+     * 보고 주기는 센서 물리이므로 양 모드 공통이어야 한다. 종전에는 To-Be만 IFCN 1초로 덮여
+     * 같은 레이더가 To-Be에서 최대 16배 빨리 보고했다. codex `ifcn:1`("킬웹 보고주기 전부 1s")의
+     * 논거는 융합 신선도인데, 엔진이 이미 센서별 보고 경로 중 **최속 경로를 고르므로**
+     * (sim-engine.js `_iadsReportBundle` — candidates.sort(delay) → candidates[0]) 그 이득은
+     * 링크 구조에서 자연 발생한다. 일괄 1초는 이중 계상이며, 단일 센서만 보는 표적에는
+     * 융합 논거 자체가 없다. 정본 이탈 사유는 ADR-067·params.md IADS-LINK-IFCN-01에 기록.
+     *
+     * ⚠️ C2 발신 `report`(MCRC→군단 AOC 항적 중계·킬웹 C2→IAOC)는 C2↔C2이므로 대상이 아니다.
+     */
+    function sensorReportTobe(typeId) {
+      if (!v2) return DL_FAST;
+      return parity ? reportCycleComm(typeId) : IFCN;
+    }
+
     if (kamdoc) {
-      sensorNodes(['GREEN_PINE_B', 'GREEN_PINE_C']).forEach(function (s) { addLink(links, s.id, kamdoc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_kamd'); });
+      sensorNodes(['GREEN_PINE_B', 'GREEN_PINE_C']).forEach(function (s) { addLink(links, s.id, kamdoc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, sensorReportTobe(s.typeId), 'korean_kamd'); });
       iccs.forEach(function (icc) {
         addLink(links, kamdoc.id, icc.id, 'coord', v2 ? C2_TRANSFER : LONG, v2 ? IFCN : DL_FAST, 'korean_kamd');
         // The legacy decision stage searches from the reporting/controller C2
@@ -251,7 +269,7 @@
       });
     }
     if (mcrc) {
-      sensorNodes(['FPS117']).forEach(function (s) { addLink(links, s.id, mcrc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc'); });
+      sensorNodes(['FPS117']).forEach(function (s) { addLink(links, s.id, mcrc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, sensorReportTobe(s.typeId), 'korean_mcrc'); });
       iccs.forEach(function (icc) {
         addLink(links, mcrc.id, icc.id, 'coord', v2 ? C2_TRANSFER : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc');
         addLink(links, icc.id, mcrc.id, 'coord', v2 ? C2_TRANSFER : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc');
@@ -273,8 +291,8 @@
     }
     sensorNodes(['TPS880K']).forEach(function (s) {
       var owner = c2ForPos(s.localAdPosKey);
-      if (mcrc) addLink(links, s.id, mcrc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc');
-      if (owner) addLink(links, s.id, owner.id, 'report', v2 ? reportCycleComm(s.typeId) : INTERNAL, v2 ? IFCN : DL_FAST, 'abt_local');
+      if (mcrc) addLink(links, s.id, mcrc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, sensorReportTobe(s.typeId), 'korean_mcrc');
+      if (owner) addLink(links, s.id, owner.id, 'report', v2 ? reportCycleComm(s.typeId) : INTERNAL, sensorReportTobe(s.typeId), 'abt_local');
     });
 
     deployment.batteries.forEach(function (b) {
@@ -282,7 +300,7 @@
       var ecs = ecsByBattery[b.id];
       var sensor = b.mfrSensorPosKey ? nodeMap['SENSOR_' + b.mfrSensorPosKey] : null;
       var upper = c2ForPos(b.commandC2PosKey || b.iccPosKey || b.localAdPosKey);
-      if (sensor && ecs) addLink(links, sensor.id, ecs.id, 'report', v2 ? reportCycleComm(sensor.typeId) : INTERNAL, v2 ? IFCN : DL_FAST, 'battery_mfr');
+      if (sensor && ecs) addLink(links, sensor.id, ecs.id, 'report', v2 ? reportCycleComm(sensor.typeId) : INTERNAL, sensorReportTobe(sensor.typeId), 'battery_mfr');
       if (upper && ecs) {
         var upAsIs = v2 ? C2_TRANSFER : ((b.c2Axis === 'LOCAL_AD' || b.forceOwner === 'USFK') ? INTERNAL : SHORT);
         addLink(links, ecs.id, upper.id, 'coord', upAsIs, v2 ? IFCN : DL_FAST, b.c2Axis || 'korean');
@@ -296,18 +314,18 @@
     // reporting path, not cross-ICC engagement-state sharing.
     if (!kamdoc) {
       sensorNodes(['GREEN_PINE_B', 'GREEN_PINE_C']).forEach(function (s) {
-        iccs.forEach(function (icc) { addLink(links, s.id, icc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_kamd'); });
+        iccs.forEach(function (icc) { addLink(links, s.id, icc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, sensorReportTobe(s.typeId), 'korean_kamd'); });
       });
     }
     if (!mcrc) {
       sensorNodes(['FPS117', 'TPS880K']).forEach(function (s) {
-        iccs.forEach(function (icc) { addLink(links, s.id, icc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, v2 ? IFCN : DL_FAST, 'korean_mcrc'); });
+        iccs.forEach(function (icc) { addLink(links, s.id, icc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, sensorReportTobe(s.typeId), 'korean_mcrc'); });
       });
     }
 
     if (iaoc) {
       nodes.filter(function (n) { return n.category === 'sensor' && n.forceOwner !== 'USFK'; }).forEach(function (s) {
-        addLink(links, s.id, iaoc.id, 'report', null, v2 ? IFCN : DL_FAST, 'killweb');
+        addLink(links, s.id, iaoc.id, 'report', null, sensorReportTobe(s.typeId), 'killweb');
       });
       nodes.filter(function (n) { return n.category === 'c2' && n.id !== iaoc.id && n.forceOwner !== 'USFK'; }).forEach(function (c) {
         addLink(links, c.id, iaoc.id, 'report', null, v2 ? IFCN : DL_FAST, 'killweb');
@@ -358,6 +376,8 @@
         approvalChain: features.approvalChain !== false || features.approvalChainTobe === true,
         // ADR-064·065: 남부 종심 축선 — coverage 파생 포함 여부(명시적 false만 제외)
         southernAxes: features.southernAxes !== false,
+        // ADR-067: 센서→C2 보고 주기 양 모드 공통(기본 ON — 엔진 기본값과 정합)
+        sensorReportParity: features.sensorReportParity !== false,
         // ADR-058 동반 스윕: 운용자 처리시간 high/mid/low (기본 mid — 종전 동일)
         c2OperatorLevel: features.c2OperatorLevel === 'high' || features.c2OperatorLevel === 'low'
           ? features.c2OperatorLevel : null });

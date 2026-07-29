@@ -24,6 +24,7 @@
     features.threatTargetDispersion = state.disp !== '0';
     features.southernAxes = state.south !== '0';
     features.linkSemanticsV2 = state.linkv2 !== '0'; // ADR-066
+    features.sensorReportParity = state.rp !== '0'; // ADR-067
     return { deploymentId: state.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -70,6 +71,8 @@
     if (southBox) southBox.checked = state.south === '1'; // ADR-064
     var linkBox = document.getElementById('link-semantics-toggle');
     if (linkBox) linkBox.checked = state.linkv2 === '1'; // ADR-066
+    var rpBox = document.getElementById('sensor-parity-toggle');
+    if (rpBox) rpBox.checked = state.rp === '1'; // ADR-067
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
     document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
@@ -136,6 +139,14 @@
     if (linkToggle) {
       linkToggle.addEventListener('change', function (e) {
         setState({ linkv2: e.target.checked ? '1' : '0' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-067: 레이더→C2 보고 주기 대칭 토글 — To-Be 보고 링크 지연이 바뀌므로 실행 조건 변경.
+    var rpToggle = document.getElementById('sensor-parity-toggle');
+    if (rpToggle) {
+      rpToggle.addEventListener('change', function (e) {
+        setState({ rp: e.target.checked ? '1' : '0' });
         if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
       });
     }

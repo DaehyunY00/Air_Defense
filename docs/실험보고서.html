@@ -45,7 +45,7 @@
 정합 → ADR-067 보고 주기 대칭 → ADR-068 교전현황 공유 COP) <b>전 수치를 다시 측정한 것</b>이다.
 구판(v3.5, 전 플래그 OFF) 대비:
 <table style="margin-top:10px">
-<thead><tr><th>지표</th><th class="num">구 기본값 (v3.5)</th><th class="num">신 기본값 (v3.6)</th><th class="num">이동</th></tr></thead>
+<thead><tr><th>지표</th><th class="num">구 기본값 (v3.5)</th><th class="num">신 기본값 (v3.7)</th><th class="num">이동</th></tr></thead>
 <tbody>
 <tr><td>SC3 격추율 개선폭 Δ</td><td class="num">+27.3pp</td><td class="num">+18.7pp</td><td class="num"><b>−31%</b> 🔴</td></tr>
 <tr><td>SC3 결심지연 개선폭 Δ</td><td class="num">−87.3초</td><td class="num">−46.2초</td><td class="num"><b>−47%</b> 🔴</td></tr>
@@ -60,8 +60,9 @@
 </div>
 
 <div class="box red"><span class="bt">🔴 강건성 경고 — 저부하 임무 지표 분리는 강건하지 않다</span>
-SC1 격추율 Δ의 통계적 분리가 <b>세 판 연속 뒤집혔다</b>(구 기본값 미분리 → ADR-065 +2.9pp 유의 →
-현재 +0.2pp 미분리). 저부하에서의 임무 지표 분리는 링크·승인 가정에 민감하다.
+SC1 격추율 Δ가 네 판에 걸쳐 <b>미분리 → 유의 → 미분리</b>로 오갔고 부호까지 바뀌었다
+(구 기본값 +1.0pp n.s. → ADR-065 <b>+2.9pp 유의</b> → ADR-066 +0.2pp n.s. → 현재 <b>−0.6pp n.s.</b>).
+저부하에서의 임무 지표 분리는 링크·승인 가정에 민감하다.
 <b>"통합하면 격추율이 오른다"는 주장은 포화 시나리오(SC3)에서만 강건하며, 저부하 셀의 격추율
 개선을 인용해서는 안 된다.</b></div>
 
@@ -78,7 +79,7 @@ SC1 격추율 Δ의 통계적 분리가 <b>세 판 연속 뒤집혔다</b>(구 �
 </tbody>
 </table>
 
-<div class="box"><span class="bt">기준선 규율 변경 (v3.5 → v3.6)</span>
+<div class="box"><span class="bt">기준선 규율 변경 (v3.5 → v3.6·3.7)</span>
 구판은 §6·§7의 단독 효과를 <b>"ADR-056+057 ON 누적 베이스"</b> 위에서 쟀다. 이유는 "결함 있는
 기준선(낡은 링크 의미론) 위에서 재면 어떤 As-Is 페널티든 중첩 과장된다"였다.
 <b>그 결함이 ADR-066으로 기본값에서 고쳐졌으므로, 이제 기본값 자체가 정합된 기준선이다.</b>

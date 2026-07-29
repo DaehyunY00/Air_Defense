@@ -25,62 +25,43 @@
   .bt { font-weight:700; margin-right:6px; }
   .small { font-size:12.5px; color:var(--sub); }
   .sig { color:var(--good); font-weight:700; } .ns { color:var(--sub); } .worse { color:var(--bad); font-weight:700; }
+  details.hist { margin:16px 0; border:1px solid var(--line); border-radius:4px; padding:8px 14px; background:#fafbfc; }
+  details.hist > summary { cursor:pointer; font-weight:700; color:var(--sub); }
 </style>
 </head>
 <body>
 
 <h1>K-JAMDS 시뮬레이터 — As-Is ↔ To-Be 실험보고서</h1>
-<p class="small">보고서 버전: v3.5 (2026-07-28 실측 · ADR-065 기본값 전환 반영) · 코드: <code>v3</code> 브랜치(ADR-055~065 반영) ·
-실험 원자료: <code>artifacts/experiment/*.json</code>(동일 명령으로 재현 가능)</p>
+<p class="small">보고서 버전: v3.6 (2026-07-29 <b>신 기본값 전면 재실측</b> · ADR-065~067 반영) ·
+코드: <code>v3</code> 브랜치 · 실험 원자료: <code>artifacts/experiment/v67-on-*.json</code>(기본값) ·
+<code>r68-*.json</code>(반사실) — 동일 명령으로 재현 가능</p>
 
 <div class="box warn"><span class="bt">디스클레이머</span>
 모든 수치는 공개자료 기반 정책연구용 <b>개념값</b> 위에서 나온 시뮬레이션 결과다. 절대값은 전술
-성능치가 아니며, 의미가 있는 것은 <b>같은 조건·같은 난수에서의 As-Is↔To-Be 차이</b>뿐이다.
-이 보고서의 전 수치는 이번 판(v3)에서 재실측한 것이다 — 폐기된 배치(MINI)나 구판 기록은 인용하지 않는다.</div>
+성능치가 아니며, 의미가 있는 것은 <b>같은 조건·같은 난수에서의 As-Is↔To-Be 차이</b>뿐이다.</div>
 
-<div class="box red"><span class="bt">🔴 개선폭 20% 이상 이동 공지 — 기본값 전환 (ADR-065)</span>
-승인 계선(ADR-058)·표적권역 산포(ADR-063)·남부 종심 축선(ADR-064)이 <b>기본 ON</b>으로 전환됐다.
-그 결과 <b>결심지연 개선폭이 SC1 −21.9→−33.7초(+54%), SC3 −68.0→−82.2초(+21%)</b>로 커졌다.
-⚠️ <b>To-Be가 좋아진 것이 아니라 As-Is가 원래 치러야 할 비용을 이제 치르는 것</b>이다 — 근거는
-As-Is 협조몫이 0.0초 → 23~34초로 발현했고 To-Be 절대값은 거의 불변이라는 점이다. 종전 기본값은
-As-Is를 실제보다 유리하게 모델링하고 있었다. SC1 격추율 Δ는 부호까지 바뀌었다(−0.5pp n.s. →
-+2.9pp 유의). 상세·편향 원장은 <code>docs/adr/ADR-065</code>.
-<br><br>
-⚠️ <b>본 보고서 §2~§8의 표는 대부분 「구 기본값(3종 OFF)」에서 측정된 값</b>이다. 수치는 감사
-추적을 위해 그대로 두되, 현재 기본 실행과 다르다는 점을 명시한다. 구 기본값 재현은 딥링크
-<code>appr=0&amp;disp=0&amp;south=0</code>으로 가능하다. 신 기본값 전면 재측정은 후속 과제다.</div>
+<div class="box red"><span class="bt">🔴 개선폭 20% 이상 이동 공지 — 신 기본값 전면 재측정</span>
+본 판은 기본값이 세 번 바뀐 뒤(ADR-065 승인 계선·표적 산포·남부 축선 → ADR-066 링크 의미론 정본
+정합 → ADR-067 보고 주기 대칭) <b>전 수치를 다시 측정한 것</b>이다. 구판(v3.5, 전 플래그 OFF) 대비:
+<table style="margin-top:10px">
+<thead><tr><th>지표</th><th class="num">구 기본값 (v3.5)</th><th class="num">신 기본값 (v3.6)</th><th class="num">이동</th></tr></thead>
+<tbody>
+<tr><td>SC3 격추율 개선폭 Δ</td><td class="num">+27.3pp</td><td class="num">+18.6pp</td><td class="num"><b>−32%</b> 🔴</td></tr>
+<tr><td>SC3 결심지연 개선폭 Δ</td><td class="num">−87.3초</td><td class="num">−45.8초</td><td class="num"><b>−48%</b> 🔴</td></tr>
+<tr><td>SC1 격추율 개선폭 Δ</td><td class="num">+1.0pp (n.s.)</td><td class="num">+0.2pp (n.s.)</td><td class="num">둘 다 미분리</td></tr>
+</tbody>
+</table>
+⚠️ <b>To-Be가 나빠진 것이 아니라 As-Is가 원래 성능을 되찾은 것</b>이다 — SC3 As-Is 격추율은
+33.7% → 38.1%, As-Is 결심지연은 213.4초 → 162.2초로 개선됐고 <b>To-Be 절대값은 거의 움직이지
+않았다</b>(61.0%→56.7%, 126.1초→116.4초). 구 기본값은 As-Is 링크를 codex가 폐기한 "일률 16초"로
+모델링해 <b>현 체계를 실제보다 나쁘게 그리고 있었다</b>. 상세는 §5와 <code>docs/adr/ADR-066</code>.
+</div>
 
-<div class="box warn"><span class="bt">Phase 6 (ADR-061) — legacy·compat 폐기 공지</span>
-본 보고서의 <b>legacy·compat / LEGACY_HIRES·compat 셀은 측정 당시의 기록</b>이다. Phase 6에서
-legacy 배치와 compat 충실도가 폐기되어(ADR-061) 해당 셀은 <b>더 이상 재현할 수 없다</b> —
-수치는 감사 추적을 위해 그대로 보존한다. 현재 재현 가능한 축은 고해상도 배치 6종 × iads-c2 ×
-기능 플래그이며, 폐기 커밋 전후 native 6케이스가 bit-exact임이 SHA-256으로 증명되었다
-(<code>tests/hires-baseline.json</code>). 따라서 <b>iads-c2 셀의 모든 수치·G6 재산출은 폐기 후에도
-그대로 유효하다.</b></div>
-
-<div class="box red"><span class="bt">🔴 개선폭 20% 이상 이동 공지 (ADR-057 — 링크 의미론 codex 정합)</span>
-링크 의미론을 IADS_codex 정본(ADR-014)에 정합시킨 반사실 실행(<code>linkSemanticsV2</code> ON)에서
-<b>To-Be 개선폭이 1/3~1/2로 줄어든다</b>: SC3 격추율 개선 +27.3pp→+18.0pp(−34%), 결심지연 개선
-−87→−41초(−52%). 원인은 To-Be가 아니라 <b>As-Is 쪽이 빨라진 것</b>이다 — 종전 As-Is는 codex가
-폐기한 "일률 16초 지연"으로 실제보다 나쁘게 모델링돼 있었고, 그만큼 To-Be 개선폭이
-과대평가되고 있었다. 상세는 §5, 원자료는 <code>phase2-linkv2-*.json</code>. 기본값은 OFF다
-(이 보고서의 §2~§4 기본 수치는 OFF 상태). 후속 Phase에서 기본 전환을 검토한다.</div>
-
-<div class="box red"><span class="bt">🔴 개선폭 이동 공지 (ADR-058 — 승인 계선 이식)</span>
-native 경로에 As-Is 승인 계선(협조 홉·승인 서비스·동적 위임)을 이식한 반사실 실행에서
-<b>결심지연 개선폭이 SC1 −4.0→−6.9초(상대 +72%, 절대 +2.9초), SC3 +7.5%</b>로 움직였다
-(상대 20% 규칙에 따라 명시). <b>임무 지표(격추·누수)의 개선폭은 이동하지 않았다</b>
-(SC3 격추율 Δ +18.8→+18.7pp). 반증 실험이 결정적이다: To-Be에 같은 계선을 강제해도
-결과가 사실상 불변(결심지연 124.0→124.0초) — 차이의 원천은 계선의 존재가 아니라
-<b>in-loop 절차·승인 대기행렬(Wq 36.8초)·늦은 분권 전환</b>이다. 상세 §6, 원자료
-<code>phase3-*.json</code>. 기본값 OFF.</div>
-
-<div class="box red"><span class="bt">🔴 편향 방향 공지 (ADR-056)</span>
-이번 판은 <b>To-Be에 유리한 방향의 결함 수정</b>(ADR-056)을 포함한다. 수정 전에는 To-Be가
-교전현황을 2초/무손실로 전달받고도 <b>한 번도 소비하지 않아</b> 중복교전이 As-Is보다 많게
-측정되고 있었다(§4에서 결함 확정→수정→효과를 전부 공개). 기본값은 여전히 OFF이며,
-OFF는 수정 전과 비트 단위로 동일하다(SHA-256 회귀 고정). 수정의 단독 효과는 §4.3의
-OFF↔ON 대조가 전부이고, <b>임무 결과(격추·누수)는 통계적으로 움직이지 않았다.</b></div>
+<div class="box red"><span class="bt">🔴 강건성 경고 — 저부하 임무 지표 분리는 강건하지 않다</span>
+SC1 격추율 Δ의 통계적 분리가 <b>세 판 연속 뒤집혔다</b>(구 기본값 미분리 → ADR-065 +2.9pp 유의 →
+현재 +0.2pp 미분리). 저부하에서의 임무 지표 분리는 링크·승인 가정에 민감하다.
+<b>"통합하면 격추율이 오른다"는 주장은 포화 시나리오(SC3)에서만 강건하며, 저부하 셀의 격추율
+개선을 인용해서는 안 된다.</b></div>
 
 <h2 id="s1">1. 실험 설계</h2>
 <table>
@@ -88,248 +69,280 @@ OFF↔ON 대조가 전부이고, <b>임무 결과(격추·누수)는 통계적�
 <tbody>
 <tr><td>비교 대상</td><td><b>As-Is</b>(KAMDOC/MCRC/군단AOC 3축 분절) ↔ <b>To-Be</b>(IAOC 통합·KILL_WEB)</td></tr>
 <tr><td>짝지은 실행 (CRN)</td><td>복제마다 <b>같은 seed</b>로 As-Is/To-Be를 실행 — 위협 도착열이 동일하므로 차이는 구조에서만 나온다</td></tr>
-<tr><td>복제 수</td><td>셀당 30 seed (baseSeed 12345 + 황금비 해시 격자)</td></tr>
-<tr><td>실행 조건</td><td>1,800초 · 위협강도 ×1.5</td></tr>
+<tr><td>복제 수</td><td>셀당 30 seed (baseSeed 12345 + 황금비 해시 격자) · operator 스윕만 10 seed</td></tr>
+<tr><td>실행 조건</td><td>1,800초 · 위협강도 ×1.5 · <code>HANBANDO_LEGACY_NORMAL</code> × <code>iads-c2</code></td></tr>
 <tr><td>판정</td><td>seed별 Δ(To-Be−As-Is)의 <b>95% CI가 0을 제외</b>할 때만 "통계적으로 분리"</td></tr>
-<tr><td>셀 매트릭스</td><td>시나리오 3(SC1/SC2/SC3) × {legacy·compat†, LEGACY_HIRES·compat†, LEGACY_HIRES·iads-c2} + ADR-056 ON 반사실 2셀 <span class="small">(† = ADR-061로 폐기된 축 — 기록 보존, 재현 불가)</span></td></tr>
+<tr><td><b>기준선</b></td><td><b>신 기본값</b> = 승인 계선·표적 산포·남부 축선·링크 의미론 정합·보고 주기 대칭 <b>전부 ON</b>(= 앱이 실제로 실행하는 조건)</td></tr>
 </tbody>
 </table>
-<div class="box"><span class="bt">배치·충실도 축의 의미</span>
-<b>legacy·compat</b> = 구 64노드 개념배치의 9단계 승인 파이프라인(승인 홉·동적 위임이 모델링된
-유일한 경로 — 결심 지연의 구조 분해는 여기서 본다).
-<b>LEGACY_HIRES</b> = 같은 자산 편성을 고해상도 타입으로 이식(ADR-054)한 <b>주 분석 배치</b> —
-compat(개념 교전)과 iads-c2(센서/RCS 물리) 두 충실도를 지원한다. 전투기·이지스·조기경보기가
-제외되므로 legacy와 절대값을 직접 비교하면 안 된다. FULL(84포대)은 실행 비용 문제로 이번 판
-매트릭스에서 제외했다(모의논리서 §4). <b>compat 두 축은 ADR-061(Phase 6)로 폐기되었다 —
-표의 해당 행은 측정 당시 기록이다.</b></div>
-<pre># 재현 (셀당 수 분~수십 분)
-node scripts/experiment-run.mjs --cell "sc3|HANBANDO_LEGACY_NORMAL|iads-c2|1.5|30"
-node scripts/experiment-run.mjs --cell "sc3|HANBANDO_LEGACY_NORMAL|iads-c2|1.5|30" --features '{"unifiedEngagementState":true}'</pre>
+
+<div class="box"><span class="bt">기준선 규율 변경 (v3.5 → v3.6)</span>
+구판은 §6·§7의 단독 효과를 <b>"ADR-056+057 ON 누적 베이스"</b> 위에서 쟀다. 이유는 "결함 있는
+기준선(낡은 링크 의미론) 위에서 재면 어떤 As-Is 페널티든 중첩 과장된다"였다.
+<b>그 결함이 ADR-066으로 기본값에서 고쳐졌으므로, 이제 기본값 자체가 정합된 기준선이다.</b>
+따라서 본 판은 <b>모든 단독 효과를 신 기본값 위에서</b> 측정한다 — 보고서 수치와 사용자가 앱에서
+보는 수치가 같아진다.</div>
+
+<div class="box warn"><span class="bt">반사실 방향이 뒤집힌 세 절</span>
+ADR-057(링크 의미론)·ADR-058(승인 계선)·ADR-067(보고 주기 대칭)은 <b>기본 ON</b>이 되었다. 따라서
+§5·§6·§7.5의 단독 효과는 <b>"OFF → ON"이 아니라 "기본(ON) ↔ 명시적 OFF"</b>로 읽어야 한다.
+표에는 어느 쪽이 기본인지 명시했다.</div>
+
+<pre># 재현 (셀당 7~21분)
+node scripts/experiment-run.mjs --cell "sc3|HANBANDO_LEGACY_NORMAL|iads-c2|1.5|30" --dur 1800   # 기본값
+node scripts/experiment-run.mjs --cell "sc3|HANBANDO_LEGACY_NORMAL|iads-c2|1.5|30" --dur 1800 \
+     --features '{"linkSemanticsV2":false}'                                                     # 반사실</pre>
 
 <h2 id="s2">2. 주 결과 — 임무 지표 (전체 생성 분모)</h2>
 <p class="small">각 칸: As-Is → To-Be (Δ의 95% CI가 0을 제외하면 <span class="sig">굵은 초록</span>,
 포함하면 <span class="ns">회색(n.s.)</span>). 누수율은 낮을수록 좋다.</p>
 <table>
-<thead><tr><th>셀 (×1.5·1800초·n=30)</th><th class="num">격추율</th><th class="num">누수율</th><th class="num">절단률</th><th class="num">결심지연(초)</th></tr></thead>
+<thead><tr><th>셀 (신 기본값 · ×1.5 · 1800초 · n=30)</th><th class="num">격추율</th><th class="num">누수율</th><th class="num">절단률</th><th class="num">결심지연(초)</th><th class="num">Δ격추 95% CI</th></tr></thead>
 <tbody>
-<tr><td>SC1 · legacy·compat</td><td class="num"><span class="sig">56.4% → 60.7%</span></td><td class="num"><span class="ns">25.6% → 25.4%</span></td><td class="num">18.0% → 13.9%</td><td class="num"><span class="sig">153.0 → 17.5</span></td></tr>
-<tr><td>SC1 · LEGACY_HIRES·compat</td><td class="num"><span class="ns">65.1% → 66.5%</span></td><td class="num"><span class="ns">15.8% → 15.5%</span></td><td class="num">19.1% → 18.0%</td><td class="num"><span class="sig">206.9 → 197.9</span></td></tr>
-<tr><td>SC1 · LEGACY_HIRES·iads-c2</td><td class="num"><span class="ns">79.2% → 80.2%</span></td><td class="num"><span class="ns">3.7% → 3.5%</span></td><td class="num">17.0% → 16.3%</td><td class="num"><span class="sig">162.7 → 155.2</span></td></tr>
-<tr><td>SC2 · legacy·compat</td><td class="num"><span class="sig">56.8% → 61.8%</span></td><td class="num"><span class="ns">25.5% → 23.9%</span></td><td class="num">17.7% → 14.4%</td><td class="num"><span class="sig">145.7 → 10.4</span></td></tr>
-<tr><td>SC2 · LEGACY_HIRES·compat</td><td class="num"><span class="ns">30.5% → 31.3%</span></td><td class="num"><span class="ns">43.5% → 43.8%</span></td><td class="num">26.0% → 24.9%</td><td class="num"><span class="worse">464.1 → 481.9 (악화)</span></td></tr>
-<tr><td>SC3 · legacy·compat</td><td class="num"><span class="sig">24.7% → 59.6%</span></td><td class="num"><span class="sig">63.6% → 32.3%</span></td><td class="num">11.7% → 8.1%</td><td class="num"><span class="sig">91.5 → 10.8</span></td></tr>
-<tr><td>SC3 · LEGACY_HIRES·iads-c2</td><td class="num"><span class="sig">33.7% → 61.0%</span></td><td class="num"><span class="sig">53.8% → 27.0%</span></td><td class="num">12.5% → 12.0%</td><td class="num"><span class="sig">213.4 → 126.1</span></td></tr>
+<tr><td>SC1 · 경계 침투 (생성 65.2)</td><td class="num"><span class="ns">77.3% → 77.5%</span></td><td class="num"><span class="ns">6.5% → 6.5%</span></td><td class="num">16.2% → 16.0%</td><td class="num"><span class="sig">150.0 → 141.8</span></td><td class="num"><span class="ns">+0.2pp [−1.0, +1.3]</span></td></tr>
+<tr><td>SC2 · 무인기 남파 (생성 57.3)</td><td class="num"><span class="ns">60.8% → 61.2%</span></td><td class="num"><span class="ns">19.3% → 19.0%</span></td><td class="num">19.9% → 19.8%</td><td class="num"><span class="ns">425.8 → 425.7</span></td><td class="num"><span class="ns">+0.3pp [−0.1, +0.8]</span></td></tr>
+<tr><td>SC3 · 복합 동시공격 (생성 363.6)</td><td class="num"><span class="sig">38.1% → 56.7%</span></td><td class="num"><span class="sig">49.9% → 31.4%</span></td><td class="num">12.1% → 11.9%</td><td class="num"><span class="sig">162.2 → 116.4</span></td><td class="num"><span class="sig">+18.6pp [+17.9, +19.4]</span></td></tr>
 </tbody>
 </table>
 <div class="box"><span class="bt">읽는 법</span>
-① <b>개선폭은 부하의 함수다</b> — 저부하 SC1에서는 임무 지표가 통계적으로 분리되지 않고
-(양 구조 모두 여유), 포화 SC3에서 크게 분리된다(격추율 +27~35%p).
-② <b>결심 지연의 개선 크기는 배치의 결심 모델에 의존한다</b> — legacy(9단계 승인 파이프라인)는
-승인 홉이라는 고정 비용이 사라져 부하 무관 −135초, LEGACY_HIRES(native 자체승인)는 대기행렬
-해소분만 남아 SC1 −8초/SC3 −87초. "통합 C2가 결심을 N초 앞당긴다"는 인용에는 반드시 배치를
-명시해야 한다.
-③ <b>SC2 LEGACY_HIRES·compat의 결심지연 악화(+17.8초)</b> — 무인기는 SHORAD(비호·천마)만
-교전 가능한데, To-Be에서도 이 자산군의 처리 경로가 병목이라 개선이 없다. 임무 지표도 n.s. —
-<b>무인기 문제는 C2 통합만으로 풀리지 않는다</b>는 반증 관측이 이번 판에서도 유지된다.</div>
+① <b>개선폭은 부하의 함수다</b> — 저부하 SC1·무인기 SC2에서는 임무 지표가 통계적으로 분리되지
+않고(양 구조 모두 여유이거나, 병목이 C2가 아님), 포화 SC3에서만 크게 분리된다(격추율 +18.6pp).
+② <b>SC2는 결심지연조차 미분리다</b>(Δ −0.0초). 무인기 누수의 <b>83~84%가 <code>no_fire_control</code></b>
+(양 구조 동일) — 병목이 지휘통제가 아니라 <b>교전 수단(SHORAD 물리 한계)</b>이라는 뜻이다.
+③ <b>SC3 결심지연 −45.8초는 대기행렬 해소분이다</b> — As-Is 승인 대기 Wq 40.1초·협조몫 18.4초가
+사라진 몫이 지배적이다(§6). "통합 C2가 결심을 N초 앞당긴다"는 인용에는 반드시 시나리오·부하를
+명시해야 한다.</div>
 
-<h2 id="s3">3. 구조 지표 — 중복교전·책임공백</h2>
+<h2 id="s3">3. 구조 지표 — 중복교전·책임공백·비용</h2>
 <table>
-<thead><tr><th>셀</th><th class="num">중복교전 As-Is</th><th class="num">중복교전 To-Be</th><th class="num">구조적실패 As-Is → To-Be</th></tr></thead>
+<thead><tr><th>셀</th><th class="num">중복교전 As-Is → To-Be</th><th class="num">구조적실패 As-Is → To-Be</th><th class="num">exchangeSat As-Is/To-Be</th><th class="num">방어효율</th><th class="num">고가보존율</th></tr></thead>
 <tbody>
-<tr><td>SC1 · legacy·compat</td><td class="num">72.3</td><td class="num"><span class="sig">0.0</span></td><td class="num"><span class="sig">8.2 → 0.0</span></td></tr>
-<tr><td>SC3 · legacy·compat</td><td class="num">536.2</td><td class="num"><span class="sig">0.0</span></td><td class="num"><span class="sig">185.3 → 0.0</span></td></tr>
-<tr><td>SC1 · LEGACY_HIRES·compat</td><td class="num">0.5</td><td class="num"><span class="worse">14.7 (역전!)</span></td><td class="num">0.2 → 0.0</td></tr>
-<tr><td>SC1 · LEGACY_HIRES·iads-c2 (기본 OFF)</td><td class="num">8.8</td><td class="num"><span class="worse">17.3 (역전!)</span></td><td class="num">0 → 0</td></tr>
-<tr><td>SC3 · LEGACY_HIRES·iads-c2 (기본 OFF)</td><td class="num">26.0</td><td class="num"><span class="worse">33.8 (역전!)</span></td><td class="num"><span class="worse">19.9 → 29.1</span></td></tr>
-<tr><td>SC1 · LEGACY_HIRES·iads-c2 <b>+ ADR-056 ON</b></td><td class="num">8.8</td><td class="num"><span class="sig">0.03</span></td><td class="num">0 → 0</td></tr>
-<tr><td>SC3 · LEGACY_HIRES·iads-c2 <b>+ ADR-056 ON</b></td><td class="num">26.0</td><td class="num"><span class="sig">0.13</span></td><td class="num">19.9 → 28.1</td></tr>
+<tr><td>SC1</td><td class="num"><span class="worse">12.97 → 16.33 (역전!)</span></td><td class="num"><span class="ns">0.03 → 0.00</span></td><td class="num">40.92 / 29.66</td><td class="num">0.94 → 0.95</td><td class="num">0.36 → 0.36</td></tr>
+<tr><td>SC2</td><td class="num"><span class="ns">0.43 → 0.53</span></td><td class="num"><span class="ns">0.13 → 0.10</span></td><td class="num">101.06 / 102.98</td><td class="num">0.76 → 0.76</td><td class="num">0.22 → 0.21</td></tr>
+<tr><td>SC3</td><td class="num"><span class="worse">18.10 → 28.70 (역전!)</span></td><td class="num"><span class="ns">25.23 → 23.57</span></td><td class="num">7.49 / 5.00</td><td class="num">0.77 → 0.83</td><td class="num">0.54 → 0.58</td></tr>
 </tbody>
 </table>
-<p>legacy 배치에서 To-Be 중복교전 0은 융합 COP의 계획 차단이 완전 작동하기 때문이다.
-LEGACY_HIRES의 "역전"은 §4의 결함이며, ADR-056 ON이 바로잡는다.</p>
+<p><b>중복교전 역전은 기본값 상태의 알려진 결함</b>이다(ADR-056, 기본 OFF) — §4가 확정·수정·효과를
+전부 공개한다. <b>구조적실패가 To-Be에서도 크게 남는 것(SC3 23.57)</b>은 이 판의 주요 관측이며 §10에 남긴다.</p>
 
-<h2 id="s4">4. ADR-056 — To-Be 중복해소 결함의 확정과 수정</h2>
-<h3>4.1 결함 확정 (기본 OFF 상태의 실측)</h3>
-<p>To-Be의 상급 C2는 축 이름이 <code>KILL_WEB</code>인데, 군단 AOC 교전현황의 유일한 소비 조건이
-<code>axis==='MCRC'</code>여서 <b>To-Be는 교전현황을 2초/무손실로 전달받고도 한 번도 소비하지
-않았다</b>. paired MC 30 seed로 확정:</p>
+<h2 id="s4">4. ADR-056 — To-Be 중복해소 결함 (플래그 <code>unifiedEngagementState</code>, 기본 OFF)</h2>
+<p>To-Be의 상급 C2는 축 이름이 <code>KILL_WEB</code>인데 군단 AOC 교전현황의 유일한 소비 조건이
+<code>axis==='MCRC'</code>여서 <b>To-Be는 교전현황을 전달받고도 한 번도 소비하지 않는다</b>.
+수정은 양방향 COP(순방향 KILL_WEB 소비 + 역방향 군단 AOC 가시화)다.</p>
 <table>
-<thead><tr><th>중복교전 (LEGACY_HIRES·iads-c2)</th><th class="num">As-Is</th><th class="num">To-Be(OFF)</th><th>Δ 95% CI</th></tr></thead>
+<thead><tr><th>지표</th><th class="num">SC1: 기본(OFF) → ON</th><th class="num">SC3: 기본(OFF) → ON</th><th>판정</th></tr></thead>
 <tbody>
-<tr><td>SC1</td><td class="num">8.80</td><td class="num">17.33</td><td><b>+8.53 [+7.22, +9.85]</b> — 0 제외, 우연 아님</td></tr>
-<tr><td>SC3</td><td class="num">25.97</td><td class="num">33.83</td><td><b>+7.87 [+5.85, +9.89]</b> — 0 제외, 우연 아님</td></tr>
-</tbody>
-</table>
-<h3>4.2 수정 — 양방향 COP (플래그 <code>unifiedEngagementState</code>, 기본 OFF)</h3>
-<p>① 순방향: KILL_WEB도 군단 AOC 교전현황을 소비. ② 역방향: 군단 AOC가 KILL_WEB의 활성 교전을
-데이터링크 대표지연 2초 후 COP에서 봄. 순방향만으로는 부족했다 — 잔여 중복이 전부 역방향
-(KILL_WEB 선발사→군단 AOC 후발사)이었음을 방향 분해로 확인하고 양방향으로 완성했다.
-설계 대안(축 통합안)과의 비교·선택 근거는 <code>docs/adr/ADR-056</code>.</p>
-<h3>4.3 수정의 단독 효과 (OFF↔ON, 동일 30 seed)</h3>
-<table>
-<thead><tr><th>지표</th><th class="num">SC1: OFF → ON</th><th class="num">SC3: OFF → ON</th><th>판정</th></tr></thead>
-<tbody>
-<tr><td>To-Be 중복교전</td><td class="num">17.33 → <b>0.03</b></td><td class="num">33.83 → <b>0.13</b></td><td>목적 효과. ON Δ(To-Be−As-Is): SC1 −8.77 [−9.95,−7.59] · SC3 −25.83 [−26.51,−25.16]</td></tr>
-<tr><td>To-Be 격추율</td><td class="num">80.2% → 80.2%</td><td class="num">61.0% → 61.2%</td><td class="ns">이동 없음 (CI 0 포함)</td></tr>
-<tr><td>To-Be 누수율</td><td class="num">3.5% → 3.9%</td><td class="num">27.0% → 26.7%</td><td class="ns">이동 없음 (CI 0 포함)</td></tr>
-<tr><td>To-Be 결심지연</td><td class="num">155.2 → 154.3초</td><td class="num">126.1 → 125.8초</td><td class="ns">이동 없음 수준</td></tr>
-<tr><td>exchangeSat</td><td class="num">20.57 → 20.41</td><td class="num">4.75 → 4.69</td><td>≫1 유지 — G6 ③ 불변</td></tr>
+<tr><td>To-Be 중복교전</td><td class="num">16.33 → <b>0.07</b></td><td class="num">28.70 → <b>0.07</b></td><td>목적 효과 — 사실상 완전 해소</td></tr>
+<tr><td>격추율 Δ</td><td class="num"><span class="ns">+0.2pp → −0.6pp</span></td><td class="num"><span class="sig">+18.6pp → +18.7pp</span></td><td class="ns">임무 지표 이동 없음</td></tr>
+<tr><td>결심지연 Δ</td><td class="num">−8.2 → −10.3초</td><td class="num">−45.8 → −46.2초</td><td class="ns">이동 없음 수준</td></tr>
+<tr><td>To-Be exchangeSat</td><td class="num">29.66 → 23.52</td><td class="num">5.00 → 4.98</td><td>≫1 유지 — G6 ③ 불변</td></tr>
+<tr><td>To-Be 고가보존율</td><td class="num"><span class="worse">0.36 → 0.28</span></td><td class="num">0.58 → 0.55</td><td>중복 제거가 고가 유도탄 보존을 <b>돕지 않는다</b></td></tr>
 </tbody>
 </table>
 <div class="box"><span class="bt">정직한 해석</span>
 이 수정은 <b>구조 지표(중복교전)만</b> 바로잡고 임무 결과는 바꾸지 않는다 — 이 부하에서 중복
-사격은 요격탄을 낭비할 뿐 격추 기회를 잠식하지 않기 때문이다(As-Is 관측과 동일한 패턴).
-따라서 "통합하면 격추율이 오른다"는 주장에 이 수정이 기여하는 바는 <b>없다</b>. 기여하는 것은
-"통합 COP가 중복 사격(탄약 낭비)을 없앤다"는 주장이며, 그 효과 크기가 위 표다.</div>
+사격은 요격탄을 낭비할 뿐 격추 기회를 잠식하지 않기 때문이다. 따라서 <b>"통합하면 격추율이
+오른다"는 주장에 이 수정이 기여하는 바는 없다.</b> 기여하는 것은 "통합 COP가 중복 사격을
+없앤다"는 주장이다. 게다가 <b>SC1 고가보존율은 오히려 나빠진다</b>(0.36→0.28) — 중복이 사라지자
+남는 교전이 고가 유도탄으로 몰린 결과이며, "중복 제거 = 자원 절약"이라는 직관에 대한 반증이다.</div>
 
-<h2 id="s45">5. ADR-057 — 링크 의미론 codex 정합의 단독 효과</h2>
-<p>형제 저장소 IADS_codex(정본)의 ADR-014는 "센서→C2는 일률 지연이 아니라 <b>보고 주기</b>"라고
-판정한다. Air_Defense 고해상도 경로는 codex와 같은 값으로 <code>reportingPeriod</code>를 선언해
-놓고 <b>한 번도 소비하지 않았고</b>(죽은 필드), 대신 전 센서에 일률 16초를 적용하고 있었다.
-플래그 <code>linkSemanticsV2</code>(기본 OFF)가 이를 정정한다: As-Is 센서→C2 = 센서별 보고주기
-(그린파인 16·FPS-117 8·TPS-880K 4·MFR 1초), As-Is C2↔C2 = codex shortRange 1초,
-To-Be 전 링크 = IFCN 1초(codex: "킬웹 보고주기 전부 1s").</p>
-<h3>5.1 단독 효과 (paired MC 30 seed, OFF ↔ ON)</h3>
+<h2 id="s5">5. ADR-057 — 링크 의미론 정본 정합 (기본 <b>ON</b>, <code>linkv2=0</code>으로 해제)</h2>
+<p>형제 저장소 IADS_codex(정본)의 ADR-014는 "센서→C2는 일률 지연이 아니라 <b>보고 주기</b>"로
+판정한다. 기본값은 이에 정합한다 — As-Is 센서→C2 = 센서별 보고주기(그린파인 16·FPS-117 8·
+TPS-880K 4·MFR 1초), C2↔C2 = <b>양 모드 모두 1초</b>. 아래는 <b>끄면 무슨 일이 일어나는가</b>이다.</p>
 <table>
-<thead><tr><th>지표</th><th class="num">SC1 Δ(To-Be−As-Is): OFF → ON</th><th class="num">SC3 Δ: OFF → ON</th></tr></thead>
+<thead><tr><th>지표</th><th class="num">SC1: 기본(ON) ↔ OFF</th><th class="num">SC3: 기본(ON) ↔ OFF</th></tr></thead>
 <tbody>
-<tr><td>격추율(spawn)</td><td class="num">+0.9pp → +1.0pp</td><td class="num"><b>+27.3pp → +18.0pp</b> [+16.7,+19.2]</td></tr>
-<tr><td>결심지연</td><td class="num">−7.5 → −2.5초</td><td class="num"><b>−87.2 → −41.5초</b> [−44.0,−38.9]</td></tr>
-<tr><td>교전지연</td><td class="num">−7.9 → −2.8초</td><td class="num"><b>−101.4 → −48.4초</b> [−51.5,−45.3]</td></tr>
-<tr><td>중복교전</td><td class="num">+8.53 → +1.27</td><td class="num">+7.87 → +0.87 [−0.40,+2.13] (미분리로 전환)</td></tr>
-<tr><td>구조적실패</td><td class="num">0 → 0</td><td class="num"><b>+9.17 → −8.07 (방향 반전)</b></td></tr>
-<tr><td>exchangeSat (As-Is/To-Be)</td><td class="num">20.4 / 20.4</td><td class="num">4.98 / 4.69 — 양 팔 ≫1 유지</td></tr>
+<tr><td>격추율 Δ(To-Be−As-Is)</td><td class="num"><span class="ns">+0.2pp</span> ↔ <span class="sig">+4.5pp</span></td><td class="num"><span class="sig">+18.6pp</span> ↔ <b>+26.8pp (+44% 과장)</b></td></tr>
+<tr><td>결심지연 Δ</td><td class="num">−8.2 ↔ <b>−23.4초</b></td><td class="num">−45.8 ↔ <b>−100.8초 (2.2배 과장)</b></td></tr>
+<tr><td><b>As-Is</b> 격추율</td><td class="num">77.3% ↔ 72.9%</td><td class="num">38.1% ↔ <b>27.9%</b></td></tr>
+<tr><td><b>To-Be</b> 격추율</td><td class="num">77.5% ↔ 77.5% (불변)</td><td class="num">56.7% ↔ 54.7%</td></tr>
+<tr><td><b>As-Is</b> 결심지연</td><td class="num">150.0 ↔ 164.8초</td><td class="num">162.2 ↔ <b>220.2초</b></td></tr>
+<tr><td>As-Is 중복교전</td><td class="num">12.97 ↔ 8.67</td><td class="num">18.10 ↔ 12.83</td></tr>
+<tr><td>exchangeSat As-Is/To-Be</td><td class="num">40.9/29.7 ↔ 31.6/20.8</td><td class="num">7.5/5.0 ↔ 10.9/5.0</td></tr>
 </tbody>
 </table>
-<div class="box"><span class="bt">부수 관측 2건</span>
-① <b>As-Is 중복교전 급증</b>(SC1 8.8→16.1) — C2↔C2가 1초로 빨라지자 MCRC와 군단 AOC의
-동시결심 경합이 늘었다. <b>빠른 링크는 교전상태 공유(ADR-056) 없이는 중복을 오히려 키운다</b> —
-"데이터링크만 깔면 된다"는 통념에 대한 추가 반증.
-② <b>SC3 구조적실패 이례의 해소</b> — OFF에서 To-Be(29.1)가 As-Is(19.9)보다 많던 이례가
-ON에서 반전된다(14.2 vs 22.2). §6에 남겼던 이례가 링크 의미론 왜곡의 산물이었을 가능성이 높다.</div>
-<h3>5.2 한계</h3>
-<p class="small">보고주기 수치는 codex 스스로 "가상 placeholder"라 명시한 모델값(등급 C)이며,
-톱니 신선도(0~주기 변동)는 미구현 — 고정 지연 근사는 항상 주기 상한만큼 늦게 보는 보수적
-가정이다. <code>docs/adr/ADR-057</code> §한계 참조.</p>
+<div class="box"><span class="bt">이 표가 말하는 것</span>
+끄면 <b>To-Be는 거의 그대로인데 As-Is만 나빠진다</b>. 즉 구 의미론은 To-Be를 좋게 그린 것이
+아니라 <b>As-Is를 실제보다 나쁘게 그려 개선폭을 부풀리고 있었다.</b> 이것이 기본값을 뒤집은
+이유이며(ADR-066), v3.5 보고서의 SC3 수치가 이 판에서 크게 낮아진 원인이다.</div>
+<div class="box warn"><span class="bt">부수 관측 — 빠른 링크는 중복을 <u>키운다</u></span>
+As-Is 중복교전이 기본값(빠른 링크)에서 <b>더 많다</b>(SC1 8.67→12.97, SC3 12.83→18.10).
+C2↔C2가 1초가 되자 MCRC와 군단 AOC의 <b>동시결심 경합</b>이 늘었기 때문이다.
+<b>"데이터링크만 깔면 된다"는 통념에 대한 반증</b> — 교전상태 공유(ADR-056) 없이 링크만 빠르게 하면
+중복이 늘어난다. 참고로 정적 중복 히트맵(협조 지연 기준)은 같은 전환에서 <b>반대 방향</b>으로
+움직인다(<code>tests/overlap-performance.test.js</code>에 근거 기록) — 그 지표는 "협조 지연발
+중복 위험"만 재며 중복교전 예측치가 아니다.</div>
+<p class="small"><b>한계</b>: 보고주기 수치는 codex 스스로 "가상 placeholder"라 명시한 모델값(등급 C)이며,
+톱니 신선도(0~주기 변동)는 미구현 — 고정 지연 근사는 항상 주기 상한만큼 늦게 보는 보수적 가정이다.</p>
 
-<h2 id="s55">6. ADR-058 — 승인 계선 이식의 단독 효과 (2-베이스)</h2>
-<p>legacy 9단계 파이프라인에만 있던 승인 계선(승인권자 해소→coord 협조 홉→<code>approval</code>
-서비스→동적 권한위임)을 native 경로의 As-Is LOCAL_AD 축(군단 AOC)에 이식했다
-(플래그 <code>approvalChain</code>, 기본 OFF · USFK 축 제외 어서션 고정).</p>
-<h3>6.1 주 베이스(ADR-056+057 ON) 위 단독 효과</h3>
+<h2 id="s6">6. ADR-058 — 승인 계선 (기본 <b>ON</b>, <code>appr=0</code>으로 해제)</h2>
+<p>As-Is LOCAL_AD 축(군단 AOC)의 교전이 승인권자 해소 → coord 협조 홉(음성 20초) →
+<code>approval</code> 서비스 → 동적 권한위임을 거친다. USFK 축은 제외(ADR-036 어서션 고정).</p>
 <table>
-<thead><tr><th>지표</th><th class="num">SC1: OFF → ON</th><th class="num">SC3: OFF → ON</th></tr></thead>
+<thead><tr><th>지표</th><th class="num">SC1: 기본(ON) ↔ OFF</th><th class="num">SC3: 기본(ON) ↔ OFF</th></tr></thead>
 <tbody>
-<tr><td>As-Is 협조몫 (meanCoordDelaySec)</td><td class="num">0 → <b>34.6초</b></td><td class="num">0 → <b>19.1초</b></td></tr>
-<tr><td>As-Is 승인 대기 Wq (approval)</td><td class="num">0 → 1.3초</td><td class="num">0 → <b>36.8초</b></td></tr>
-<tr><td>결심지연 Δ(To-Be−As-Is)</td><td class="num">−4.0 → −6.9초</td><td class="num">−41.9 → −45.0초</td></tr>
-<tr><td>격추율 Δ</td><td class="num"><span class="ns">+0.6pp → +0.7pp (무이동)</span></td><td class="num"><span class="ns">+18.8pp → +18.7pp (무이동)</span></td></tr>
-<tr><td>As-Is 중복교전</td><td class="num">16.1 → 14.8</td><td class="num">33.2 → <b>19.7</b> (승인 직렬화 효과)</td></tr>
-<tr><td>MCRC approval ρ (As-Is)</td><td class="num">0 → 0.28</td><td class="num">0 → 0.51 (track ρ 0.95 불변)</td></tr>
+<tr><td>As-Is 협조몫 (meanCoordDelaySec)</td><td class="num"><b>34.5초</b> ↔ 0</td><td class="num"><b>18.4초</b> ↔ 0</td></tr>
+<tr><td>As-Is 승인 대기 Wq</td><td class="num">1.5초 ↔ 0</td><td class="num"><b>40.1초</b> ↔ 0</td></tr>
+<tr><td>As-Is 승인 ρ (최대)</td><td class="num">0.28 ↔ 0</td><td class="num">0.49 ↔ 0</td></tr>
+<tr><td>결심지연 Δ</td><td class="num">−8.2 ↔ −4.1초</td><td class="num">−45.8 ↔ −40.6초</td></tr>
+<tr><td>격추율 Δ</td><td class="num"><span class="ns">+0.2pp ↔ +1.0pp</span></td><td class="num"><span class="sig">+18.6pp ↔ +17.6pp</span></td></tr>
+<tr><td><b>As-Is 중복교전</b></td><td class="num">12.97 ↔ 14.97</td><td class="num"><b>18.10 ↔ 32.50</b></td></tr>
 </tbody>
 </table>
-<h3>6.2 반증·민감도</h3>
-<div class="box"><span class="bt">반증 (approvalChainTobe)</span> To-Be에 동일 계선을 강제해도
-결심지연 124.0→124.0초·격추율 62.3→62.1%로 사실상 불변 — To-Be의 위임 임계(×1)와
-automation(on-loop/auto-preauth)이 계선 비용을 0에 수렴시킨다. <b>As-Is↔To-Be 차이는 "승인
-계선의 존재"가 아니라 in-loop 절차(음성 왕복)·승인 대기행렬·늦은 분권 전환에서 나온다.</b></div>
-<div class="box"><span class="bt">2-베이스 대조</span> 같은 토글을 <b>전 플래그 OFF 베이스</b>(구
-기준선) 위에서 재면 효과가 3~4배 과장된다(SC1 결심지연 Δ −7.5→−26.1초 vs 주 베이스
-−4.0→−6.9초). 낡은 링크 의미론 위에서는 어떤 As-Is 페널티든 중첩 과장된다 — 결함 수정·정본
-정합 상태를 분석 기준선으로 삼는 이유의 실증.</div>
-<div class="box warn"><span class="bt">operator.mid 민감도 (10 seed 스윕)</span> 승인 계선 효과의
-크기는 C2 운용자 처리시간(등급 C·독립 출처 없음)에 민감하다: As-Is 결심지연 증가가 high(22.5초)
-+2.8초 ↔ low(57.5초) +16.0초. <b>방향은 세 수준 모두 동일</b>(To-Be 우위 확대). 크기 인용 시
-등급 C 명기 필수.</div>
-
-<h2 id="s58">7. ADR-059 — native WTA 모드 차등의 단독 효과</h2>
-<p>native 사수 선정에 As-Is/To-Be 차등(As-Is=관측 부하만, To-Be=물리 점수+비용 인식)을
-이식했다(플래그 <code>nativeWtaMode</code>, 기본 OFF). 주 베이스 30 seed:</p>
+<div class="box"><span class="bt">승인 절차의 양면성</span>
+승인 계선은 As-Is 결심을 늦추지만(협조몫 18~35초·승인 Wq 40초) <b>동시에 중복교전을 크게
+줄인다</b>(SC3 32.50 → 18.10). 승인이 교전을 <b>직렬화</b>하기 때문이다. 승인 절차를 "순수한
+비효율"로 읽으면 안 된다 — 그것은 조정 기능도 함께 수행하고 있으며, 통합 C2는 <b>그 조정 기능을
+COP로 대체해야</b> 중복 증가 없이 지연만 없앨 수 있다(§4·§5의 중복 역전이 그 미완성을 보여준다).</div>
+<h3>6.1 반증 — To-Be에 같은 계선을 강제하면 (<code>approvalChainTobe</code>)</h3>
 <table>
-<thead><tr><th>지표</th><th class="num">SC1: OFF → ON</th><th class="num">SC3: OFF → ON</th></tr></thead>
+<thead><tr><th>SC3 To-Be 지표</th><th class="num">기본</th><th class="num">계선 강제</th><th>판정</th></tr></thead>
 <tbody>
-<tr><td>격추율 Δ(To-Be−As-Is)</td><td class="num"><span class="ns">+0.6pp → +0.6pp (동일)</span></td><td class="num">+18.8pp → +20.4pp (상대 +8.2% — 🔴 기준 미만)</td></tr>
-<tr><td>As-Is 격추율</td><td class="num">0.801 → 0.801</td><td class="num">0.436 → 0.421 (COP 부재 열화 발현)</td></tr>
-<tr><td>고가보존율 As-Is/To-Be</td><td class="num">0.385/0.290 (불변)</td><td class="num">0.586/0.548 → 0.578/0.548</td></tr>
+<tr><td>결심지연</td><td class="num">116.4초</td><td class="num">116.3초</td><td class="ns">사실상 불변</td></tr>
+<tr><td>격추율</td><td class="num">56.7%</td><td class="num">57.0%</td><td class="ns">사실상 불변</td></tr>
+<tr><td>협조몫</td><td class="num">0.0초</td><td class="num">0.6초</td><td>As-Is 18.4초의 <b>1/30</b></td></tr>
+<tr><td>승인 대기 Wq</td><td class="num">0.0초</td><td class="num">2.1초</td><td>As-Is 40.1초의 <b>1/19</b></td></tr>
 </tbody>
 </table>
-<div class="box warn"><span class="bt">정직 관측 2건</span>
-① <b>비용 인식 항은 이 배치 집합에서 사실상 물지 않는다</b> — To-Be는 ON==OFF bit-동일,
-As-Is 반증(비용항 강제)도 보존율 0.578→0.581뿐. ② 따라서 legacy의 반증 서사("자원 절약은
-비용 인식 로직에서 나온다")는 <b>고해상도에서 재현되지 않는다</b> — 보존율 차이는 비용
-인식이 아니라 <b>교전량·기하 제약</b>에서 나온다(FULL As-Is는 비용항 없이도 0.814 vs To-Be
-0.360). 상세·근거는 <code>docs/adr/ADR-059</code>.</div>
+<p><b>결정적 반증이다.</b> To-Be에 동일한 승인 계선을 강제해도 비용이 거의 발생하지 않는다 —
+위임 임계(×1)와 automation(on-loop/auto-preauth)이 계선 비용을 0에 수렴시킨다.
+<b>As-Is↔To-Be 차이의 원천은 "승인 계선의 존재"가 아니라 in-loop 절차(음성 왕복)·승인
+대기행렬·늦은 분권 전환이다.</b></p>
+<h3>6.2 민감도 — C2 운용자 처리시간 (등급 C · SC1 · 10 seed)</h3>
+<table>
+<thead><tr><th>운용자 수준</th><th class="num">As-Is 결심지연 (OFF → ON)</th><th class="num">승인 계선이 더한 지연</th><th class="num">결심지연 Δ (OFF → ON)</th></tr></thead>
+<tbody>
+<tr><td>high (22.5초)</td><td class="num">140.2 → 142.9초</td><td class="num">+2.8초</td><td class="num">−1.9 → −3.6초</td></tr>
+<tr><td>low (57.5초)</td><td class="num">145.7 → 161.2초</td><td class="num"><b>+15.5초</b></td><td class="num">−6.3 → −16.4초</td></tr>
+</tbody>
+</table>
+<p class="small">승인 계선 효과의 <b>크기</b>는 C2 운용자 처리시간(등급 C · 독립 출처 없음)에 5배 이상 민감하다.
+<b>방향은 두 수준 모두 동일</b>(To-Be 우위 확대). 크기를 인용할 때는 등급 C 명기가 필수다.</p>
 
-<h2 id="s59">8. Phase 5·6 — compat 폐기 판정과 집행</h2>
+<h2 id="s7">7. ADR-059 — native WTA 모드 차등 (<code>nativeWtaMode</code>, 기본 OFF)</h2>
+<p>native 사수 선정에 As-Is/To-Be 차등(As-Is=관측 부하만, To-Be=물리 점수+비용 인식)을 이식한 반사실.</p>
+<table>
+<thead><tr><th>지표</th><th class="num">SC1: 기본(OFF) → ON</th><th class="num">SC3: 기본(OFF) → ON</th></tr></thead>
+<tbody>
+<tr><td>격추율 Δ</td><td class="num"><span class="ns">+0.2pp → +0.2pp (동일)</span></td><td class="num">+18.6pp → +19.1pp <span class="small">(상대 +2.7% — 🔴 기준 미만)</span></td></tr>
+<tr><td>As-Is 격추율</td><td class="num">77.3% → 77.3%</td><td class="num">38.1% → 37.6% (COP 부재 열화 발현)</td></tr>
+<tr><td>고가보존율 As-Is/To-Be</td><td class="num">0.36/0.36 → 0.36/0.36</td><td class="num">0.54/0.58 → 0.53/0.58</td></tr>
+</tbody>
+</table>
+<div class="box warn"><span class="bt">정직 관측 — 비용 인식 항은 거의 물지 않는다</span>
+반증 플래그(<code>nativeWtaCostAsis</code>)로 As-Is에 비용항을 강제해도 <b>8셀 격자 중 2셀에서만</b>
+결과가 바뀐다(FULL·×1.5·600/900초). 무는 셀의 <b>위치는 판마다 이동하고 빈도는 약 1/4에
+머문다</b>(ADR-065 판에서는 ×3 셀에서 물었다). 따라서 legacy의 서사("자원 절약은 비용 인식
+로직에서 나온다")는 <b>고해상도에서 재현되지 않는다</b> — 보존율 차이는 <b>교전량·기하 제약</b>에서
+나온다. 회귀 스위트는 무는 셀과 <b>무는 셀이 아닌 셀을 함께</b> 고정해 이 빈도를 증거로 남긴다.</div>
+
+<h2 id="s75">7.5. ADR-067 — 레이더→C2 보고 주기 대칭 (기본 <b>ON</b>, <code>rp=0</code>으로 해제)</h2>
+<p>보고 주기는 센서의 물리 속성이므로 양 모드 공통이다. 끄면 To-Be 보고 링크만 전부 1초가 되어
+<b>같은 그린파인이 To-Be에서 16배 빨리 보고</b>한다(codex <code>ifcn:1</code> 해석).</p>
+<table>
+<thead><tr><th>지표</th><th class="num">SC1: 기본(ON) ↔ OFF</th><th class="num">SC3: 기본(ON) ↔ OFF</th></tr></thead>
+<tbody>
+<tr><td>격추율 Δ</td><td class="num"><span class="ns">+0.2pp ↔ −0.1pp</span></td><td class="num"><span class="sig">+18.6pp ↔ +18.4pp</span></td></tr>
+<tr><td>결심지연 Δ</td><td class="num">−8.2 ↔ −9.3초</td><td class="num">−45.8 ↔ −45.7초</td></tr>
+<tr><td>To-Be 팔 paired 차이(ON−OFF)</td><td class="num">격추 +0.27pp [−0.80,+1.34] <b>n.s.</b></td><td class="num">격추 +0.29pp [−0.40,+0.98] <b>n.s.</b></td></tr>
+</tbody>
+</table>
+<div class="box"><span class="bt">효과 0인데 왜 바꿨나</span>
+<b>전 지표 미분리</b>이고 As-Is는 bit-exact로 불변이다. 그러나 효과가 0이라고 종전 모델링이
+옳았다는 뜻은 아니다 — <b>같은 레이더가 C2 구조에 따라 16배 빨리 보고하는 것은 크기와 무관하게
+정당화되지 않는다.</b> 실제로 보고 경로는 크게 느려진다(SC3에서 1초 경로 69%→43%, 약 19%가
+8~9초로 이동). 결과가 안 움직이는 이유는 <b>보고 지연이 To-Be 결심 파이프라인(116초)의 지배항이
+아니기 때문</b>이다. 이 측정은 <b>codex <code>ifcn:1</code>이 이중 계상이었다는 근거를 강화</b>한다 —
+킬웹의 실질 이점은 IFCN 주기가 아니라 최속 경로 선택·전 노드 배포라는 구조에서 나온다.
+이는 IADS_codex 정본에 대한 <b>저장소 최초의 의도적 이탈</b>이며, 보고된 수치를 하나도 바꾸지
+않는다는 점에서 가장 안전한 형태의 이탈이다(ADR-067).</div>
+
+<h2 id="s8">8. Phase 5·6 — compat 폐기 판정과 집행</h2>
 <p><b>Phase 5 판정</b> — <code>docs/compat-retirement-readiness.md</code>: §6 결합 7항목 중 충족 2 ·
 범위 축소 대체 3 · <b>미충족 2(정본 이벤트 스키마·위협 운동)</b> + 도메인 RNG 부분 구현.
 제외 자산 5종은 <b>연구 범위 명시 축소</b>(지상배치 방공 C2 — ADR-060)로 처리.
 §6 문언 기준으로는 폐기 불가였으나, <b>§6을 "범위 축소 기준"으로 개정하는 사용자 결정</b>
 (2026-07-28)에 따라 Phase 6이 진행되었다 — 미충족 2건은 후속 과제로 정직하게 남는다.</p>
 <p><b>Phase 6 집행 (ADR-061)</b> — legacy 9단계 파이프라인·legacy 배치 데이터·compat 충실도
-삭제. 핵심 이관 증명: 폐기 직전 LEGACY_HIRES×iads-c2 6케이스(SC1/2/3×양모드)의 SHA-256이
-<b>폐기 전후 6/6 bit-exact</b>(<code>tests/hires-baseline.json</code>) — 삭제가 native 결과를 전혀
-건드리지 않았다. 이 기준선은 "개선 이전 대비"가 아니라 <b>"이관 후 회귀 없음"</b> 증명이라는
-의미 약화를 함께 기록한다. 도메인 RNG 완전 이관은 이 bit-exact 증명과 한 커밋에서 양립할 수
-없어 의도적으로 보류(ADR-061). legacy 전용 회귀 16종은 폐기하고 대체 커버리지를
-<code>tests/retired-legacy-suites.md</code>에 원장으로 남겼다. 단일본은 IIFE 커널 번들로
-iads-c2를 그대로 실행한다(모듈 커널과 bit-exact 6/6 검증).</p>
+삭제. 핵심 이관 증명: 폐기 직전 6케이스의 SHA-256이 <b>폐기 전후 6/6 bit-exact</b>였다.
+이 기준선은 "개선 이전 대비"가 아니라 <b>"이관 후 회귀 없음"</b> 증명이라는 의미 약화를 함께
+기록한다. 도메인 RNG 완전 이관은 그 bit-exact 증명과 한 커밋에서 양립할 수 없어 의도적 보류.
+legacy 전용 회귀 16종은 폐기하고 대체 커버리지를 <code>tests/retired-legacy-suites.md</code>에 원장으로 남겼다.</p>
+<p class="small">⚠️ 지문 재기준화는 <b>네 번</b> 누적됐다(ADR-061 이관 → 065 → 066 → 067). 현재 지문의 의미는
+"OFF == 도입 전"이 아니라 <b>"OFF == 현행 기준선"</b>(이후 회귀 방지선)이다. 구 지문은 git 이력에 있다.</p>
 
-<h2 id="s65">9-0. ADR-065 기본값 전환 — 편향 원장 (paired 20 seed × 900초 × ×1.5)</h2>
+<h2 id="s9">9. G6 — 결론 불변 4종 재산출 (신 기본값)</h2>
 <table>
-<thead><tr><th>셀</th><th>격추율 Δ</th><th>결심지연 Δ</th><th>As-Is 협조몫</th><th>exchangeSat As-Is/To-Be</th></tr></thead>
+<thead><tr><th style="width:30%">결론</th><th>이번 판 재산출 결과</th></tr></thead>
 <tbody>
-<tr><td>SC1 구 기본(전 OFF)</td><td class="num"><span class="ns">−0.5pp ±1.9</span></td><td class="num">−21.9s ±2.9</td><td class="num">0.0s</td><td class="num">21.25 / 21.88</td></tr>
-<tr><td>SC1 <b>신 기본(3종 ON)</b></td><td class="num"><span class="sig">+2.9pp ±2.7</span></td><td class="num"><span class="sig">−33.7s ±2.8</span></td><td class="num"><b>34.1s</b></td><td class="num">20.00 / 20.42</td></tr>
-<tr><td>SC3 구 기본(전 OFF)</td><td class="num"><span class="sig">+38.7pp ±1.5</span></td><td class="num">−68.0s ±3.9</td><td class="num">0.0s</td><td class="num">6.55 / 4.57</td></tr>
-<tr><td>SC3 <b>신 기본(3종 ON)</b></td><td class="num"><span class="sig">+39.9pp ±1.5</span></td><td class="num"><span class="sig">−82.2s ±7.6</span></td><td class="num"><b>23.3s</b></td><td class="num"><b>25.51</b> / 4.59</td></tr>
+<tr><td>① As-Is 핵심 병목은 협조·승인 경로</td><td><b>유지 · 직접 관측</b> — As-Is 협조몫 <b>18.4~34.5초</b>, 승인 대기 Wq <b>40.1초</b>(SC3), 승인 ρ 0.49를 <b>기본 화면에서</b> 본다. 승인 계선을 끄면 이 값들이 전부 0이 되고 결심지연 개선폭도 −45.8→−40.6초로 줄어든다(§6). <b>누수 사유가 결정적</b>: SC3 As-Is 누수의 <b>77%가 C2 원인</b>(<code>timeout:c2</code> 66% + <code>window_lost_due_to_c2</code> 11%).</td></tr>
+<tr><td>② To-Be 병목은 C2에서 무기체계로 이동</td><td><b>유지 · 이번 판에서 정량 확인</b> — SC3 누수 사유 구성이 뒤바뀐다. <b>As-Is</b>: C2 원인 77% / 무기체계 원인 11%(탄약·교전창·명중실패). <b>To-Be</b>: C2 원인 <b>41%</b>로 감소, 무기체계 원인 <b>48%</b>로 증가(<code>ammo_depleted</code> 28% · <code>timeout:engage</code> 16% · <code>missed</code> 4%). 병목이 지휘통제에서 <b>탄약·교전 능력</b>으로 넘어갔다.</td></tr>
+<tr><td>③ 무인기 비용 비대칭 미해소 (exchangeSat &gt; 1)</td><td><b>유지</b> — 전 셀 <b>5.00~102.98</b>로 1을 크게 초과한다(SC1 40.9/29.7 · SC2 <b>101.1/103.0</b> · SC3 7.5/5.0). 무인기 시나리오 SC2에서 <b>To-Be가 오히려 더 높다</b>(103.0 &gt; 101.1) — 통합해도 저가 위협에 고가 요격탄을 쓰는 구조는 그대로다. 어느 셀·어느 플래그에서도 1 밑으로 내려가지 않았다.</td></tr>
+<tr><td>④ 신궁·천마 탄도탄 교전 불가</td><td><b>유지</b> — 제약 어서션(<code>tests/constraints.test.mjs</code>의 <code>iadsEngageableThreats</code> 데이터 검증 + <code>tests/southern-axes.test.mjs</code>의 탄도 단독 발사 0건 행위 검증) 통과. 전 회귀 스위트 녹색(29스위트).</td></tr>
 </tbody>
 </table>
-<p><b>SC3 As-Is exchangeSat 6.55→25.51(3.9배)</b>는 "더 비싸게 막았다"가 아니라 <b>남부 위협을
-놓쳐 격추 위협가치(분모)가 줄어든 것</b>이다(To-Be 4.57→4.59 불변). 이 지표의 알려진 함정이므로
-방어효율·격추율과 함께 읽어야 한다.</p>
-<p><b>정직 기록 — 두 보증 약화</b>: ① ADR-056 지문이 "OFF == 도입 전"에서 <b>"OFF == 현행
-기준선"</b>으로 재기준화됐다(배경 변경으로 구 비교 재현 불가). ② ADR-059 비용항 반증이 무는
-셀이 6셀 중 2셀로 줄었다 — 발화 셀과 <b>비발화 셀을 함께</b> 어서션으로 고정해 빈도 감소를
-증거로 남겼다. 이는 "비용항은 거의 물지 않는다"는 원 결론을 강화한다.</p>
+<p><b>뒤집힌 결론 없음.</b> 다만 ①②의 <b>크기</b>는 구판보다 작아졌고(상단 🔴), ②는 이번 판에서
+처음으로 누수 사유 분포로 정량 확인됐다.</p>
 
-<h2 id="s5">9. G6 — 결론 불변 4종 재산출</h2>
-<table>
-<thead><tr><th style="width:36%">결론</th><th>이번 판 재산출 결과</th></tr></thead>
-<tbody>
-<tr><td>① As-Is 핵심 병목은 협조·승인 경로(①⑥⑦)</td><td><b>유지·강화 (ADR-065로 기본 관측)</b> — 승인 계선이 기본 ON이 되어 <b>기본 화면에서 협조몫 23~34초가 직접 보인다</b>(종전에는 0으로 표시돼 결론을 화면에서 확인할 수 없었다). ADR-058 ON에서 native 최초로 협조몫(19~35초)·승인 Wq(36.8초) 관측, legacy 발견 재현. — legacy·compat 결심지연 145~153초 중 승인 파이프라인 몫이 지배적(As-Is→To-Be −135초). LEGACY_HIRES에서도 SC3 대기행렬 해소 −87초.</td></tr>
-<tr><td>② To-Be 병목은 C2에서 무기체계로 이동</td><td><b>유지</b> — To-Be에서 구조적 실패(책임공백류) 0이 되고 잔여 누수가 timeout(교전창)·missed로 이동(legacy·compat 누수 사유 분포).</td></tr>
-<tr><td>③ 무인기 비용 비대칭 미해소 (exchangeSat &gt; 1)</td><td><b>유지 (신 기본값에서 심화)</b> — 신 기본값 전 셀 4.59~25.51로 As-Is 비대칭이 오히려 커졌다. 구 기본값 기록: SC2 exchangeSat: legacy 72.6→68.5, LEGACY_HIRES 71.6→70.8. SC1/SC3 iads-c2에서도 20.4~20.6, 4.7~5.8 — 어느 셀·어느 플래그(ADR-056·057 ON 포함)에서도 1 밑으로 내려가지 않음.</td></tr>
-<tr><td>④ 신궁·천마 탄도탄 교전 불가</td><td><b>유지</b> — 제약 어서션(<code>tests/constraints.test.mjs</code> — ADR-061에서 <code>iadsEngageableThreats</code> 데이터 + 탄도 단독 발사 0건 행위로 이중 검증 이관) 통과, 전 회귀 스위트 녹색(Phase 6 판은 25스위트).</td></tr>
-</tbody>
-</table>
-
-<h2 id="s6">10. 이 판에서 새로 남긴 관측 (후속 분석 대상)</h2>
+<h2 id="s10">10. 이 판에서 새로 남긴 관측 (후속 분석 대상)</h2>
 <ul>
-<li><b>SC3 LEGACY_HIRES·iads-c2에서 구조적실패 절대 건수는 To-Be(28~29)가 As-Is(19.9)보다 많다</b>
- — ADR-056 이전부터 존재하고 ADR-056 ON이 소폭만 줄인다(29.1→28.1). <b>후속 관측(§5):
- 링크 의미론을 codex에 정합시키면(ADR-057 ON) 이 이례가 반전·해소된다</b>(To-Be 14.2 vs
- As-Is 22.2) — 이례가 "일률 16초" 왜곡의 산물이었을 가능성이 높다.</li>
-<li><b>SC2(무인기)는 어느 구조에서도 미분리</b> — 교전 수단(SHORAD)의 물리 한계가 지배.
- C2 지표(결심지연)는 To-Be가 오히려 악화될 수 있다(LEGACY_HIRES·compat +17.8초).</li>
-<li><b>As-Is에서 LEGACY_HIRES의 단일 L-SAM이 특정 셀에서 선정되지 않는 관측</b>(ADR-055 §한계)
- — native 사수 선정의 모드 의존성 분석 과제로 남아 있다.</li>
+<li><b>구조적 실패가 To-Be에서도 크게 남는다</b>(SC3 As-Is 25.23 → To-Be 23.57, 미분리).
+ 구판에서 관측된 "To-Be가 As-Is보다 많은" 이례는 해소됐으나(방향 정상화), <b>절대 건수가 거의
+ 줄지 않는다</b>. 통합 C2가 책임공백을 없앤다는 서사는 이 배치·부하에서 <b>부분적으로만</b> 성립한다.</li>
+<li><b>중복교전 역전이 기본 상태에서 유지된다</b>(SC1 12.97→16.33, SC3 18.10→28.70). ADR-056을
+ 켜면 사라지지만 기본값은 OFF다 — <b>기본 화면은 여전히 결함 상태를 보여준다.</b> 기본 전환 여부는
+ 미결이며, 켜면 고가보존율이 나빠지는 부작용(§4)이 함께 온다.</li>
+<li><b>승인 절차는 중복교전을 억제하는 조정 기능도 한다</b>(SC3 As-Is 32.50 → 18.10). 승인을
+ "순수 비효율"로 다루는 정책 제언은 이 관측과 충돌한다.</li>
+<li><b>SC2는 어느 구조·어느 플래그에서도 미분리</b> — 누수의 83~84%가 <code>no_fire_control</code>로
+ 양 구조 동일. <b>무인기 문제는 C2 통합으로 풀리지 않는다</b>는 반증 관측이 이번 판에서도 유지된다.</li>
+<li><b>저부하 SC1의 분리는 가정에 민감하다</b> — 세 판 연속 유의성이 뒤집혔다(상단 🔴).</li>
 </ul>
 
-<h2 id="s7">11. 한계</h2>
+<h2 id="s11">11. 한계</h2>
 <ol>
-<li>FULL(84포대) 배치는 이번 판 매트릭스에서 제외 — 셀당 실행 시간 문제. 결론은 LEGACY_HIRES
-  기준이며 FULL 일반화는 미검증.</li>
-<li>위협 운동학은 개념 축선/dwell 함수(모의논리서 §7) — 절대값 인용 금지.</li>
-<li>C2 처리시간 다수가 근거 등급 C — 민감 결론은 파라미터 스윕으로 강건성 확인 필요.</li>
-<li>ADR-056·ADR-057은 기본 OFF다 — 본 보고서의 "기본" 수치(§2~§4)는 두 수정이 꺼진 상태의
-  수치이며, §4·§5가 각 수정의 단독 효과를 분리 공개한다. 기본값 전환(및 두 플래그 동시 ON의
-  상호작용 측정)은 후속 결정 사안.</li>
+<li><b>FULL(84포대) 배치는 이번 판 매트릭스에서 제외</b> — 셀당 실행 시간 문제. 결론은
+  LEGACY_HIRES 기준이며 FULL 일반화는 미검증(반증 셀에서만 사용).</li>
+<li><b>위협 운동학은 개념 축선/dwell 함수</b> — 절대값 인용 금지. 표적 권역은 5곳(서울·오산평택·
+  강릉·대구·부산)이며 남부 축선은 탄도류만·SC3만 적용된다.</li>
+<li><b>C2 처리시간 다수가 근거 등급 C</b> — §6.2가 보이듯 승인 효과 크기는 운용자 처리시간에
+  5배 이상 민감하다. 민감 결론은 반드시 스윕과 함께 인용해야 한다.</li>
+<li><b>ADR-056·059는 기본 OFF다</b> — §2·§3의 기본 수치는 두 반사실이 꺼진 상태이며, §4·§7이
+  각 단독 효과를 분리 공개한다. ADR-056의 기본 전환은 미결(고가보존율 부작용 때문).</li>
+<li><b>톱니 신선도 미구현</b> — 보고 주기를 고정 지연으로 근사한다(양 모드 동일 근사이므로
+  비교에는 영향이 없으나 절대값은 보수적).</li>
+<li><b>정본 이탈 1건</b> — ADR-067은 IADS_codex <code>ifcn:1</code>을 따르지 않는다. 사유는 기록했고
+  보고 수치를 바꾸지 않지만, codex 갱신 시 재검토 대상이다.</li>
+<li><b>지문 재기준화 4회 누적</b> — §8 참조.</li>
 </ol>
 
-<p class="small">원자료: <code>artifacts/experiment/phase1-confirm-*.json</code>(OFF) · <code>phase1-on-*.json</code>(ADR-056 ON)
-· <code>phase2-linkv2-*.json</code>(ADR-057 ON) · <code>phase3-*.json</code>(ADR-058) · <code>phase4-*.json</code>(ADR-059 2-베이스·반증) · <code>report-*.json</code>(compat 축 — ADR-061 폐기로 재현 불가 기록) — iads-c2 축은 전부 명령
-한 줄로 재현 가능(§1). 모델 구조·지표 정의: <code>모의논리서.html</code> · 파라미터 근거: <code>docs/params.md</code>.</p>
+<details class="hist">
+<summary>부록 — 폐기된 축의 기록 (재현 불가 · 감사 추적용)</summary>
+<p class="small">아래는 <b>ADR-061로 폐기된 legacy 배치·compat 충실도</b>에서 측정된 v3.5 이전 기록이다.
+현재 코드로는 <b>재현할 수 없으며</b>, 현 결과와 절대값을 직접 비교해서는 안 된다(전력 구성·물리 모델이 다름).</p>
+<table>
+<thead><tr><th>셀 (구판 · ×1.5 · 1800초 · n=30)</th><th class="num">격추율</th><th class="num">누수율</th><th class="num">결심지연(초)</th></tr></thead>
+<tbody>
+<tr><td>SC1 · legacy·compat</td><td class="num">56.4% → 60.7%</td><td class="num">25.6% → 25.4%</td><td class="num">153.0 → 17.5</td></tr>
+<tr><td>SC1 · LEGACY_HIRES·compat</td><td class="num">65.1% → 66.5%</td><td class="num">15.8% → 15.5%</td><td class="num">206.9 → 197.9</td></tr>
+<tr><td>SC2 · legacy·compat</td><td class="num">56.8% → 61.8%</td><td class="num">25.5% → 23.9%</td><td class="num">145.7 → 10.4</td></tr>
+<tr><td>SC2 · LEGACY_HIRES·compat</td><td class="num">30.5% → 31.3%</td><td class="num">43.5% → 43.8%</td><td class="num">464.1 → 481.9 (악화)</td></tr>
+<tr><td>SC3 · legacy·compat</td><td class="num">24.7% → 59.6%</td><td class="num">63.6% → 32.3%</td><td class="num">91.5 → 10.8</td></tr>
+</tbody>
+</table>
+<p class="small">legacy(9단계 승인 파이프라인)의 결심지연 −135초는 <b>승인 홉이라는 고정 비용</b>이 사라진
+결과였다. 고해상도 native 경로에는 그 파이프라인이 없으므로 −45.8초(§2)와 직접 비교할 수 없다.</p>
+<p class="small"><b>구 기본값(전 플래그 OFF)의 iads-c2 수치</b>(v3.5 §2): SC1 79.2%→80.2% · 3.7%→3.5% · 162.7→155.2초 /
+SC3 33.7%→61.0% · 53.8%→27.0% · 213.4→126.1초. 딥링크
+<code>appr=0&amp;disp=0&amp;south=0&amp;linkv2=0&amp;rp=0</code>으로 재현할 수 있다.</p>
+</details>
+
+<p class="small">원자료: <code>artifacts/experiment/v67-on-*.json</code>(신 기본값 주 결과) ·
+<code>v67-off-*.json</code>(ADR-067 반사실) · <code>r68-*.json</code>(ADR-056·057·058·059 반사실 ·
+반증 · operator 스윕) — 전부 명령 한 줄로 재현 가능(§1).
+모델 구조·지표 정의: <code>모의논리서.html</code> · 파라미터 근거: <code>docs/params.md</code> ·
+설계 결정: <code>docs/adr/</code>.</p>
 
 </body>
 </html>

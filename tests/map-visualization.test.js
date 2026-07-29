@@ -13,7 +13,11 @@ var fail = 0;
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
 
 // ── 기대값을 카탈로그에서 직접 산출 (렌더러와 데이터의 정합 검증) ──
-var catalog = KJ.buildDeploymentCatalog('HANBANDO_LEGACY_NORMAL');
+// ADR-065: 지도는 기본 ON 변형 카탈로그(승인 coord 링크·남부 coverage)를 그린다.
+// 기대값도 **렌더러와 같은 경로**로 뽑아야 한다 — 옵션 없는 카탈로그로 계산하면 링크 수가 어긋난다.
+var catalog = KJ.resolveModelCatalog({
+  deploymentId: 'HANBANDO_LEGACY_NORMAL', features: { highResolutionDeployment: true }
+});
 function expectFor(mode) {
   var nodes = KJ.nodesInMode(mode, catalog);
   var by = {};

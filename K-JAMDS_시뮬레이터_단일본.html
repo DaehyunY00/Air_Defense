@@ -9243,9 +9243,17 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 미지·구식 배치 ID(예: 'legacy')는 기본 배치(HANBANDO_LEGACY_NORMAL)로 정규화한다.
     var dep = state && state.dep;
     if (!dep || (KJ.DEPLOYMENT_IDS || []).indexOf(dep) === -1) dep = undefined;
+    // ADR-065: 승인 계선·남부 축선 토글이 카탈로그 구성(coord 링크·coverage)을 바꾸므로
+    // 지도도 실행과 같은 변형을 그려야 한다. 종전에는 토글을 반영하지 않아, 사용자가 끈
+    // 상태에서도 지도에는 승인 협조 링크가 남았다.
     return KJ.resolveModelCatalog({
       deploymentId: dep,
-      features: { highResolutionDeployment: true }
+      features: {
+        highResolutionDeployment: true,
+        approvalChain: !state || state.appr !== '0',
+        threatTargetDispersion: !state || state.disp !== '0',
+        southernAxes: !state || state.south !== '0'
+      }
     });
   }
 

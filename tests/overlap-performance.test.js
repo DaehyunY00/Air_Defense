@@ -18,8 +18,12 @@ var model = {
   features: { highResolutionDeployment: true }
 };
 var scenario = KJ.scenarioById('sc3');
+// ADR-065 갱신: 남부 종심 축선(ADR-064)이 기본 포함되면서 coverage 파생이 좁아졌다 —
+// 사거리가 남부 축선에만 닿는 자산이 종전에는 coverage:[](=축선 무제한)이라 **중부축 중복위험에
+// 계상**되고 있었고, 이제 남부 전용으로 분류돼 빠진다(central asis 2858.25 → 2250.75).
+// 종전 값이 과대계상이었다 — 임계를 맞춘 것이 아니라 계정 범위가 정확해진 것이다.
 var expected = {
-  asis: [1125, 2858.25, 1698, 506.25],
+  asis: [1125, 2250.75, 1698, 506.25],
   tobe: [112.5, 997.5, 609, 0]
 };
 

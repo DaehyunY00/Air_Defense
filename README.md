@@ -184,7 +184,7 @@ css/style.css                    # 레이아웃·테마
 js/
   config/ system-types.js · geo-mdl.js · deployments.js · deployment-adapter.js
          # 고해상도 체계 타입 · MDL 개념 벨트 · 배치 6종 · C2/센서/사수/링크 catalog
-         #   (FULL 3종 + LEGACY_HIRES 3종 — ADR-054·055·061. 변형 카탈로그: linkV2/appr/opLevel)
+         #   (FULL 3종 + LEGACY_HIRES 3종 — ADR-054·055·061. 변형 카탈로그: linkV2/appr/south/rp/opLevel)
   data/  nodes.js · links.js · threats.js · scenarios.js · axes.js
          # nodes/links는 ADR-061로 빈 stub(legacy 배치 폐기 기록 보존) · 위협·시나리오·축선 좌표
   core/  router.js · constraints.js · rng.js · heap.js · sim-worker-client.js
@@ -261,6 +261,7 @@ node tests/run-all.js            # 전체 회귀 — js/ 구문검증 + 29개 �
 | `legacy-hires-deployment` | LEGACY_HIRES 편성·물리 동작·DOWN 대체·**legacy/compat 거부(ADR-061)** |
 | `engagement-state-unification` · `link-semantics` · `approval-chain` · `native-wta` | ADR-056~059 플래그별 OFF bit-exact·ON 거동·반증 |
 | `target-dispersion` · `southern-axes` | ADR-063 표적권역 산포(균등원판·스트림 분리·권역 무결성) / ADR-064 남부 종심 축선(coverage 파생 분리·사거리 정합·체공 환산) |
+| `sensor-report-parity` | ADR-067 레이더→C2 보고 주기 양 모드 공통 — 대칭 0건·킬웹 포함·음성 비대칭 유지·As-Is bit-exact 불변 |
 | `analysis-metric-honesty` | ADR-062 분석 탭 지표 정직성 — 死 지표 제거 근거(포화에도 사수 Wq=0)·"미측정" 표기·승인계선 토글 배선·OFF bit-exact |
 | `target-dispersion` | ADR-063 표적권역 산포 — OFF bit-exact·균등원판 분포·seed 의존성·도착 스트림 분리·권역 무결성·제약 불변 |
 | `map-visualization` · `ui-performance` · `vendor-leaflet` · `overlap-performance` | 지도 렌더 정합(카탈로그 기준) / Worker·범례 / Leaflet 동봉 무결성 / FULL 성능 |

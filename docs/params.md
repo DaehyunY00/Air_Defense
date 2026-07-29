@@ -104,7 +104,7 @@
 - **단위**: 초
 - **출처**: `IADS_codex/src/config/weapon-data.js` `SENSOR_TYPES.<sensor>.reportingPeriod` — Air_Defense `js/config/system-types.js`가 동일 값으로 선언(종전에는 소비처 0건인 죽은 필드).
 - **인용문**: codex ADR-014 — "탐지자산→상위 C2 정보 전달은 일률 지연이 아니라 보고 주기 — 그림 나이가 0~P 톱니(sawtooth)로 변동. 탐지자산별 주기는 SENSOR_TYPES.<sensor>.reportingPeriod가 단일 출처."
-- **적용범위**: `linkSemanticsV2`(ADR-066으로 **기본 ON**) 카탈로그의 센서→C2 `report` 링크. **ADR-067로 양 모드 공통이 되었다** — 종전에는 As-Is만 이 값을 쓰고 To-Be는 IADS-LINK-IFCN-01(1 s)로 덮였는데, 같은 레이더가 To-Be에서 최대 16배 빨리 보고하는 셈이었다. 킬웹 `센서→IAOC` 50링크를 포함한다. 대칭화 제외 대상은 C2 발신 링크(C2↔C2는 IADS-LINK-SHORT-01)와 음성 절차 링크(C2-COORD-HORIZ-01)다. 플래그 `sensorReportParity`(기본 ON, `rp=0`으로 해제)로 감쌌다.
+- **적용범위**: `linkSemanticsV2`(ADR-066으로 **기본 ON**) 카탈로그의 센서→C2 `report` 링크. **ADR-067로 양 모드 공통이 되었다** — 종전에는 As-Is만 이 값을 쓰고 To-Be는 IADS-LINK-IFCN-01(1 s)로 덮였는데, 같은 레이더가 To-Be에서 최대 16배 빨리 보고하는 셈이었다. 킬웹 `센서→IAOC` 링크를 포함한다(LEGACY_HIRES 19개 · FULL 65개 — 킬웹 `report` 총 50/154개 중 센서 발신 몫이며, 나머지는 C2→IAOC로 대칭화 대상이 아니다). 대칭화 제외 대상은 C2 발신 링크(C2↔C2는 IADS-LINK-SHORT-01)와 음성 절차 링크(C2-COORD-HORIZ-01)다. 플래그 `sensorReportParity`(기본 ON, `rp=0`으로 해제)로 감쌌다.
 - **신뢰도 등급**: **C** — codex 정본 값 승계이나 codex 스스로 이 주기들을 "ADR-014 모델값(§0.13 D-5 — **가상 placeholder, 추후 실측 자료조사**)"라고 명시한다. 정본 승계 ≠ 공개근거 확보.
 - **MC 적용방식**: 고정(1단계 근사 — "센서별 고정 지연 = reportingPeriod". 톱니 신선도(0~P 변동)는 후속 과제로 ADR-057 §한계에 기록)
 

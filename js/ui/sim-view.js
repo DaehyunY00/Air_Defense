@@ -336,7 +336,12 @@
       setComputeNotice('idle');
     },
 
-    onLeave: function () { pause(); }
+    onLeave: function () { pause(); },
+
+    /** [분석] 탭 위협 항적 로그용 — 최근 실행 결과 접근자 (실행 전이면 null) */
+    getLastRun: function () { return run; },
+    stageLabel: stageLabel,
+    threatColor: function (type) { return THREAT_COLOR[type] || '#f00'; }
   };
 
   function setStatus(msg) { var s = el('sim-status'); if (s) s.textContent = msg; }

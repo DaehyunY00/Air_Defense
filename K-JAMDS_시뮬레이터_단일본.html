@@ -838,6 +838,25 @@ li.tlog-done { color: var(--muted); }
 li.tlog-current { color: #ffd27d; font-weight: 700; }
 li.tlog-future { color: #4a5666; }
 
+/* ── [분석] 탭 위협 항적 로그 (최근 시뮬레이션 실행) ── */
+.alog-row { border-bottom: 1px solid #222b38; font-size: 12px; }
+.alog-row:last-child { border-bottom: none; }
+.alog-hdr {
+  display: flex; align-items: center; gap: 8px; padding: 5px 4px;
+  cursor: pointer; border-radius: 4px; list-style: none;
+}
+.alog-hdr::-webkit-details-marker { display: none; }
+.alog-hdr::before { content: '▸'; color: var(--muted); font-size: 10px; }
+.alog-row[open] > .alog-hdr::before { content: '▾'; }
+.alog-hdr:hover { background: var(--panel-2); }
+.alog-row[open] > .alog-hdr { background: #1c3a52; }
+.alog-id { flex-shrink: 0; min-width: 110px; color: var(--text); font-weight: 700; }
+.alog-id i { color: var(--muted); font-style: normal; font-size: 10px; font-weight: 400; }
+.alog-type { flex: 1; color: #aecbeb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alog-time { flex-shrink: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+.alog-stages { list-style: none; margin: 2px 0 8px 26px; padding: 0; color: var(--muted); }
+.alog-stages li { padding: 1px 0; font-variant-numeric: tabular-nums; }
+
 /* ── As-Is ↔ To-Be 좌·우 직관 비교 블록 ── */
 .vs-block { margin: 4px 0 8px; }
 
@@ -1236,9 +1255,6 @@ li.chk-fail { background: #43140f; }
 .ctl-check { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; cursor: pointer; }
 .ctl-check input { cursor: pointer; }
 
-.policy-list { margin: 4px 0 4px 18px; font-size: 12px; }
-.policy-list li { margin-bottom: 8px; word-break: keep-all; }
-
 @media (max-width: 900px) {
   .pl-m { grid-template-columns: 34px 1fr 52px 52px 90px; }
   .pl-m-track { display: none; }
@@ -1434,7 +1450,7 @@ li.chk-fail { background: #43140f; }
       </details>
     </section>
 
-    <!-- ── 분석 탭: 9단계 파이프라인 병목·해결 지표 + 정상상태 해석 상세 ── -->
+    <!-- ── 분석 탭: 9단계 파이프라인 병목·해결 지표 + 위협 항적 로그 ── -->
     <section class="tab-panel" id="panel-analysis">
       <div class="card">
         <h2>🧭 9단계 파이프라인 — 병목·해결 지표 (As-Is ↔ To-Be)</h2>
@@ -1462,54 +1478,11 @@ li.chk-fail { background: #43140f; }
       </div>
 
       <div class="card">
-        <h2>💡 정책적 읽기 — 어느 단계에 투자?</h2>
-        <ul class="policy-list">
-          <li><b>⑥⑦ 결심·교전협조 단계가 한국군 이원화 C2의 최대 병목</b> — 결심 지연·중복교전
-              위험·책임공백이 모두 여기 집중됩니다. To-Be(융합·자동교전·데이터링크)의 개선폭이
-              가장 크게 나타나는 곳입니다.</li>
-          <li><b>③④⑤ C2 처리 포화는 "섞어쏘기"(SC3)에서 지배적</b> — ρ≥0.9 임계 돌파 구간에서
-              As-Is 누출률이 비선형 급증합니다([Monte Carlo] 탭 임계 전환점 분석의 핵심).</li>
-          <li><b>⑨ 비용교환비는 저가 포화위협(SC2 무인기)에서 부각</b> — 고가 요격탄 소모 구조를
-              드러냅니다.</li>
-          <li><b>⑧ no_shooter(제약)는 통합으로 해결 불가</b> — 무기체계 소요(예: 탄도탄 대응
-              자산) 문제로 분리해서 볼 것.</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h2>🔎 도출된 병목 (시나리오 × 토폴로지 × 모드 기반 — 정상상태 해석)</h2>
-        <div id="bottleneck-summary"></div>
-      </div>
-      <div class="card">
-        <h2>노드 이용률 (M/M/c 정상상태 근사, ρ 내림차순)</h2>
-        <table>
-          <thead>
-            <tr><th>노드</th><th>구분</th><th>부하 λ<br>(건/분)</th><th>서버/채널 c</th>
-                <th>처리시간</th><th>이용률 ρ</th><th>평균대기 Wq</th><th>판정</th></tr>
-          </thead>
-          <tbody id="node-table-body"></tbody>
-        </table>
-      </div>
-      <div class="card">
-        <h2>통신 링크 부하·지연</h2>
-        <table>
-          <thead>
-            <tr><th>링크</th><th>유형</th><th>지연</th><th>유통량 (건/분)</th><th>판정</th></tr>
-          </thead>
-          <tbody id="link-table-body"></tbody>
-        </table>
-      </div>
-      <div class="card">
-        <h2>위협별 탐지→교전 타임라인 (경로 고정지연 추정)</h2>
-        <div id="timeline-rows"></div>
-        <div class="tl-legend">
-          <span><span class="sw" style="background:#2e6fd8"></span>탐지·보고</span>
-          <span><span class="sw" style="background:#7b1fa2"></span>협조/융합</span>
-          <span><span class="sw" style="background:#f0a020"></span>결심/승인</span>
-          <span><span class="sw" style="background:#00838f"></span>교전명령</span>
-          <span><span class="sw" style="background:#3d8b40"></span>교전/요격</span>
-        </div>
-        <div class="note" id="analysis-note"></div>
+        <h2>🛰 위협 항적 로그 (최근 시뮬레이션 실행)</h2>
+        <p>[시뮬레이션] 탭에서 실행한 최근 DES의 <b>위협별 9단계 항적 로그</b>입니다.
+           각 위협을 클릭하면 생성→탐지→보고→식별·평가→결심·협조→교전명령→교전→BDA의
+           단계별 시각·결과를 확인할 수 있습니다.</p>
+        <div id="analysis-threat-log"></div>
       </div>
     </section>
 
@@ -9874,7 +9847,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
  * [분석] / [근거자료] 탭.
  *  - 9단계 파이프라인 병목·해결 지표: 동일 seed의 As-Is/To-Be 결정론 DES 1복제 비교
  *    (설정 키 캐시 — 슬라이더 드래그 시 동일 설정 중복 재계산 방지)
- *  - 정상상태 해석 상세(노드 ρ표·링크표·타임라인): 기존 KJ.analyzeScenario 유지
+ *  - 위협 항적 로그: [시뮬레이션] 탭 최근 실행(KJ.simView.getLastRun)의 위협별 9단계 로그
  * 병목·지표는 어디에도 하드코딩되지 않고 [시나리오 부하 × 토폴로지 × 용량] 관측에서 도출된다.
  */
 (function () {
@@ -9905,15 +9878,6 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   function catalogFor(state) {
     return KJ.resolveModelCatalog ? KJ.resolveModelCatalog(modelConfig(state)) : null;
   }
-
-  var LEVEL_BADGE = {
-    idle: '<span class="badge badge-idle">유휴</span>',
-    normal: '<span class="badge badge-ok">정상</span>',
-    warn: '<span class="badge badge-warn">주의 ρ≥0.7</span>',
-    bottleneck: '<span class="badge badge-bad">병목 ρ≥0.9</span>',
-    saturated: '<span class="badge badge-crit">포화 ρ≥1</span>'
-  };
-  var KIND_ICON = { node: '⬛', link: '🔗', gap: '⚠️' };
 
   // ══════════════ 9단계 파이프라인 병목·해결 지표 (분석 탭 상단) ══════════════
   // 각 단계가 "어떤 병목을 드러내고 어떤 지표·실패코드로 관측되는지"를
@@ -10483,83 +10447,71 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     }).join('');
   }
 
+  /** mm:ss 포맷 (sim-view와 동일 정의) */
+  function fmtTime(sec) {
+    sec = Math.max(0, Math.round(sec));
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  /** 위협 1건의 최종 판정 뱃지 — 격추 / 요격 실패 / 관측 종료 미해결 */
+  function outcomeBadge(th) {
+    if (th.exitT == null) return '<span class="badge badge-idle">미해결(관측 종료)</span>';
+    if (th.outcome === 'killed') return '<span class="badge badge-ok">격추</span>';
+    return '<span class="badge badge-bad">요격 실패</span>';
+  }
+
+  /** [분석] 탭 위협 항적 로그 — [시뮬레이션] 탭 최근 실행의 위협별 9단계 로그 렌더 */
+  function renderThreatLog(state) {
+    var box = el('analysis-threat-log');
+    if (!box) return;
+    var run = KJ.simView && KJ.simView.getLastRun ? KJ.simView.getLastRun() : null;
+    if (!run || !run.threats || !run.threats.length) {
+      box.innerHTML = '<div class="bn-none">아직 실행된 시뮬레이션이 없습니다 — ' +
+        '[시뮬레이션] 탭에서 [▶ 시뮬레이션 시작]을 누르면 위협별 항적 로그가 여기에 표시됩니다.</div>';
+      return;
+    }
+    var cfg = run.cfg;
+    var killed = 0, leaked = 0, censored = 0;
+    run.threats.forEach(function (th) {
+      if (th.exitT == null) censored++;
+      else if (th.outcome === 'killed') killed++;
+      else leaked++;
+    });
+    var stale = cfg.sc !== state.sc || cfg.mode !== state.mode || cfg.dep !== state.dep ||
+      Number(cfg.x) !== Number(state.x);
+    var html = '<div class="analysis-context">' +
+      esc(KJ.scenarioById(cfg.sc).name) + ' · ' +
+      (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형') + ' · ' + esc(cfg.dep) +
+      ' · 강도 ×' + Number(cfg.x).toFixed(1) + ' · seed ' + cfg.seed + ' · ' + cfg.dur + '초 — ' +
+      '추적 ' + run.threats.length + '건 (격추 ' + killed + ' · 요격 실패 ' + leaked +
+      (censored ? ' · 미해결 ' + censored : '') + ')' +
+      (run.res.traceTruncated ? ' · ⚠️ 추적 상한 절삭' : '') + '</div>' +
+      (stale ? '<div class="note">⚠️ 상단 컨트롤의 시나리오·모드·배치·강도가 이 실행과 다릅니다 — ' +
+        '[시뮬레이션] 탭에서 [↺ 다시 실행]하면 로그가 갱신됩니다.</div>' : '');
+    html += run.threats.map(function (th) {
+      var stages = th.stages.map(function (s) {
+        return '<li>' + fmtTime(s.t) + ' · ' + esc(KJ.simView.stageLabel(s.name)) + '</li>';
+      }).join('');
+      return '<details class="alog-row">' +
+        '<summary class="alog-hdr">' +
+        '<span class="tlog-dot" style="background:' + KJ.simView.threatColor(th.type) + '"></span>' +
+        '<span class="alog-id">' + esc(th.id) + ' <i>(' + esc(th.axis) + ')</i></span>' +
+        '<span class="alog-type">' + esc(th.typeName) + '</span>' +
+        '<span class="alog-time">' + fmtTime(th.spawnT) +
+        (th.exitT != null ? ' → ' + fmtTime(th.exitT) : ' →') + '</span>' +
+        outcomeBadge(th) + '</summary>' +
+        '<ul class="alog-stages">' + (stages || '<li>기록된 단계 없음</li>') + '</ul>' +
+        '</details>';
+    }).join('');
+    box.innerHTML = html;
+  }
+
   KJ.panels = {
-    /** [분석] 탭: 9단계 파이프라인 지표 + 정상상태 해석 상세 렌더 */
-    renderAnalysis: function (state, analysis) {
-      var sc = KJ.scenarioById(state.sc);
-      var catalog = catalogFor(state);
+    /** [분석] 탭: 9단계 파이프라인 지표 + 위협 항적 로그 렌더 */
+    renderAnalysis: function (state) {
       renderPipeline(state);
-
-      // ── 병목 종합 (시나리오에서 도출) ──
-      var bn = analysis.bottlenecks.length
-        ? analysis.bottlenecks.map(function (b) {
-          return '<li class="bn-item bn-sev' + b.severity + '">' +
-            KIND_ICON[b.kind] + ' <b>' + esc(b.name) + '</b><br>' +
-            '<span class="bn-detail">' + esc(b.detail) + '</span></li>';
-        }).join('')
-        : '<li class="bn-none">현재 시나리오·강도·모드에서 도출된 병목 없음 ' +
-          '(병목은 고정값이 아니라 부하의 함수 — 강도를 높이거나 시나리오를 바꿔보세요)</li>';
-      el('bottleneck-summary').innerHTML =
-        '<div class="analysis-context">' + esc(sc.name) + ' · ' +
-        (state.mode === 'asis' ? 'As-Is (분절형)' : 'To-Be (K-JAMDS 통합형)') +
-        ' · 강도 ×' + state.x.toFixed(1) + '</div><ul>' + bn + '</ul>';
-
-      // ── 노드 이용률 표 (ρ 내림차순) ──
-      var rows = analysis.nodes.slice().sort(function (a, b) {
-        var ra = isFinite(a.rho) ? a.rho : 99, rb = isFinite(b.rho) ? b.rho : 99;
-        return rb - ra;
-      }).map(function (r) {
-        var bar = Math.min(100, (isFinite(r.rho) ? r.rho : 1.2) * 100);
-        return '<tr class="row-' + r.level + '">' +
-          '<td>' + esc(r.name) + '</td>' +
-          '<td>' + (r.category === 'c2' ? 'C2' : '교전') + '</td>' +
-          '<td class="num">' + r.lambda.toFixed(2) + '</td>' +
-          '<td class="num">' + r.servers + '</td>' +
-          '<td class="num">' + r.serviceSec + 's</td>' +
-          '<td><div class="rho-bar"><div class="rho-fill lv-' + r.level +
-          '" style="width:' + bar + '%"></div>' +
-          '<span>' + (isFinite(r.rho) ? r.rho.toFixed(2) : '≥1') + '</span></div></td>' +
-          '<td class="num">' + (isFinite(r.Wq) ? r.Wq.toFixed(1) + 's' : '∞') + '</td>' +
-          '<td>' + LEVEL_BADGE[r.level] + '</td></tr>';
-      }).join('');
-      el('node-table-body').innerHTML = rows;
-
-      // ── 통신 링크 표 ──
-      var lrows = analysis.links.slice().sort(function (a, b) {
-        return (b.delaySec * b.flow) - (a.delaySec * a.flow);
-      }).map(function (r) {
-        return '<tr' + (r.isCommBottleneck ? ' class="row-bottleneck"' : '') + '>' +
-          '<td>' + esc(KJ.nodeById(r.from, catalog).name) + ' → ' + esc(KJ.nodeById(r.to, catalog).name) + '</td>' +
-          '<td>' + esc(r.type) + '</td>' +
-          '<td class="num">' + r.delaySec + 's</td>' +
-          '<td class="num">' + r.flow.toFixed(2) + '</td>' +
-          '<td>' + (r.isCommBottleneck
-            ? '<span class="badge badge-bad">통신병목</span>'
-            : '<span class="badge badge-ok">정상</span>') + '</td></tr>';
-      }).join('');
-      el('link-table-body').innerHTML = lrows;
-
-      // ── 위협별 타임라인 (탐지→교전 고정지연 추정) ──
-      var tl = analysis.timelines.map(function (t) {
-        var total = Math.max(t.totalSec, 1);
-        var segs = t.stages.map(function (s, i) {
-          var w = (s.sec / total * 100).toFixed(1);
-          return '<div class="tl-seg tl-' + i + '" style="width:' + w + '%" title="' +
-            esc(s.name) + ' ' + s.sec + '초"></div>';
-        }).join('');
-        return '<div class="tl-row">' +
-          '<div class="tl-label">' + esc(t.typeName) + ' <span class="tl-axis">(' +
-          esc(t.axis) + ')</span></div>' +
-          '<div class="tl-bar">' + segs + '</div>' +
-          '<div class="tl-total">' + (t.engageable ? '≈' + Math.round(t.totalSec) + '초' :
-            '<span class="badge badge-crit">교전 불가</span>') + '</div></div>';
-      }).join('');
-      el('timeline-rows').innerHTML = tl ||
-        '<div class="bn-none">시나리오에 위협이 없습니다.</div>';
-
-      el('analysis-note').textContent =
-        '※ Phase 1 정상상태 M/M/c(Erlang-C) 해석적 근사입니다. 타임라인은 대기시간을 제외한 ' +
-        '경로 고정지연 합이며, Phase 2(DES)·Phase 3(Monte Carlo)에서 확률분포 기반으로 정밀화됩니다.';
+      renderThreatLog(state);
       if (KJ.tableSort) KJ.tableSort.attachAll(el('panel-analysis')); // 숫자열 헤더 우측정렬 동기화
     },
 
@@ -10956,7 +10908,12 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       setComputeNotice('idle');
     },
 
-    onLeave: function () { pause(); }
+    onLeave: function () { pause(); },
+
+    /** [분석] 탭 위협 항적 로그용 — 최근 실행 결과 접근자 (실행 전이면 null) */
+    getLastRun: function () { return run; },
+    stageLabel: stageLabel,
+    threatColor: function (type) { return THREAT_COLOR[type] || '#f00'; }
   };
 
   function setStatus(msg) { var s = el('sim-status'); if (s) s.textContent = msg; }
@@ -12244,7 +12201,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       KJ.mapView.invalidateSize();
       KJ.simView.render(state, analysis);
     } else if (state.tab === 'analysis') {
-      KJ.panels.renderAnalysis(state, analysis);
+      KJ.panels.renderAnalysis(state);
     } else if (state.tab === 'mc') {
       KJ.mcPanel.render(state);
     } else if (state.tab === 'data') {

@@ -98,7 +98,7 @@
       KJ.mapView.invalidateSize();
       KJ.simView.render(state, analysis);
     } else if (state.tab === 'analysis') {
-      KJ.panels.renderAnalysis(state, analysis);
+      KJ.panels.renderAnalysis(state);
     } else if (state.tab === 'mc') {
       KJ.mcPanel.render(state);
     } else if (state.tab === 'data') {

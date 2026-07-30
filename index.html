@@ -188,7 +188,7 @@
       </details>
     </section>
 
-    <!-- ── 분석 탭: 9단계 파이프라인 병목·해결 지표 + 정상상태 해석 상세 ── -->
+    <!-- ── 분석 탭: 9단계 파이프라인 병목·해결 지표 + 위협 항적 로그 ── -->
     <section class="tab-panel" id="panel-analysis">
       <div class="card">
         <h2>🧭 9단계 파이프라인 — 병목·해결 지표 (As-Is ↔ To-Be)</h2>
@@ -216,54 +216,11 @@
       </div>
 
       <div class="card">
-        <h2>💡 정책적 읽기 — 어느 단계에 투자?</h2>
-        <ul class="policy-list">
-          <li><b>⑥⑦ 결심·교전협조 단계가 한국군 이원화 C2의 최대 병목</b> — 결심 지연·중복교전
-              위험·책임공백이 모두 여기 집중됩니다. To-Be(융합·자동교전·데이터링크)의 개선폭이
-              가장 크게 나타나는 곳입니다.</li>
-          <li><b>③④⑤ C2 처리 포화는 "섞어쏘기"(SC3)에서 지배적</b> — ρ≥0.9 임계 돌파 구간에서
-              As-Is 누출률이 비선형 급증합니다([Monte Carlo] 탭 임계 전환점 분석의 핵심).</li>
-          <li><b>⑨ 비용교환비는 저가 포화위협(SC2 무인기)에서 부각</b> — 고가 요격탄 소모 구조를
-              드러냅니다.</li>
-          <li><b>⑧ no_shooter(제약)는 통합으로 해결 불가</b> — 무기체계 소요(예: 탄도탄 대응
-              자산) 문제로 분리해서 볼 것.</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <h2>🔎 도출된 병목 (시나리오 × 토폴로지 × 모드 기반 — 정상상태 해석)</h2>
-        <div id="bottleneck-summary"></div>
-      </div>
-      <div class="card">
-        <h2>노드 이용률 (M/M/c 정상상태 근사, ρ 내림차순)</h2>
-        <table>
-          <thead>
-            <tr><th>노드</th><th>구분</th><th>부하 λ<br>(건/분)</th><th>서버/채널 c</th>
-                <th>처리시간</th><th>이용률 ρ</th><th>평균대기 Wq</th><th>판정</th></tr>
-          </thead>
-          <tbody id="node-table-body"></tbody>
-        </table>
-      </div>
-      <div class="card">
-        <h2>통신 링크 부하·지연</h2>
-        <table>
-          <thead>
-            <tr><th>링크</th><th>유형</th><th>지연</th><th>유통량 (건/분)</th><th>판정</th></tr>
-          </thead>
-          <tbody id="link-table-body"></tbody>
-        </table>
-      </div>
-      <div class="card">
-        <h2>위협별 탐지→교전 타임라인 (경로 고정지연 추정)</h2>
-        <div id="timeline-rows"></div>
-        <div class="tl-legend">
-          <span><span class="sw" style="background:#2e6fd8"></span>탐지·보고</span>
-          <span><span class="sw" style="background:#7b1fa2"></span>협조/융합</span>
-          <span><span class="sw" style="background:#f0a020"></span>결심/승인</span>
-          <span><span class="sw" style="background:#00838f"></span>교전명령</span>
-          <span><span class="sw" style="background:#3d8b40"></span>교전/요격</span>
-        </div>
-        <div class="note" id="analysis-note"></div>
+        <h2>🛰 위협 항적 로그 (최근 시뮬레이션 실행)</h2>
+        <p>[시뮬레이션] 탭에서 실행한 최근 DES의 <b>위협별 9단계 항적 로그</b>입니다.
+           각 위협을 클릭하면 생성→탐지→보고→식별·평가→결심·협조→교전명령→교전→BDA의
+           단계별 시각·결과를 확인할 수 있습니다.</p>
+        <div id="analysis-threat-log"></div>
       </div>
     </section>
 

@@ -166,6 +166,25 @@ li.tlog-done { color: var(--muted); }
 li.tlog-current { color: #ffd27d; font-weight: 700; }
 li.tlog-future { color: #4a5666; }
 
+/* ── [분석] 탭 위협 항적 로그 (최근 시뮬레이션 실행) ── */
+.alog-row { border-bottom: 1px solid #222b38; font-size: 12px; }
+.alog-row:last-child { border-bottom: none; }
+.alog-hdr {
+  display: flex; align-items: center; gap: 8px; padding: 5px 4px;
+  cursor: pointer; border-radius: 4px; list-style: none;
+}
+.alog-hdr::-webkit-details-marker { display: none; }
+.alog-hdr::before { content: '▸'; color: var(--muted); font-size: 10px; }
+.alog-row[open] > .alog-hdr::before { content: '▾'; }
+.alog-hdr:hover { background: var(--panel-2); }
+.alog-row[open] > .alog-hdr { background: #1c3a52; }
+.alog-id { flex-shrink: 0; min-width: 110px; color: var(--text); font-weight: 700; }
+.alog-id i { color: var(--muted); font-style: normal; font-size: 10px; font-weight: 400; }
+.alog-type { flex: 1; color: #aecbeb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alog-time { flex-shrink: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+.alog-stages { list-style: none; margin: 2px 0 8px 26px; padding: 0; color: var(--muted); }
+.alog-stages li { padding: 1px 0; font-variant-numeric: tabular-nums; }
+
 /* ── As-Is ↔ To-Be 좌·우 직관 비교 블록 ── */
 .vs-block { margin: 4px 0 8px; }
 
@@ -563,9 +582,6 @@ li.chk-fail { background: #43140f; }
 /* ADR-062: 승인 계선 토글 — 상단 컨트롤의 체크박스 라벨 */
 .ctl-check { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; cursor: pointer; }
 .ctl-check input { cursor: pointer; }
-
-.policy-list { margin: 4px 0 4px 18px; font-size: 12px; }
-.policy-list li { margin-bottom: 8px; word-break: keep-all; }
 
 @media (max-width: 900px) {
   .pl-m { grid-template-columns: 34px 1fr 52px 52px 90px; }

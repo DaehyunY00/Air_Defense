@@ -116,16 +116,32 @@ SOUTH.forEach(function (a) {
 
 // ── 5. 남부 자산 활성화 (도입 목적) ──
 console.log('# 남부 자산 활성화');
-function southFired(r, cat) {
+// ⚠️ ADR-072 정정 — **ROK 자산만** 센다.
+// ADR-064의 주장은 "ROK 남부 배치 자산 14문이 표적 회랑 미도달로 유휴"다. USFK THAAD(성주,
+// 36.13°N)는 ADR-036 독립축이라 KAMDOC 표적 회랑 설정과 무관하게 자기 축에서 교전하며,
+// 사거리(개념 ~200km)상 오산·서울로 향하는 탄도 위협을 성주에서 요격하는 것이 배치 목적 자체다.
+// ADR-069(톱니)·ADR-071(자위권)이 기본 ON이 되어 항적 신선도·발사 기회가 바뀌자 그 교전이
+// 실제로 발현했고(각 플래그 단독으로도 발현), 종전 "0문" 관측은 정보 타이밍의 우연이었음이
+// 드러났다. 제약 위반이 아니라 관측 전제가 무너진 것이므로 **주장의 범위대로** 좁힌다.
+function southFired(r, cat, rokOnly) {
   return r.nodes.filter(function (n) {
-    return n.category === 'shooter' && n.shots > 0 &&
-      cat.nodeMap[n.id] && cat.nodeMap[n.id].coord[0] < 36.6;
+    if (n.category !== 'shooter' || !(n.shots > 0)) return false;
+    var nd = cat.nodeMap[n.id];
+    if (!nd || nd.coord[0] >= 36.6) return false;
+    return rokOnly ? nd.forceOwner !== 'USFK' : true;
   });
 }
-var firedOff = southFired(off, catOff);
+var firedOff = southFired(off, catOff, true);
 var longRun = run({ southernAxes: true }, { dur: 1800 });
-var firedOn = southFired(longRun, catOn);
-assert(firedOff.length === 0, 'OFF: 36.6°N 이남 사수 발사 0문 (종전 관측 — 표적 회랑 미도달)');
+var firedOn = southFired(longRun, catOn, true);
+assert(firedOff.length === 0,
+  'OFF: 36.6°N 이남 **ROK** 사수 발사 0문 (표적 회랑 미도달 — USFK 독립축 제외)');
+// USFK가 남쪽에서 교전하는 것은 정상이므로, 그 사실 자체를 기록해 회귀 시 눈에 보이게 한다.
+var usfkSouthOff = southFired(off, catOff, false).filter(function (n) {
+  return catOff.nodeMap[n.id].forceOwner === 'USFK';
+});
+console.log('  NOTE USFK 남부 교전(정상 · ADR-036 독립축): ' +
+  (usfkSouthOff.map(function (n) { return n.id.replace('BATTERY_', ''); }).join(', ') || '없음'));
 assert(firedOn.length > 0,
   'ON: 남부 사수가 실제로 교전 (' + firedOn.length + '문: ' +
   firedOn.map(function (n) { return n.id.replace('BATTERY_', ''); }).join(', ') + ')');
@@ -139,7 +155,7 @@ var shoradIds = {};
 catOn.nodes.forEach(function (n) {
   if (n.category === 'shooter' && (n.typeId === 'BIHO' || n.typeId === 'CHUNMA')) shoradIds[n.id] = true;
 });
-// SC3에는 신궁·천마가 정당하게 교전하는 위협(무인기·순항·전투기)이 섞여 있으므로
+// SC3에는 비호·천마가 정당하게 교전하는 위협(무인기·순항·전투기)이 섞여 있으므로
 // "발사 0건"이 아니라 **탄도 위협에 대한 발사 0건**이 제약의 내용이다(constraints (a)와 동일 취지).
 var ballisticShots = 0;
 longRun.threatTraces.forEach(function (t) {
@@ -150,16 +166,27 @@ longRun.threatTraces.forEach(function (t) {
   });
 });
 assert(ballisticShots === 0,
-  '남부 축선 ON에서도 신궁·천마의 탄도 위협 발사 0건 (제약 어서션 a 불변)');
-var shoradSouth = 0;
+  '남부 축선 ON에서도 비호·천마의 탄도 위협 발사 0건 (제약 어서션 a 불변)');
+// ⚠️ ADR-072 정정 — 종전 어서션은 "남부 축선 위협은 전부 장거리 유형이라 단거리 방공 사거리
+// 미달"을 전제로 발사 0건을 요구했다. **그 전제가 틀렸다**: 위협 유형이 장거리라는 것은
+// 발사 지점이 멀다는 뜻이지, 종말단계 착탄점 상공에서 단거리 방공 사거리 밖이라는 뜻이 아니다.
+// 대구·부산 상공에 도달한 순항미사일은 그곳 비호의 교전 봉투 안이며, 요격하는 것이 정상이다.
+// ADR-069·071 기본 ON으로 그 교전이 발현했다(각 플래그 단독으로도 1건). 제약의 실제 내용은
+// **유형 제약**이므로 그것으로 대체한다 — 위 ballisticShots와 함께 이중으로 고정된다.
+var shoradSouthByType = {};
 longRun.threatTraces.forEach(function (t) {
   if (SOUTH.indexOf(t.axis) === -1) return;
   t.stages.forEach(function (st) {
-    if (st.name.indexOf('발사:') === 0 && shoradIds[st.name.split(':')[1].split('/')[0]]) shoradSouth++;
+    if (st.name.indexOf('발사:') !== 0) return;
+    if (shoradIds[st.name.split(':')[1].split('/')[0]]) {
+      shoradSouthByType[t.type] = (shoradSouthByType[t.type] || 0) + 1;
+    }
   });
 });
-assert(shoradSouth === 0,
-  '남부 축선 위협(전부 장거리 유형)에 신궁·천마가 발사한 건 없음');
+var southBallistic = (shoradSouthByType.srbm || 0) + (shoradSouthByType.mrl_large || 0);
+assert(southBallistic === 0,
+  '남부 축선 위협 중 비호·천마가 발사한 탄도 위협 0건 (유형 제약 — 발사 분포: ' +
+  (JSON.stringify(shoradSouthByType) || '{}') + ')');
 
 // ── 7. UI·라우터·문서 배선 ──
 console.log('# 배선');

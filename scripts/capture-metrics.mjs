@@ -27,7 +27,13 @@ const TARGETS = [
   { name: 'sc1-asis-x1-boundary', hash: '#tab=sim&sc=sc1&mode=asis&x=1&seed=12345', tab: 'sim' },
   { name: 'sc2-asis-x1-uav-burst', hash: '#tab=sim&sc=sc2&mode=asis&x=1&seed=12345', tab: 'sim' },
   { name: 'sc3-mc-transition-tornado', hash: '#tab=mc&sc=sc3&mode=asis&x=1&seed=12345', tab: 'mc' },
-  { name: 'sc3-analysis-pipeline', hash: '#tab=analysis&sc=sc3&mode=asis&x=1.5&seed=12345', tab: 'analysis' }
+  { name: 'sc3-analysis-pipeline', hash: '#tab=analysis&sc=sc3&mode=asis&x=1.5&seed=12345', tab: 'analysis' },
+  // ADR-064 [결심 비교] 탭 — 교전창 여유·선택 손실. mode는 화면 내용을 바꾸지 않지만
+  // (페어드 뷰라 양 모드를 항상 함께 그린다) 딥링크 하위호환 회귀로 두 값 모두 캡처한다.
+  { name: 'sc3-decision-asis', hash: '#tab=decision&sc=sc3&mode=asis&seed=12345&dur=900', tab: 'decision' },
+  { name: 'sc3-decision-tobe', hash: '#tab=decision&sc=sc3&mode=tobe&seed=12345&dur=900', tab: 'decision' },
+  { name: 'sc1-decision-asis', hash: '#tab=decision&sc=sc1&mode=asis&seed=12345&dur=900', tab: 'decision' },
+  { name: 'sc1-decision-tobe', hash: '#tab=decision&sc=sc1&mode=tobe&seed=12345&dur=900', tab: 'decision' }
 ];
 
 /**
@@ -121,6 +127,25 @@ async function captureAnalysisTab(page, target) {
   return { fallback: false, modalPath: p, mapPath: null };
 }
 
+/** ADR-064 [결심 비교] 탭 — 게이지·분포·페어드 타임라인·후보 명단이 모두 렌더된 뒤 캡처 */
+async function captureDecisionTab(page, target) {
+  await hardGoto(page, `${baseUrl}/index.html${target.hash}`);
+  // 두 체계 DES가 끝나야 게이지가 그려진다(계산 중에는 안내 문구만 있음).
+  await page.waitForSelector('#decision-gauges .dc-gauge', { timeout: 60000 });
+  await page.waitForSelector('#decision-timeline .dc-tl-group', { timeout: 60000 });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    const panel = document.querySelector('#panel-decision');
+    if (panel) { panel.style.height = 'auto'; panel.style.overflow = 'visible'; }
+    const main = document.querySelector('main');
+    if (main) { main.style.overflow = 'visible'; }
+  });
+  await page.waitForTimeout(200);
+  const p = path.join(outDir, `${target.name}.png`);
+  await page.locator('#panel-decision').screenshot({ path: p });
+  return { fallback: false, modalPath: p, mapPath: null };
+}
+
 async function main() {
   const browser = await chromium.launch({ headless: true, executablePath: CHROMIUM_PATH });
   const page = await browser.newPage({ viewport: { width: 1680, height: 1000 } });
@@ -132,6 +157,7 @@ async function main() {
     console.log(`캡처 중: ${target.name} (${target.hash})`);
     const res = target.tab === 'mc' ? await captureMcTab(page, target)
       : target.tab === 'analysis' ? await captureAnalysisTab(page, target)
+      : target.tab === 'decision' ? await captureDecisionTab(page, target)
       : await captureSimTab(page, target);
     results.push({ ...target, ...res });
   }

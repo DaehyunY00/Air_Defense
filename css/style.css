@@ -632,3 +632,153 @@ li.chk-fail { background: #43140f; }
 .ctl-advanced > summary { cursor: pointer; font-size: 12.5px; color: var(--sub, #5a6270); font-weight: 600; }
 .ctl-advanced[open] > summary { margin-bottom: 6px; }
 .ctl-advanced-note { font-size: 11.5px; color: var(--sub, #5a6270); margin: 4px 0 8px; line-height: 1.5; }
+/* ══ [결심 비교] 탭 (ADR-075) — 교전창 여유 + 선택 손실 ══ */
+.dc-unmeasured {
+  border: 1px dashed #6b5a18; background: #221c08; border-radius: 8px;
+  padding: 12px 14px; margin: 8px 0; font-size: 12px; color: #ffd27d;
+}
+.dc-unmeasured-why { color: var(--muted); font-size: 11px; margin-left: 8px; }
+.dc-unmeasured-how { color: var(--muted); font-size: 11px; margin-top: 6px; line-height: 1.6; }
+
+/* ── ④ 게이지 ── */
+.dc-gauge {
+  border: 1px solid var(--border); border-radius: 8px; background: var(--panel-2);
+  padding: 10px 12px; margin-bottom: 10px;
+}
+.dc-g-title { font-size: 13px; margin-bottom: 8px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.dc-g-win { font-size: 10px; border-radius: 10px; padding: 1px 8px; border: 1px solid; }
+.dc-g-win.tobe { color: #8fdc96; border-color: #2e5c33; background: #12240f; }
+.dc-g-win.asis { color: #ff9a8d; border-color: #6b2018; background: #240f0d; }
+.dc-g-win.flat { color: var(--muted); border-color: var(--border); }
+.dc-g-row { display: grid; grid-template-columns: 46px 1fr 62px; align-items: center; gap: 8px; margin-bottom: 4px; }
+.dc-g-lab { font-size: 11px; }
+.dc-g-lab.asis { color: #ff9a8d; }
+.dc-g-lab.tobe { color: #7dd982; }
+.dc-g-bar { height: 14px; background: #0d1117; border-radius: 3px; overflow: hidden; }
+.dc-g-fill { height: 100%; }
+.dc-g-fill.asis { background: #e05545; }
+.dc-g-fill.tobe { background: #3d8b40; }
+.dc-g-val { font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; }
+.dc-g-val.asis { color: #ff9a8d; }
+.dc-g-val.tobe { color: #7dd982; }
+.dc-g-sub { font-size: 10px; color: var(--muted); margin-top: 6px; line-height: 1.6; word-break: keep-all; }
+
+/* ── ③ 분포 ── */
+.dc-legend { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.dc-key { display: inline-block; width: 12px; height: 3px; border-radius: 2px; margin-left: 10px; }
+.dc-key.asis { background: #e05545; }
+.dc-key.tobe { background: #3d8b40; }
+.dc-hist { width: 100%; max-width: 760px; height: auto; display: block; margin: 4px 0 2px; }
+.dc-h-line { fill: none; stroke-width: 1.6; }
+.dc-h-line.asis { stroke: #e05545; }
+.dc-h-line.tobe { stroke: #3d8b40; }
+.dc-h-area { stroke: none; }
+.dc-h-area.asis { fill: #e0554533; }
+.dc-h-area.tobe { fill: #3d8b4033; }
+.dc-h-neg { fill: #ff2d1a1f; }
+.dc-h-zero { stroke: #ff2d1a99; stroke-width: 1; stroke-dasharray: 3 2; }
+.dc-h-axis { stroke: var(--border); stroke-width: 1; }
+.dc-h-ax { fill: var(--muted); font-size: 9px; }
+.dc-h-undec-box { fill: #0d1117; stroke: var(--border); stroke-width: 1; }
+.dc-h-undec.asis { fill: #e05545; }
+.dc-h-undec.tobe { fill: #3d8b40; }
+
+/* ── ① 페어드 타임라인 ── */
+.dc-rule {
+  font-size: 11px; color: var(--muted); line-height: 1.7; word-break: keep-all;
+  border-left: 3px solid var(--accent); background: #0d1117;
+  padding: 8px 12px; border-radius: 0 6px 6px 0; margin-bottom: 12px;
+}
+.dc-tl-group {
+  border: 1px solid var(--border); border-radius: 8px; background: var(--panel-2);
+  padding: 8px 10px; margin-bottom: 8px; cursor: pointer;
+}
+.dc-tl-group:hover { border-color: var(--accent); }
+.dc-tl-group.split { border-left: 3px solid var(--warn); }
+.dc-tl-group.sel { border-color: var(--accent); box-shadow: 0 0 0 1px #4a90d955; }
+.dc-tl-key { font-size: 11px; margin-bottom: 6px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.dc-tl-axis { color: var(--muted); font-size: 10px; }
+.dc-tl-tag {
+  font-size: 9px; color: #ffcf70; background: #3a2a10;
+  border: 1px solid #6b4a18; border-radius: 10px; padding: 1px 7px;
+}
+.dc-tl-lane { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 8px; margin-bottom: 3px; }
+.dc-tl-side { font-size: 10px; }
+.dc-tl-side.asis { color: #ff9a8d; }
+.dc-tl-side.tobe { color: #7dd982; }
+.dc-tl-bar {
+  position: relative; height: 18px; background: #0d1117;
+  border: 1px solid var(--border); border-radius: 3px; overflow: hidden;
+}
+.dc-tl-bar.missed { border-color: #6b2018; }
+.dc-tl-absent { color: var(--muted); font-size: 10px; padding: 2px 6px; height: auto; }
+.dc-seg { position: absolute; top: 0; height: 100%; }
+.dc-seg-detect { background: #2e6fd8; opacity: .55; }
+.dc-seg-wq {
+  background: repeating-linear-gradient(45deg, #f0a020 0 3px, #7a5210 3px 6px);
+}
+.dc-seg-svc { background: #f0a020; }
+.dc-seg-rest { background: #3a4454; }
+.dc-seg-cmd { background: #00838f; }
+.dc-seg-eng { background: #3d8b40; }
+.dc-seg-idle {
+  background: repeating-linear-gradient(45deg, #6b201833 0 4px, #ff2d1a22 4px 8px);
+}
+.dc-close { position: absolute; top: -2px; width: 3px; height: calc(100% + 4px); background: #dbe4ee; }
+.dc-close.missed { background: var(--crit); box-shadow: 0 0 6px var(--crit); }
+.dc-decide { position: absolute; top: 0; width: 1px; height: 100%; background: #ffffffaa; }
+.dc-appr {
+  position: absolute; top: 50%; transform: translate(-50%, -50%);
+  color: #d38bff; font-size: 10px; line-height: 1; text-shadow: 0 0 3px #000;
+}
+.dc-tl-out {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  font-size: 9px; background: #0d1117cc; padding: 0 4px; border-radius: 3px;
+}
+.dc-tl-out.ok { color: #8fdc96; }
+.dc-tl-out.bad { color: #ff9a8d; }
+.dc-tl-out.flat { color: var(--muted); }
+.tl-legend .dc-sw-hatch {
+  background: repeating-linear-gradient(45deg, #f0a020 0 3px, #7a5210 3px 6px);
+}
+.tl-legend .dc-sw-idle {
+  background: repeating-linear-gradient(45deg, #6b2018 0 3px, #ff2d1a44 3px 6px);
+}
+.tl-legend .dc-sw-close { background: #dbe4ee; width: 3px !important; }
+.dc-sw-appr { color: #d38bff; margin-right: 4px; }
+
+/* ── ② 후보 명단 ── */
+.dc-cand-title { font-size: 12px; margin-bottom: 8px; }
+.dc-cand-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dc-cand-side { border: 1px solid var(--border); border-radius: 8px; background: var(--panel-2); padding: 8px 10px; }
+.dc-cand-head { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+.dc-cand-head.asis { color: #ff9a8d; }
+.dc-cand-head.tobe { color: #7dd982; }
+.dc-cand-n { font-size: 10px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+.dc-dec { border-top: 1px solid var(--border); padding-top: 6px; margin-top: 6px; }
+.dc-dec-head { font-size: 11px; }
+.dc-axis { color: var(--muted); font-size: 10px; }
+.dc-dec-sub { font-size: 10px; color: var(--muted); margin-bottom: 5px; }
+.dc-trunc { color: var(--warn); }
+.dc-cand {
+  display: grid; grid-template-columns: minmax(90px, 1.2fr) 1fr 62px minmax(0, 1.2fr);
+  align-items: center; gap: 6px; font-size: 10px; padding: 2px 3px; border-radius: 3px;
+}
+.dc-cand.chosen { box-shadow: inset 0 0 0 1px var(--accent); background: #4a90d915; }
+.dc-cand-id { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dc-cand-type { color: var(--muted); }
+.dc-star { color: #ffcf70; }
+.dc-cand-track { height: 8px; background: #0d1117; border-radius: 2px; overflow: hidden; }
+.dc-cand-fill { display: block; height: 100%; background: var(--accent); }
+.dc-cand-num { font-variant-numeric: tabular-nums; text-align: right; color: #aecbeb; }
+.dc-cand-meta { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dc-regret { font-size: 10px; margin-top: 5px; padding: 3px 6px; border-radius: 4px; word-break: keep-all; }
+.dc-regret.opt { color: #8fdc96; background: #12240f; }
+.dc-regret.loss { color: #ffcf70; background: #3a2a10; }
+.dc-regret.none { color: var(--muted); background: #0d1117; }
+
+@media (max-width: 900px) {
+  .dc-cand-pair { grid-template-columns: 1fr; }
+  .dc-cand { grid-template-columns: 1fr 60px; }
+  .dc-cand-track, .dc-cand-meta { display: none; }
+}

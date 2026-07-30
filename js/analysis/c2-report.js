@@ -63,6 +63,159 @@
     return '현재 실행의 임무결과 영향은 미확인 — 강도 스윕과 paired 반복으로 지속성 확인';
   }
 
+  // ── ADR-075: 결심 비교(순수 후처리) ──
+  // ADR-073/074가 남긴 `decision_audit`·`window_audit`을 런 종료 후 후처리해 4개 뷰의 재료를
+  // 만든다. 엔진 상태를 되쓰지 않고 난수도 쓰지 않는다 — 이벤트 배열만 읽는다.
+  var DECISION_THREAT_CAP = 300;
+
+  /** 계측이 꺼진 런을 0으로 위장하지 않기 위한 미측정 표식(ADR-062(분석 탭 지표 정직성)·ADR-073 §커버리지 원장 계승). */
+  function unmeasuredDecisionComparison(reason) {
+    return { available: false, reason: reason, shadowEval: false, windowMargin: false };
+  }
+
+  function buildDecisionComparison(events, result, threats) {
+    var global = (result && result.global) || {};
+    var features = global.features || {};
+    var ledger = global.decisionAudit || null;
+    // 판정은 UI 상태가 아니라 **런이 보고한 값**에서 취한다.
+    if (!features.decisionAudit) return unmeasuredDecisionComparison('decisionAudit OFF');
+    if (ledger && ledger.recorded === false) {
+      return unmeasuredDecisionComparison('분석 채널(c2Analysis) 비활성 — 이벤트 미기록');
+    }
+    var hasShadow = !!features.shadowEval;
+    var hasWindow = !!features.windowMargin;
+
+    var rows = {}, order = [];
+    function row(id) {
+      if (!rows[id]) {
+        rows[id] = {
+          threatId: id, type: null, axis: null, spawnT: null,
+          windowOpenT: null, windowCloseT: null, dwellEndT: null,
+          detectT: null, firstDecisionT: null, firstFireT: null,
+          killT: null, leakT: null, leakReason: null,
+          c2QueueSec: 0, c2ServiceSec: 0, approvalJobs: 0,
+          decisions: []
+        };
+        order.push(id);
+      }
+      return rows[id];
+    }
+
+    events.forEach(function (event) {
+      if (!event || !event.threatId) return;
+      var r;
+      if (event.type === 'window_audit') {
+        r = row(event.threatId);
+        r.type = event.threatType; r.axis = event.axis; r.spawnT = event.spawnT;
+        r.windowOpenT = event.windowOpenT; r.windowCloseT = event.windowCloseT;
+        r.dwellEndT = event.dwellEndT;
+      } else if (event.type === 'decision_audit') {
+        r = row(event.threatId);
+        if (r.firstDecisionT == null || event.t < r.firstDecisionT) r.firstDecisionT = event.t;
+        r.decisions.push({
+          t: event.t,
+          commanderId: event.commanderId, commanderAxis: event.commanderAxis,
+          commanderScope: event.commanderScope,
+          visibleUnitCount: event.visibleUnitCount, candidateCount: event.candidateCount,
+          candidatesTruncated: event.candidatesTruncated,
+          infeasibleReasons: event.infeasibleReasons,
+          candidates: event.candidates, chosenUnitId: event.chosenUnitId,
+          chosenScore: event.chosenScore,
+          globalBestUnitId: event.globalBestUnitId, globalBestScore: event.globalBestScore,
+          regret: event.regret, shadowScope: event.shadowScope,
+          shadowFeasible: event.shadowFeasible,
+          engagementWindowCloseT: event.engagementWindowCloseT,
+          engagementWindowMargin: event.engagementWindowMargin
+        });
+      }
+    });
+    // 계측 이벤트가 없으면(=결심이 한 건도 없던 런) 미측정이 아니라 "0건 관측"이다 — 구분한다.
+    Object.keys(rows).forEach(function (id) {
+      var tr = threats[id];
+      if (!tr) return;
+      var r = rows[id];
+      if (r.spawnT == null) r.spawnT = tr.spawn;
+      r.detectT = tr.detect;
+      r.firstFireT = tr.fire;
+      r.killT = tr.kill;
+      r.leakT = tr.leak;
+      r.leakReason = tr.leakEvent ? tr.leakEvent.reason : null;
+      Object.keys(tr.c2).forEach(function (key) {
+        var rec = tr.c2[key];
+        if (rec.arrivedAt != null && rec.processingAt != null) {
+          r.c2QueueSec += Math.max(0, rec.processingAt - rec.arrivedAt);
+        }
+        if (rec.processingAt != null && rec.doneAt != null) {
+          r.c2ServiceSec += Math.max(0, rec.doneAt - rec.processingAt);
+        }
+        if (rec.kind === 'approval') r.approvalJobs++;
+      });
+    });
+
+    // ── 게이지 ①: 교전창 놓침률 ──
+    // ⚠️ ADR-063: 분모는 **창이 있었던 전 위협**이다. 결심에 도달한 위협만 세면 생존 편향이
+    // 생긴다(결심은 실현가능 PIP가 있어야 성립 → 여유가 음수가 될 수 없다).
+    var missRate = null;
+    if (hasWindow) {
+      var total = 0, missed = 0, undecided = 0, late = 0;
+      order.forEach(function (id) {
+        var r = rows[id];
+        if (r.windowCloseT == null) return;   // 교전 기회 자체가 없던 위협 — 분모에서 뺀다
+        total++;
+        if (r.firstDecisionT == null) { missed++; undecided++; }
+        else if (r.windowCloseT - r.firstDecisionT < 0) { missed++; late++; }
+      });
+      missRate = {
+        total: total, missed: missed, undecided: undecided, lateDecision: late,
+        rate: ratio(missed, total),
+        note: '분모 = 교전창이 존재했던 전 위협. 미결심을 놓침으로 센다(ADR-074).'
+      };
+    }
+
+    // ── 게이지 ②: 전역 최적 일치율 ──
+    var optimalRate = null, regretValues = [];
+    if (hasShadow) {
+      var scored = 0, optimal = 0;
+      order.forEach(function (id) {
+        rows[id].decisions.forEach(function (d) {
+          if (d.regret == null) return;   // USFK 축 등 미측정 — 0으로 세지 않는다
+          scored++; regretValues.push(d.regret);
+          if (d.regret === 0) optimal++;
+        });
+      });
+      optimalRate = {
+        n: scored, optimal: optimal, rate: ratio(optimal, scored),
+        note: '분모 = 그림자 평가가 실제로 가능했던 결심. USFK 독립 축은 제외(ADR-036).'
+      };
+    }
+
+    var marginValues = [];
+    if (hasWindow) {
+      order.forEach(function (id) {
+        rows[id].decisions.forEach(function (d) {
+          if (finite(d.engagementWindowMargin)) marginValues.push(d.engagementWindowMargin);
+        });
+      });
+    }
+
+    var kept = order.slice(0, DECISION_THREAT_CAP);
+    return {
+      available: true,
+      mode: (result.config && result.config.mode) || null,
+      shadowEval: hasShadow,
+      windowMargin: hasWindow,
+      ledger: ledger,
+      gauges: { missRate: missRate, optimalRate: optimalRate },
+      distributions: {
+        margin: { values: marginValues, quantiles: quantiles(marginValues) },
+        regret: { values: regretValues, quantiles: quantiles(regretValues) }
+      },
+      threats: kept.map(function (id) { return rows[id]; }),
+      threatsTruncated: order.length > kept.length,
+      note: '런 종료 후 c2Events 순수 후처리. 위협별 막대는 사례(삽화)이며 주장의 근거는 분포·게이지다.'
+    };
+  }
+
   KJ.buildC2Analysis = function (events, result) {
     events = Array.isArray(events) ? events : [];
     result = result || { global: {}, nodes: [], config: {} };
@@ -545,6 +698,8 @@
         note: '실제 SENSOR_DETECTED 이후 요격탄 비행구간 합집합 밖의 공백'
       },
       bottleneckEvidence: evidence,
+      // ADR-075: [결심 비교] 탭 재료. 계측 OFF 런에서는 available=false로 "미측정"을 알린다.
+      decisionComparison: buildDecisionComparison(events, result, threats),
       measurement: {
         detection: '실제 SENSOR_DETECTED 이벤트',
         availability: events.length > 0,

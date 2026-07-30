@@ -6,7 +6,7 @@
   <title>K-JAMDS C2 시뮬레이터 — KJADS 3대 문제 상황</title>
   <!-- Leaflet 1.9.4 동봉본(vendor/) — CDN 의존 제거. 출처·라이선스·해시는 vendor/leaflet-1.9.4/README.md -->
   <link rel="stylesheet" href="vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="stylesheet" href="css/style.css?v=20260724a">
+  <link rel="stylesheet" href="css/style.css?v=20260730a">
 </head>
 <body>
   <!-- 제약 (c): 디스클레이머 상시 표출 -->
@@ -87,6 +87,7 @@
   <nav class="tabs">
     <button class="tab-btn" data-tab="sim">🎮 시뮬레이션</button>
     <button class="tab-btn" data-tab="analysis">📊 분석</button>
+    <button class="tab-btn" data-tab="decision">⚖️ 결심 비교</button>
     <button class="tab-btn" data-tab="mc">🎲 Monte Carlo</button>
     <button class="tab-btn" data-tab="data">📚 근거자료·제약검증</button>
   </nav>
@@ -226,6 +227,49 @@
       </div>
     </section>
 
+    <!-- ── 결심 비교 탭 (ADR-064): 교전창 여유 + 선택 손실을 인과 사슬 한 줄로 ── -->
+    <section class="tab-panel" id="panel-decision">
+      <div class="card">
+        <h2>⚖️ 결심 비교 — 교전창 여유(시간) · 선택 손실(점수)</h2>
+        <p>동일 seed의 As-Is/To-Be를 짝지어(CRN — 두 체계가 <b>같은 위협</b>을 마주함),
+           결심이 <b>제때</b> 났는지(교전창 여유)와 <b>최적 사수</b>를 골랐는지(선택 손실)를
+           나란히 봅니다. 두 지표 모두 엔진이 결심 순간에 이미 계산한 값을 기록한 것이며
+           (ADR-062), 기준값은 난수를 쓰지 않는 관측 전용 계산입니다(ADR-063).</p>
+        <div id="decision-context" class="analysis-context"></div>
+      </div>
+
+      <div class="card">
+        <h2>④ 헤드라인 게이지 — 주장의 근거</h2>
+        <div id="decision-gauges"></div>
+      </div>
+
+      <div class="card">
+        <h2>③ 두 분포 — 교전창 여유 · 선택 손실</h2>
+        <div id="decision-distributions"></div>
+      </div>
+
+      <div class="card">
+        <h2>① 페어드 타임라인 — 위협별 사례(삽화)</h2>
+        <div id="decision-rule" class="dc-rule"></div>
+        <div id="decision-timeline"></div>
+        <div class="tl-legend">
+          <span><span class="sw" style="background:#2e6fd8"></span>탐지 대기</span>
+          <span><span class="sw dc-sw-hatch"></span>C2 대기 Wq</span>
+          <span><span class="sw" style="background:#f0a020"></span>C2 서비스</span>
+          <span><span class="sw" style="background:#00838f"></span>결심→발사</span>
+          <span><span class="sw" style="background:#3d8b40"></span>교전·요격</span>
+          <span><span class="sw dc-sw-idle"></span>결심 없이 교전창 경과</span>
+          <span><span class="sw dc-sw-close"></span>교전창 마감</span>
+          <span><span class="dc-sw-appr">◆</span>협조 연락·승인 절차</span>
+        </div>
+      </div>
+
+      <div class="card" id="decision-popover-card">
+        <h2>② 후보 명단 — 그 결심이 무엇을 보고 있었나</h2>
+        <div id="decision-popover"></div>
+      </div>
+    </section>
+
     <!-- ── Monte Carlo 탭 ── -->
     <section class="tab-panel" id="panel-mc">
       <div class="card">
@@ -336,25 +380,28 @@
   <script src="js/data/links.js"></script>
   <script src="js/data/threats.js"></script>
   <script src="js/data/scenarios.js"></script>
-  <script src="js/data/axes.js"></script>
+  <!-- axes.js는 ADR-063(axisImpactPoint)·ADR-071(SELF_DEFENSE_RADIUS_KM)에서 새 export가
+       늘었는데 버전 쿼리가 없어, 옛 사본을 캐시한 브라우저가 `KJ.axisImpactPoint is not a
+       function`으로 즉사한다(실측 재현). 형제 파일과 같은 마커를 붙여 캐시를 끊는다. -->
+  <script src="js/data/axes.js?v=20260730a"></script>
   <script src="js/config/deployment-adapter.js?v=20260724a"></script>
-  <script src="js/core/router.js?v=20260724a"></script>
+  <script src="js/core/router.js?v=20260730a"></script>
   <script src="js/core/constraints.js"></script>
   <script src="js/core/rng.js"></script>
   <script src="js/core/heap.js"></script>
   <script src="js/analysis/bottleneck.js"></script>
-  <script src="js/analysis/c2-report.js?v=20260724a"></script>
-  <script src="js/engine/sim-engine.js?v=20260724a"></script>
+  <script src="js/analysis/c2-report.js?v=20260730a"></script>
+  <script src="js/engine/sim-engine.js?v=20260730a"></script>
   <script src="js/analysis/mc-runner.js?v=20260724a"></script>
   <script src="js/analysis/transition.js?v=20260724a"></script>
   <script src="js/analysis/overlap-heatmap.js"></script>
-  <script src="js/core/sim-worker-client.js?v=20260724a"></script>
+  <script src="js/core/sim-worker-client.js?v=20260730a"></script>
   <script src="js/ui/geo.js"></script>
   <script src="js/ui/table-sort.js"></script>
   <script src="js/ui/map-view.js?v=20260724a"></script>
-  <script src="js/ui/panels.js?v=20260724a"></script>
+  <script src="js/ui/panels.js?v=20260730a"></script>
   <script src="js/ui/sim-view.js?v=20260724a"></script>
   <script src="js/ui/mc-panel.js?v=20260724a"></script>
-  <script src="js/main.js?v=20260724a"></script>
+  <script src="js/main.js?v=20260730a"></script>
 </body>
 </html>

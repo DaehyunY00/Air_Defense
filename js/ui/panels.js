@@ -32,6 +32,18 @@
     features.engageOnRemote = !!state && state.eor === '1'; // ADR-070: 기본 꺼짐 실험 옵션
     return { deploymentId: state && state.dep, features: features, modelFidelity: 'iads-c2' };
   }
+  /**
+   * ADR-073/074: DES 실행에만 얹는 결심 비교 계측 3종. 카탈로그 해석(modelConfig)에는 넣지
+   * 않는다 — 계측은 토폴로지와 무관하고, 카탈로그 캐시 키를 흔들 이유가 없다.
+   * 전부 **관측 전용**이라 격추·누수·난수 소비가 불변임이 회귀로 고정돼 있다
+   * (decision-audit·shadow-eval 스위트). [분석]·[결심 비교] 두 탭이 같은 desPair 결과를
+   * 공유하므로 계산은 한 번만 돈다.
+   */
+  function runFeatures(state) {
+    return Object.assign({}, modelConfig(state).features, {
+      decisionAudit: true, shadowEval: true, windowMargin: true
+    });
+  }
   function catalogFor(state) {
     return KJ.resolveModelCatalog ? KJ.resolveModelCatalog(modelConfig(state)) : null;
   }
@@ -64,7 +76,7 @@
       cfg: {
         scenarioId: state.sc, mode: 'asis', intensity: state.x,
         seed: state.seed, endTimeSec: state.dur,
-        deploymentId: highCfg.deploymentId, features: highCfg.features,
+        deploymentId: highCfg.deploymentId, features: runFeatures(state),
         modelFidelity: highCfg.modelFidelity,
         // 위협 항적 병렬 로그용 — mode:'asis' 고정이므로 current=As-Is, other=To-Be로 확정된다.
         trace: true, traceCap: 300
@@ -559,6 +571,283 @@
     renderTaxonomyTable(ca, cb);
   }
 
+  // ══════════════ [결심 비교] 탭 (ADR-075) ══════════════
+  // ADR-073/074가 남긴 로그를 **순수 후처리**한 `c2Analysis.decisionComparison`만 읽어 그린다.
+  // 엔진 상태를 되쓰지 않고, 값을 다시 계산하지도 않는다.
+  //
+  // 미측정 표시 규율(ADR-062·073 계승): 계측이 꺼진 런은 0이 아니라 "미측정"으로 렌더한다.
+  // 판정은 UI 상태가 아니라 **런이 보고한** `global.features.decisionAudit`(→ available)에서 취한다.
+
+  var decisionSel = { threatId: null };  // ② 팝오버로 펼친 위협(탭 세션 내 선택 상태)
+
+  function unmeasured(reason) {
+    return '<div class="dc-unmeasured">🚫 <b>미측정 — 결심 비교 계측 OFF</b>' +
+      (reason ? '<span class="dc-unmeasured-why">(' + esc(reason) + ')</span>' : '') +
+      '<div class="dc-unmeasured-how">이 런은 <code>decisionAudit</code> 계측 없이 실행됐습니다. ' +
+      '값이 0인 것이 아니라 <b>재지 않은 것</b>입니다.</div></div>';
+  }
+  function pctText(v) { return v == null ? '—' : (v * 100).toFixed(1) + '%'; }
+  function secText(v) { return v == null ? '—' : Math.round(v) + 's'; }
+
+  /** As-Is/To-Be 한 쌍을 좌우 막대로 놓는 게이지 한 줄. lowerBetter면 작은 쪽이 초록. */
+  function gaugeRow(title, a, b, sub, lowerBetter) {
+    function bar(side, v) {
+      var w = v == null ? 0 : Math.max(0, Math.min(1, v)) * 100;
+      var better = v != null && (lowerBetter
+        ? (side === 'asis' ? v < 0 : true) : false);
+      return '<div class="dc-g-bar"><div class="dc-g-fill ' + side + '" style="width:' +
+        w.toFixed(1) + '%"></div></div>';
+    }
+    var winner = (a == null || b == null) ? null
+      : (lowerBetter ? (b < a ? 'tobe' : (a < b ? 'asis' : null))
+                     : (b > a ? 'tobe' : (a > b ? 'asis' : null)));
+    return '<div class="dc-gauge">' +
+      '<div class="dc-g-title">' + esc(title) +
+      (winner ? '<span class="dc-g-win ' + winner + '">' +
+        (winner === 'tobe' ? 'To-Be 우위' : 'As-Is 우위') + '</span>'
+        : '<span class="dc-g-win flat">차이 없음</span>') + '</div>' +
+      '<div class="dc-g-row"><span class="dc-g-lab asis">As-Is</span>' +
+      bar('asis', a) + '<span class="dc-g-val asis">' + pctText(a) + '</span></div>' +
+      '<div class="dc-g-row"><span class="dc-g-lab tobe">To-Be</span>' +
+      bar('tobe', b) + '<span class="dc-g-val tobe">' + pctText(b) + '</span></div>' +
+      '<div class="dc-g-sub">' + sub + '</div></div>';
+  }
+
+  /**
+   * ③ 겹쳐 그린 두 분포. 0 미만 구간은 빨강 음영.
+   * `undecidedA/B`는 결심조차 없어 여유를 잴 수 없었던 위협 수 — 축 왼쪽 밖의 **별도 통**으로
+   * 그린다. 0으로 접어 넣으면 "여유 0초"로 오독되기 때문이다(미측정과 0의 구분).
+   */
+  function histogram(valuesA, valuesB, opts) {
+    var all = valuesA.concat(valuesB).filter(function (v) { return typeof v === 'number' && isFinite(v); });
+    var undecidedA = opts.undecidedA || 0, undecidedB = opts.undecidedB || 0;
+    if (!all.length && !undecidedA && !undecidedB) {
+      return '<div class="bn-none">' + esc(opts.emptyText || '표본 없음') + '</div>';
+    }
+    var lo = Math.min.apply(null, all.concat(all.length ? [] : [0]));
+    var hi = Math.max.apply(null, all.concat(all.length ? [] : [1]));
+    if (!(hi > lo)) { hi = lo + 1; }
+    var BINS = 28, W = 620, H = 150, PADL = 46, PADB = 26, PADT = 8;
+    var side = (undecidedA || undecidedB) ? 58 : 0;   // 미결심 통 폭
+    var plotW = W - PADL - 8 - side, plotH = H - PADB - PADT;
+    function binOf(v) { return Math.min(BINS - 1, Math.floor((v - lo) / (hi - lo) * BINS)); }
+    function counts(values) {
+      var c = new Array(BINS).fill(0);
+      values.forEach(function (v) { if (isFinite(v)) c[binOf(v)]++; });
+      return c;
+    }
+    var ca = counts(valuesA), cb = counts(valuesB);
+    // 곡선과 미결심 통은 **축척을 분리한다.** 미결심이 곡선 최댓값보다 훨씬 크면 공유 축척에서
+    // 곡선이 뭉개져 분포 모양이 안 보인다. 두 통의 실제 건수는 축 아래 숫자로 병기한다.
+    var peak = Math.max(1, Math.max.apply(null, ca.concat(cb)).valueOf());
+    var undecidedPeak = Math.max(1, undecidedA, undecidedB);
+    var bw = plotW / BINS;
+    function poly(c, cls) {
+      var pts = [];
+      for (var i = 0; i < BINS; i++) {
+        var x = PADL + side + i * bw, y = PADT + plotH - (c[i] / peak) * plotH;
+        pts.push(x + ',' + y, (x + bw) + ',' + y);
+      }
+      return '<polyline class="dc-h-line ' + cls + '" points="' + pts.join(' ') + '"/>' +
+        '<polygon class="dc-h-area ' + cls + '" points="' +
+        (PADL + side) + ',' + (PADT + plotH) + ' ' + pts.join(' ') + ' ' +
+        (PADL + side + plotW) + ',' + (PADT + plotH) + '"/>';
+    }
+    // 0 미만 구간 빨강 음영 (여유 분포 전용)
+    var negShade = '';
+    if (opts.shadeNegative && lo < 0) {
+      var zeroX = PADL + side + Math.min(1, (0 - lo) / (hi - lo)) * plotW;
+      negShade = '<rect class="dc-h-neg" x="' + (PADL + side) + '" y="' + PADT +
+        '" width="' + (zeroX - PADL - side).toFixed(1) + '" height="' + plotH + '"/>' +
+        '<line class="dc-h-zero" x1="' + zeroX.toFixed(1) + '" y1="' + PADT +
+        '" x2="' + zeroX.toFixed(1) + '" y2="' + (PADT + plotH) + '"/>';
+    }
+    var undecidedBox = '';
+    if (side) {
+      var ua = (undecidedA / undecidedPeak) * plotH, ub = (undecidedB / undecidedPeak) * plotH;
+      undecidedBox =
+        '<rect class="dc-h-undec-box" x="' + PADL + '" y="' + PADT + '" width="' + (side - 8) +
+        '" height="' + plotH + '"/>' +
+        '<rect class="dc-h-undec asis" x="' + (PADL + 4) + '" y="' + (PADT + plotH - ua) +
+        '" width="' + ((side - 16) / 2) + '" height="' + ua.toFixed(1) + '"/>' +
+        '<rect class="dc-h-undec tobe" x="' + (PADL + 4 + (side - 16) / 2) + '" y="' + (PADT + plotH - ub) +
+        '" width="' + ((side - 16) / 2) + '" height="' + ub.toFixed(1) + '"/>' +
+        '<text class="dc-h-ax" x="' + (PADL + (side - 8) / 2) + '" y="' + (H - 14) +
+        '" text-anchor="middle">미결심</text>' +
+        '<text class="dc-h-ax" x="' + (PADL + (side - 8) / 2) + '" y="' + (H - 4) +
+        '" text-anchor="middle">' + undecidedA + ' / ' + undecidedB + '</text>';
+    }
+    return '<svg class="dc-hist" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet">' +
+      negShade + undecidedBox +
+      poly(ca, 'asis') + poly(cb, 'tobe') +
+      '<line class="dc-h-axis" x1="' + (PADL + side) + '" y1="' + (PADT + plotH) +
+      '" x2="' + (PADL + side + plotW) + '" y2="' + (PADT + plotH) + '"/>' +
+      '<text class="dc-h-ax" x="' + (PADL + side) + '" y="' + (H - 12) + '">' + esc(opts.fmt(lo)) + '</text>' +
+      '<text class="dc-h-ax" x="' + (PADL + side + plotW) + '" y="' + (H - 12) +
+      '" text-anchor="end">' + esc(opts.fmt(hi)) + '</text>' +
+      '<text class="dc-h-ax" x="2" y="' + (PADT + 10) + '">' + peak + '건</text>' +
+      '<text class="dc-h-ax" x="' + (PADL + side + plotW / 2) + '" y="' + (H - 2) +
+      '" text-anchor="middle">' + esc(opts.xLabel) + '</text>' +
+      '</svg>';
+  }
+
+  /**
+   * ① 페어드 타임라인 한 줄. 가로축은 **실제 시각**(생성 → 체공창 종료)이며,
+   * C2 대기(Wq)/서비스는 위치가 아니라 [탐지→결심] 구간 안의 **비중**으로 나눠 칠한다
+   * (여러 노드에 흩어진 대기·서비스에 단일 위치를 줄 수 없으므로 — 화면에 명시).
+   */
+  function timelineBar(r, side) {
+    if (!r || r.spawnT == null) {
+      return '<div class="dc-tl-bar dc-tl-absent">이 체계에서는 해당 위협 기록 없음</div>';
+    }
+    var t0 = r.spawnT, span = Math.max(1, (r.dwellEndT || r.spawnT + 1) - t0);
+    function pos(t) { return t == null ? null : Math.max(0, Math.min(100, (t - t0) / span * 100)); }
+    var segs = '';
+    var detect = pos(r.detectT), decide = pos(r.firstDecisionT), fire = pos(r.firstFireT);
+    var end = pos(r.killT != null ? r.killT : (r.leakT != null ? r.leakT : r.dwellEndT));
+    if (detect != null) {
+      segs += '<div class="dc-seg dc-seg-detect" style="left:0;width:' + detect.toFixed(2) +
+        '%" title="탐지 대기 ' + secText(r.detectT - t0) + '"></div>';
+    }
+    if (detect != null && decide != null && decide > detect) {
+      // 결심까지의 구간을 Wq(빗금) / 서비스(채움) / 나머지(전달·이동)로 비중 분할
+      var width = decide - detect;
+      var acct = Math.max(0.0001, r.c2QueueSec + r.c2ServiceSec);
+      var gap = Math.max(0, (r.firstDecisionT - r.detectT) - acct);
+      var totalSec = acct + gap;
+      var wq = width * (r.c2QueueSec / totalSec), sv = width * (r.c2ServiceSec / totalSec);
+      segs += '<div class="dc-seg dc-seg-wq" style="left:' + detect.toFixed(2) + '%;width:' +
+        wq.toFixed(2) + '%" title="C2 대기 Wq ' + secText(r.c2QueueSec) + ' (비중 분할)"></div>' +
+        '<div class="dc-seg dc-seg-svc" style="left:' + (detect + wq).toFixed(2) + '%;width:' +
+        sv.toFixed(2) + '%" title="C2 서비스 ' + secText(r.c2ServiceSec) + ' (비중 분할)"></div>' +
+        '<div class="dc-seg dc-seg-rest" style="left:' + (detect + wq + sv).toFixed(2) + '%;width:' +
+        Math.max(0, width - wq - sv).toFixed(2) + '%" title="전달·기타 ' + secText(gap) + '"></div>';
+    }
+    if (decide == null && detect != null && r.windowCloseT != null) {
+      // 결심이 아예 없었던 위협 — 빈 막대는 "아무 일도 없었다"로 읽히지 않으므로,
+      // 탐지 이후 교전창이 통째로 흘러간 구간을 붉은 빗금으로 드러낸다.
+      var idleEnd = Math.max(detect, pos(r.windowCloseT));
+      segs += '<div class="dc-seg dc-seg-idle" style="left:' + detect.toFixed(2) + '%;width:' +
+        (idleEnd - detect).toFixed(2) + '%" title="탐지 후 결심 없이 교전창이 마감됨 (' +
+        secText(r.windowCloseT - r.detectT) + ')"></div>';
+    }
+    if (decide != null && fire != null && fire > decide) {
+      segs += '<div class="dc-seg dc-seg-cmd" style="left:' + decide.toFixed(2) + '%;width:' +
+        (fire - decide).toFixed(2) + '%" title="결심→발사 ' + secText(r.firstFireT - r.firstDecisionT) + '"></div>';
+    }
+    if (fire != null && end != null && end > fire) {
+      segs += '<div class="dc-seg dc-seg-eng" style="left:' + fire.toFixed(2) + '%;width:' +
+        (end - fire).toFixed(2) + '%" title="교전·요격"></div>';
+    }
+    // 교전창 마감 세로선 — 막대가 이 선을 넘으면(결심이 없거나 늦으면) 빨강
+    var closeX = pos(r.windowCloseT);
+    var missed = r.windowCloseT != null &&
+      (r.firstDecisionT == null || r.firstDecisionT > r.windowCloseT);
+    var marks = '';
+    if (closeX != null) {
+      marks += '<div class="dc-close' + (missed ? ' missed' : '') + '" style="left:' +
+        closeX.toFixed(2) + '%" title="교전창 마감 ' + secText(r.windowCloseT - t0) + ' (생성 기준)"></div>';
+    }
+    if (r.approvalJobs > 0 && decide != null) {
+      marks += '<div class="dc-appr" style="left:' + decide.toFixed(2) +
+        '%" title="협조 연락·승인 절차 ' + r.approvalJobs + '건">◆</div>';
+    }
+    if (decide != null) {
+      marks += '<div class="dc-decide" style="left:' + decide.toFixed(2) +
+        '%" title="결심완료 ' + secText(r.firstDecisionT - t0) + '"></div>';
+    }
+    var outcome = r.killT != null ? '격추' : (r.leakT != null ? '누수' : '미해결');
+    var margin = (r.windowCloseT != null && r.firstDecisionT != null)
+      ? r.windowCloseT - r.firstDecisionT : null;
+    return '<div class="dc-tl-bar' + (missed ? ' missed' : '') + '" data-side="' + side + '">' +
+      segs + marks +
+      '<div class="dc-tl-out ' + (r.killT != null ? 'ok' : (r.leakT != null ? 'bad' : 'flat')) + '">' +
+      outcome + (margin != null ? ' · 여유 ' + secText(margin)
+        : (r.firstDecisionT == null ? ' · 결심 없음' : '')) + '</div></div>';
+  }
+
+  /** ② 후보 명단 팝오버 — 실제 선택 = 색 링, 전역 최적 = 별표. */
+  function candidatePanel(threatId, a, b) {
+    if (!threatId) {
+      return '<div class="bn-none">위 타임라인의 막대를 클릭하면 그 결심이 본 후보 명단이 열립니다.</div>';
+    }
+    function block(r, label, cls) {
+      if (!r || !r.decisions.length) {
+        return '<div class="dc-cand-side"><div class="dc-cand-head ' + cls + '">' + label +
+          '</div><div class="bn-none">이 체계에서는 결심이 없었습니다 — 후보 명단 자체가 없습니다.</div></div>';
+      }
+      var body = r.decisions.map(function (d) {
+        var peak = d.candidates.reduce(function (m, c) { return Math.max(m, Math.abs(c.score)); }, 0) || 1;
+        var rowsHtml = d.candidates.map(function (c) {
+          var isChosen = c.unitId === d.chosenUnitId;
+          var isBest = d.globalBestUnitId && c.unitId === d.globalBestUnitId;
+          return '<div class="dc-cand' + (isChosen ? ' chosen' : '') + '">' +
+            '<span class="dc-cand-id">' + (isBest ? '<b class="dc-star">★</b>' : '') +
+            esc(c.unitId) + ' <span class="dc-cand-type">' + esc(c.unitType || '') + '</span></span>' +
+            '<span class="dc-cand-track"><span class="dc-cand-fill" style="width:' +
+            (Math.abs(c.score) / peak * 100).toFixed(1) + '%"></span></span>' +
+            '<span class="dc-cand-num">' + c.score.toExponential(2) + '</span>' +
+            '<span class="dc-cand-meta">pk ' + c.pk.toFixed(2) + ' · ' +
+            c.rangeKm.toFixed(0) + 'km · 탄약 ' + (c.ammoRatio * 100).toFixed(0) + '%</span></div>';
+        }).join('');
+        // 전역 최적이 후보 명단 밖에 있으면 별표를 붙일 자리가 없다 — 별도 줄로 드러낸다.
+        var outside = d.globalBestUnitId && !d.candidates.some(function (c) {
+          return c.unitId === d.globalBestUnitId;
+        });
+        var regretLine = d.regret == null
+          ? '<div class="dc-regret none">선택 손실 미측정 (' + esc(d.shadowScope || '범위 밖') + ')</div>'
+          : '<div class="dc-regret' + (d.regret > 0 ? ' loss' : ' opt') + '">' +
+            (d.regret > 0
+              ? '선택 손실 ' + d.regret.toExponential(2) + ' — 전역 최적은 ★ ' + esc(d.globalBestUnitId) +
+                (outside ? ' <b>(이 결심자의 명단 밖)</b>' : '')
+              : '선택 손실 0 — 전역 최적을 골랐습니다') + '</div>';
+        return '<div class="dc-dec">' +
+          '<div class="dc-dec-head">t=' + secText(d.t) + ' · ' + esc(d.commanderId) +
+          ' <span class="dc-axis">' + esc(d.commanderAxis) + '/' + esc(d.commanderScope || '') + '</span></div>' +
+          '<div class="dc-dec-sub">시야 내 발사대 ' + d.visibleUnitCount + '기 → 실현가능 후보 ' +
+          d.candidateCount + '기' +
+          (d.shadowFeasible != null ? ' · 전 자산 기준 실현가능 ' + d.shadowFeasible + '기' : '') +
+          (d.candidatesTruncated ? ' <span class="dc-trunc">(표시는 상위 ' + d.candidates.length + '기)</span>' : '') +
+          '</div>' + rowsHtml + regretLine + '</div>';
+      }).join('');
+      return '<div class="dc-cand-side"><div class="dc-cand-head ' + cls + '">' + label +
+        ' <span class="dc-cand-n">결심 ' + r.decisions.length + '건</span></div>' + body + '</div>';
+    }
+    return '<div class="dc-cand-title">위협 <code>' + esc(threatId) + '</code></div>' +
+      '<div class="dc-cand-pair">' + block(a, 'As-Is 분절형', 'asis') +
+      block(b, 'To-Be 통합형', 'tobe') + '</div>' +
+      '<div class="note">색 링 = 실제 선택 · ★ = 전 자산 기준 전역 최적(그림자 평가, USFK 제외 — ADR-036). ' +
+      '점수는 WTA 목적함수 값이며 <b>격추 건수로 환산되지 않습니다</b> — 그래서 크기가 아니라 ' +
+      '일치율(손실 0 비율)로 주장합니다(ADR-074 §한계).</div>';
+  }
+
+  /**
+   * 대표 위협 선정 규칙(화면에 명시) — 임의 선택이 아님을 보이기 위해 규칙과 결과를 함께 낸다.
+   * 1순위: As-Is 놓침(미결심·누수) & To-Be 격추로 **결과가 갈린** 위협
+   * 2순위: 두 체계 모두 결심한 위협 중 여유 차이가 큰 순
+   * 동순위는 threatId 오름차순(결정론).
+   */
+  function pickThreats(byIdA, byIdB, limit) {
+    var ids = Object.keys(byIdA).filter(function (id) { return byIdB[id]; }).sort();
+    function split(id) {
+      var a = byIdA[id], b = byIdB[id];
+      return (a.killT == null) && (b.killT != null);
+    }
+    var primary = ids.filter(split);
+    var rest = ids.filter(function (id) { return !split(id); }).sort(function (x, y) {
+      function marg(r) {
+        return (r.windowCloseT != null && r.firstDecisionT != null)
+          ? r.windowCloseT - r.firstDecisionT : -Infinity;
+      }
+      var dx = Math.abs(marg(byIdB[x]) - marg(byIdA[x]));
+      var dy = Math.abs(marg(byIdB[y]) - marg(byIdA[y]));
+      if (!isFinite(dx)) dx = -1;
+      if (!isFinite(dy)) dy = -1;
+      return dy - dx || (x < y ? -1 : 1);
+    });
+    return { primary: primary, list: primary.concat(rest).slice(0, limit) };
+  }
+
   /** 병목 taxonomy ↔ 발생 단계 요약표 (+ 이번 설정의 관측 건수) */
   function renderTaxonomyTable(ca, cb) {
     var body = el('taxonomy-body');
@@ -783,6 +1072,151 @@
   KJ.panels = {
     /** [분석] 탭: 9단계 파이프라인 지표 + As-Is↔To-Be 위협 항적 병렬 로그 */
     renderAnalysis: renderAnalysisPanels,
+
+    /**
+     * [결심 비교] 탭 (ADR-075) — 4개 뷰를 순수 후처리로 렌더한다.
+     * 데이터는 [분석] 탭과 같은 desPair 캐시를 쓴다(계측이 관측 전용이라 결과가 동일).
+     */
+    renderDecision: function (state) {
+      var ctx = el('decision-context');
+      if (!ctx) return;
+      var self = this;
+      var data = pipelineData(state, function () { self.renderDecision(state); });
+      var sc = KJ.scenarioById(state.sc);
+      ctx.innerHTML = '<b>' + esc(sc.name) + '</b> · ' + esc(state.dep) +
+        ' · 강도 ×' + Number(state.x).toFixed(1) + ' · seed ' + state.seed +
+        ' · ' + state.dur + '초 · 동일 seed paired DES(CRN)';
+      if (!data) {
+        var msg = desCache.error
+          ? '<div class="bn-none">계산 실패: ' + esc(desCache.error) + '</div>'
+          : '<div class="bn-none">두 체계 DES 계산 중…</div>';
+        ['decision-gauges', 'decision-distributions', 'decision-timeline', 'decision-popover']
+          .forEach(function (id) { if (el(id)) el(id).innerHTML = msg; });
+        if (el('decision-rule')) el('decision-rule').innerHTML = '';
+        return;
+      }
+      // pipelineData는 mode:'asis'로 요청하므로 current=As-Is, other=To-Be로 고정된다.
+      var dcA = data.a.c2Analysis && data.a.c2Analysis.decisionComparison;
+      var dcB = data.b.c2Analysis && data.b.c2Analysis.decisionComparison;
+
+      // ── 미측정 표시 규율: 판정은 런이 보고한 값에서 취한다 ──
+      if (!dcA || !dcB || !dcA.available || !dcB.available) {
+        var reason = (dcA && dcA.reason) || (dcB && dcB.reason) || '런이 계측 상태를 보고하지 않음';
+        ['decision-gauges', 'decision-distributions', 'decision-timeline', 'decision-popover']
+          .forEach(function (id) { if (el(id)) el(id).innerHTML = unmeasured(reason); });
+        if (el('decision-rule')) el('decision-rule').innerHTML = '';
+        return;
+      }
+
+      // ── ④ 게이지 ──
+      var gA = dcA.gauges, gB = dcB.gauges;
+      var gaugeHtml = '';
+      if (dcA.windowMargin && dcB.windowMargin && gA.missRate && gB.missRate) {
+        gaugeHtml += gaugeRow('교전창 놓침률 — 문이 닫히기 전에 결심했는가',
+          gA.missRate.rate, gB.missRate.rate,
+          'As-Is ' + gA.missRate.missed + '/' + gA.missRate.total +
+          ' · To-Be ' + gB.missRate.missed + '/' + gB.missRate.total +
+          ' (분모 = 교전창이 실제로 존재했던 위협. <b>결심조차 없던 위협을 놓침으로 셉니다</b> — ' +
+          '결심에 도달한 위협만 보면 생존 편향이 생깁니다. ADR-074)', true);
+      } else {
+        gaugeHtml += unmeasured('windowMargin OFF — 교전창 놓침률');
+      }
+      if (dcA.shadowEval && dcB.shadowEval && gA.optimalRate && gB.optimalRate) {
+        gaugeHtml += gaugeRow('전역 최적 일치율 — 최적 사수를 골랐는가',
+          gA.optimalRate.rate, gB.optimalRate.rate,
+          'As-Is ' + gA.optimalRate.optimal + '/' + gA.optimalRate.n +
+          ' · To-Be ' + gB.optimalRate.optimal + '/' + gB.optimalRate.n +
+          ' (분모 = 그림자 평가가 가능했던 결심. USFK 독립 축은 0이 아니라 미측정으로 제외 — ADR-036)',
+          false);
+      } else {
+        gaugeHtml += unmeasured('shadowEval OFF — 전역 최적 일치율');
+      }
+      el('decision-gauges').innerHTML = gaugeHtml +
+        '<div class="note">이 두 게이지가 <b>주장의 근거</b>입니다. 아래 타임라인·후보 명단은 ' +
+        '단일 실행의 사례(삽화)이며 그 자체로 인과를 증명하지 않습니다. 30시드 집계 방향과 ' +
+        '원인 귀속은 <code>docs/adr/ADR-074</code>에 기록돼 있습니다.</div>';
+
+      // ── ③ 분포 ──
+      var distHtml = '';
+      if (dcA.windowMargin && dcB.windowMargin) {
+        distHtml += '<h3>(가) 교전창 여유 분포 — 결심완료 시점의 남은 시간</h3>' +
+          histogram(dcA.distributions.margin.values, dcB.distributions.margin.values, {
+            fmt: function (v) { return Math.round(v) + 's'; },
+            xLabel: '교전창 마감 − 결심완료 (초) · 0 미만 = 문이 닫힌 뒤 결심',
+            shadeNegative: true,
+            undecidedA: gA.missRate ? gA.missRate.undecided : 0,
+            undecidedB: gB.missRate ? gB.missRate.undecided : 0,
+            emptyText: '결심이 없어 여유 표본이 없습니다.'
+          }) +
+          '<div class="note">왼쪽 회색 통 = <b>미결심</b>(결심 자체가 없어 여유를 잴 수 없는 위협). ' +
+          '0으로 접어 넣으면 "여유 0초"로 오독되므로 축 밖에 따로 세우며, ' +
+          '<b>곡선과 축척이 분리돼 있습니다</b>(건수는 통 아래 숫자로 병기 — 높이끼리 비교하지 마십시오). ' +
+          '⚠️ 곡선 부분은 <b>결심에 도달한 위협만</b>의 분포라 생존 편향이 있습니다 — ' +
+          '결심은 실현가능 PIP가 있어야 성립하므로 구조적으로 음수가 거의 나오지 않습니다. ' +
+          '체계 비교는 게이지(전수 분모)로 하십시오.</div>';
+      } else {
+        distHtml += unmeasured('windowMargin OFF — 교전창 여유 분포');
+      }
+      if (dcA.shadowEval && dcB.shadowEval) {
+        distHtml += '<h3>(나) 선택 손실 분포 — 전역 최적 대비 점수 차</h3>' +
+          histogram(dcA.distributions.regret.values, dcB.distributions.regret.values, {
+            fmt: function (v) { return v.toExponential(1); },
+            xLabel: '선택 손실 regret (WTA 점수 단위) · 0 = 전역 최적',
+            emptyText: '그림자 평가 표본이 없습니다.'
+          }) +
+          '<div class="note">가로축은 WTA 목적함수 점수 단위이며 격추 건수로 환산되지 않습니다. ' +
+          '그래서 크기가 아니라 <b>0에 몰린 비율</b>(위 게이지)로 읽습니다.</div>';
+      } else {
+        distHtml += unmeasured('shadowEval OFF — 선택 손실 분포');
+      }
+      el('decision-distributions').innerHTML =
+        '<div class="dc-legend"><span class="dc-key asis"></span>As-Is 분절형' +
+        '<span class="dc-key tobe"></span>To-Be 통합형</div>' + distHtml;
+
+      // ── ① 페어드 타임라인 ──
+      var byA = {}, byB = {};
+      dcA.threats.forEach(function (r) { byA[r.threatId] = r; });
+      dcB.threats.forEach(function (r) { byB[r.threatId] = r; });
+      var picked = pickThreats(byA, byB, 12);
+      el('decision-rule').innerHTML =
+        '<b>표시 사례 선정 규칙</b> — 임의 선택이 아닙니다. ' +
+        '① <b>As-Is 미격추 · To-Be 격추</b>로 결과가 갈린 위협을 먼저 놓고(이번 실행 ' +
+        picked.primary.length + '건), ② 나머지는 두 체계의 교전창 여유 차가 큰 순으로, ' +
+        '동순위는 threatId 오름차순(결정론)으로 최대 12건을 표시합니다. ' +
+        '<b>사례는 삽화이며 주장의 근거는 위 ③④ 분포·게이지입니다.</b> ' +
+        'CRN(공통난수)으로 위/아래는 같은 seed의 <b>같은 위협</b>이며 도착시각도 동일합니다.';
+      el('decision-timeline').innerHTML = picked.list.length
+        ? picked.list.map(function (id, i) {
+            var a = byA[id], b = byB[id];
+            var isSplit = picked.primary.indexOf(id) !== -1;
+            return '<div class="dc-tl-group' + (isSplit ? ' split' : '') +
+              (decisionSel.threatId === id ? ' sel' : '') + '" data-threat="' + esc(id) + '">' +
+              '<div class="dc-tl-key">' + esc(id) +
+              '<span class="dc-tl-axis">' + esc(a.axis || '') + ' · 생성 ' + secText(a.spawnT) + '</span>' +
+              (isSplit ? '<span class="dc-tl-tag">결과가 갈림</span>' : '') + '</div>' +
+              '<div class="dc-tl-lane"><span class="dc-tl-side asis">As-Is</span>' +
+              timelineBar(a, 'asis') + '</div>' +
+              '<div class="dc-tl-lane"><span class="dc-tl-side tobe">To-Be</span>' +
+              timelineBar(b, 'tobe') + '</div></div>';
+          }).join('')
+        : '<div class="bn-none">두 체계에 공통으로 기록된 위협이 없습니다.</div>';
+
+      // ── ② 후보 명단 팝오버 (막대 클릭) ──
+      if (!decisionSel.threatId || !byA[decisionSel.threatId]) {
+        decisionSel.threatId = picked.list[0] || null;
+      }
+      el('decision-popover').innerHTML =
+        candidatePanel(decisionSel.threatId, byA[decisionSel.threatId], byB[decisionSel.threatId]);
+      Array.prototype.forEach.call(
+        el('decision-timeline').querySelectorAll('.dc-tl-group'), function (node) {
+          node.addEventListener('click', function () {
+            decisionSel.threatId = node.dataset.threat;
+            self.renderDecision(state);
+            var card = el('decision-popover-card');
+            if (card && card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          });
+        });
+    },
 
     /** 근거자료 탭: 제약 어서션 + 파라미터 문서 링크 */
     renderData: function (state) {

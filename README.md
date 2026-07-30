@@ -52,7 +52,7 @@ OFF입니다. Leaflet 없는 SVG fallback도 같은 중첩 표시와 범위 링 
 ```
 
 - 체계 모드는 **단일 토글 스위치**(off=As-Is 분절형, on=To-Be 통합형).
-- 4개 탭: **[시뮬레이션]**(지도·실행·결과창) · **[분석]**(파이프라인 지표·병목 taxonomy·정상상태 해석) · **[Monte Carlo]**(수렴·유의성·민감도·임계 전환점) · **[근거자료·제약검증]**(파라미터 근거·제약 어서션).
+- 5개 탭: **[시뮬레이션]**(지도·실행·결과창) · **[분석]**(파이프라인 지표·병목 taxonomy·정상상태 해석) · **[결심 비교]**(교전창 여유·선택 손실 — ADR-062~064) · **[Monte Carlo]**(수렴·유의성·민감도·임계 전환점) · **[근거자료·제약검증]**(파라미터 근거·제약 어서션).
 
 ## 실행 방법
 
@@ -225,7 +225,7 @@ tests/  run-all.js + 30개 스위트  # 아래 [검증] 참조. 폐기 스위트
 
 ## 딥링크 스킴
 
-`#tab=<sim|analysis|mc|data>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&south=<0|1>&linkv2=<0|1>&rp=<0|1>&cop=<0|1>&saw=<0|1>&sdf=<0|1>&x=<강도배수>&seed=<정수>&dur=<초>`
+`#tab=<sim|analysis|decision|mc|data>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&south=<0|1>&linkv2=<0|1>&rp=<0|1>&cop=<0|1>&saw=<0|1>&sdf=<0|1>&x=<강도배수>&seed=<정수>&dur=<초>`
 
 - `dep`은 고해상도 6종 ID(기본 `HANBANDO_LEGACY_NORMAL`). 구 딥링크의 `dep=legacy`·MINI ID·
   `fid=` 파라미터는 기본값으로 자동 흡수됩니다(ADR-061).
@@ -260,6 +260,7 @@ tests/  run-all.js + 30개 스위트  # 아래 [검증] 참조. 폐기 스위트
 - 구 `tab=map|scenario|des|playback`은 `sim` 탭으로 흡수됩니다.
 - [`#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345`](index.html#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345) — 섞어쏘기 As-Is 1.5배.
 - [`#tab=analysis&sc=sc1&mode=asis`](index.html#tab=analysis&sc=sc1&mode=asis) — 경계 침투 해석 분석.
+- [`#tab=decision&sc=sc3&seed=12345&dur=900`](index.html#tab=decision&sc=sc3&seed=12345&dur=900) — 결심 비교(페어드 뷰라 `mode`는 화면을 바꾸지 않습니다).
 - [`#tab=mc&sc=sc3&mode=asis&x=2`](index.html#tab=mc&sc=sc3&mode=asis&x=2) — Monte Carlo·임계 전환점.
 
 ## 검증

@@ -66,17 +66,29 @@ assert(mc.indexOf('C2 MOP 쌍체 비교') !== -1 && mc.indexOf('nPaired / 요청
   mc.indexOf('계측 없음') !== -1,
   'MC 탭에 동일 seed 교집합 C2 MOP Δ·결측 표본 노출');
 assert(mc.indexOf("KJ.compute.run('transition'") !== -1, '임계 전환점 Worker 분리');
-assert(worker.indexOf("'../engine/sim-engine.js'") !== -1 &&
-  worker.indexOf("'../analysis/c2-report.js'") !== -1 &&
-  worker.indexOf("'../analysis/overlap-heatmap.js'") !== -1,
-  'Worker 엔진·C2 분석·기타 분석 정본 로드');
+// ADR-075: Worker의 모든 import에 캐시 버스터(`?v=…`)가 붙었다. 검증 대상은 "어떤 정본을
+// 싣는가"이지 버전 문자열이 아니므로 쿼리를 허용하고 경로만 본다 — 다음 버전 갱신에서
+// 이 어서션이 거짓 실패하지 않도록.
+['../engine/sim-engine.js', '../analysis/c2-report.js', '../analysis/overlap-heatmap.js']
+  .forEach(function (path) {
+    assert(new RegExp("'" + path.replace(/[./]/g, '\\$&') + "(\\?v=[^']*)?'").test(worker),
+      'Worker 정본 로드: ' + path);
+  });
+// 캐시 버스터가 **빠짐없이** 붙어 있어야 한다. 하나라도 버전이 없으면 갱신 배포를 받은
+// 브라우저가 옛 사본을 섞어 써 조용히 다른 수치를 낸다(ADR-075 §배포 결함 실측).
+assert(!/'\.\.?\/[^']*\.js'/.test(worker.replace(/\?v=[^']*/g, '?v=')),
+  'Classic Worker의 전 import에 캐시 버스터 부착(버전 없는 경로 0건)');
+assert(!/'\.\.?\/[^']*\.js'/.test(moduleWorker.replace(/\?v=[^']*/g, '?v=')),
+  'Module Worker의 전 import에 캐시 버스터 부착(버전 없는 경로 0건)');
 assert(workerRuntime.indexOf('heatCurrentAxes') !== -1 && client.indexOf('heatCurrentAxes') !== -1,
   'Worker/폴백 overlap 축선 결과 전달');
 assert(moduleWorker.indexOf('installIadsKernel') !== -1 && worker.indexOf('sim-worker-runtime.js') !== -1,
   'Module 우선·Classic 호환 Worker가 공통 실행 런타임 사용');
+// 버전 문자열을 고정하지 않는다(갱신 때마다 거짓 실패) — classic 폴백 경로가 살아 있고
+// 그 워커 URL에도 캐시 버스터가 붙어 있는지만 본다.
 assert(client.indexOf("startWorker('classic')") !== -1 &&
-  client.indexOf("sim-worker.js?v=20260724a") !== -1,
-  'Module Worker 초기화 실패 시 대기 작업을 보존해 Classic Worker로 1회 전환');
+  /sim-worker\.js\?v=[^'"]+/.test(client) && /sim-worker\.mjs\?v=[^'"]+/.test(client),
+  'Module Worker 초기화 실패 시 대기 작업을 보존해 Classic Worker로 1회 전환(양 워커 URL 버전 부착)');
 assert(client.indexOf('main-thread-fallback') !== -1, '단일 HTML/Worker 미지원 폴백 보존');
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');

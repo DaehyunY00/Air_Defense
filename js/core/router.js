@@ -18,7 +18,9 @@
   // ADR-065: appr(승인 계선)·disp(표적 산포)·south(남부 축선)는 **기본 ON**이다('0'으로 해제).
   // ADR-066: linkv2(링크 의미론 codex 정합)도 **기본 ON** — 반증용 해제 경로로 linkv2=0을 신설.
   var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '1', disp: '1', south: '1', linkv2: '1', rp: '1', cop: '1', saw: '1', sdf: '1', eor: '0', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
-  var VALID_TABS = ['sim', 'analysis', 'mc', 'data'];
+  // ADR-075: 'decision'(결심 비교) 추가. 기존 탭ID·파라미터 스킴은 그대로라 구 딥링크는
+  // 전부 하위호환이다(모르는 키는 무시, 모르는 탭은 기본값으로 폴백 — 종전 동작 유지).
+  var VALID_TABS = ['sim', 'analysis', 'decision', 'mc', 'data'];
   // 구 딥링크 호환: 지도/시나리오/DES/재생 탭은 통합 [시뮬레이션] 탭으로 흡수
   var LEGACY_TAB = { map: 'sim', scenario: 'sim', des: 'sim', playback: 'sim' };
 

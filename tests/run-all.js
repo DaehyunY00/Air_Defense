@@ -72,6 +72,7 @@ var suites = [
   ,['decision-audit.test.mjs', 'ADR-073 결심 감사 로깅 (OFF bit-exact·RNG 소비 불변·상한/표본 결정론)']
   ,['decision-audit.test.mjs', 'ADR-062 결심 감사 로깅 (OFF bit-exact·RNG 소비 불변·상한/표본 결정론)']
   ,['shadow-eval.test.mjs', 'ADR-074 그림자 평가·교전창 계측 (RNG 불변·regret≥0·USFK 제외·전수 분모)']
+  ,['decision-comparison.test.mjs', 'ADR-075 결심 비교 탭 (순수 후처리·미측정 표시·딥링크 하위호환·단일본)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

@@ -306,8 +306,21 @@
     this.decisionAuditSampleRate =
       (typeof f.decisionAuditSampleRate === 'number' && f.decisionAuditSampleRate > 0 &&
        f.decisionAuditSampleRate <= 1) ? f.decisionAuditSampleRate : 1;
-    this._decisionAuditStats = { logged: 0, dropped: 0, sampledOut: 0, truncated: false,
-      selfDefenseUnaudited: 0 };
+    // ADR-074 B-1: 그림자 평가 — 결심 순간에 "전 자산이 다 보였다면 골랐을 최고점"을 같은
+    // 점수식으로 한 번 더 구해 로그에만 남긴다. **결정을 바꾸지 않는 관측 전용**이며 PIP·PSSEK가
+    // 전부 결정론이라 난수를 단 한 번도 쓰지 않는다. decisionAudit이 켜져 있어야 동작한다.
+    this.shadowEval = ff('shadowEval', false);
+    // ADR-036(USFK 권한 자동 통합 금지) — 그림자 자산 범위에서 USFK를 **기본 제외**한다.
+    // 포함 버전은 참고용 반사실로만 켠다(결론 문장에 쓰지 않는다).
+    this.shadowEvalIncludeUsfk = ff('shadowEvalIncludeUsfk', false);
+    // ADR-074 B-2: 교전창 마감 계측 — 기존 반사실 PIP 창(_iadsGeometryWindow)의 상한을 재사용한다.
+    // 새 물리 없음·난수 없음. decisionAudit이 켜져 있어야 동작한다.
+    this.windowMargin = ff('windowMargin', false);
+    this._decisionAuditStats = {
+      logged: 0, dropped: 0, sampledOut: 0, truncated: false, selfDefenseUnaudited: 0,
+      shadowSkipped: 0, shadowSkippedDecisions: 0, windowUnmeasured: 0
+    };
+    this._shadowShooterCache = null;
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
     if (this.highResolutionDeployment) this.features.highResolutionDeployment = true;
     this.features.unifiedEngagementState = this.unifiedEngagementState; // ADR-068: 항상 실제 해석값 신고
@@ -327,6 +340,9 @@
     this.features.selfDefenseFire = this.selfDefenseFire; // ADR-072: 항상 실제 해석값 신고
     if (this.selfDefenseFire) this.features.selfDefenseRadiusKm = this.selfDefenseRadiusKm;
     if (this.decisionAudit) this.features.decisionAudit = true;
+    if (this.shadowEval) this.features.shadowEval = true;
+    if (this.shadowEvalIncludeUsfk) this.features.shadowEvalIncludeUsfk = true;
+    if (this.windowMargin) this.features.windowMargin = true;
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
@@ -1337,6 +1353,31 @@
     return (1 - W) + W * costFit;
   };
 
+  /**
+   * 사수 후보 점수식(WTA). ADR-074에서 `_iadsDecide` 인라인 식을 **산술 그대로** 옮겨 온 것으로,
+   * 그림자 평가가 실제 결심과 **동일한 목적함수**로 채점하도록 단일 정본을 둔다. 정본이 둘이면
+   * regret이 "더 나쁜 사수"가 아니라 "다른 목적함수"를 재게 되므로 지표 자체가 무의미해진다.
+   * 이관이 산술적으로 무손실임은 OFF bit-exact SHA-256(4/4)로 고정돼 있다.
+   */
+  Simulation.prototype._iadsWtaScore = function (ev, shooter, ammoRatio, load, threat) {
+    var priority = Number(shooter.shooterPriority) || 9;
+    if (this.nativeWtaMode && this.mode === 'asis') {
+      // ADR-059 As-Is: COP 부재 — 무기별 pk·PIP(교전 포락선 적합도)를 비교할 수단이 없다.
+      // 관측 가능한 것(자기 탄약·자기 부하)만으로 선택한다. 물리 실현가능성 필터(_iadsEvaluate의
+      // canEngage·봉투·FC 게이트)는 선행 적용됨 — 선호 순서만 바뀐다.
+      var score = ammoRatio * (1 - load) - priority * 0.000001;
+      if (this.nativeWtaCostAsis) score *= this._iadsCostTerm(shooter, ev, threat); // 반증 전용
+      return score;
+    }
+    if (this.nativeWtaMode) {
+      // ADR-059 To-Be: 현행 물리 점수식 + 비용 인식((1−W)+W·costFit, 탄도 위협 한정 —
+      // legacy Step 1의 국한 논리 승계: 고가 낭비는 탄도(하층/상층 요격탄 선택)에서만 발생).
+      return (ev.pk * ammoRatio * (1 - load) / Math.max(1, ev.pip.rangeKm) - priority * 0.000001) *
+        this._iadsCostTerm(shooter, ev, threat);
+    }
+    return ev.pk * ammoRatio * (1 - load) / Math.max(1, ev.pip.rangeKm) - priority * 0.000001;
+  };
+
   Simulation.prototype._iadsEvaluate = function (shooter, threat, t) {
     if (!this._iadsCanEngage(shooter, threat)) return { feasible: false, reason: 'no_missile_for_threat' };
     var resource = this.iadsResources[shooter.id];
@@ -1725,6 +1766,103 @@
     return ((h >>> 0) / 4294967296) < this.decisionAuditSampleRate;
   };
 
+  /**
+   * ADR-074: 그림자 평가·교전창 계측이 쓰는 자산 범위.
+   * 기본은 한국군 전 발사대(ROK + ROK_LOCAL_AD)이며 **USFK는 제외**한다 — ADR-036(권한 자동
+   * 통합 금지)에 따라 USFK는 독립 축이고, "다 보였다면"이라는 반사실에 넣으면 그 독립성 가정을
+   * 훼손한다. `shadowEvalIncludeUsfk`로 참고용 반사실만 별도로 켠다.
+   *
+   * ⚠️ C2 배정 제약(`coverage` 축 담당)은 **일부러 무시한다.** 그림자 평가가 완화하려는 것이
+   * 바로 그 배정 제약이기 때문이다. 물리 능력(`_iadsCanEngage`)과 실현가능성(`_iadsEvaluate`의
+   * 봉투·PIP·FC·탄약·채널)은 그대로 적용된다.
+   */
+  Simulation.prototype._shadowShooters = function () {
+    if (!this._shadowShooterCache) {
+      var includeUsfk = this.shadowEvalIncludeUsfk;
+      this._shadowShooterCache = this._nodesInMode().filter(function (n) {
+        return n.category === 'shooter' && (includeUsfk || n.forceOwner !== 'USFK');
+      });
+    }
+    return this._shadowShooterCache;
+  };
+
+  /**
+   * ADR-074 B-1: 전역 최적 사수(그림자). 실제 결심과 **동일한 시각 t·동일한 점수식**으로
+   * 전 자산을 채점해 최고점을 돌려준다. 엔진 상태를 쓰지 않으며 반환값은 로그로만 나간다.
+   *
+   * 난수 소비 0 — `_iadsEvaluate`는 PIP 탐색(기하)·PSSEK 조회(표)·보정(결정론 함수)만 쓴다.
+   * 만약 어떤 후보 경로가 난수를 요구하게 되면 그 후보를 세지 말고 `skipped`로 올려야 한다
+   * (지어내지 않는다 — 못 재면 못 잰다고 기록). 현재 그런 경로는 없다.
+   *
+   * 실제 선택도 이 집합의 원소이고 같은 t에서 같은 자원 상태(`active`는 발사 시점에야 증가한다)를
+   * 보므로 `globalBestScore ≥ 실제선택 점수`, 즉 `regret ≥ 0`이 구조적으로 보장된다.
+   */
+  Simulation.prototype._shadowEvaluate = function (threat, t) {
+    var out = { best: null, evaluated: 0, feasible: 0, skipped: 0 };
+    this._shadowShooters().forEach(function (shooter) {
+      if (!this._iadsCanEngage(shooter, threat)) return; // 위협 호환 무기가 아님 — 후보 자체가 아니다
+      var resource = this.iadsResources[shooter.id];
+      if (!resource) { out.skipped++; return; }          // 미가동 자산 — 못 잰 것으로 센다
+      out.evaluated++;
+      var ev = this._iadsEvaluate(shooter, threat, t);
+      if (!ev.feasible) return;
+      out.feasible++;
+      var ammoRatio = resource.initialAmmo ? ev.ammo / resource.initialAmmo : 0;
+      var load = resource.maxSimultaneous ? resource.active / resource.maxSimultaneous : 1;
+      var score = this._iadsWtaScore(ev, shooter, ammoRatio, load, threat);
+      // 동점은 unitId 오름차순 — `_iadsDecide`의 정렬 tie-break와 같은 규칙.
+      if (!out.best || score > out.best.score ||
+          (score === out.best.score && shooter.id < out.best.unitId)) {
+        out.best = {
+          unitId: shooter.id, unitType: shooter.typeId || null, score: score,
+          pk: ev.pk, rangeKm: ev.pip ? ev.pip.rangeKm : null,
+          pipTime: ev.pip && Number.isFinite(ev.pip.timeToReach) ? t + ev.pip.timeToReach : null
+        };
+      }
+    }, this);
+    return out;
+  };
+
+  /**
+   * ADR-074 B-2: 위협의 교전창 = 어떤 자산이든 요격점을 잡을 수 있는 시간 구간.
+   * 마감(`closeT`)은 전 자산의 반사실 PIP 창(`_iadsGeometryWindow`) `lastFire`의 최댓값,
+   * 개시(`openT`)는 `firstFire`의 최솟값이다. **새 물리를 만들지 않고** 이미 있는 값의
+   * 상·하한을 재사용한다(`_terminalIadsFailure`의 `latestFire`와 같은 재료). 난수 없음.
+   * 위협 단위로 한 번만 계산해 캐시한다(하부 창 캐시도 그대로 활용).
+   * 어떤 자산도 창을 못 잡으면 `{openT:null, closeT:null}` — 0이 아니라 **미측정**이다.
+   */
+  Simulation.prototype._engagementWindowOf = function (threat) {
+    if (threat._auditWindow !== undefined) return threat._auditWindow;
+    // ⚠️ 관측이 관측 대상을 바꾸지 않게 하는 장치 —— 반드시 필요하다.
+    // `_iadsGeometryWindow`의 공유 캐시 키는 (사수 × 위협유형 × 축 × 체공창)인데, ADR-063
+    // 표적권역 산포가 켜지면 **같은 키의 두 위협이 서로 다른 착탄점**을 갖는다. 즉 캐시는
+    // 먼저 계산된 위협의 창을 뒤 위협에게도 돌려준다. 우리는 결심보다 이른 시점(위협 생성)에
+    // 이 함수를 부르므로, 공유 캐시를 그대로 쓰면 **캐시가 채워지는 순서를 바꿔 실제 경로의
+    // 값까지 흔든다**(실측: SC3 To-Be에서 격추 95→91로 이동). 계측은 관측 전용이어야 하므로
+    // 위협마다 전용 빈 캐시로 갈아끼우고 끝나면 되돌린다 — 공유 캐시는 한 글자도 건드리지
+    // 않으며, 위협 간 키 충돌도 동시에 회피된다.
+    // ※ 공유 캐시 키가 착탄점을 빠뜨린 것 자체는 이 계측과 무관한 **기존 결함**이다
+    //    (`_terminalIadsFailure`·`_classifyNativeExitFailure`도 같은 캐시를 읽는다).
+    //    고치면 결과가 바뀌므로 이 계측 계층에서 손대지 않고 별도 과제로 남긴다.
+    var sharedCache = this._geometryWindowCache;
+    this._geometryWindowCache = {};
+    var first = Infinity, last = -Infinity;
+    try {
+      this._shadowShooters().forEach(function (n) {
+        var w = this._iadsGeometryWindow(n, threat);
+        if (!w) return;
+        if (w.firstFire < first) first = w.firstFire;
+        if (w.lastFire > last) last = w.lastFire;
+      }, this);
+    } finally {
+      this._geometryWindowCache = sharedCache;
+    }
+    threat._auditWindow = Number.isFinite(last)
+      ? { openT: first, closeT: last }
+      : { openT: null, closeT: null };
+    return threat._auditWindow;
+  };
+
   Simulation.prototype._emitDecisionAudit = function (threat, commander, t, candidates, chosen, reasons) {
     var stats = this._decisionAuditStats;
     if (!this._decisionAuditSampled(threat.id)) { stats.sampledOut++; return; }
@@ -1749,7 +1887,45 @@
       };
     });
     stats.logged++;
-    this._metricEvent('decision_audit', t, threat, {
+    var extra = {};
+    // ── ADR-074 B-1: 선택 손실(regret)의 분모 ──
+    if (this.shadowEval) {
+      if (String(commander.axis).indexOf('USFK') === 0) {
+        // ADR-036: USFK는 독립 축이다. "통합됐다면"이라는 반사실 자체가 가정 위반이라
+        // 점수를 만들지 않고 미측정으로 남긴다.
+        extra.shadowScope = 'skipped_usfk_axis';
+        extra.regret = null;
+        stats.shadowSkippedDecisions++;
+      } else {
+        var shadow = this._shadowEvaluate(threat, t);
+        extra.shadowScope = this.shadowEvalIncludeUsfk ? 'rok_and_usfk' : 'rok_only';
+        extra.shadowEvaluated = shadow.evaluated;   // 물리 능력이 있어 채점을 시도한 자산 수
+        extra.shadowFeasible = shadow.feasible;     // 그중 그 순간 실현가능했던 자산 수
+        extra.shadowSkipped = shadow.skipped;       // 못 잰 자산 수(미가동 등)
+        extra.globalBestUnitId = shadow.best ? shadow.best.unitId : null;
+        extra.globalBestUnitType = shadow.best ? shadow.best.unitType : null;
+        extra.globalBestScore = shadow.best ? shadow.best.score : null;
+        // regret = 전역최적 − 실제선택. 실제선택도 그림자 집합의 원소라 구조상 ≥ 0이며,
+        // Math.max는 부동소수 잔차만 막는다(음수가 나오면 그것은 버그다 — 테스트가 감시).
+        extra.regret = shadow.best ? Math.max(0, shadow.best.score - chosen.score) : null;
+        stats.shadowSkipped += shadow.skipped;
+      }
+      // regret의 감수(減數). shadowEval OFF에서는 붙이지 않아 Phase A 페이로드가 그대로 남는다
+      // (후처리는 candidates[0].score로 같은 값을 얻는다).
+      extra.chosenScore = chosen.score;
+    }
+    // ── ADR-074 B-2: 교전창 여유(시간 지표) ──
+    // ⚠️ 여기서 재는 여유는 **결심에 도달한 위협에만** 존재한다(생존 편향). 결심 자체가
+    // 성립하려면 `_iadsEvaluate`가 실현가능 PIP를 찾아야 하므로 이 값은 구조적으로 거의
+    // 음수가 되지 않는다. 편향 없는 "놓침률"은 전 위협 분모(window_audit)로만 계산할 것.
+    if (this.windowMargin) {
+      var win = this._engagementWindowOf(threat);
+      extra.engagementWindowCloseT = win.closeT;
+      // 여유 = 교전창 마감 − 결심완료. 0 이하이면 "문이 닫힌 뒤 결심"(놓침).
+      extra.engagementWindowMargin = win.closeT === null ? null : win.closeT - t;
+      if (win.closeT === null) stats.windowUnmeasured++;
+    }
+    this._metricEvent('decision_audit', t, threat, Object.assign(extra, {
       mode: this.mode,
       commanderId: commander.id,
       commanderAxis: commander.axis,
@@ -1766,7 +1942,7 @@
       infeasibleReasons: Object.assign({}, reasons),
       candidates: rows,
       chosenUnitId: chosen.shooter.id
-    });
+    }));
   };
 
   Simulation.prototype._iadsDecide = function (threat, t, commander) {
@@ -1824,21 +2000,7 @@
       if (ev.feasible) {
         var r = self.iadsResources[id], ammoRatio = r.initialAmmo ? ev.ammo / r.initialAmmo : 0;
         var load = r.maxSimultaneous ? r.active / r.maxSimultaneous : 1;
-        var priority = Number(shooter.shooterPriority) || 9;
-        if (self.nativeWtaMode && self.mode === 'asis') {
-          // ADR-059 As-Is: COP 부재 — 무기별 pk·PIP(교전 포락선 적합도)를 비교할 수단이 없다.
-          // 관측 가능한 것(자기 탄약·자기 부하)만으로 선택한다. 물리 실현가능성 필터(_iadsEvaluate의
-          // canEngage·봉투·FC 게이트)는 선행 적용됨 — 선호 순서만 바뀐다.
-          ev.score = ammoRatio * (1 - load) - priority * 0.000001;
-          if (self.nativeWtaCostAsis) ev.score *= self._iadsCostTerm(shooter, ev, threat); // 반증 전용
-        } else if (self.nativeWtaMode) {
-          // ADR-059 To-Be: 현행 물리 점수식 + 비용 인식((1−W)+W·costFit, 탄도 위협 한정 —
-          // legacy Step 1의 국한 논리 승계: 고가 낭비는 탄도(하층/상층 요격탄 선택)에서만 발생).
-          ev.score = (ev.pk * ammoRatio * (1 - load) / Math.max(1, ev.pip.rangeKm) - priority * 0.000001) *
-            self._iadsCostTerm(shooter, ev, threat);
-        } else {
-          ev.score = ev.pk * ammoRatio * (1 - load) / Math.max(1, ev.pip.rangeKm) - priority * 0.000001;
-        }
+        ev.score = self._iadsWtaScore(ev, shooter, ammoRatio, load, threat);
         ev.shooter = shooter;
         // ADR-073: 점수식이 이미 쓴 중간항을 계측용으로 보관만 한다(재계산·난수 없음).
         // 플래그 OFF에서는 속성 자체를 만들지 않아 객체 형상까지 직전과 동일하다.
@@ -2327,6 +2489,19 @@
       _iadsAxisDistanceKm: null
     };
     this._metricEvent('THREAT_SPAWNED', t, threat, { threatType: threat.type, axis: threat.axis });
+    // ADR-074 B-2: 위협 **전수**에 대한 교전창 원장. 결심에 도달한 위협만 보면 생존 편향이
+    // 생기므로(결심은 실현가능 PIP가 있어야 성립 → 여유가 음수가 될 수 없다), 놓침률의 분모를
+    // 여기서 전 위협으로 고정한다. 창은 궤적·자산 배치만의 함수라 생성 시점에 확정된다.
+    if (this.decisionAudit && this.windowMargin) {
+      var auditWindow = this._engagementWindowOf(threat);
+      this._metricEvent('window_audit', t, threat, {
+        mode: this.mode, threatType: threat.type, axis: threat.axis,
+        spawnT: threat.spawnT,
+        windowOpenT: auditWindow.openT,     // null이면 어떤 자산도 요격점을 못 잡음(교전 기회 부재)
+        windowCloseT: auditWindow.closeT,
+        dwellEndT: threat.spawnT + threat.dwellSec
+      });
+    }
     if (this.trace) {
       if (this.threatTraces.length < this.traceCap) {
         threat._trace = {
@@ -2766,6 +2941,20 @@
         // 감사에서 빠진 결심 수를 여기서 드러낸다(커버리지 구멍을 침묵시키지 않는다).
         selfDefenseUnaudited: this._decisionAuditStats.selfDefenseUnaudited
       };
+      // ADR-074: 두 기준값이 실제로 측정됐는지. UI는 이 값으로 "미측정"과 "0"을 가른다.
+      // 신규 플래그가 OFF면 키 자체를 만들지 않아 Phase A wire shape가 그대로 보존된다.
+      if (this.shadowEval) {
+        result.global.decisionAudit.shadowEval = true;
+        result.global.decisionAudit.shadowScope =
+          this.shadowEvalIncludeUsfk ? 'rok_and_usfk' : 'rok_only';
+        result.global.decisionAudit.shadowSkipped = this._decisionAuditStats.shadowSkipped;
+        result.global.decisionAudit.shadowSkippedDecisions =
+          this._decisionAuditStats.shadowSkippedDecisions;
+      }
+      if (this.windowMargin) {
+        result.global.decisionAudit.windowMargin = true;
+        result.global.decisionAudit.windowUnmeasured = this._decisionAuditStats.windowUnmeasured;
+      }
     }
     if (this.c2Analysis) {
       // 비교 가능한 명시적 분모 지표. 기본 API wire shape는 보존하고 분석 실행에서만 확장한다.

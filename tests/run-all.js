@@ -70,6 +70,8 @@ var suites = [
   ,['codex-alignment.test.mjs', 'ADR-069~072 IADS_codex 정본 정합 (톱니 신선도·원격교전+웹파티션·자위권 발사·기본값 전환)']
   ,['threat-log-pairing.test.mjs', '분석 탭 항적 병렬 로그 (CRN 위협집단 동일성·판정 분기 실재·tracePair 배선)']
   ,['decision-audit.test.mjs', 'ADR-073 결심 감사 로깅 (OFF bit-exact·RNG 소비 불변·상한/표본 결정론)']
+  ,['decision-audit.test.mjs', 'ADR-062 결심 감사 로깅 (OFF bit-exact·RNG 소비 불변·상한/표본 결정론)']
+  ,['shadow-eval.test.mjs', 'ADR-074 그림자 평가·교전창 계측 (RNG 불변·regret≥0·USFK 제외·전수 분모)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

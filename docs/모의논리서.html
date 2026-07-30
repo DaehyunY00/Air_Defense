@@ -32,7 +32,7 @@
 <body>
 
 <h1>K-JAMDS 시뮬레이터 — 모의논리서</h1>
-<p class="small">문서 버전: v3.6 (ADR-065~067 기본값 전환 반영) · 대상 코드: <code>v3</code> 브랜치 ·
+<p class="small">문서 버전: <b>v3.7</b> (ADR-065~072 기본값 전환 반영 · 계산식 한글 표기) · 대상 코드: <code>v3</code> 브랜치 ·
 배치 6종(FULL 3 + LEGACY_HIRES 3) · 충실도 <b>iads-c2 단일</b>(legacy 배치·compat 충실도는 ADR-061로 폐기)</p>
 
 <div class="box warn"><span class="bt">디스클레이머</span>
@@ -411,9 +411,10 @@ C2 모델</b>(M/M/c/K 처리·링크 지연·승인 계선)과 결합한 것, �
 <h2 id="s5">5. 지표 계산 방식 — [분석] 탭 단계 순서</h2>
 <p>아래 순서는 <b>[분석] 탭이 화면에 그리는 파이프라인 순서와 동일</b>하다(① 탐지 → ② 추적생성 →
 ③④⑤ 식별·위협평가·WTA → ⑥⑦ 결심·교전협조 → ⑧ 교전·요격명령 → ⑨ BDA·재교전 → ⑨+ 결과 종합).
-각 단계의 <b>엔진 함수</b>와 지표를 <b>실제로 어떻게 계산하는지 한글 문장으로</b> 적었다 —
-수식 기호 대신 "무엇을 무엇으로 나눈다"로 읽도록 썼다. 코드에 있는 <b>필드 이름은 원문 그대로</b>
-남겼으니 소스와 대조할 때 그 이름으로 찾으면 된다. 모든 값은
+각 단계의 <b>엔진 함수</b>와 지표의 <b>계산식</b>을 함께 적었다. 계산식은 <b>수식 형태를 유지하되
+변수·함수 이름을 한글로</b> 썼다(예: <code>격추율 = 격추 수 ÷ 생성 수</code>) — 기호를 몰라도 식의
+구조가 그대로 읽힌다. 지표 이름 옆의 <b>코드 필드명은 원문 그대로</b> 남겼으니 소스와 대조할 때는
+그 이름으로 찾으면 된다. 모든 값은
 <code>result.global</code>·<code>result.nodes</code>·<code>result.links</code>에서 나오며,
 코드 위치는 <code>js/engine/sim-engine.js</code> 결과 조립부와
 <code>js/ui/panels.js</code>(표시 계산)다.</p>
@@ -427,16 +428,15 @@ NATO COBP/SAS-026 분류(<code>ENV-MOM-COBP-01</code>)를 따른다.</div>
 <p class="small">엔진: <code>_beginDetect</code> · <code>_onDetect</code> · IADS 커널
 <code>js/model/iads/sensor-model.js</code></p>
 <table>
-<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">어떻게 계산하나 (한글 서술)</th><th>해석 주의</th></tr></thead>
+<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">계산식 (한글 표기)</th><th>해석 주의</th></tr></thead>
 <tbody>
 <tr><td>탐지율 <code>detectRate</code></td><td>MoP</td>
-<td><b>탐지된 위협 수를 생성된 위협 수로 나눈다.</b><br>
-스캔 한 번의 탐지 확률은 <b>기본 탐지확률에 재밍 감쇠와 ECM 감쇠를 차례로 곱한 값</b>이다.
-기본 탐지확률은 레이더 방정식의 4승 법칙을 따른다 — <b>기준거리를 실제거리로 나눈 값을 네 제곱하고,
-표적 RCS를 기준 RCS로 나눈 값을 곱한 뒤, 그 제곱근에 0.95를 곱한다</b>(최대 0.99로 제한).
-거리가 2배 멀어지면 신호는 16분의 1이 된다는 뜻이다.<br>
-여러 번 스캔한 누적 탐지는 <b>"한 번도 못 볼 확률"을 스캔 횟수만큼 곱한 뒤 1에서 뺀다</b>.
-스캔 주기는 0.2초이므로 스캔 횟수는 경과시간을 0.2초로 나눈 값이다.</td>
+<td><code><b>탐지율 = 탐지된 위협 수 ÷ 생성된 위협 수</b></code><br><br>
+<code>신호대잡음비 = (기준탐지거리 ÷ 실제거리)⁴ × (표적RCS ÷ 기준RCS)</code><br>
+<code>기본탐지확률 = min(0.99, √신호대잡음비 × 0.95)</code><br>
+<code>스캔1회 탐지확률 = 기본탐지확률 × (1 − 재밍강도 × 피재밍계수) × (1 − ECM계수)</code><br>
+<code>누적탐지확률 = 1 − (1 − 스캔1회 탐지확률)<sup>(경과시간 ÷ 스캔주기)</sup></code><br>
+<code>스캔주기 = 0.2초</code></td>
 <td>체공 위협은 시행횟수 N=dwell/스캔이 커서 <b>양 모드 모두 ~1.0으로 포화</b>된다.
 융합 효과는 "율"이 아니라 <b>탐지 시점 단축</b>으로 나타나며, 단일 센서만 커버하는 위협은 개선이 없다.</td></tr>
 </tbody>
@@ -445,23 +445,24 @@ NATO COBP/SAS-026 분류(<code>ENV-MOM-COBP-01</code>)를 따른다.</div>
 <h3>② 추적생성 (Track) — 보고 링크</h3>
 <p class="small">엔진: <code>_onDetected</code> · <code>_iadsReportBundle</code>(최속 보고경로 선택)</p>
 <table>
-<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">어떻게 계산하나 (한글 서술)</th><th>해석 주의</th></tr></thead>
+<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">계산식 (한글 표기)</th><th>해석 주의</th></tr></thead>
 <tbody>
 <tr><td>report 링크 전달지연</td><td>MoP</td>
-<td><b>각 링크의 대표 지연에 그 링크가 실제 전달한 건수를 곱해 모두 더하고, 전체 전달 건수로
-나눈다</b>(보고 종류 링크만 집계). 즉 <b>많이 쓰인 링크의 지연에 더 큰 가중치</b>가 붙는다.<br>
-센서에서 C2까지의 지연은 <b>그 센서의 보고 주기</b>가 결정한다 — 그린파인 16초 · FPS-117 8초 ·
-TPS-880K 4초 · 포대 MFR 1초.<br>
-ADR-069 기본 ON에서는 이 주기가 <b>고정 지연이 아니라 톱니</b>로 소비된다:
-<b>현재 시각을 주기로 나눈 나머지</b>가 그 순간의 그림 나이다(0에서 주기 사이를 오가며, 시간평균은
-주기의 절반).</td>
+<td><code><b>보고지연 평균 = 합계(링크 대표지연 × 링크 전달건수) ÷ 합계(링크 전달건수)</b></code>
+&nbsp;(종류 = 보고 인 링크만)<br><br>
+<code>센서→C2 지연 = 그 센서의 보고주기</code><br>
+<code>보고주기: 그린파인 = 16초 · FPS-117 = 8초 · TPS-880K = 4초 · 포대MFR = 1초</code><br><br>
+톱니 신선도(ADR-069 기본 ON):<br>
+<code><b>그림나이(주기, 현재시각) = 현재시각 − ⌊현재시각 ÷ 주기⌋ × 주기</b></code><br>
+<code>치역 = [0, 주기) · 시간평균 = 주기 ÷ 2</code></td>
 <td>샘플된 실현 지연이 아니라 <b>대표값 가중평균</b>이다. 현재 링크 분포가 모두 대칭이라
 평균=대표값이지만, 비대칭 분포를 도입하면 샘플 합 집계로 교체해야 한다.</td></tr>
 <tr><td>항적 품질 <code>trackQuality</code></td><td>MoP</td>
-<td>상관 결과를 <b>정상·오상관·실패·신선도상실·식별완료 다섯 가지로 세어 놓은 건수</b>다.
-상관이 성공할 확률은 <b>센서 등급별로 다르게 추첨</b>한다(포대 MFR급이 조기경보급보다 오상관·실패
-확률이 높다 — 좁은 빔으로 빠르게 보기 때문). 실패한 항적은 <b>5초마다 다시 추첨</b>하고,
-정상·오상관 판정은 한 번 정해지면 유지한다.</td>
+<td><code><b>항적품질 = {정상, 오상관, 실패, 신선도상실, 식별완료} 각 건수</b></code><br><br>
+<code>상관실패확률 = 센서등급별 추첨값</code><br>
+<code>&nbsp;조기경보급: 실패 2% · 오상관 1%</code><br>
+<code>&nbsp;교전MFR급: 실패 10% · 오상관 5%</code><br>
+<code>실패 항적: 5초마다 재추첨</code> · <code>정상·오상관 판정: 영구 유지</code></td>
 <td>오상관(mis)은 정체성 오인이며 물리 궤적 예측 자체는 유효하다.</td></tr>
 </tbody>
 </table>
@@ -470,24 +471,24 @@ ADR-069 기본 ON에서는 이 주기가 <b>고정 지연이 아니라 톱니</b
 <p class="small">엔진: <code>_onC2Arrive</code> · <code>_afterC2</code>(To-Be는 <code>_onFusionArrive</code>) ·
 사수 선정 <code>_iadsEvaluate</code> · <code>_iadsDecide</code></p>
 <table>
-<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">어떻게 계산하나 (한글 서술)</th><th>해석 주의</th></tr></thead>
+<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">계산식 (한글 표기)</th><th>해석 주의</th></tr></thead>
 <tbody>
 <tr><td>C2 항적처리 최대 ρ<br><code>rhoByKind.iads_track</code></td><td>MoP</td>
-<td>노드마다 <b>서버가 실제로 일한 시간을 "관측 시간 × 서버 수"로 나눈다</b> — 즉 가용 서버·시간을
-얼마나 채웠는지의 비율이다. 이를 <b>처리 종류별로 따로 집계</b>한 뒤, 전체 C2 노드 중 <b>가장 큰
-값</b>을 취한다.</td>
+<td><code><b>이용률(노드, 종류) = 서비스중 시간 ÷ (관측 시간 × 서버 수)</b></code><br>
+<code><b>C2 최대 이용률 = max(모든 C2 노드의 이용률(노드, 항적처리))</b></code><br><br>
+<code>판정: 이용률 ≥ 0.9 → 병목 · 이용률 ≥ 1 → 포화</code></td>
 <td>C2 서버풀은 항적처리(<code>iads_track</code>)와 승인처리(<code>approval</code>)를 <b>공유</b>한다.
 그래서 kind별로 분해해야 각 카드가 자기 단계 병목만 본다. ρ≥0.9 병목 · ρ≥1 포화.</td></tr>
 <tr><td>C2 항적처리 최대 대기<br><code>WqByKind.iads_track</code></td><td>MoP</td>
-<td><b>대기한 시간을 모두 더해 대기한 건수로 나눈다</b>(처리 종류별). 전체 C2 노드 중 가장 큰
-값을 취한다.</td>
+<td><code><b>대기시간(노드, 종류) = 합계(대기시간) ÷ 대기 건수</b></code><br>
+<code><b>C2 최대 대기 = max(모든 C2 노드의 대기시간(노드, 항적처리))</b></code></td>
 <td>M/M/c/K 대기행렬의 실측 Wq이며 이론값이 아니다.</td></tr>
 <tr><td>포화 드롭 <code>dropsByKind</code></td><td>MoP</td>
-<td><b>대기열이 정해진 용량을 넘어 버려진 메시지를 센 건수</b>다(처리 종류별).</td>
+<td><code><b>포화드롭(노드, 종류) = 대기열 길이 &gt; 용량 K 일 때 버려진 메시지 건수</b></code></td>
 <td>드롭은 위협 상실로 직결되지 않는다 — 재시도 경로가 있다.</td></tr>
 <tr><td>도출 병목 수 <code>bottlenecks.length</code></td><td>MoCE</td>
-<td><b>이용률이 0.9 이상인 노드 · 포화된 링크 · 책임공백을 관측에서 골라낸 목록의 길이</b>다.
-목록에 무엇이 들어갈지는 미리 정해두지 않고 실행 결과에서 뽑는다.</td>
+<td><code><b>병목수 = 개수( {노드 : 이용률 ≥ 0.9} ∪ {링크 : 포화} ∪ {책임공백} )</b></code><br><br>
+목록 원소는 하드코딩이 아니라 실행 관측에서 도출된다.</td>
 <td>하드코딩이 아니라 [부하 × 토폴로지 × 용량] 관측의 결과다. ⚠️ <b>범주형 개수</b>라
 부하 단조성이 보장되지 않는다 — SC2는 위협 37개 중 1건의 gap으로 목록이 채워졌다 사라지기도 한다.</td></tr>
 </tbody>
@@ -497,20 +498,21 @@ ADR-069 기본 ON에서는 이 주기가 <b>고정 지연이 아니라 톱니</b
 <p class="small">엔진: <code>_iadsDecide</code> · <code>_iadsApprovalGate</code>(ADR-058) ·
 <code>_iadsSharedLocalEngagement</code>(ADR-056) · <code>js/model/iads/c2-policy.js</code></p>
 <table>
-<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">어떻게 계산하나 (한글 서술)</th><th>해석 주의</th></tr></thead>
+<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">계산식 (한글 표기)</th><th>해석 주의</th></tr></thead>
 <tbody>
 <tr><td>결심 지연<br><code>meanDecisionDelaySec</code></td><td>MoP</td>
-<td>위협마다 <b>최초 교전명령이 난 시각에서 탐지된 시각을 뺀 값</b>을 모두 더해,
-<b>교전에 이른 위협 수</b>로 나눈다.</td>
+<td><code><b>결심지연 = 합계(최초 교전명령 시각 − 탐지 시각) ÷ 교전에 이른 위협 수</b></code></td>
 <td><b>교전에 이른 위협만</b>의 조건부 평균이다(생존자 편향). 교전 자체가 성립하지 않은 위협은
 표본에 없으므로, 교전 성립률이 크게 다른 두 상태를 이 값만으로 비교하면 안 된다.</td></tr>
 <tr><td>그중 협조 홉 지연<br><code>meanCoordDelaySec</code></td><td>MoP</td>
-<td>위협마다 쌓아둔 <b>협조 소요시간을 모두 더해, 결심 지연과 똑같은 분모(교전에 이른 위협 수)로
-나눈다</b> — 분모가 같으므로 <b>결심 지연에서 이 값을 그대로 뺄 수 있다</b>.<br>
-위협별 누적 방법: 책임 C2에서 승인권자까지 <b>협조 링크만 밟는 가장 빠른 경로를 찾고(다익스트라),
-그 경로에 놓인 링크 지연을 전부 더한다</b>. 승인이 하급으로 위임되거나 감독하 자동교전으로
-처리되면 <b>협조 단계를 건너뛰므로 0이 쌓인다</b>.<br>
-As-Is 육군↔공군 협조는 <b>음성 절차로 대표 20초</b>(10~30초 사이 균등 추첨)다.</td>
+<td><code><b>협조홉 지연 = 합계(위협별 협조소요) ÷ 교전에 이른 위협 수</b></code>
+&nbsp;← 결심지연과 <b>분모 동일</b>(그대로 뺄 수 있다)<br><br>
+<code>협조경로 = 최소지연경로(책임C2 → 승인권자, 협조 링크만)</code> &nbsp;(다익스트라)<br>
+<code><b>위협별 협조소요 = 합계(협조경로에 놓인 각 링크의 지연)</b></code><br><br>
+<code>승인위임 또는 감독하 자동교전인 경우 → 위협별 협조소요 = 0</code><br>
+<code>As-Is 육↔공 협조 지연 ~ 균등분포(10초, 30초) · 대표 20초</code><br><br>
+<code><b>잔여 = 결심지연 − 협조홉 지연</b></code>
+&nbsp;= 항적·식별 지연 + C2 처리 + 승인 서비스 + 승인 대기</td>
 <td>⚠️ <b>전선 성능이 아니라 절차 지연</b>이다(음성/VTC 왕복 — 교전의사 선언·책임구역 확인).
 링크를 광케이블로 바꿔도 줄지 않는다. 승인 계선을 끄면 이 값은 0이 아니라 <b>"미측정"</b>으로 표시된다.
 <br><b>잔여 = 결심지연 − 협조 홉</b> 은 항적·식별 지연 + C2 처리 + 승인 서비스 + 승인 대기의 합이다.
@@ -518,35 +520,39 @@ As-Is 육군↔공군 협조는 <b>음성 절차로 대표 20초</b>(10~30초 �
 해결된다"는 함의를 반박한다. 다만 잔여 전체가 승인 대기인 것도 아니다: 승인 Wq만 떼면
 SC1 1.5초 · SC2 9.8초 · <b>SC3 45.1초</b>로, 포화 시나리오에서만 승인권자 대기행렬이 주된 몫이 된다.</td></tr>
 <tr><td>승인 노드 최대 ρ·Wq<br><code>rhoByKind.approval</code></td><td>MoP</td>
-<td>③④⑤의 이용률·대기시간과 <b>계산 방법이 완전히 같고, 집계 대상만 승인 처리</b>로 바꾼 것이다.</td>
+<td><code><b>승인 최대 이용률 = max(모든 C2 노드의 이용률(노드, 승인처리))</b></code><br>
+<code><b>승인 최대 대기 = max(모든 C2 노드의 대기시간(노드, 승인처리))</b></code><br><br>
+③④⑤와 <b>식은 동일</b>하고 <code>종류</code> 인자만 <code>승인처리</code>로 바뀐다.</td>
 <td>같은 C2 서버풀을 항적처리와 공유하므로 항적 ρ와 합산하면 안 된다.</td></tr>
 <tr><td>항적융합<br><code>coordination.fusedTracks</code></td><td>MoP</td>
-<td>군단 방공작전통제소가 <b>MCRC에서 받은 항적과 자기 국지 레이더 항적을 같은 위협으로 묶어낸
-건수</b>를 센다.</td>
+<td><code><b>항적융합 = 개수( {위협 : MCRC 유래 항적 ∧ 자체 국지 항적이 동일 위협으로 상관됨} )</b></code></td>
 <td>As-Is 군단 AOC의 C2A 구조 관측 — To-Be의 IFCN 융합과는 다른 층이다.</td></tr>
 <tr><td>교전현황 드롭<br><code>statusSharing</code></td><td>MoP</td>
-<td><b>발송·도착·폐기·신선도상실 건수와 평균 대기시간, 그리고 이 정보로 실제 중복을 해소한
-건수</b>를 각각 센다.<br>
-As-Is 채널은 <b>음성/VTC로 대표 180초</b>(90~270초 삼각분포, 최빈 180초)이며,
-<b>동시에 한 건만 처리(서버 1개)하고 대기열은 4건까지</b> 받으며, <b>300초가 지난 정보는 폐기</b>한다.</td>
+<td><code><b>교전현황 = {발송, 도착, 폐기, 신선도상실, 평균대기, 중복해소} 각 건수·초</b></code><br><br>
+As-Is 채널(음성/VTC):<br>
+<code>지연 ~ 삼각분포(90초, 180초, 270초)</code>&nbsp;(최소, 최빈, 최대)<br>
+<code>서버 수 = 1 · 대기열 용량 = 4 · 신선도 한계 = 300초</code><br>
+<code>도착 조건: 대기열 길이 ≤ 4 ∧ (도착시각 − 발송시각) ≤ 300초</code><br><br>
+To-Be 채널: <code>지연 = 1초</code>(IFCN)</td>
 <td><b>As-Is 제한적 공유의 실체</b>: SC3 실측에서 발송 143건 중 도착 13건(9%)·용량초과 폐기
 122건(85%)·평균 대기 39초 → 중복해소 <b>0건</b>. To-Be는 IFCN 1초로 폐기 0·중복해소 44건.</td></tr>
 <tr><td>중복교전 위험<br>(정적) <code>overlapHeat</code></td><td>MoCE</td>
-<td>축선마다 <b>위협 도착률에 "위험한 C2 쌍의 개수"를 곱해 모두 더한다</b>.<br>
-어떤 C2 두 곳이 <b>위험한 쌍</b>인지는 이렇게 판정한다 — 둘 사이의 <b>가장 빠른 협조 경로 지연이
-그 위협의 체공시간에 일정 비율을 곱한 값보다 크면</b>, 협조가 끝나기 전에 위협이 지나가 버리므로
-서로 모르는 채 각자 쏠 위험이 있다고 본다.</td>
+<td><code><b>중복위험 = 합계(축선별: 위협 도착률 × 위험쌍 개수)</b></code><br><br>
+<code>협조지연(C2쌍) = 최소지연경로(C2ᵃ → C2ᵇ, 협조 링크만)의 지연 합</code>&nbsp;(다익스트라)<br>
+<code><b>위험쌍 = { C2쌍 : 협조지연(C2쌍) ≥ 체공시간 × 위험임계비율 }</b></code><br><br>
+뜻: 협조가 끝나기 전에 위협이 지나가면 서로 모르는 채 각자 쏜다.</td>
 <td>⚠️ <b>"협조 지연발 중복 위험"만</b> 재는 지표이며 중복교전 예측치가 아니다. 실측상 링크가
 빨라지면 이 지표는 <b>내려가는데 DES 중복교전은 올라간다</b>(동시결심 경합) — 두 값을 함께 읽어야 한다.</td></tr>
 <tr><td>중복교전 발생<br>(동적) <code>coordination.duplicates</code></td><td>MoCE</td>
-<td>같은 위협 하나에 <b>서로 다른 C2 축이 둘 이상 각각 발사를 확정한 건수</b>를 센다.
-판정 시점은 발사 확정 순간이다(발사 의도만 있었던 것은 세지 않는다).</td>
+<td><code><b>중복교전 = 개수( {위협 : 발사확정한 서로 다른 C2 축 수 ≥ 2} )</b></code><br><br>
+<code>판정 시점 = 발사확정(fire_commit) 순간</code>&nbsp;(발사 의도만 있으면 세지 않는다)</td>
 <td>이게 실제 관측량이다. To-Be가 As-Is보다 많으면 교전상태 공유 결함을 의심해야 한다(ADR-056).</td></tr>
 <tr><td>요격탄 이중 소모<br><code>duplicateInterceptM</code></td><td>MoFE</td>
-<td><b>중복으로 쏜 요격탄의 단가를 모두 더한다</b>(백만 달러 단위).</td>
+<td><code><b>중복 요격탄가 = 합계(중복 발사에 쓰인 요격탄 단가)</b></code>&nbsp;(단위: 백만 달러)</td>
 <td>중복의 <b>비용 환산</b>. 실측상 중복은 대부분 저가 요격탄이 낸다.</td></tr>
 <tr><td>분권 전환<br><code>delegation.count</code></td><td>MoCE</td>
-<td><b>승인 대기 부하가 정해진 배수를 넘어서, 승인 권한이 하급 제대로 넘어간 횟수</b>를 센다.</td>
+<td><code><b>분권전환 = 개수( {시점 : 승인 대기건수 &gt; 서버 수 × 위임임계배수} )</b></code><br><br>
+<code>As-Is 위임임계배수 &gt; To-Be 위임임계배수(=1)</code> → As-Is 전환이 늦다.</td>
 <td>부하의 함수다. As-Is는 전환이 <b>늦고</b> To-Be는 위임 임계 ×1 + automation으로 즉시 흡수한다.</td></tr>
 </tbody>
 </table>
@@ -555,25 +561,30 @@ As-Is 채널은 <b>음성/VTC로 대표 180초</b>(90~270초 삼각분포, 최�
 <p class="small">엔진: <code>_iadsFireControlState</code>(화력통제 게이트) ·
 <code>_iadsEvaluate</code>(PIP·pk) · <code>_onIadsFire</code></p>
 <table>
-<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">어떻게 계산하나 (한글 서술)</th><th>해석 주의</th></tr></thead>
+<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">계산식 (한글 표기)</th><th>해석 주의</th></tr></thead>
 <tbody>
 <tr><td>무기 최대 관측 ρ</td><td>MoP</td>
-<td>사수마다 <b>지금 동시에 교전 중인 표적 수를 그 사수가 동시에 다룰 수 있는 최대 수로 나누고</b>,
-전체 사수 중 가장 큰 값을 취한다.</td>
+<td><code><b>무기 이용률(사수) = 동시교전 점유 수 ÷ 동시교전 최대 수</b></code><br>
+<code><b>무기 최대 이용률 = max(모든 사수의 무기 이용률)</b></code></td>
 <td>사수에는 <b>대기행렬이 없다</b> — 슬롯이 차면 대기 없이 즉시 차단·재시도다.
 그래서 사수 Wq 지표는 존재하지 않는다(ADR-062로 제거).</td></tr>
 <tr><td>command 링크 전달지연</td><td>MoP</td>
-<td>명령 종류 링크만 골라, <b>②와 같은 방식(대표 지연 × 전달 건수를 더해 전체 건수로 나눔)</b>으로
-평균을 낸다. 사격통제소에서 발사대까지는 <b>양 모드 모두 1초</b>다.</td>
+<td><code><b>명령지연 평균 = 합계(링크 대표지연 × 링크 전달건수) ÷ 합계(링크 전달건수)</b></code>
+&nbsp;(종류 = 명령 인 링크만)<br><br>
+<code>사격통제소 → 발사대 지연 = 1초</code>&nbsp;(양 모드 동일)</td>
 <td>하향 명령은 사건기반 즉시발송 + 중계 C2 처리시간이다.</td></tr>
 <tr><td>동시교전 슬롯 차단<br><code>capacityBlocks</code></td><td>MoP</td>
-<td><b>교전 채널이 가득 차서 일단 막혔다가 다시 시도한 건수</b>를 센다.</td>
+<td><code><b>슬롯차단 = 개수( {발사시도 : 동시교전 점유 수 = 동시교전 최대 수} )</b></code><br><br>
+차단된 시도는 상실이 아니라 <b>재시도</b>된다.</td>
 <td>⚠️ 영구 상실이 아니다. 라벨을 "drops"로 읽으면 손실로 오해한다(ADR-062로 라벨 정정).</td></tr>
 <tr><td>화력통제 게이트</td><td>MoP</td>
-<td>발사 자격은 <b>자기 포대 레이더가 그 표적을 화력통제 등급으로 잡고 있고, 그 그림이 3초 이내로
-신선할 때</b> 주어진다.<br>
-원격 교전(ADR-070)을 켜면 <b>같은 킬웹에 속한 다른 포대의 레이더 그림</b>으로도 자격이 생긴다.
-단 <b>탐지만 하는 조기경보 레이더는 자격을 주지 못한다</b> — 유도에 필요한 정확도와 갱신율이 없다.</td>
+<td><code><b>발사자격(사수, 위협) = 자기자격 ∨ 원격자격</b></code><br><br>
+<code>자기자격 = (자기MFR 항적 상태 = 화력통제) ∧ (항적 나이 ≤ 3초)</code><br><br>
+<code>원격자격 = 원격교전 ON ∧ 모드 = To-Be ∧ ∃센서 :</code><br>
+<code>&nbsp;&nbsp;(항적 상태 = 화력통제) ∧ (항적 나이 ≤ 3초)</code><br>
+<code>&nbsp;&nbsp;∧ (센서가 화력통제 능력 보유)</code> ← 탐지 전용 레이더 배제<br>
+<code>&nbsp;&nbsp;∧ (센서 소속 웹 = 사수 소속 웹)</code> ← 웹 파티션<br><br>
+<code>웹(노드) = USFK이면 usfk · 국지방공이면 local_ad · 그 외 upper</code></td>
 <td>광역 감시 레이더는 <b>큐잉(cueing)만</b> 한다 — 유도에 필요한 정확도가 없다.
 SC2 무인기 누수의 83~84%가 이 게이트에서 나온다(<code>no_fire_control</code>).</td></tr>
 </tbody>
@@ -582,38 +593,41 @@ SC2 무인기 누수의 83~84%가 이 게이트에서 나온다(<code>no_fire_co
 <h3>⑨ BDA → 재교전 (폐루프)</h3>
 <p class="small">엔진: <code>_onEngageEnd</code> · <code>js/model/iads/engagement-model.js</code></p>
 <table>
-<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">어떻게 계산하나 (한글 서술)</th><th>해석 주의</th></tr></thead>
+<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">계산식 (한글 표기)</th><th>해석 주의</th></tr></thead>
 <tbody>
 <tr><td>격추율 <code>killRate</code></td><td>MoFE</td>
-<td><b>격추한 수를 "생성된 수에서 관측이 잘린 수를 뺀 값"으로 나눈다</b> — 결과가 확정된 위협만
-분모에 넣는 방식이다.<br>
-보고서와 측정 하네스는 <b>생성된 수 전체를 분모로 쓰는 값</b>을 함께 쓴다(격추 수 ÷ 생성 수).</td>
+<td><code>절단 수 = 생성 수 − 격추 수 − 누수 수</code>&nbsp;(관측창에 결과가 안 잡힌 몫)<br><br>
+<code><b>격추율(해결분 기준) = 격추 수 ÷ (생성 수 − 절단 수)</b></code><br>
+<code><b>격추율(전체생성 기준) = 격추 수 ÷ 생성 수</b></code>&nbsp;← 보고서·하네스가 쓰는 분모<br><br>
+<code>절단률 = 절단 수 ÷ 생성 수</code>&nbsp;← <b>항상 병기</b></td>
 <td><code>censoredRaw = spawned − killed − leaked</code>(관측창 절단). 절단 보정
 (<code>censorFix</code>, 기본 ON)이 분모에서 제외한다 — 제외하지 않으면 관측이 잘린 위협이
 "생존"으로 계상되어 As-Is 누수율이 과소평가된다. <b>절단률을 항상 병기</b>한다.</td></tr>
 <tr><td>평균 격추시간<br><code>meanTimeToKillSec</code></td><td>MoP</td>
-<td><b>격추된 위협마다 "격추 시각 − 생성 시각"을 더해 격추 수로 나눈다.</b></td>
+<td><code><b>평균 격추시간 = 합계(격추 시각 − 생성 시각) ÷ 격추 수</b></code></td>
 <td><b>격추 성공분만</b>의 조건부 평균(생존자 편향). 표본 수
 <code>meanTimeToKillN</code>을 함께 노출해 이를 드러낸다.</td></tr>
 <tr><td>교전당 발사수<br><code>shotsPerEngagement</code></td><td>MoP</td>
-<td><b>발사한 요격탄 수를 교전에 이른 위협 수로 나눈다.</b> 한 번 교전에 최대 2발까지 연속 발사하고,
-실패하면 재교전할 수 있다.</td>
+<td><code><b>교전당 발사수 = 발사한 요격탄 수 ÷ 교전에 이른 위협 수</b></code><br><br>
+<code>1회 교전 발사 수 ≤ 2</code>(연속발사) · 실패 시 재교전 가능</td>
 <td>중복 사격이 있으면 커진다 — ADR-056 ON에서 1.43→1.17로 내려간다.</td></tr>
 <tr><td>방어효율<br><code>defenseEfficiency</code></td><td>MoFE</td>
-<td><b>막아낸 위협의 가치 합을 전체 위협의 가치 합으로 나눈다.</b></td>
+<td><code><b>방어효율 = 합계(막아낸 위협 가치) ÷ 합계(전체 위협 가치)</b></code></td>
 <td>격추율의 <b>가치 가중</b> 버전. 고가 위협을 막았는지를 본다.</td></tr>
 <tr><td>비용교환비<br><code>exchangeSat</code></td><td>MoFE</td>
-<td><b>쓴 요격탄 금액을 "격추에 성공한" 위협의 가치로 나눈다.</b></td>
+<td><code><b>비용교환비 = 합계(요격탄 소모액) ÷ 합계(격추한 저가위협 가치)</b></code><br><br>
+분모가 <b>격추 성공분</b>이라는 점이 함정의 원인이다(해석 주의 참조).</td>
 <td>⚠️ <b>알려진 함정</b>: 못 잡으면 분모가 줄어 값이 <b>커진다</b>. 방어 실패가 "비싸게 막았다"로
 보이므로 <b>반드시 격추율·방어효율과 함께</b> 읽는다. 1 초과 = 저가 위협에 고가 요격탄.</td></tr>
 <tr><td>고가유도탄 보존율<br><code>highValuePreservation</code></td><td>MoFE</td>
-<td><b>고가 요격탄(단가 5백만 달러 이상) 소모액을 전체 소모액으로 나눈 뒤, 1에서 뺀다</b> —
-즉 전체 지출 가운데 고가가 아닌 몫이다.</td>
+<td><code><b>고가유도탄 보존율 = 1 − 합계(고가 요격탄 소모액) ÷ 합계(전체 요격탄 소모액)</b></code><br><br>
+<code>고가 요격탄 = 단가 ≥ 5백만 달러</code></td>
 <td>⚠️ <b>비율이므로 분모 효과에 취약</b>: 저가 소모가 크게 줄면 절대 고가 소모가 줄어도
 비율은 <b>떨어진다</b>. 실측 사례 — ADR-056 ON에서 전체 −52M·고가 −11.6M인데도 0.36→0.28.
 절대량과 함께 보지 않으면 방향을 거꾸로 읽는다.</td></tr>
 <tr><td>위협등급 대비 단가<br><code>interceptPerThreatValue</code></td><td>MoFE</td>
-<td><b>쓴 요격탄 금액을 "교전한" 위협의 가치로 나눈다</b> — 격추 성공 여부를 따지지 않는다.</td>
+<td><code><b>위협등급 대비 단가 = 합계(요격탄 소모액) ÷ 합계(교전한 위협 가치)</b></code><br><br>
+분모가 <b>교전분</b>(격추 무관)이라 비용교환비의 분모 함정을 피한다.</td>
 <td>exchangeSat의 분모 함정을 피한 대조 지표다.</td></tr>
 </tbody>
 </table>
@@ -622,21 +636,21 @@ SC2 무인기 누수의 83~84%가 이 게이트에서 나온다(<code>no_fire_co
 <p class="small">엔진: <code>_results</code> · 실패 분류 <code>_terminalIadsFailure</code> ·
 <code>KJ.leakTaxonomy</code></p>
 <table>
-<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">어떻게 계산하나 (한글 서술)</th><th>해석 주의</th></tr></thead>
+<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">계산식 (한글 표기)</th><th>해석 주의</th></tr></thead>
 <tbody>
 <tr><td>요격 실패율 <code>leakRate</code></td><td>MoFE</td>
-<td><b>누수된 수를 "생성된 수에서 관측이 잘린 수를 뺀 값"으로 나눈다</b> — 격추율과 같은 분모 규약이다.</td>
+<td><code><b>요격 실패율 = 누수 수 ÷ (생성 수 − 절단 수)</b></code>&nbsp;← 격추율과 동일 분모 규약</td>
 <td>격추율과 같은 분모 규약을 쓴다.</td></tr>
 <tr><td>누수 사유 <code>leakReasons</code></td><td>MoCE</td>
-<td>위협마다 <b>최종 주원인 하나</b>를 정해 사유별로 센다. 주원인은 <b>반사실 기준</b>으로 고른다 —
-"무엇이 있었으면 이 위협을 막았을까"를 묻고, 그 하나를 원인으로 삼는다(단계 이름이 아니라
-<b>해결 수단</b> 기준이다).</td>
+<td><code><b>누수사유[사유] = 개수( {위협 : 최종 주원인(위협) = 사유} )</b></code><br><br>
+<code>최종 주원인(위협) = 반사실 판정</code> — "무엇이 있었으면 막았을까"의 답 <b>하나</b><br>
+분류 축은 단계 이름이 아니라 <b>해결 수단</b>이다.</td>
 <td>단계명이 아니라 해결수단 기준이다. G6 ②의 직접 증거 —
 SC3 As-Is는 C2 원인 77%(<code>timeout:c2</code> 66% + <code>window_lost_due_to_c2</code> 11%),
 To-Be는 42%로 줄고 무기체계 원인이 46%로 늘어난다.</td></tr>
 <tr><td>구조적 실패 합<br><code>structuralPrimary</code></td><td>MoCE</td>
-<td>누수 사유 가운데 <b>구조적 원인으로 분류된 것만 골라 건수를 더한다</b> —
-탐지공백 · 비융합 · 책임공백 · 포화 · 지연이 여기 속한다.</td>
+<td><code><b>구조적 실패 = 합계( 누수사유[사유] , 사유 ∈ 구조적 집합 )</b></code><br><br>
+<code>구조적 집합 = {탐지공백, 비융합, 책임공백, 포화, 지연}</code></td>
 <td>To-Be에서 감소해야 정상이다. ⚠️ 실측은 SC3에서 25.2→23.2(미분리)로
 <b>거의 줄지 않는다</b> — "통합이 책임공백을 없앤다"는 서사는 부분적으로만 성립한다.</td></tr>
 </tbody>
@@ -703,7 +717,7 @@ To-Be는 42%로 줄고 무기체계 원인이 46%로 늘어난다.</td></tr>
   <b>탄도탄·방사포·순항미사일·전투기만</b> 배정되고(무인기·헬기는 사거리 미달) <b>SC3에만</b>
   적용된다. 원주 등 그 밖의 표적은 여전히 없다. ADR-063 표적권역 산포는 권역 <i>내부</i>에서
   착탄점을 다양화할 뿐(반경 15km 개념) 새 권역을 만들지 않는다.</li>
-<li><b>구판 수치와의 단절(ADR-065·066·067)</b> — 실험보고서는 v3.6에서 <b>신 기본값으로 전면
+<li><b>구판 수치와의 단절(ADR-065~072)</b> — 실험보고서는 v3.8에서 <b>신 기본값으로 전면
   재측정</b>되어 이 문서와 기준이 일치한다. 다만 <b>v3.5 이전 판의 수치를 인용하면 안 된다</b> —
   기본값이 세 번 바뀌면서(승인·산포·남부 → 링크 의미론 → 보고 주기 대칭) SC3 격추율 개선폭이
   +27.3pp → +18.6pp로, 결심지연 개선폭이 −87.3초 → −45.8초로 이동했다. 구판 수치는 보고서

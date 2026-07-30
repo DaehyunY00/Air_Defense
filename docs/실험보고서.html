@@ -32,9 +32,9 @@
 <body>
 
 <h1>K-JAMDS 시뮬레이터 — As-Is ↔ To-Be 실험보고서</h1>
-<p class="small">보고서 버전: v3.7 (2026-07-29 <b>신 기본값 전면 재실측</b> · ADR-065~068 반영) ·
-코드: <code>v3</code> 브랜치 · 실험 원자료: <code>artifacts/experiment/r69-base-*.json</code>(기본값) ·
-<code>r69-*.json</code>(반사실) — 동일 명령으로 재현 가능</p>
+<p class="small">보고서 버전: <b>v3.8</b> (2026-07-30 <b>ADR-072 기본값 전면 재실측</b> · ADR-065~072 반영) ·
+코드: <code>v3</code> 브랜치 · 실험 원자료: <code>artifacts/experiment/r75-base-*.json</code>(기본값) ·
+<code>r75-*.json</code>·<code>r76-*.json</code>(반사실) — 동일 명령으로 재현 가능</p>
 
 <div class="box warn"><span class="bt">디스클레이머</span>
 모든 수치는 공개자료 기반 정책연구용 <b>개념값</b> 위에서 나온 시뮬레이션 결과다. 절대값은 전술
@@ -59,12 +59,12 @@
 모델링해 <b>현 체계를 실제보다 나쁘게 그리고 있었다</b>. 상세는 §5와 <code>docs/adr/ADR-066</code>.
 </div>
 
-<div class="box red"><span class="bt">🔴 기준선 재이동 공지 (2026-07-30 · ADR-069~072) — 본 판의 수치는 현 기본값이 아니다</span>
-본 판(v3.7) 측정 이후 기본값이 <b>두 개 더</b> 켜졌다: <b>보고 주기 톱니 신선도</b>(ADR-069) ·
+<div class="box red"><span class="bt">🔴 기준선 재이동 기록 (2026-07-30 · ADR-069~072) — v3.7 → v3.8</span>
+v3.7 측정 이후 기본값이 <b>두 개 더</b> 켜졌다: <b>보고 주기 톱니 신선도</b>(ADR-069) ·
 <b>자위권 사격</b>(ADR-071). 두 전환의 판정 근거와 편향 원장은
 <code>docs/adr/ADR-069·071·072</code>에 있다. 주 결과가 다시 이동했다:
 <table style="margin-top:10px">
-<thead><tr><th>SC3 지표</th><th class="num">본 판 v3.7 (ADR-068 기본값)</th><th class="num">현 기본값 (ADR-072)</th><th class="num">이동</th></tr></thead>
+<thead><tr><th>SC3 지표</th><th class="num">v3.7 (ADR-068 기본값)</th><th class="num">v3.8 = 본 판 (ADR-072 기본값)</th><th class="num">이동</th></tr></thead>
 <tbody>
 <tr><td>As-Is 격추율</td><td class="num">38.1%</td><td class="num"><b>41.7%</b></td><td class="num">+3.6pp</td></tr>
 <tr><td>To-Be 격추율</td><td class="num">56.8%</td><td class="num">57.0%</td><td class="num">+0.2pp</td></tr>
@@ -74,11 +74,11 @@
 </table>
 <b>또 As-Is만 움직였다</b> — 톱니는 느린 광역 센서(그린파인 16초·FPS-117 8초)에 의존하는 As-Is를
 더 빠르게 하고, 자위권 사격은 승인 대기가 있는 As-Is만 구제한다(To-Be 격추율은 57.0%로 불변).
-SC3 개선폭은 <b>+27.3pp(v3.5) → +18.7pp(v3.7) → +15.3pp(현재)</b> 로 단조 감소해 왔다.
-<br><br>⚠️ <b>인용 규칙</b>: 본 판 <b>§2·§3의 주 결과</b>와 위 표를 함께 읽고, <b>인용은 위 표(현
-기본값)를 쓰라.</b> 본 판 <b>§4~§7의 반사실 비교</b>(ADR-056~059 단독 효과·승인 계선 OFF·WTA·operator
-스윕)는 ADR-068 기본값 위에서 <b>내부적으로 일관되게</b> 측정된 것이므로 그 안에서는 유효하지만,
-위 표의 신 기본값 수치와 <b>섞어 인용하면 안 된다</b>. 반사실 셀 재측정 후 v3.8에서 통합한다.
+SC3 개선폭은 <b>+27.3pp(v3.5) → +18.7pp(v3.7) → +15.3pp(v3.8)</b> 로 단조 감소해 왔다.
+<br><br>✅ <b>v3.8에서 전 절이 통합되었다</b> — §2·§3의 주 결과뿐 아니라 <b>§4~§7.5의 반사실 표
+전부가 ADR-072 기본값 위에서 재측정</b>됐다(<code>r76-*</code> 15셀 · 각 30 seed, operator 스윕은
+10 seed). 위 표는 <b>v3.7 → v3.8 이동 기록</b>으로 남긴 것이며, 이제 <b>본문 수치를 그대로 인용해도
+된다</b>. 새로 추가된 §7.6(톱니·자위권)·§7.7(원격 교전)이 두 전환의 단독 효과를 담는다.
 </div>
 
 <div class="box red"><span class="bt">🔴 강건성 경고 — 저부하 임무 지표 분리는 강건하지 않다</span>
@@ -197,19 +197,24 @@ SC1·SC3 양쪽에서 어서션으로 고정). 비교의 한쪽 팔만 옮긴 �
 <table>
 <thead><tr><th>To-Be 요격탄 소모 (M$)</th><th class="num">SC1: OFF → 기본(ON)</th><th class="num">SC3: OFF → 기본(ON)</th></tr></thead>
 <tbody>
-<tr><td>전체</td><td class="num"><span class="sig">351.5 → 299.6 (−51.9)</span></td><td class="num"><span class="sig">921.6 → 856.2 (−65.4)</span></td></tr>
-<tr><td>└ 저가분</td><td class="num">124.8 → 84.5 (−40.3)</td><td class="num">537.2 → 471.9 (<b>−65.2</b>)</td></tr>
-<tr><td>└ 고가분 ($≥5M)</td><td class="num">226.7 → 215.1 (−11.6)</td><td class="num">384.4 → 384.3 (<b>−0.2</b>)</td></tr>
-<tr><td>고가보존율 <span class="small">(=1−고가/전체)</span></td><td class="num">0.36 → 0.28</td><td class="num">0.58 → 0.55</td></tr>
+<tr><td>전체</td><td class="num"><span class="sig">346.4 → 301.3 (−45.1)</span></td><td class="num"><span class="sig">921.3 → 859.3 (−62.0)</span></td></tr>
+<tr><td>└ 저가분</td><td class="num">127.4 → 85.5 (−41.9)</td><td class="num">537.3 → 475.3 (<b>−62.0</b>)</td></tr>
+<tr><td>└ 고가분 ($≥5M)</td><td class="num">218.9 → 215.7 (−3.2)</td><td class="num">384.0 → 384.0 (<b>±0.0</b>)</td></tr>
+<tr><td>중복분</td><td class="num">52.79 → <b>0.00</b></td><td class="num">87.35 → <b>0.20</b></td></tr>
+<tr><td>고가보존율 <span class="small">(=1−고가/전체)</span></td><td class="num">0.368 → <b>0.284</b></td><td class="num">0.583 → <b>0.553</b></td></tr>
 </tbody>
 </table>
 <div class="box warn"><span class="bt">⚠️ 고가보존율 하락은 악화가 아니다 — 지표 읽는 법</span>
-<code>highValuePreservation = 1 − 고가($≥5M)소모 / 전체소모</code>는 <b>비율</b>이다. 중복 사격은
+<code>고가유도탄 보존율 = 1 − 고가($≥5M) 소모액 ÷ 전체 소모액</code>은 <b>비율</b>이다. 중복 사격은
 대부분 <b>저가 요격탄</b>이었으므로 이를 제거하면 <b>분모(전체)가 분자(고가)보다 훨씬 크게 줄어
-비율이 떨어진다</b>. 절대량으로는 <b>아무것도 나빠지지 않는다</b>(고가분 SC1 −11.6 M$, SC3 −0.2 M$).
-<br>정직한 결론은 <b>"중복 제거의 절약은 거의 전부 저가 요격탄에서 나오며, KJADS 5-1이 겨냥하는
-고가 유도탄 보존에는 SC3에서 사실상 기여하지 않는다"</b>이다. 이 지표를 단독으로 인용하면
-방향을 거꾸로 읽게 된다.</div>
+비율이 떨어진다</b>. 절대량으로는 <b>아무것도 나빠지지 않는다</b> — 고가분은 SC1 −3.2 M$,
+<b>SC3는 384.0 → 384.0으로 소수 첫째 자리까지 완전히 동일</b>하다.
+<br><br>정직한 결론은 <b>"중복 제거의 절약은 SC3에서 100% 저가 요격탄에서 나오며(−62.0 M$ 전액),
+KJADS 5-1이 겨냥하는 고가 유도탄 보존에는 전혀 기여하지 않는다"</b>이다 — 저가분 감소액과 전체
+감소액이 <b>소수점까지 같다</b>. 이 지표를 단독으로 인용하면 방향을 거꾸로 읽는다.
+<br><br>⚠️ 같은 함정이 <b>ADR-070(§7.7)에서는 반대로 작동한다</b> — 거기서는 보존율이 0.20→0.01로
+떨어지면서 <b>고가 절대 소모도 32.0→284.8 M$로 8.9배 늘어난다</b>. 즉 비율 하락이 항상 허상은
+아니다. <b>비율과 절대량을 둘 다 확인해야</b> 어느 쪽인지 판별된다.</div>
 
 <h2 id="s5">5. ADR-057 — 링크 의미론 정본 정합 (기본 <b>ON</b>, <code>linkv2=0</code>으로 해제)</h2>
 <p>형제 저장소 IADS_codex(정본)의 ADR-014는 "센서→C2는 일률 지연이 아니라 <b>보고 주기</b>"로
@@ -441,7 +446,7 @@ To-Be WTA 경로가 비용항을 아예 소비하지 않을 가능성이 있다.
 이 기준선은 "개선 이전 대비"가 아니라 <b>"이관 후 회귀 없음"</b> 증명이라는 의미 약화를 함께
 기록한다. 도메인 RNG 완전 이관은 그 bit-exact 증명과 한 커밋에서 양립할 수 없어 의도적 보류.
 legacy 전용 회귀 16종은 폐기하고 대체 커버리지를 <code>tests/retired-legacy-suites.md</code>에 원장으로 남겼다.</p>
-<p class="small">⚠️ 지문 재기준화는 <b>다섯 번</b> 누적됐다(ADR-061 이관 → 065 → 066 → 067 → 068). 현재 지문의 의미는
+<p class="small">⚠️ 지문 재기준화는 <b>여섯 번</b> 누적됐다(ADR-061 이관 → 065 → 066 → 067 → 068 → 072). 현재 지문의 의미는
 "OFF == 도입 전"이 아니라 <b>"OFF == 현행 기준선"</b>(이후 회귀 방지선)이다. 구 지문은 git 이력에 있다.</p>
 
 <h2 id="s9">9. G6 — 결론 불변 4종 재산출 (신 기본값)</h2>

@@ -250,6 +250,12 @@
     // 엔진이 이미 최속 센서 경로를 고르므로(_iadsReportBundle) 융합 신선도는 링크 구조에서
     // 자연 발생하고, 일괄 1초는 이중 계상이다. 분기는 어댑터가 수행한다(변형 카탈로그 |rp).
     this.sensorReportParity = ff('sensorReportParity', true);
+    // ADR-069: 보고 주기 톱니 신선도 — IADS_codex `track-pool.reportingStaleness` 정합.
+    // codex는 flat 상수(LINEAR_AXIS_RELAY_DELAY 34s·KILLWEB_LINK_DELAY 1s)를 **폐기**하고
+    // "탐지자산이 주기 P마다 1회 보고 → C2가 보는 정보 나이는 [0,P) 톱니"로 대체했다.
+    // 우리는 P 고정(톱니 상한)으로 근사해 왔다 — 항상 최악을 보는 보수적 가정.
+    // ON이면 전역 동기 시계 톱니를 쓴다: staleness = t − floor(t/P)·P. RNG를 쓰지 않아 결정론 보존.
+    this.sawtoothFreshness = ff('sawtoothFreshness', false);
     this.targetSpreadKm = (typeof f.targetSpreadKm === 'number' && f.targetSpreadKm >= 0)
       ? f.targetSpreadKm : (KJ.THREAT_TARGET_SPREAD_KM || 0);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
@@ -266,6 +272,7 @@
     if (this.threatTargetDispersion) this.features.targetSpreadKm = this.targetSpreadKm;
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
+    if (this.sawtoothFreshness) this.features.sawtoothFreshness = true; // ADR-069 (OFF wire shape 보존)
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
@@ -968,8 +975,27 @@
     }
   };
 
+  /**
+   * ADR-069 — 보고 주기 톱니 신선도 (IADS_codex `reportingStaleness` 정합).
+   *
+   * 탐지자산이 주기 P마다 1회 상위 C2로 그림을 보고하면, C2가 보는 정보의 나이는
+   * simTime − 최근 보고시각으로 [0, P) 구간을 톱니로 변동한다(보고 시각은 전역 동기 시계
+   * t = 0, P, 2P, …). 평균 나이가 P → P/2로 줄어들지만 **양 모드에 같은 주기로 적용**되므로
+   * ADR-067의 대칭 원칙은 유지된다. RNG를 소비하지 않아 결정론이 보존된다.
+   */
+  Simulation.prototype._reportingStaleness = function (period) {
+    if (!(period > 0)) return 0; // 실시간/전속 (포대 자기 MFR)
+    var s = this.now - Math.floor(this.now / period) * period;
+    return s < 0 ? 0 : s;
+  };
+
   Simulation.prototype._linkDelay = function (comm) {
     var base = comm.delaySec;
+    // ADR-069: 보고 주기 링크(report-cycle)만 톱니로 해석한다. 데이터링크·음성 절차 지연은
+    // 주기 개념이 아니라 전송·왕복 시간이므로 대상이 아니다.
+    if (this.sawtoothFreshness && comm.type === 'report-cycle') {
+      return this._reportingStaleness(comm.delaySec);
+    }
     if (comm.dist) {
       if (comm.dist.kind === 'triangular') base = this.rng.triangular(comm.dist.min, comm.dist.mode, comm.dist.max);
       else if (comm.dist.kind === 'uniform') base = this.rng.uniform(comm.dist.min, comm.dist.max);

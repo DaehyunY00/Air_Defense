@@ -37,6 +37,11 @@
     <label>위협 강도</label>
     <input type="range" id="intensity-slider" min="0.5" max="3" step="0.1" value="1">
     <span id="intensity-value">×1.0</span>
+    <details class="ctl-advanced">
+      <summary title="여섯 항목 모두 이 모델의 기본 동작입니다. 끄는 것은 반증·감사 목적이며, 끈 상태의 수치를 결과로 인용하면 안 됩니다.">⚙️ 모델 조건 (기본값 — 감사·반증용)</summary>
+      <p class="ctl-advanced-note">아래 여섯 항목은 <b>이 시뮬레이션의 기본 동작</b>입니다(전부 켜짐).
+        끄면 각각의 구 동작이 재현되며 <b>반증·감사 목적으로만</b> 씁니다 — 끈 상태의 수치를 결과로 인용하면 안 됩니다.
+        딥링크로도 끌 수 있습니다: <code>#appr=0&amp;disp=0&amp;south=0&amp;linkv2=0&amp;rp=0&amp;cop=0</code></p>
     <label class="ctl-check" title="As-Is 승인 계선(군단·수방사 AOC→MCRC 협조 홉 + 승인 대기 + 동적 위임)을 모델에 포함합니다(ADR-058). 끄면 ⑥⑦ 승인·협조 지표는 0이 아니라 '미측정'으로 표시됩니다.">
       <input type="checkbox" id="approval-chain-toggle" checked>
       승인 계선 모델 (ADR-058)
@@ -61,6 +66,7 @@
       <input type="checkbox" id="engagement-cop-toggle" checked>
       교전현황 공유 COP (ADR-056)
     </label>
+    </details>
   </div>
   <div id="deployment-warning" class="deployment-warning hidden" role="status"></div>
 

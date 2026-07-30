@@ -572,3 +572,11 @@ li.chk-fail { background: #43140f; }
   .pl-m-track { display: none; }
   .pl-m-na-note { grid-column: span 2; }
 }
+
+/* ADR-069: 모델 조건 토글 접기 섹션 — 여섯 항목은 기본 동작이고 끄는 것은 감사·반증용이므로
+   상단 컨트롤에서 접어 둔다(플래그·딥링크는 그대로 유지 — 반증 경로 보존). */
+.ctl-advanced { flex-basis: 100%; border: 1px solid var(--line, #d8dde5); border-radius: 4px;
+  padding: 4px 10px; background: rgba(0, 0, 0, 0.02); }
+.ctl-advanced > summary { cursor: pointer; font-size: 12.5px; color: var(--sub, #5a6270); font-weight: 600; }
+.ctl-advanced[open] > summary { margin-bottom: 6px; }
+.ctl-advanced-note { font-size: 11.5px; color: var(--sub, #5a6270); margin: 4px 0 8px; line-height: 1.5; }

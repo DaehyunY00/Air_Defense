@@ -263,6 +263,15 @@
     // 감시 모드에 남는다는 것이 codex 사유(kill-web.js D2). Linear(As-Is)는 무변경.
     // 종전 Air_Defense는 **양 모드 모두** 자기 MFR FC를 요구해 킬웹의 핵심 이점 하나가 빠져 있었다.
     this.engageOnRemote = ff('engageOnRemote', false);
+    // ADR-071: 자위권 발사 — IADS_codex ADR-050 축소 이식. 발사 3단 사다리의 ③.
+    // 지명·명령이 **전혀 없어도** 자기 레이더로 본 탄도 위협이 자기 근처에 떨어질 것으로
+    // 예측되면 마지막 발사 시점에 발사한다. ①정식(킬체인+명령)·②긴급(지명+마감)이 구제하지
+    // 못하는 **상류 전체 지연**(탐지·보고·식별)을 구제하는 경로다. 양 모드 공통(보편 권리 —
+    // 비교 오염 없음). ⚠️ 축소 이식: codex의 2단계 자위 태세(회전↔탄도집중 모드 전환)는
+    // 우리 센서 커널에 모드 개념이 없어 미구현 — 전환 소요를 0으로 보는 관대한 근사다.
+    this.selfDefenseFire = ff('selfDefenseFire', false);
+    this.selfDefenseRadiusKm = (typeof f.selfDefenseRadiusKm === 'number' && f.selfDefenseRadiusKm > 0)
+      ? f.selfDefenseRadiusKm : (KJ.SELF_DEFENSE_RADIUS_KM || 10);
     this.targetSpreadKm = (typeof f.targetSpreadKm === 'number' && f.targetSpreadKm >= 0)
       ? f.targetSpreadKm : (KJ.THREAT_TARGET_SPREAD_KM || 0);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
@@ -281,6 +290,10 @@
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
     if (this.sawtoothFreshness) this.features.sawtoothFreshness = true; // ADR-069 (OFF wire shape 보존)
     if (this.engageOnRemote) this.features.engageOnRemote = true; // ADR-070 (OFF wire shape 보존)
+    if (this.selfDefenseFire) { // ADR-071 (OFF wire shape 보존)
+      this.features.selfDefenseFire = true;
+      this.features.selfDefenseRadiusKm = this.selfDefenseRadiusKm;
+    }
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
@@ -334,6 +347,7 @@
         hit: 0, miss: 0, released: 0, expired: 0, cancelled: 0,
         expiryByReason: {}, fireByCause: {}
       },
+      selfDefense: { fired: 0, failed: 0 }, // ADR-071
       statusSharing: {
         sent: 0, delivered: 0, dropped: 0, stale: 0, queued: 0,
         queueWaitSec: 0, deconflicted: 0, duplicatesDueToStaleState: 0
@@ -978,6 +992,9 @@
         threat.leakReason = null;
       }
     }
+    // ADR-071: 자위권 발사 — 정식 경로가 아무것도 만들지 못한 채 발사 마감이 닥친 경우.
+    // 별도 균일 감시 루프를 만들지 않고 기존 센서 스캔 사건에 얹는다(codex 구현 제약).
+    if (this.selfDefenseFire) this._tryIadsSelfDefense(threat, t);
     if (t + dt < threat.spawnT + threat.dwellSec) {
       this.schedule(t + dt, PRI.DETECT, 'IADS_SENSOR_SCAN', { threat: threat });
     }
@@ -995,6 +1012,96 @@
     if (!(period > 0)) return 0; // 실시간/전속 (포대 자기 MFR)
     var s = this.now - Math.floor(this.now / period) * period;
     return s < 0 ? 0 : s;
+  };
+
+  /**
+   * ADR-071 — 자위권 발사 시도 (codex ADR-050 축소 이식).
+   *
+   * codex 확정 조건 4개 중 3개를 그대로 쓴다:
+   *   ① 정보 조건 — 포대 **자기 MFR**의 자체 추적 성립 필수(상부 트랙 원용 금지).
+   *   ② 위협 조건 — 낙하 예측점이 포대 반경 `selfDefenseRadiusKm`(기본 10km) 이내.
+   *                 인근 도시·일반 방어구역 확대 금지(그건 분권 교전 = 킬웹 영역).
+   *   ③ 시점 조건 — 발사 마감 도달 시에만. 마감은 기존 `_iadsGeometryWindow().lastFire`를
+   *                 그대로 쓴다(새 상수 없음). 마감 전 정식 지명·명령 도착 시 정식 우선.
+   *   ④ 사후 — `launchCause='self_defense'` 표식. 이웃 포대 잠금을 유발하지 않는다(codex 명시)
+   *            → **중복교전 압력이 구조적으로 커진다**(관측 대상).
+   *
+   * 적용 범위는 codex와 같이 **탄도축 위협(srbm/mrl_large) 한정**이다.
+   */
+  Simulation.prototype._tryIadsSelfDefense = function (threat, t) {
+    if (!this.selfDefenseFire || !threat.alive) return;
+    if (iadsThreatCategory(threat.type) !== 'ballistic') return;
+    // 정식 우선: 지명·명령이 이미 있으면 자위권은 발동하지 않는다(②와 상호배타).
+    if (threat._hadIadsPlan) return;
+    if (threat._selfDefenseFired) return;
+    var impact = threat.target || (KJ.AXES[threat.axis] && KJ.AXES[threat.axis].target);
+    if (!impact) return;
+    var self = this, radius = this.selfDefenseRadiusKm;
+    var shooters = KJ.nodesInMode(this.mode, this.catalog).filter(function (n) {
+      if (n.category !== 'shooter' || !n.canEngage || !n.canEngage[threat.type]) return false;
+      if (n.forceOwner === 'USFK') return false; // ADR-036 독립축
+      // ② 위협 조건 — 낙하 예측점이 포대 반경 이내
+      return haversineKm({ lat: n.coord[0], lon: n.coord[1], altKm: 0 },
+        { lat: impact[0], lon: impact[1], altKm: 0 }) <= radius;
+    });
+    for (var i = 0; i < shooters.length; i++) {
+      var shooter = shooters[i];
+      // ① 정보 조건 — 자기 MFR의 자체 추적 성립(상부 트랙 원용 금지)
+      var own = shooter.mfrSensorId && threat._sensorTracks
+        ? threat._sensorTracks[shooter.mfrSensorId] : null;
+      if (this.iadsSensorPhysics && (!own || own.state === KJ.IADS.SENSOR_STATE.UNDETECTED)) continue;
+      // ③ 시점 조건 — 발사 마감 도달(이번 tick에 마감이 지나간다)
+      var win = this._iadsGeometryWindow(shooter, threat);
+      if (!win || !Number.isFinite(win.lastFire)) continue;
+      if (t < win.lastFire - KJ.IADS.SENSOR_SCAN_CADENCE_SECONDS || t > win.lastFire) continue;
+      var commander = this._iadsSelfDefenseCommander(shooter);
+      if (!commander) continue;
+      var feas = this._iadsEvaluate(shooter, threat, t);
+      if (!feas || !feas.feasible) {
+        // codex: 마감 내 FC 미성립 시 자위권 실패 기록
+        this.global.selfDefense.failed++;
+        this._recordFailureEvidence(threat, 'self_defense_failed',
+          { shooterId: shooter.id, reason: feas ? feas.reason : 'no_candidate' });
+        continue;
+      }
+      var plan = this._iadsCreatePlan(commander, shooter.id, t, threat, {
+        targetEcsId: shooter.ecsC2Id || null,
+        delegationLevel: 'SELF_DEFENSE',
+        launchCause: 'self_defense',
+        validUntil: win.lastFire + 3
+      });
+      threat._iadsPlans.push(plan);
+      threat._hadIadsPlan = true;
+      threat._selfDefenseFired = true;
+      threat._commandCause = 'self_defense';
+      this.global.c2Orders.created++;
+      this.global.selfDefense.fired++;
+      this._mark(threat, '자위권발사:' + shooter.id, t);
+      this._metricEvent('COMMAND_DECIDED', t, threat, {
+        nodeId: commander.id, shooterId: shooter.id, cause: 'self_defense',
+        directiveId: plan.directiveId, engagementId: plan.engagementId,
+        authorityLevel: plan.authorityLevel, delegationLevel: plan.delegationLevel,
+        commanderAxis: commander.axis, threatCategory: iadsThreatCategory(threat.type)
+      });
+      // 자위권은 포대 자체 발사이므로 상급 하달 링크 지연이 없다 — 즉시 발사 사건을 예약한다.
+      // (codex ADR-050: "지명·명령이 전혀 없어도" 마감에 발사 — 하달 경로를 타지 않는다.)
+      this._iadsTransitionPlan(plan, 'in_transit', t);
+      this.schedule(t, PRI.LINK_ARRIVE, 'IADS_FIRE',
+        { threat: threat, commander: commander, shooterId: shooter.id, plan: plan });
+      return;
+    }
+  };
+
+  /** 자위권은 포대 자체 권한이므로 자기 ECS(없으면 사수 자신)를 지휘자로 삼는다. */
+  Simulation.prototype._iadsSelfDefenseCommander = function (shooter) {
+    var ecsId = shooter.ecsC2Id || (shooter.controlledBy && shooter.controlledBy[this.mode] &&
+      shooter.controlledBy[this.mode][0]) || null;
+    var node = ecsId ? this._nodeById(ecsId) : null;
+    return {
+      id: node ? node.id : shooter.id,
+      axis: 'SELF_DEFENSE', scope: 'self_battery',
+      batteryIds: [shooter.id]
+    };
   };
 
   Simulation.prototype._linkDelay = function (comm) {

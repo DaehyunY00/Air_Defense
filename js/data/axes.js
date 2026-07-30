@@ -152,6 +152,9 @@
   // 종전에는 같은 축선의 모든 위협이 **정확히 같은 한 점**으로 향해, seed를 바꿔도 착탄점이
   // 변하지 않고 표적권역 주변 자산만 반복 교전했다. 표적을 권역(disk) 안에서 뽑아 위협마다
   // 다른 착탄점을 갖게 한다. 반경은 THREAT-TARGET-DISP-01(개념 설정·등급 C, docs/params.md).
+  // ADR-071: 자위권 반경 — IADS_codex ADR-050 `SELF_DEFENSE_RADIUS_KM = 10`
+  // ("조정 가능한 교리 상수"). 낙하 예측점이 포대 이 반경 안이면 자위권 발동 대상.
+  KJ.SELF_DEFENSE_RADIUS_KM = 10;
   KJ.THREAT_TARGET_SPREAD_KM = 15;
 
   /**

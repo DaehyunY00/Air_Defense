@@ -256,6 +256,13 @@
     // 우리는 P 고정(톱니 상한)으로 근사해 왔다 — 항상 최악을 보는 보수적 가정.
     // ON이면 전역 동기 시계 톱니를 쓴다: staleness = t − floor(t/P)·P. RNG를 쓰지 않아 결정론 보존.
     this.sawtoothFreshness = ff('sawtoothFreshness', false);
+    // ADR-070: 원격 교전(engage-on-remote) — IADS_codex ADR-051 D2 정합.
+    // codex 킬웹은 웹 융합 트랙이 fc-grade(웹 내 **어느 포대 MFR**이든 FC 제공)면 자기 MFR이
+    // FC가 아니어도 발사를 허용한다. 탐지 전용 레이더(그린파인·FPS-117·TPS-880K)는 감시급만
+    // 전파해 발사 자격을 주지 못한다 — 교전 추적 모드로 들어가면 광역 감시가 저하되므로
+    // 감시 모드에 남는다는 것이 codex 사유(kill-web.js D2). Linear(As-Is)는 무변경.
+    // 종전 Air_Defense는 **양 모드 모두** 자기 MFR FC를 요구해 킬웹의 핵심 이점 하나가 빠져 있었다.
+    this.engageOnRemote = ff('engageOnRemote', false);
     this.targetSpreadKm = (typeof f.targetSpreadKm === 'number' && f.targetSpreadKm >= 0)
       ? f.targetSpreadKm : (KJ.THREAT_TARGET_SPREAD_KM || 0);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
@@ -273,6 +280,7 @@
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
     if (this.sawtoothFreshness) this.features.sawtoothFreshness = true; // ADR-069 (OFF wire shape 보존)
+    if (this.engageOnRemote) this.features.engageOnRemote = true; // ADR-070 (OFF wire shape 보존)
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
@@ -1088,18 +1096,51 @@
     return r ? r.launchers.reduce(function (sum, l) { return sum + (l.reloadCompleteAt === null ? l.remaining : 0); }, 0) : 0;
   };
 
+  /**
+   * ADR-070 — 원격 교전 자격(codex ADR-051 D2). To-Be(킬웹)에서만, 웹 내 **다른 포대 MFR**이
+   * 이 위협을 화력통제 상태로 보고 있으면 발사 자격을 인정한다.
+   *
+   * 탐지 전용 레이더는 제외한다 — `hasFireControlCapability`가 false인 센서(그린파인 B/C·
+   * FPS-117·TPS-880K)는 감시급 트랙만 제공하므로 자격을 주지 못한다(codex kill-web.js D2).
+   * ⚠️ 우리 모델에는 웹 파티션(codex D1)이 없어 **To-Be 전 자산을 단일 웹으로** 본다 —
+   * codex보다 관대한 근사이며 ADR-070 §한계에 기록한다.
+   */
+  Simulation.prototype._iadsRemoteFcGrade = function (threat, t) {
+    if (!this.engageOnRemote || this.mode !== 'tobe' || !this.iadsSensorPhysics) return false;
+    var tracks = threat._sensorTracks;
+    if (!tracks) return false;
+    var ids = Object.keys(tracks);
+    for (var i = 0; i < ids.length; i++) {
+      var tr = tracks[ids[i]];
+      if (!tr || tr.state !== KJ.IADS.SENSOR_STATE.FIRE_CONTROL) continue;
+      if (!KJ.IADS.trackFreshness(tr, t, 3).fresh) continue;
+      var sensor = this._nodeById(ids[i]);
+      var spec = sensor && KJ.SENSOR_TYPES[sensor.typeId];
+      // 탐지 전용 레이더는 발사 자격을 주지 못한다(D2). USFK 자산도 독립축이라 제외(ADR-036).
+      if (!KJ.IADS.hasFireControlCapability(spec, threat.type)) continue;
+      if (sensor.forceOwner === 'USFK') continue;
+      return true;
+    }
+    return false;
+  };
+
   Simulation.prototype._iadsFireControlState = function (shooter, threat, t) {
     if (!shooter.mfrSensorId) return { ready: true, readyAt: t, state: 'FIRE_CONTROL' };
     if (this.iadsSensorPhysics) {
       var physicalTrack = threat._sensorTracks && threat._sensorTracks[shooter.mfrSensorId];
       var state = physicalTrack ? physicalTrack.state : KJ.IADS.SENSOR_STATE.UNDETECTED;
       var freshness = KJ.IADS.trackFreshness(physicalTrack, t, 3);
+      var ownReady = state === KJ.IADS.SENSOR_STATE.FIRE_CONTROL && freshness.fresh;
+      // ADR-070: 자기 MFR이 FC가 아니어도 웹 내 다른 포대 MFR이 FC를 주면 발사 자격 인정.
+      var remote = !ownReady && this._iadsRemoteFcGrade(threat, t);
+      if (remote) this.global.remoteFcGrants = (this.global.remoteFcGrants || 0) + 1;
       return {
-        ready: state === KJ.IADS.SENSOR_STATE.FIRE_CONTROL && freshness.fresh,
+        ready: ownReady || remote,
         readyAt: t + KJ.IADS.SENSOR_SCAN_CADENCE_SECONDS,
-        state: state,
+        state: remote ? 'FIRE_CONTROL_REMOTE' : state,
         staleness: freshness.age,
-        confidence: freshness.confidence
+        confidence: freshness.confidence,
+        remote: remote
       };
     }
     var sensor = this._nodeById(shooter.mfrSensorId);
@@ -2383,6 +2424,8 @@
         meanTimeToKillN: ttk.length, // meanTTK가 평균 낸 표본 수(=격추 성공 수) — 생존자 편향 가시화
         // Phase 7(⑨): 교전당 발사수 = 총 발사수/최초교전 표적수. salvo·재교전으로 1발을 넘는 발사 부담을 노출.
         shotsFired: this.global.shotsFired,
+        // ADR-070: 원격 교전 자격 부여 횟수 — ON일 때만 노출(OFF wire shape 보존).
+        remoteFcGrants: this.engageOnRemote ? (this.global.remoteFcGrants || 0) : undefined,
         shotsPerEngagement: this.global.everEngaged ? this.global.shotsFired / this.global.everEngaged : 0,
         // 자원최적화 Step 1: 고가유도탄 보존율(MoFE, KJADS 5-1 직접지표) = 1 − 고가($≥5M)소모/전체소모.
         // 높을수록 고가 자산 보존. · 위협등급 대비 요격탄 단가 비율 = 총요격탄가/교전위협가치(격추 무관).

@@ -166,7 +166,7 @@ li.tlog-done { color: var(--muted); }
 li.tlog-current { color: #ffd27d; font-weight: 700; }
 li.tlog-future { color: #4a5666; }
 
-/* ── [분석] 탭 위협 항적 로그 (최근 시뮬레이션 실행) ── */
+/* ── [분석] 탭 위협 항적 로그 (As-Is↔To-Be 병렬 대조) ── */
 .alog-row { border-bottom: 1px solid #222b38; font-size: 12px; }
 .alog-row:last-child { border-bottom: none; }
 .alog-hdr {
@@ -182,8 +182,44 @@ li.tlog-future { color: #4a5666; }
 .alog-id i { color: var(--muted); font-style: normal; font-size: 10px; font-weight: 400; }
 .alog-type { flex: 1; color: #aecbeb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .alog-time { flex-shrink: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
-.alog-stages { list-style: none; margin: 2px 0 8px 26px; padding: 0; color: var(--muted); }
+.alog-stages { list-style: none; margin: 2px 0 8px 0; padding: 0; color: var(--muted); }
 .alog-stages li { padding: 1px 0; font-variant-numeric: tabular-nums; }
+.alog-stages .alog-t { color: #7f93ab; margin-right: 4px; }
+
+/* 판정 쌍(As-Is → To-Be)과 변화 라벨 */
+.alog-pair { flex-shrink: 0; display: flex; align-items: center; gap: 4px; }
+.alog-arrow { color: var(--muted); }
+.alog-dv { flex-shrink: 0; min-width: 132px; text-align: right; font-weight: 700; }
+.dv-gain { color: #46d17f; }
+.dv-loss { color: #ff6b6b; }
+.dv-same { color: var(--muted); font-weight: 400; }
+.dv-other { color: #e0b341; }
+
+/* 좌·우 2열 단계 타임라인 — 좁은 화면에서는 세로로 쌓는다 */
+.alog-cols {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin: 4px 0 8px 26px; padding-top: 4px; border-top: 1px dashed #2a3646;
+}
+.alog-col { min-width: 0; }
+.alog-col h4 {
+  margin: 0 0 3px; font-size: 11px; color: #aecbeb;
+  text-transform: none; letter-spacing: 0;
+}
+@media (max-width: 760px) { .alog-cols { grid-template-columns: 1fr; } }
+
+/* 필터 칩 */
+.alog-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.alog-filter {
+  background: var(--panel-2); color: var(--muted); border: 1px solid #2a3646;
+  border-radius: 999px; padding: 3px 10px; font-size: 11px; cursor: pointer;
+}
+.alog-filter:hover { color: var(--text); border-color: #3a4a5e; }
+.alog-filter.is-on { background: #1c3a52; color: #fff; border-color: #3d6c93; }
+.alog-filter b { font-variant-numeric: tabular-nums; }
+.alog-legend {
+  display: flex; gap: 16px; font-size: 11px; color: var(--muted);
+  padding: 4px 4px 6px 26px;
+}
 
 /* ── As-Is ↔ To-Be 좌·우 직관 비교 블록 ── */
 .vs-block { margin: 4px 0 8px; }

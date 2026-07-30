@@ -23,7 +23,11 @@
       progress(id, 'current-des');
       var current = KJ.runDES(cfg);
       progress(id, 'comparison-des');
-      var other = KJ.runDES(Object.assign({}, cfg, { mode: otherMode, trace: false }));
+      // 반대 모드는 기본적으로 trace를 끈다(재생 애니메이션은 current만 쓰므로 낭비).
+      // tracePair=true인 호출(분석 탭 As-Is↔To-Be 병렬 항적 로그)만 양쪽 trace를 요구한다.
+      var other = KJ.runDES(Object.assign({}, cfg, {
+        mode: otherMode, trace: payload.tracePair ? cfg.trace : false
+      }));
       current.c2Analysis = KJ.buildC2Analysis(current.c2Events, current);
       other.c2Analysis = KJ.buildC2Analysis(other.c2Events, other);
       delete current.c2Events;

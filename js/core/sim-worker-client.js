@@ -41,7 +41,10 @@
       cfg = Object.assign(scenarioConfig(payload.cfg), { c2Analysis: true });
       otherMode = cfg.mode === 'asis' ? 'tobe' : 'asis';
       var currentDes = KJ.runDES(cfg);
-      var otherDes = KJ.runDES(Object.assign({}, cfg, { mode: otherMode, trace: false }));
+      // 워커 런타임과 동일 규약: tracePair=true일 때만 반대 모드도 trace한다.
+      var otherDes = KJ.runDES(Object.assign({}, cfg, {
+        mode: otherMode, trace: payload.tracePair ? cfg.trace : false
+      }));
       currentDes.c2Analysis = KJ.buildC2Analysis(currentDes.c2Events, currentDes);
       otherDes.c2Analysis = KJ.buildC2Analysis(otherDes.c2Events, otherDes);
       delete currentDes.c2Events;

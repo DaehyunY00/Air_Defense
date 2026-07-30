@@ -338,8 +338,8 @@
 
     onLeave: function () { pause(); },
 
-    /** [분석] 탭 위협 항적 로그용 — 최근 실행 결과 접근자 (실행 전이면 null) */
-    getLastRun: function () { return run; },
+    /** [분석] 탭 항적 병렬 로그와 공유하는 표시 규약 — 단계 라벨·위협 색을 한 곳에서 정의한다
+     *  (분석 탭은 자체 desPair 결과를 쓰므로 실행 결과 자체는 공유하지 않는다). */
     stageLabel: stageLabel,
     threatColor: function (type) { return THREAT_COLOR[type] || '#f00'; }
   };

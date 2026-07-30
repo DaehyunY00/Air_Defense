@@ -59,6 +59,13 @@
   // 이 비율 이하일 때만 후보로 인정. 1.0 = 결정론(평균 ≤ 잔여). 교전시간은 지수분포라 평균이
   // 창 안에 들어와도 실현의 절반은 초과하므로, 확률적 여유(<1.0)를 둘지는 STOP 판단 대상(기본 1.0).
   var ENGAGE_WINDOW_MARGIN = 1.0;
+  // ── ADR-073: 결심 감사 로깅(decisionAudit) 상한 — 계측 전용, 물리·결심에 무관 ──
+  // 후보 상한: To-Be는 한 결심에서 수십 개 후보를 보므로 이벤트 크기를 묶는다. 점수 내림차순
+  // 상위 N만 남기며 실제 선택(rank 0)은 절대 잘리지 않는다. 전체 후보 수는 candidateCount로 보존.
+  var DECISION_AUDIT_MAX_CANDIDATES = 30;
+  // 런당 이벤트 상한(메모리 백스톱). 실측(SC3×900초)에서 결심 수가 이 값의 1/10 수준이라
+  // 기본 실행에서는 걸리지 않는다. 걸리면 truncated=true로 노출한다(0으로 위장하지 않음).
+  var DECISION_AUDIT_MAX_EVENTS = 5000;
 
   // 병목 판정 임계값 (Phase 1과 동일 기준: 계획서 ENV-RHO-THRESH-01)
   var RHO_WARN = 0.7, RHO_BOTTLENECK = 0.9;
@@ -279,6 +286,28 @@
       ? f.selfDefenseRadiusKm : (KJ.SELF_DEFENSE_RADIUS_KM || 10);
     this.targetSpreadKm = (typeof f.targetSpreadKm === 'number' && f.targetSpreadKm >= 0)
       ? f.targetSpreadKm : (KJ.THREAT_TARGET_SPREAD_KM || 0);
+    // ADR-073: 결심 감사 로깅 — `_iadsDecide`가 사수를 고를 때 이미 계산해 놓고 버리던
+    // 후보 명단·점수를 이벤트로 남기는 **관측 전용** 계층. 새 계산도, 새 난수도 없다.
+    // 물리·결심·RNG에 일절 관여하지 않으며 OFF에서는 직전 상태와 bit-exact다.
+    // 기록은 c2Analysis 채널(_metricEvent)을 타므로 일반 DES/MC wire shape도 불변.
+    this.decisionAudit = ff('decisionAudit', false);
+    // 위협당 후보 상한(점수 내림차순 상위 N — 정렬이 이미 결정론이라 표본도 결정론).
+    // 실제 선택은 항상 rank 0이므로 상한이 걸려도 선택 후보는 절대 잘리지 않는다.
+    this.decisionAuditMaxCandidates =
+      (typeof f.decisionAuditMaxCandidates === 'number' && f.decisionAuditMaxCandidates >= 1)
+        ? Math.round(f.decisionAuditMaxCandidates) : DECISION_AUDIT_MAX_CANDIDATES;
+    // 런당 이벤트 총량 상한(메모리 백스톱). 초과분은 버리고 truncated로 노출한다 —
+    // 후반부 결심이 잘리는 시간 편향이 있으므로, 편향 없는 축소는 sampleRate를 쓴다.
+    this.decisionAuditMaxEvents =
+      (typeof f.decisionAuditMaxEvents === 'number' && f.decisionAuditMaxEvents >= 1)
+        ? Math.round(f.decisionAuditMaxEvents) : DECISION_AUDIT_MAX_EVENTS;
+    // threatId 해시 기반 결정론 표본추출률(0<r≤1, 기본 1=전수). 위협 단위로 채택하므로
+    // 시간·결과와 무관하게 균일하며, 같은 seed·같은 위협집합이면 두 모드가 같은 표본을 본다.
+    this.decisionAuditSampleRate =
+      (typeof f.decisionAuditSampleRate === 'number' && f.decisionAuditSampleRate > 0 &&
+       f.decisionAuditSampleRate <= 1) ? f.decisionAuditSampleRate : 1;
+    this._decisionAuditStats = { logged: 0, dropped: 0, sampledOut: 0, truncated: false,
+      selfDefenseUnaudited: 0 };
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
     if (this.highResolutionDeployment) this.features.highResolutionDeployment = true;
     this.features.unifiedEngagementState = this.unifiedEngagementState; // ADR-068: 항상 실제 해석값 신고
@@ -297,6 +326,7 @@
     if (this.engageOnRemote) this.features.engageOnRemote = true; // ADR-070 (OFF wire shape 보존)
     this.features.selfDefenseFire = this.selfDefenseFire; // ADR-072: 항상 실제 해석값 신고
     if (this.selfDefenseFire) this.features.selfDefenseRadiusKm = this.selfDefenseRadiusKm;
+    if (this.decisionAudit) this.features.decisionAudit = true;
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
@@ -1086,6 +1116,12 @@
         authorityLevel: plan.authorityLevel, delegationLevel: plan.delegationLevel,
         commanderAxis: commander.axis, threatCategory: iadsThreatCategory(threat.type)
       });
+      // ADR-073 §한계: 자위권 발사(ADR-071)는 **WTA 사수 선정을 거치지 않는다** — 포대가 자기
+      // 항적으로 스스로 쏘므로 후보 명단도 점수도 존재하지 않는다. 그래서 `decision_audit`을
+      // 남길 수 없다(없는 것을 지어내지 않는다). 대신 이 경로로 빠진 결심 수를 세어
+      // `global.decisionAudit.selfDefenseUnaudited`로 드러낸다 — 감사 커버리지 구멍을
+      // 침묵시키지 않기 위함이다. `COMMAND_DECIDED` 수와 감사 수의 차이가 곧 이 값이다.
+      if (this.decisionAudit) this._decisionAuditStats.selfDefenseUnaudited++;
       // 자위권은 포대 자체 발사이므로 상급 하달 링크 지연이 없다 — 즉시 발사 사건을 예약한다.
       // (codex ADR-050: "지명·명령이 전혀 없어도" 마감에 발사 — 하달 경로를 타지 않는다.)
       this._iadsTransitionPlan(plan, 'in_transit', t);
@@ -1671,6 +1707,68 @@
     return fallback || 'timeout:c2';
   };
 
+  /**
+   * ADR-073: 결심 감사(decision_audit) 이벤트 기록 — **관측 전용**.
+   *
+   * `_iadsDecide`가 사수를 고르며 이미 계산해 놓고 버리던 후보 배열과 점수를 그대로 옮겨 적는다.
+   * 새 계산·새 난수는 없다(모든 값이 인자로 들어온 `candidates`에 이미 있다). 이 함수는 엔진
+   * 상태를 읽지도 쓰지도 않으며, 반환값도 호출부에서 쓰이지 않는다 — 제거해도 결과가 같다.
+   *
+   * 표본 규칙(둘 다 결정론):
+   *  · sampleRate<1 → threatId FNV-1a 해시 u∈[0,1)가 rate 미만인 위협만 기록(시간·결과 무편향).
+   *  · 이벤트 총량 상한 초과 → 이후 결심을 버리고 truncated=true(후반부 시간 편향 있음 — 공시).
+   */
+  Simulation.prototype._decisionAuditSampled = function (threatId) {
+    if (this.decisionAuditSampleRate >= 1) return true;
+    var h = 0x811c9dc5, s = String(threatId);
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return ((h >>> 0) / 4294967296) < this.decisionAuditSampleRate;
+  };
+
+  Simulation.prototype._emitDecisionAudit = function (threat, commander, t, candidates, chosen, reasons) {
+    var stats = this._decisionAuditStats;
+    if (!this._decisionAuditSampled(threat.id)) { stats.sampledOut++; return; }
+    if (stats.logged >= this.decisionAuditMaxEvents) {
+      stats.dropped++; stats.truncated = true; return;
+    }
+    var cap = this.decisionAuditMaxCandidates;
+    // candidates는 호출부에서 이미 점수 내림차순(동점은 unitId 오름차순)으로 정렬돼 있다.
+    var kept = candidates.length > cap ? candidates.slice(0, cap) : candidates;
+    var rows = kept.map(function (ev) {
+      return {
+        unitId: ev.shooter.id,
+        unitType: ev.shooter.typeId || null,
+        score: ev.score,
+        pk: ev.pk,
+        rangeKm: ev.pip ? ev.pip.rangeKm : null,
+        ammoRatio: ev.auditAmmoRatio,
+        load: ev.auditLoad,
+        // 요격 가능 시각(절대). pip.timeToReach는 결심시각 기준 상대초라 t를 더한다.
+        pipTime: ev.pip && Number.isFinite(ev.pip.timeToReach) ? t + ev.pip.timeToReach : null,
+        missileType: ev.missileType || null
+      };
+    });
+    stats.logged++;
+    this._metricEvent('decision_audit', t, threat, {
+      mode: this.mode,
+      commanderId: commander.id,
+      commanderAxis: commander.axis,
+      commanderScope: commander.scope || null,
+      threatCategory: iadsThreatCategory(threat.type),
+      // 이 결심자가 **볼 수 있었던** 발사대 수 = C2 시야 폭. As-Is의 좁은 명단은 여기에 나타난다
+      // (commander.batteryIds는 결심 직전에 이미 순회한 그 배열 — 새 계산 아님).
+      visibleUnitCount: commander.batteryIds.length,
+      // 시야 안에서 그 순간 **물리적으로 실현가능**했던 후보 수. 물리 필터(_iadsEvaluate의
+      // 봉투·PIP·FC·탄약·채널)가 결정하며 시야 폭과는 다른 값이다 — 둘을 섞어 읽지 말 것.
+      candidateCount: candidates.length,
+      candidatesTruncated: candidates.length > cap,
+      // 시야에는 있었으나 탈락한 사유별 건수(_iadsDecide가 이미 집계한 reasons 그대로).
+      infeasibleReasons: Object.assign({}, reasons),
+      candidates: rows,
+      chosenUnitId: chosen.shooter.id
+    });
+  };
+
   Simulation.prototype._iadsDecide = function (threat, t, commander) {
     if (!threat.alive || threat.pipelineDead) return;
     if (threat._firstIadsDecisionT == null) threat._firstIadsDecisionT = t;
@@ -1742,6 +1840,9 @@
           ev.score = ev.pk * ammoRatio * (1 - load) / Math.max(1, ev.pip.rangeKm) - priority * 0.000001;
         }
         ev.shooter = shooter;
+        // ADR-073: 점수식이 이미 쓴 중간항을 계측용으로 보관만 한다(재계산·난수 없음).
+        // 플래그 OFF에서는 속성 자체를 만들지 않아 객체 형상까지 직전과 동일하다.
+        if (self.decisionAudit) { ev.auditAmmoRatio = ammoRatio; ev.auditLoad = load; }
         candidates.push(ev);
       } else {
         reasons[ev.reason] = (reasons[ev.reason] || 0) + 1;
@@ -1804,6 +1905,9 @@
       trackSourceCount: ledger ? (ledger.sources || []).length : 0,
       trackFused: !!(ledger && ledger.fused)
     });
+    // ADR-073: 결심이 확정된 바로 그 시점(COMMAND_DECIDED와 동일 t)에 후보 명단을 남긴다.
+    // 여기서 남기므로 감사 이벤트는 실제 결심과 1:1이고, t가 곧 "결심완료시각"이다.
+    if (this.decisionAudit) this._emitDecisionAudit(threat, commander, t, candidates, chosen, reasons);
     this._mark(threat, '사수선정·표적할당:' + commander.typeId + '→' + chosen.shooter.id, t);
     this._mark(threat, '자체교전승인:' + commander.typeId, t);
     this._sendIadsStatus(threat, commander, 'assigned', t);
@@ -2644,6 +2748,24 @@
       result.nodeSeries = this.nodeSeries;
       result.traceTruncated = this.traceTruncated;
       result.nodeSeriesTruncated = this.nodeSeriesTruncated;
+    }
+    // ADR-073: 계측 커버리지 원장 — 무엇을 얼마나 기록했고 무엇을 버렸는지. ON일 때만 노출한다
+    // (OFF wire shape 불변). 후처리·UI는 이 값으로 "미측정"과 "0"을 구분한다.
+    if (this.decisionAudit) {
+      result.global.decisionAudit = {
+        logged: this._decisionAuditStats.logged,
+        dropped: this._decisionAuditStats.dropped,
+        sampledOut: this._decisionAuditStats.sampledOut,
+        truncated: this._decisionAuditStats.truncated,
+        sampleRate: this.decisionAuditSampleRate,
+        maxCandidates: this.decisionAuditMaxCandidates,
+        maxEvents: this.decisionAuditMaxEvents,
+        // 이벤트 자체는 c2Analysis 채널로만 나간다 — 분석 실행이 아니면 로깅도 없다.
+        recorded: !!this.c2Analysis,
+        // ADR-071 자위권 발사는 WTA 사수 선정을 거치지 않아 후보 명단이 존재하지 않는다.
+        // 감사에서 빠진 결심 수를 여기서 드러낸다(커버리지 구멍을 침묵시키지 않는다).
+        selfDefenseUnaudited: this._decisionAuditStats.selfDefenseUnaudited
+      };
     }
     if (this.c2Analysis) {
       // 비교 가능한 명시적 분모 지표. 기본 API wire shape는 보존하고 분석 실행에서만 확장한다.

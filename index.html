@@ -66,6 +66,14 @@
       <input type="checkbox" id="engagement-cop-toggle" checked>
       교전현황 공유 COP (ADR-056)
     </label>
+    <label class="ctl-check" title="탐지자산의 보고 주기를 톱니(sawtooth) 신선도로 산정합니다(ADR-069). 레이더가 주기 P마다 한 번 보고하면 지휘소가 보는 정보의 나이는 0~P 사이를 오갑니다 — IADS_codex 정본의 산정법입니다. 끄면 항상 최악(P 고정)으로 보는 보수적 근사로 돌아갑니다. 양 체계에 같은 주기로 적용되므로 비교 공정성은 유지됩니다.">
+      <input type="checkbox" id="sawtooth-toggle" checked>
+      보고 주기 톱니 신선도 (ADR-069)
+    </label>
+    <label class="ctl-check" title="자위권 발사를 모델에 포함합니다(ADR-050·071). 지명·명령이 전혀 없어도 포대가 자기 레이더로 본 탄도 위협이 자기 반경 10km 안에 떨어질 것으로 예측되면 마지막 발사 시점에 발사합니다. 탄도탄·방사포에만 적용되며, 끄면 상류 지연(탐지·보고·식별)으로 놓친 위협이 구제되지 않아 현 체계가 실제보다 나쁘게 모델링됩니다. ⚠️ 이 경로는 C2 조정을 우회하므로 중복교전이 늘어납니다(실측 SC3 18.1→20.2).">
+      <input type="checkbox" id="self-defense-toggle" checked>
+      자위권 발사 (ADR-050·071)
+    </label>
     </details>
   </div>
   <div id="deployment-warning" class="deployment-warning hidden" role="status"></div>

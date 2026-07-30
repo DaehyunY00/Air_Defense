@@ -26,6 +26,8 @@
     features.linkSemanticsV2 = !state || state.linkv2 !== '0'; // ADR-066
     features.sensorReportParity = !state || state.rp !== '0'; // ADR-067
     features.unifiedEngagementState = !state || state.cop !== '0'; // ADR-068
+    features.sawtoothFreshness = !state || state.saw !== '0'; // ADR-069·072
+    features.selfDefenseFire = !state || state.sdf !== '0'; // ADR-071·072
     return { deploymentId: state && state.dep, features: features, modelFidelity: 'iads-c2' };
   }
   function catalogFor(state) {
@@ -54,7 +56,9 @@
       state.south === '1' ? 'south' : '',
       state.linkv2 === '0' ? 'linkv1' : '',
       state.rp === '0' ? 'norp' : '',
-      state.cop === '0' ? 'nocop' : ''].join('|'); // ADR-062~068: 토글도 캐시 키
+      state.cop === '0' ? 'nocop' : '',
+      state.saw === '0' ? 'nosaw' : '',
+      state.sdf === '0' ? 'nosdf' : ''].join('|'); // ADR-062~072: 토글도 캐시 키
     if (desCache.key === key) return desCache.data;
     if (desCache.errorKey === key) return null;
     if (desCache.pendingKey === key) return null;

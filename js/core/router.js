@@ -17,7 +17,7 @@
   // ADR-061: dep 기본값은 주 분석 배치, fid는 하위호환 파싱만 남기고 항상 iads-c2로 고정된다.
   // ADR-065: appr(승인 계선)·disp(표적 산포)·south(남부 축선)는 **기본 ON**이다('0'으로 해제).
   // ADR-066: linkv2(링크 의미론 codex 정합)도 **기본 ON** — 반증용 해제 경로로 linkv2=0을 신설.
-  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '1', disp: '1', south: '1', linkv2: '1', rp: '1', cop: '1', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
+  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '1', disp: '1', south: '1', linkv2: '1', rp: '1', cop: '1', saw: '1', sdf: '1', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
   var VALID_TABS = ['sim', 'analysis', 'mc', 'data'];
   // 구 딥링크 호환: 지도/시나리오/DES/재생 탭은 통합 [시뮬레이션] 탭으로 흡수
   var LEGACY_TAB = { map: 'sim', scenario: 'sim', des: 'sim', playback: 'sim' };
@@ -53,6 +53,8 @@
       state.linkv2 = (state.linkv2 === '0' || state.linkv2 === false) ? '0' : '1'; // ADR-066
       state.rp = (state.rp === '0' || state.rp === false) ? '0' : '1'; // ADR-067
       state.cop = (state.cop === '0' || state.cop === false) ? '0' : '1'; // ADR-068
+      state.saw = (state.saw === '0' || state.saw === false) ? '0' : '1'; // ADR-069·072
+      state.sdf = (state.sdf === '0' || state.sdf === false) ? '0' : '1'; // ADR-071·072
       if (!KJ.DEPLOYMENT_IDS || KJ.DEPLOYMENT_IDS.indexOf(state.dep) === -1) {
         state.dep = DEFAULTS.dep; // 구 dep=legacy·HANBANDO_MINI_* 딥링크 폴백
       }

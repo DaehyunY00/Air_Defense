@@ -1,5 +1,5 @@
 {
-  "note": "ADR-068 기준선 재수립 — 교전현황 공유 COP(unifiedEngagementState)를 기본 ON으로 전환하면서 To-Be 수치가 바뀌어 ADR-067 지문은 폐기했다(As-Is는 KILL_WEB 축 부재로 완전 불변이며, 명시적 unifiedEngagementState=false는 ADR-067 지문과 동일하다). 구 지문은 git 이력에서 확인한다. 재기준화는 이번이 다섯 번째다(ADR-061 이관 → 065 → 066 → 067 → 068).",
+  "note": "ADR-072 기준선 재수립 — 톱니 신선도(ADR-069)·자위권 발사(ADR-071)를 기본 ON으로 전환하면서 전 수치가 바뀌어 ADR-068 지문은 폐기했다. 두 항목 모두 IADS_codex 정본(track-pool.reportingStaleness · ADR-050 발사 3단 사다리 ③)이며, 자위권은 As-Is만 회복시켜 통합 개선폭을 오히려 줄인다. 구 지문은 git 이력에서 확인한다. 재기준화는 이번이 여섯 번째다(ADR-061 이관 → 065 → 066 → 067 → 068 → 072).",
   "config": {
     "deploymentId": "HANBANDO_LEGACY_NORMAL",
     "modelFidelity": "iads-c2",
@@ -13,97 +13,111 @@
     "southernAxes": true,
     "linkSemanticsV2": true,
     "sensorReportParity": true,
-    "unifiedEngagementState": true
+    "unifiedEngagementState": true,
+    "sawtoothFreshness": true,
+    "selfDefenseFire": true
   },
   "cases": {
     "sc1|asis": {
-      "sha256": "138c886cdb530439136e01abe46d3e7dd9046038ac8170e1f1ee77aec0911478",
-      "killed": 24,
-      "leaked": 0,
+      "sha256": "8b77c5a9cbd295fe6d18666e902716a796858993add75f8c382e1114db530379",
+      "killed": 22,
+      "leaked": 2,
       "spawned": 35,
-      "eventCount": 40221,
+      "eventCount": 40569,
       "features": {
         "approvalChain": true,
         "threatTargetDispersion": true,
         "southernAxes": true,
         "linkSemanticsV2": true,
         "sensorReportParity": true,
-        "unifiedEngagementState": true
+        "unifiedEngagementState": true,
+        "sawtoothFreshness": true,
+        "selfDefenseFire": true
       }
     },
     "sc1|tobe": {
-      "sha256": "824d8ddb41416021581781bf4ddbce44a7afec0e920afee8a953f74c5caa2231",
-      "killed": 23,
-      "leaked": 2,
+      "sha256": "aa64cdbfd169280d7373d3c4134dcef05e07678c492488c4f49c98c202f75f96",
+      "killed": 21,
+      "leaked": 1,
       "spawned": 35,
-      "eventCount": 44288,
+      "eventCount": 45346,
       "features": {
         "approvalChain": true,
         "threatTargetDispersion": true,
         "southernAxes": true,
         "linkSemanticsV2": true,
         "sensorReportParity": true,
-        "unifiedEngagementState": true
+        "unifiedEngagementState": true,
+        "sawtoothFreshness": true,
+        "selfDefenseFire": true
       }
     },
     "sc2|asis": {
-      "sha256": "322bc65d4d72406f2e81ca55dd76d18b27ba8a7c37691bbe7ebeea015a2dd375",
+      "sha256": "4eb6029d68fa20c5f49f755072c4c8077555669dbe45efa1982d1ac694e379d5",
       "killed": 13,
       "leaked": 0,
       "spawned": 40,
-      "eventCount": 101528,
+      "eventCount": 101674,
       "features": {
         "approvalChain": true,
         "threatTargetDispersion": true,
         "southernAxes": true,
         "linkSemanticsV2": true,
         "sensorReportParity": true,
-        "unifiedEngagementState": true
+        "unifiedEngagementState": true,
+        "sawtoothFreshness": true,
+        "selfDefenseFire": true
       }
     },
     "sc2|tobe": {
-      "sha256": "c809c07067afcbddc7949e2a2c87c74134047bd76b48007e75f697900e32743d",
+      "sha256": "26b30280483a97badc96211a1e4142bca76615b4fea5d9f8c37db27291ac0cc3",
       "killed": 13,
       "leaked": 0,
       "spawned": 40,
-      "eventCount": 106752,
+      "eventCount": 106821,
       "features": {
         "approvalChain": true,
         "threatTargetDispersion": true,
         "southernAxes": true,
         "linkSemanticsV2": true,
         "sensorReportParity": true,
-        "unifiedEngagementState": true
+        "unifiedEngagementState": true,
+        "sawtoothFreshness": true,
+        "selfDefenseFire": true
       }
     },
     "sc3|asis": {
-      "sha256": "0dccef21fbb679296caeb1cdbef092cce2fad43568eee35ebb6e31f5758f1766",
-      "killed": 57,
-      "leaked": 114,
+      "sha256": "2b6439609e6434e9b5a99c79fc860bbb34d66bf14f7ac4e82e833bf416c7255c",
+      "killed": 63,
+      "leaked": 107,
       "spawned": 214,
-      "eventCount": 178268,
+      "eventCount": 178746,
       "features": {
         "approvalChain": true,
         "threatTargetDispersion": true,
         "southernAxes": true,
         "linkSemanticsV2": true,
         "sensorReportParity": true,
-        "unifiedEngagementState": true
+        "unifiedEngagementState": true,
+        "sawtoothFreshness": true,
+        "selfDefenseFire": true
       }
     },
     "sc3|tobe": {
-      "sha256": "bab96dcac7df50ab6a4651419e344202e92d4912f126c113ac982388f0c6234c",
-      "killed": 112,
-      "leaked": 59,
+      "sha256": "c5bf96d2282c4bae621ee2378bb413274711a3d63e50f6d70b3325cbd3cd8b35",
+      "killed": 115,
+      "leaked": 56,
       "spawned": 214,
-      "eventCount": 191426,
+      "eventCount": 190359,
       "features": {
         "approvalChain": true,
         "threatTargetDispersion": true,
         "southernAxes": true,
         "linkSemanticsV2": true,
         "sensorReportParity": true,
-        "unifiedEngagementState": true
+        "unifiedEngagementState": true,
+        "sawtoothFreshness": true,
+        "selfDefenseFire": true
       }
     }
   }

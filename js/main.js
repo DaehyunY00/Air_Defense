@@ -26,6 +26,8 @@
     features.linkSemanticsV2 = state.linkv2 !== '0'; // ADR-066
     features.sensorReportParity = state.rp !== '0'; // ADR-067
     features.unifiedEngagementState = state.cop !== '0'; // ADR-068
+    features.sawtoothFreshness = state.saw !== '0'; // ADR-069·072
+    features.selfDefenseFire = state.sdf !== '0'; // ADR-071·072
     return { deploymentId: state.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -76,6 +78,10 @@
     if (rpBox) rpBox.checked = state.rp === '1'; // ADR-067
     var copBox = document.getElementById('engagement-cop-toggle');
     if (copBox) copBox.checked = state.cop === '1'; // ADR-068
+    var sawBox = document.getElementById('sawtooth-toggle');
+    if (sawBox) sawBox.checked = state.saw === '1'; // ADR-069·072
+    var sdfBox = document.getElementById('self-defense-toggle');
+    if (sdfBox) sdfBox.checked = state.sdf === '1'; // ADR-071·072
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
     document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
@@ -158,6 +164,22 @@
     if (copToggle) {
       copToggle.addEventListener('change', function (e) {
         setState({ cop: e.target.checked ? '1' : '0' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-069·072: 톱니 신선도 토글 — 보고 링크 지연 해석이 바뀌므로 실행 조건 변경.
+    var sawToggle = document.getElementById('sawtooth-toggle');
+    if (sawToggle) {
+      sawToggle.addEventListener('change', function (e) {
+        setState({ saw: e.target.checked ? '1' : '0' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-071·072: 자위권 발사 토글 — 발사 경로가 추가되므로 실행 조건 변경.
+    var sdfToggle = document.getElementById('self-defense-toggle');
+    if (sdfToggle) {
+      sdfToggle.addEventListener('change', function (e) {
+        setState({ sdf: e.target.checked ? '1' : '0' });
         if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
       });
     }

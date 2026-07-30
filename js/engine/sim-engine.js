@@ -255,7 +255,9 @@
     // "탐지자산이 주기 P마다 1회 보고 → C2가 보는 정보 나이는 [0,P) 톱니"로 대체했다.
     // 우리는 P 고정(톱니 상한)으로 근사해 왔다 — 항상 최악을 보는 보수적 가정.
     // ON이면 전역 동기 시계 톱니를 쓴다: staleness = t − floor(t/P)·P. RNG를 쓰지 않아 결정론 보존.
-    this.sawtoothFreshness = ff('sawtoothFreshness', false);
+    // ADR-072: 기본 ON 전환 — codex 정본의 신선도 산정법이다. 고정 지연(P)은 항상 톱니
+    // 상한만 보는 근사였고, 양 모드에 같은 주기로 적용되므로 ADR-067 대칭 원칙도 유지된다.
+    this.sawtoothFreshness = ff('sawtoothFreshness', true);
     // ADR-070: 원격 교전(engage-on-remote) — IADS_codex ADR-051 D2 정합.
     // codex 킬웹은 웹 융합 트랙이 fc-grade(웹 내 **어느 포대 MFR**이든 FC 제공)면 자기 MFR이
     // FC가 아니어도 발사를 허용한다. 탐지 전용 레이더(그린파인·FPS-117·TPS-880K)는 감시급만
@@ -269,7 +271,10 @@
     // 못하는 **상류 전체 지연**(탐지·보고·식별)을 구제하는 경로다. 양 모드 공통(보편 권리 —
     // 비교 오염 없음). ⚠️ 축소 이식: codex의 2단계 자위 태세(회전↔탄도집중 모드 전환)는
     // 우리 센서 커널에 모드 개념이 없어 미구현 — 전환 소요를 0으로 보는 관대한 근사다.
-    this.selfDefenseFire = ff('selfDefenseFire', false);
+    // ADR-072: 기본 ON 전환 — codex ADR-050 발사 3단 사다리의 ③은 현 체계가 실제로 가진
+    // 권리다. 빠져 있으면 상류 지연으로 놓친 위협이 구제되지 않아 As-Is를 실제보다 나쁘게
+    // 모델링한다(개선폭 과대평가). 켜면 As-Is만 회복하므로 통합 개선폭은 오히려 줄어든다.
+    this.selfDefenseFire = ff('selfDefenseFire', true);
     this.selfDefenseRadiusKm = (typeof f.selfDefenseRadiusKm === 'number' && f.selfDefenseRadiusKm > 0)
       ? f.selfDefenseRadiusKm : (KJ.SELF_DEFENSE_RADIUS_KM || 10);
     this.targetSpreadKm = (typeof f.targetSpreadKm === 'number' && f.targetSpreadKm >= 0)
@@ -288,12 +293,10 @@
     if (this.threatTargetDispersion) this.features.targetSpreadKm = this.targetSpreadKm;
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
-    if (this.sawtoothFreshness) this.features.sawtoothFreshness = true; // ADR-069 (OFF wire shape 보존)
+    this.features.sawtoothFreshness = this.sawtoothFreshness; // ADR-072: 항상 실제 해석값 신고
     if (this.engageOnRemote) this.features.engageOnRemote = true; // ADR-070 (OFF wire shape 보존)
-    if (this.selfDefenseFire) { // ADR-071 (OFF wire shape 보존)
-      this.features.selfDefenseFire = true;
-      this.features.selfDefenseRadiusKm = this.selfDefenseRadiusKm;
-    }
+    this.features.selfDefenseFire = this.selfDefenseFire; // ADR-072: 항상 실제 해석값 신고
+    if (this.selfDefenseFire) this.features.selfDefenseRadiusKm = this.selfDefenseRadiusKm;
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.

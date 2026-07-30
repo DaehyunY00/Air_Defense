@@ -1212,10 +1212,30 @@
    * ⚠️ 우리 모델에는 웹 파티션(codex D1)이 없어 **To-Be 전 자산을 단일 웹으로** 본다 —
    * codex보다 관대한 근사이며 ADR-070 §한계에 기록한다.
    */
-  Simulation.prototype._iadsRemoteFcGrade = function (threat, t) {
+  /**
+   * ADR-070 — 킬웹 파티션(codex kill-web.js D1). 포대·센서를 세 웹으로 분류한다:
+   *   `usfk`(독립축 — ROK와 완전 비공유 D5) · `local_ad`(육군 국지방공 SHORAD) · `upper`(상층 KAMD/MCRC).
+   *
+   * codex는 여단 ICC posKey 집합을 하드코딩하지만(ICC_BRIGADE_*·ARMY_*_FRONT_AD), 우리 배치는
+   * posKey 이름이 달라 **같은 구조 규칙**을 쓴다 — 판정에 쓰는 필드(forceOwner·localAdPosKey)는
+   * codex와 동일하고, 우리 iccPosKey는 전부 여단 ICC(ICC_W·C·E·MDU 계열)라 상층으로 떨어진다.
+   * 새 노드 필드를 만들지 않으므로 결과 wire shape이 보존된다.
+   */
+  Simulation.prototype._iadsWebOf = function (node) {
+    if (!node) return null;
+    if (node.forceOwner === 'USFK') return 'usfk';
+    if (node.forceOwner === 'ROK_LOCAL_AD') return 'local_ad';
+    if (node.category === 'sensor' && node.localAdPosKey) return 'local_ad';
+    return 'upper';
+  };
+
+  Simulation.prototype._iadsRemoteFcGrade = function (shooter, threat, t) {
     if (!this.engageOnRemote || this.mode !== 'tobe' || !this.iadsSensorPhysics) return false;
     var tracks = threat._sensorTracks;
     if (!tracks) return false;
+    // D1: 포대는 **자기 웹 소속 센서**의 트랙만 통합해 본다 — 웹 밖 센서 그림은 웹 사설이다.
+    var myWeb = this._iadsWebOf(shooter);
+    if (!myWeb || myWeb === 'usfk') return false; // USFK는 독립축(ADR-036) — 원격 자격 부여·수령 모두 없음
     var ids = Object.keys(tracks);
     for (var i = 0; i < ids.length; i++) {
       var tr = tracks[ids[i]];
@@ -1223,9 +1243,9 @@
       if (!KJ.IADS.trackFreshness(tr, t, 3).fresh) continue;
       var sensor = this._nodeById(ids[i]);
       var spec = sensor && KJ.SENSOR_TYPES[sensor.typeId];
-      // 탐지 전용 레이더는 발사 자격을 주지 못한다(D2). USFK 자산도 독립축이라 제외(ADR-036).
+      // 탐지 전용 레이더는 발사 자격을 주지 못한다(D2 — 교전 추적 모드로 들어가면 광역 감시 저하).
       if (!KJ.IADS.hasFireControlCapability(spec, threat.type)) continue;
-      if (sensor.forceOwner === 'USFK') continue;
+      if (this._iadsWebOf(sensor) !== myWeb) continue; // D1 웹 파티션
       return true;
     }
     return false;
@@ -1239,7 +1259,7 @@
       var freshness = KJ.IADS.trackFreshness(physicalTrack, t, 3);
       var ownReady = state === KJ.IADS.SENSOR_STATE.FIRE_CONTROL && freshness.fresh;
       // ADR-070: 자기 MFR이 FC가 아니어도 웹 내 다른 포대 MFR이 FC를 주면 발사 자격 인정.
-      var remote = !ownReady && this._iadsRemoteFcGrade(threat, t);
+      var remote = !ownReady && this._iadsRemoteFcGrade(shooter, threat, t);
       if (remote) this.global.remoteFcGrants = (this.global.remoteFcGrants || 0) + 1;
       return {
         ready: ownReady || remote,

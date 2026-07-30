@@ -54,9 +54,26 @@
 ② 결심 지연은 어디서 오나(통신 협조인가, 승인권자 대기행렬인가), ③ 통합하면 무엇이 얼마나
 좋아지고 <b>무엇은 좋아지지 않나</b>(비용 비대칭 등 — 반증 관점 유지).</p>
 
-<h2 id="s2">2. IADS_C2 원본에서 무엇을 가져왔나</h2>
+<h2 id="s2">2. IADS_codex 정본에서 무엇을 가져왔나 — 대조표</h2>
+<div class="box"><span class="bt">정본 대조 — 2026-07-30 소스 직접 확인</span>
+형제 저장소 <b>IADS_codex</b> 소스를 직접 열어 대조한 결과다. 종전 판은 ADR 인용문에 의존해
+<b>한 곳을 잘못 적고 있었다</b> — codex <code>LINK_DELAYS.ifcn = 1</code>을 "정본의 신선도 판정"으로
+인용했으나, codex 파일 주석은 그 값들이 <b>"회귀 안전을 위해 무변경"</b>인 레거시 메시지 레이턴시
+상수이고 실제 거동은 <code>track-pool.reportingStaleness</code> 톱니 모델이며 flat 상수
+(<code>LINEAR_AXIS_RELAY_DELAY 34초</code>·<code>KILLWEB_LINK_DELAY 1초</code>)는 <b>폐기</b>됐다고 적고 있다.
+<table style="margin-top:10px">
+<thead><tr><th style="width:14%">항목</th><th style="width:30%">IADS_codex 정본</th><th style="width:30%">Air_Defense</th><th>상태</th></tr></thead>
+<tbody>
+<tr><td>물리 제원 8종 센서</td><td><code>reportingPeriod</code>·band·<code>rcsRef</code>·<code>jammingSusceptibility</code>·방위/고도각</td><td>동일</td><td><b>완전 일치</b> — 변경 불필요</td></tr>
+<tr><td>신선도 모델</td><td><code>reportingStaleness(P,t) = t − ⌊t/P⌋·P</code> — 전역 동기 시계 톱니 [0,P)</td><td>P 고정(톱니 상한 근사)</td><td><b>ADR-069로 이식</b> — 평균 나이 P→P/2</td></tr>
+<tr><td>원격 교전 (D2)</td><td>킬웹 융합 트랙이 fc-grade면 자기 MFR 없이 발사 허용. 탐지 전용 레이더 제외</td><td>종전: 양 모드 모두 자기 MFR 요구</td><td><b>ADR-070으로 이식</b> — 누락이 킬웹을 과소평가</td></tr>
+<tr><td>웹 파티션 (D1)</td><td>upper·local_ad·usfk 3웹. 포대는 자기 웹 센서만 융합</td><td>종전: 단일 융합</td><td><b>ADR-070에 포함 이식</b></td></tr>
+<tr><td>자위권 발사</td><td>ADR-050 3단 사다리 ③ — 지명·명령 없이 자기 레이더 + 낙하 10km + 마감</td><td>종전: 없음</td><td><b>ADR-071로 축소 이식</b>(모드 전환 미구현)</td></tr>
+<tr><td>As-Is 가시성</td><td>포대는 <b>자기 MFR만</b> 발사 후보로 보고, 광역 정보는 말·전화 별도 경로</td><td>광역 보고를 링크 지연 뒤 C2가 수신(발사는 자기 MFR 게이트)</td><td><b>미정합</b> — 같은 결론을 다른 메커니즘으로 낸다</td></tr>
+</tbody>
+</table></div>
 <p>고해상도 물리·교전 모델(<code>modelFidelity='iads-c2'</code>)은 별도 저장소
-<b>IADS_C2(KIDA_ADSIM v2.0)</b> — Cesium 3D 기반, 0.02초 물리 서브스텝, EADSIM-Lite 방법론 —
+<b>IADS_codex(KIDA_ADSIM v2.0 계열)</b> — Cesium 3D 기반, 0.02초 물리 서브스텝, EADSIM-Lite 방법론 —
 의 핵심 모델을 <b>DES 이벤트 구조로 재구성해 이식</b>한 것이다. 이식 계층은
 <code>js/model/iads/</code>(ES module 커널)이며, 엔진(<code>js/engine/sim-engine.js</code>)이
 이 커널을 호출한다.</p>
@@ -391,82 +408,213 @@ C2 모델</b>(M/M/c/K 처리·링크 지연·승인 계선)과 결합한 것, �
 <p class="small">구 <code>HANBANDO_MINI_*</code> 3종은 SHORAD·국지방공 축이 없어 연구 질문(문제상황 1·2)의
 원인 구조를 담지 못해 폐기했다(ADR-055).</p>
 
-<h2 id="s5">5. 지표 계산 방식</h2>
-<p>모든 지표는 실행 결과 <code>result.global</code>(및 노드/링크 배열)에서 나온다. 아래 표의 "코드"는
-<code>js/engine/sim-engine.js</code> 결과 조립부 기준이다.</p>
+<h2 id="s5">5. 지표 계산 방식 — [분석] 탭 단계 순서</h2>
+<p>아래 순서는 <b>[분석] 탭이 화면에 그리는 파이프라인 순서와 동일</b>하다(① 탐지 → ② 추적생성 →
+③④⑤ 식별·위협평가·WTA → ⑥⑦ 결심·교전협조 → ⑧ 교전·요격명령 → ⑨ BDA·재교전 → ⑨+ 결과 종합).
+각 단계의 <b>엔진 함수</b>와 지표의 <b>실제 계산식</b>을 함께 적었다. 모든 값은
+<code>result.global</code>·<code>result.nodes</code>·<code>result.links</code>에서 나오며,
+코드 위치는 <code>js/engine/sim-engine.js</code> 결과 조립부와
+<code>js/ui/panels.js</code>(표시 계산)다.</p>
 
-<h3>5.1 임무 결과 (MoE)</h3>
+<div class="box"><span class="bt">MoM 계층 표기</span>
+<b>MoP</b>(Measure of Performance — 체계 내부 과정 성능) · <b>MoCE</b>(Measure of C2
+Effectiveness — 지휘통제 효과성) · <b>MoFE</b>(Measure of Force Effectiveness — 전력 임무 효과).
+NATO COBP/SAS-026 분류(<code>ENV-MOM-COBP-01</code>)를 따른다.</div>
+
+<h3>① 탐지 (Detect)</h3>
+<p class="small">엔진: <code>_beginDetect</code> · <code>_onDetect</code> · IADS 커널
+<code>js/model/iads/sensor-model.js</code></p>
 <table>
-<thead><tr><th style="width:22%">지표</th><th style="width:38%">정의·식</th><th>주의</th></tr></thead>
+<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">계산식</th><th>해석 주의</th></tr></thead>
 <tbody>
-<tr><td>격추율 <code>killRate</code></td><td>killed / (spawned − censored)</td>
-<td rowspan="3"><b>해결분 기준</b>. censored = 종료시각까지 격추도 누수도 확정되지 않은 위협
-(관측창 절단). 절단 보정(<code>censorFix</code>, 기본 ON)이 분모에서 제외한다 — 제외하지 않으면
-관측이 잘린 위협이 "생존"으로 잘못 계상되어 As-Is 누수율이 과소평가된다.</td></tr>
-<tr><td>누수율 <code>leakRate</code></td><td>leaked / (spawned − censored)</td></tr>
-<tr><td>절단 <code>censoredRaw</code></td><td>spawned − killed − leaked</td></tr>
-<tr><td>전체생성 기준 비율<br><code>killRateSpawn</code> 등</td><td>killed / spawned (c2Analysis 실행에서 노출)</td>
-<td>실험 하네스·보고서는 이 분모를 쓴다(절단률 <code>censoredRate</code>를 항상 병기).</td></tr>
-<tr><td>누수 사유 <code>leakReasons</code></td><td>위협별 최종 주원인 코드 집계 — 반사실 기준
-("무엇이 있었으면 막았을까")으로 결정</td>
-<td>taxonomy(<code>KJ.leakTaxonomy</code>)가 구조적(structural)/조건부(conditional)를 분류.
-구조적 = C2 구조가 원인(책임공백·협조실패·처리한계 등).</td></tr>
-<tr><td>구조적 실패 <code>structuralLeaks</code></td><td>주원인이 구조적 taxonomy인 누수 수</td><td>실패 분류 v2(ADR-050 계열)의 주원인 기준.</td></tr>
+<tr><td>탐지율 <code>detectRate</code></td><td>MoP</td>
+<td><code>detected / spawned</code><br>스캔 1회 탐지확률
+<code>p = Pd(rRef, dist, rcs, rcsRef) × (1−jam·susceptibility) × (1−ecmFactor)</code>,
+<code>Pd = min(0.99, √((rRef/d)⁴·(rcs/rcsRef))·0.95)</code><br>
+누적: 위해율 <code>1−(1−p)^(dt/cadence)</code>, 스캔 주기 0.2초</td>
+<td>체공 위협은 시행횟수 N=dwell/스캔이 커서 <b>양 모드 모두 ~1.0으로 포화</b>된다.
+융합 효과는 "율"이 아니라 <b>탐지 시점 단축</b>으로 나타나며, 단일 센서만 커버하는 위협은 개선이 없다.</td></tr>
 </tbody>
 </table>
 
-<h3>5.2 시간 지표 (MoP)</h3>
+<h3>② 추적생성 (Track) — 보고 링크</h3>
+<p class="small">엔진: <code>_onDetected</code> · <code>_iadsReportBundle</code>(최속 보고경로 선택)</p>
 <table>
-<thead><tr><th style="width:26%">지표</th><th>정의·식</th></tr></thead>
+<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">계산식</th><th>해석 주의</th></tr></thead>
 <tbody>
-<tr><td>결심 지연 <code>meanDecisionDelaySec</code></td><td>Σ(최초 교전명령 시각 − 탐지 시각) / 결심 표본수 — 협조·승인·위임·처리 대기 포함</td></tr>
-<tr><td>협조 홉 몫 <code>meanCoordDelaySec</code></td><td>결심 지연 중 coord 링크 전파에 쓴 몫(동일 분모). 잔여 = 승인권자 대기·서비스.
-"데이터링크만 깔면 해결"이라는 통념을 분해 검증하는 지표</td></tr>
-<tr><td>교전 지연 <code>meanTimeToEngageSec</code></td><td>생성→최초 교전명령 (탐지 잠복 포함 end-to-end)</td></tr>
-<tr><td>격추 시간 <code>meanTimeToKillSec</code></td><td>생성→격추 확정(BDA hit)</td></tr>
+<tr><td>report 링크 전달지연</td><td>MoP</td>
+<td>링크별 <code>Σ(delaySec × count) / Σcount</code> (kind=<code>report</code>만)<br>
+센서→C2 지연 = 그 센서의 <code>reportingPeriod</code>(그린파인 16·FPS-117 8·TPS-880K 4·MFR 1초)</td>
+<td>샘플된 실현 지연이 아니라 <b>대표값 가중평균</b>이다. 현재 링크 분포가 모두 대칭이라
+평균=대표값이지만, 비대칭 분포를 도입하면 샘플 합 집계로 교체해야 한다.</td></tr>
+<tr><td>항적 품질 <code>trackQuality</code></td><td>MoP</td>
+<td><code>{correct, mis, failed, stale, identified}</code> 건수. 상관 성공확률은 센서 등급별
+(교전급/조기경보급) 추첨, 실패는 5초 주기 재시도</td>
+<td>오상관(mis)은 정체성 오인이며 물리 궤적 예측 자체는 유효하다.</td></tr>
 </tbody>
 </table>
 
-<h3>5.3 C2 구조 지표 (MoCE)</h3>
+<h3>③④⑤ 식별·위협평가·WTA — C2 서버 처리</h3>
+<p class="small">엔진: <code>_onC2Arrive</code> · <code>_afterC2</code>(To-Be는 <code>_onFusionArrive</code>) ·
+사수 선정 <code>_iadsEvaluate</code> · <code>_iadsDecide</code></p>
 <table>
-<thead><tr><th style="width:26%">지표</th><th>정의·식</th></tr></thead>
+<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">계산식</th><th>해석 주의</th></tr></thead>
 <tbody>
-<tr><td>노드 이용률 ρ</td><td>busyTime / (c·T) — c=동시처리 서버 수, T=시뮬레이션 시간. native 사수는
-발사대 점유 적분 activeTime/(동시교전능력·T). kind별 분해(<code>rhoByKind</code>: 항적처리
-<code>iads_track</code>·승인 <code>approval</code>·명령수신 <code>directive_reception</code> 등)</td></tr>
-<tr><td>대기 Wq</td><td>Σ대기시간 / 대기 표본수 (kind별 분해 동일)</td></tr>
-<tr><td>드롭 <code>drops</code></td><td>용량 K 초과로 수용 거부된 도착 수</td></tr>
-<tr><td>협조 시도 <code>coordination.attempts</code></td><td>중복 가능 상황에서 협조 판정이 발생한 횟수</td></tr>
-<tr><td>협조 성립 <code>deconflicted</code></td><td>교전현황 소비·계획 차단·COP 가시성(ADR-056, <code>copDeconflicted</code>로 분리 계상)으로 중복을 회피한 횟수</td></tr>
-<tr><td>중복교전 <code>duplicates</code></td><td>같은 위협에 이미 발사된 미해결 계획이 있는 상태에서 다른 계획이 또 발사를 확정한 횟수(발사 확정 시점 계상)</td></tr>
-<tr><td>교전현황 채널 <code>statusSharing</code></td><td>sent/queued/delivered/dropped/stale(신선도 초과 도착)/queueWaitSec/deconflicted(소비 성립)</td></tr>
-<tr><td>동적 권한위임 <code>delegation</code></td><td>승인권자 대기열이 임계(<code>DELEG_QUEUE_MULT</code>) 초과 시 하위 제대로 분권 전환한 횟수·시각·노드 분포 (ADR-058 승인 계선 — <code>approvalChain</code> ON에서 관측)</td></tr>
-<tr><td>병목 목록 <code>bottlenecks</code></td><td>노드(ρ 기준)·링크(지연×빈도)·공백(구조적 누수 사유) 3계층, 심각도 정렬</td></tr>
+<tr><td>C2 항적처리 최대 ρ<br><code>rhoByKind.iads_track</code></td><td>MoP</td>
+<td>노드별 <code>ρ = 서비스중시간 / (관측시간 × 서버수)</code>를 kind별로 분리 집계 →
+전 C2 노드 최대값</td>
+<td>C2 서버풀은 항적처리(<code>iads_track</code>)와 승인처리(<code>approval</code>)를 <b>공유</b>한다.
+그래서 kind별로 분해해야 각 카드가 자기 단계 병목만 본다. ρ≥0.9 병목 · ρ≥1 포화.</td></tr>
+<tr><td>C2 항적처리 최대 대기<br><code>WqByKind.iads_track</code></td><td>MoP</td>
+<td>대기시간 합 / 대기 건수 (kind별) → 전 C2 노드 최대</td>
+<td>M/M/c/K 대기행렬의 실측 Wq이며 이론값이 아니다.</td></tr>
+<tr><td>포화 드롭 <code>dropsByKind</code></td><td>MoP</td>
+<td>큐 용량 K 초과로 버려진 메시지 건수 (kind별)</td>
+<td>드롭은 위협 상실로 직결되지 않는다 — 재시도 경로가 있다.</td></tr>
+<tr><td>도출 병목 수 <code>bottlenecks.length</code></td><td>MoCE</td>
+<td>노드 ρ≥0.9 · 링크 포화 · 책임공백(gap)을 관측에서 <b>도출</b>한 목록의 크기</td>
+<td>하드코딩이 아니라 [부하 × 토폴로지 × 용량] 관측의 결과다. ⚠️ <b>범주형 개수</b>라
+부하 단조성이 보장되지 않는다 — SC2는 위협 37개 중 1건의 gap으로 목록이 채워졌다 사라지기도 한다.</td></tr>
 </tbody>
 </table>
 
-<h3>5.4 비용 지표 (MoFE)</h3>
+<h3>⑥⑦ 결심·교전협조/권한위임 — coord 홉</h3>
+<p class="small">엔진: <code>_iadsDecide</code> · <code>_iadsApprovalGate</code>(ADR-058) ·
+<code>_iadsSharedLocalEngagement</code>(ADR-056) · <code>js/model/iads/c2-policy.js</code></p>
 <table>
-<thead><tr><th style="width:26%">지표</th><th>정의·식</th><th>함정</th></tr></thead>
+<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">계산식</th><th>해석 주의</th></tr></thead>
 <tbody>
-<tr><td>교환비 <code>exchange</code></td><td>소모 요격탄 비용($M) / 격추 위협가치($M)</td>
-<td rowspan="2">"안 쏘면 교환비 0=최적"이라는 함정이 있다 — 반드시 방어효율과 함께 읽는다.</td></tr>
-<tr><td>포화 교환비 <code>exchangeSat</code></td><td>저가 포화위협(무인기·방사포) 부분집합의 교환비. <b>&gt;1이면 비용 비대칭 미해소</b>(G6 결론 ③)</td></tr>
-<tr><td>방어효율 <code>defenseEfficiency</code></td><td>격추 위협가치 / (격추+누수 위협가치) — "지킨 가치 비율"</td><td>교환비 함정의 반전 지표.</td></tr>
-<tr><td>중복 소모 <code>duplicateInterceptM</code></td><td>중복교전으로 이중 발사된 요격탄 비용(interceptM에 포함된 부분의 분리 계상)</td><td></td></tr>
-<tr><td>고가유도탄 보존율 <code>highValuePreservation</code></td><td>1 − 고가($≥5M) 요격탄 소모액/전체 소모액</td><td>자원 절약 주장의 반증 실험에 사용.</td></tr>
+<tr><td>결심 지연<br><code>meanDecisionDelaySec</code></td><td>MoP</td>
+<td><code>Σ(최초 교전명령시각 − 탐지시각) / everEngaged</code></td>
+<td><b>교전에 이른 위협만</b>의 조건부 평균이다(생존자 편향). 교전 자체가 성립하지 않은 위협은
+표본에 없으므로, 교전 성립률이 크게 다른 두 상태를 이 값만으로 비교하면 안 된다.</td></tr>
+<tr><td>그중 협조 홉 지연<br><code>meanCoordDelaySec</code></td><td>MoP</td>
+<td><code>Σ(coord 홉 대기+전송) / everEngaged</code>. As-Is 승인 협조는
+<code>voice</code> 대표 20초·Uniform(10,30)</td>
+<td>⚠️ <b>전선 성능이 아니라 절차 지연</b>이다(음성/VTC 왕복 — 교전의사 선언·책임구역 확인).
+링크를 광케이블로 바꿔도 줄지 않는다. 승인 계선을 끄면 이 값은 0이 아니라 <b>"미측정"</b>으로 표시된다.</td></tr>
+<tr><td>승인 노드 최대 ρ·Wq<br><code>rhoByKind.approval</code></td><td>MoP</td>
+<td>위 ③④⑤와 동일 정의, kind=<code>approval</code></td>
+<td>같은 C2 서버풀을 항적처리와 공유하므로 항적 ρ와 합산하면 안 된다.</td></tr>
+<tr><td>항적융합<br><code>coordination.fusedTracks</code></td><td>MoP</td>
+<td>군단 AOC가 MCRC 유래 + 자체 국지 항적을 <b>동일 위협으로 상관</b>한 건수</td>
+<td>As-Is 군단 AOC의 C2A 구조 관측 — To-Be의 IFCN 융합과는 다른 층이다.</td></tr>
+<tr><td>교전현황 드롭<br><code>statusSharing</code></td><td>MoP</td>
+<td><code>{sent, delivered, dropped, stale, queueWaitSec, deconflicted}</code>.
+As-Is 채널 = <code>voice-vtc</code> 180초·삼각(90,180,270)·<b>서버 1개·큐 용량 4·신선도 300초</b></td>
+<td><b>As-Is 제한적 공유의 실체</b>: SC3 실측에서 발송 143건 중 도착 13건(9%)·용량초과 폐기
+122건(85%)·평균 대기 39초 → 중복해소 <b>0건</b>. To-Be는 IFCN 1초로 폐기 0·중복해소 44건.</td></tr>
+<tr><td>중복교전 위험<br>(정적) <code>overlapHeat</code></td><td>MoCE</td>
+<td>축선별 <code>Σ(λ × 위험쌍수)</code>. 위험쌍 = C2 쌍의 협조지연
+<code>d ≥ dwellSec × COORD_RISK_FRACTION</code>인 쌍 (Dijkstra 최단 협조경로)</td>
+<td>⚠️ <b>"협조 지연발 중복 위험"만</b> 재는 지표이며 중복교전 예측치가 아니다. 실측상 링크가
+빨라지면 이 지표는 <b>내려가는데 DES 중복교전은 올라간다</b>(동시결심 경합) — 두 값을 함께 읽어야 한다.</td></tr>
+<tr><td>중복교전 발생<br>(동적) <code>coordination.duplicates</code></td><td>MoCE</td>
+<td>같은 위협에 <b>둘 이상의 C2 축</b>이 각각 발사를 확정한 건수(<code>fire_commit</code> 시점 판정)</td>
+<td>이게 실제 관측량이다. To-Be가 As-Is보다 많으면 교전상태 공유 결함을 의심해야 한다(ADR-056).</td></tr>
+<tr><td>요격탄 이중 소모<br><code>duplicateInterceptM</code></td><td>MoFE</td>
+<td>중복 발사에 쓰인 요격탄 단가 합($M)</td>
+<td>중복의 <b>비용 환산</b>. 실측상 중복은 대부분 저가 요격탄이 낸다.</td></tr>
+<tr><td>분권 전환<br><code>delegation.count</code></td><td>MoCE</td>
+<td>승인 대기 부하가 임계(<code>DELEG_QUEUE_MULT</code>)를 넘어 하급으로 권한이 넘어간 횟수</td>
+<td>부하의 함수다. As-Is는 전환이 <b>늦고</b> To-Be는 위임 임계 ×1 + automation으로 즉시 흡수한다.</td></tr>
 </tbody>
 </table>
 
-<h3>5.5 통계 처리</h3>
+<h3>⑧ 교전·요격명령 — 명령 링크 + 교전채널</h3>
+<p class="small">엔진: <code>_iadsFireControlState</code>(화력통제 게이트) ·
+<code>_iadsEvaluate</code>(PIP·pk) · <code>_onIadsFire</code></p>
 <table>
-<thead><tr><th style="width:26%">방법</th><th>내용</th></tr></thead>
+<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">계산식</th><th>해석 주의</th></tr></thead>
+<tbody>
+<tr><td>무기 최대 관측 ρ</td><td>MoP</td>
+<td>사수 노드 <code>ρ = 동시교전 점유 / maxSimultaneous</code> 최대값</td>
+<td>사수에는 <b>대기행렬이 없다</b> — 슬롯이 차면 대기 없이 즉시 차단·재시도다.
+그래서 사수 Wq 지표는 존재하지 않는다(ADR-062로 제거).</td></tr>
+<tr><td>command 링크 전달지연</td><td>MoP</td>
+<td>kind=<code>command</code> 링크의 대표값 가중평균. ECS→발사대 <code>internal</code> 1초(양 모드 동일)</td>
+<td>하향 명령은 사건기반 즉시발송 + 중계 C2 처리시간이다.</td></tr>
+<tr><td>동시교전 슬롯 차단<br><code>capacityBlocks</code></td><td>MoP</td>
+<td>교전 채널이 가득 차 <b>차단 후 재시도</b>된 건수</td>
+<td>⚠️ 영구 상실이 아니다. 라벨을 "drops"로 읽으면 손실로 오해한다(ADR-062로 라벨 정정).</td></tr>
+<tr><td>화력통제 게이트</td><td>MoP</td>
+<td>발사 자격 = 자기 MFR 트랙이 <code>FIRE_CONTROL</code> 상태 &amp; 신선도 ≤3초.
+원격 교전(ADR-070) ON이면 <b>같은 웹의 다른 포대 MFR</b>도 자격을 준다(탐지 전용 레이더 제외)</td>
+<td>광역 감시 레이더는 <b>큐잉(cueing)만</b> 한다 — 유도에 필요한 정확도가 없다.
+SC2 무인기 누수의 83~84%가 이 게이트에서 나온다(<code>no_fire_control</code>).</td></tr>
+</tbody>
+</table>
+
+<h3>⑨ BDA → 재교전 (폐루프)</h3>
+<p class="small">엔진: <code>_onEngageEnd</code> · <code>js/model/iads/engagement-model.js</code></p>
+<table>
+<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">계산식</th><th>해석 주의</th></tr></thead>
+<tbody>
+<tr><td>격추율 <code>killRate</code></td><td>MoFE</td>
+<td><code>killed / (spawned − censoredRaw)</code> — <b>해결분 기준</b><br>
+전체생성 기준 <code>killRateSpawn = killed / spawned</code>(보고서·하네스가 쓰는 분모)</td>
+<td><code>censoredRaw = spawned − killed − leaked</code>(관측창 절단). 절단 보정
+(<code>censorFix</code>, 기본 ON)이 분모에서 제외한다 — 제외하지 않으면 관측이 잘린 위협이
+"생존"으로 계상되어 As-Is 누수율이 과소평가된다. <b>절단률을 항상 병기</b>한다.</td></tr>
+<tr><td>평균 격추시간<br><code>meanTimeToKillSec</code></td><td>MoP</td>
+<td><code>Σ(격추시각 − 생성시각) / killed</code></td>
+<td><b>격추 성공분만</b>의 조건부 평균(생존자 편향). 표본 수
+<code>meanTimeToKillN</code>을 함께 노출해 이를 드러낸다.</td></tr>
+<tr><td>교전당 발사수<br><code>shotsPerEngagement</code></td><td>MoP</td>
+<td><code>shotsFired / everEngaged</code>. SLS 최대 2발 + 재교전</td>
+<td>중복 사격이 있으면 커진다 — ADR-056 ON에서 1.43→1.17로 내려간다.</td></tr>
+<tr><td>방어효율<br><code>defenseEfficiency</code></td><td>MoFE</td>
+<td>방어한 위협가치 / 전체 위협가치</td>
+<td>격추율의 <b>가치 가중</b> 버전. 고가 위협을 막았는지를 본다.</td></tr>
+<tr><td>비용교환비<br><code>exchangeSat</code></td><td>MoFE</td>
+<td>요격탄 소모액 / <b>격추한</b> 위협가치</td>
+<td>⚠️ <b>알려진 함정</b>: 못 잡으면 분모가 줄어 값이 <b>커진다</b>. 방어 실패가 "비싸게 막았다"로
+보이므로 <b>반드시 격추율·방어효율과 함께</b> 읽는다. 1 초과 = 저가 위협에 고가 요격탄.</td></tr>
+<tr><td>고가유도탄 보존율<br><code>highValuePreservation</code></td><td>MoFE</td>
+<td><code>1 − 고가($≥5M) 소모액 / 전체 소모액</code></td>
+<td>⚠️ <b>비율이므로 분모 효과에 취약</b>: 저가 소모가 크게 줄면 절대 고가 소모가 줄어도
+비율은 <b>떨어진다</b>. 실측 사례 — ADR-056 ON에서 전체 −52M·고가 −11.6M인데도 0.36→0.28.
+절대량과 함께 보지 않으면 방향을 거꾸로 읽는다.</td></tr>
+<tr><td>위협등급 대비 단가<br><code>interceptPerThreatValue</code></td><td>MoFE</td>
+<td>총 요격탄가 / <b>교전한</b> 위협가치 (격추 무관)</td>
+<td>exchangeSat의 분모 함정을 피한 대조 지표다.</td></tr>
+</tbody>
+</table>
+
+<h3>⑨+ 결과 종합 (전 단계의 귀결)</h3>
+<p class="small">엔진: <code>_results</code> · 실패 분류 <code>_terminalIadsFailure</code> ·
+<code>KJ.leakTaxonomy</code></p>
+<table>
+<thead><tr><th style="width:20%">지표</th><th style="width:8%">계층</th><th style="width:40%">계산식</th><th>해석 주의</th></tr></thead>
+<tbody>
+<tr><td>요격 실패율 <code>leakRate</code></td><td>MoFE</td>
+<td><code>leaked / (spawned − censoredRaw)</code></td>
+<td>격추율과 같은 분모 규약을 쓴다.</td></tr>
+<tr><td>누수 사유 <code>leakReasons</code></td><td>MoCE</td>
+<td>위협별 <b>최종 주원인</b> 코드 집계. <b>반사실 기준</b>("무엇이 있었으면 막았을까")으로
+<code>_terminalIadsFailure</code>가 단일 원인을 결정</td>
+<td>단계명이 아니라 해결수단 기준이다. G6 ②의 직접 증거 —
+SC3 As-Is는 C2 원인 77%(<code>timeout:c2</code> 66% + <code>window_lost_due_to_c2</code> 11%),
+To-Be는 42%로 줄고 무기체계 원인이 46%로 늘어난다.</td></tr>
+<tr><td>구조적 실패 합<br><code>structuralPrimary</code></td><td>MoCE</td>
+<td><code>Σ leakReasons[c]</code> where <code>leakTaxonomy(c).structural === true</code>
+(탐지공백·비융합·책임공백·포화·지연)</td>
+<td>To-Be에서 감소해야 정상이다. ⚠️ 실측은 SC3에서 25.2→23.2(미분리)로
+<b>거의 줄지 않는다</b> — "통합이 책임공백을 없앤다"는 서사는 부분적으로만 성립한다.</td></tr>
+</tbody>
+</table>
+
+<h3>통계 처리 (전 지표 공통)</h3>
+<table>
+<thead><tr><th style="width:22%">장치</th><th>정의</th></tr></thead>
 <tbody>
 <tr><td>paired 비교 (CRN)</td><td>As-Is/To-Be를 <b>같은 seed</b>로 짝지어 실행 — 위협 도착열이 동일하므로 구조 차이만 분리된다.
-복제 i의 시드 = baseSeed + i·0x9E3779B1 (황금비 해시 격자)</td></tr>
+복제 i의 시드 = <code>baseSeed + i·0x9E3779B1</code> (황금비 해시 격자)</td></tr>
 <tr><td>Welford 누산</td><td>온라인 평균·분산 — 표본 순서 무관 수치 안정</td></tr>
-<tr><td>95% CI</td><td>mean ± 1.96·std/√n. <b>Δ(To-Be−As-Is)의 CI가 0을 제외</b>할 때만 "통계적으로 분리"로 판정</td></tr>
-<tr><td>결정론</td><td>동일 config → 동일 결과(비트 단위). 도메인 분리 RNG로 모듈 간 난수 간섭 차단</td></tr>
+<tr><td>95% CI</td><td><code>mean ± 1.959964·std/√n</code>. <b>Δ(To-Be−As-Is)의 CI가 0을 제외</b>할 때만 "통계적으로 분리"로 판정</td></tr>
+<tr><td>결정론</td><td>동일 config → 동일 결과(비트 단위). 도메인 분리 RNG(<code>rng</code>·<code>arrRng</code>·<code>dispRng</code>·<code>southRng</code>)로 모듈 간 난수 간섭 차단</td></tr>
+<tr><td>미측정 표기</td><td>모델이 <b>재지 않는</b> 지표는 0이 아니라 "미측정"으로 표시한다(ADR-062).
+승인 계선을 끈 실행의 ⑥⑦ 승인·협조 4종이 해당한다 — 0으로 표시하면 "승인 병목 없음"으로 오독된다.</td></tr>
 </tbody>
 </table>
 

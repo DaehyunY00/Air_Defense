@@ -38,10 +38,10 @@
     <input type="range" id="intensity-slider" min="0.5" max="3" step="0.1" value="1">
     <span id="intensity-value">×1.0</span>
     <details class="ctl-advanced">
-      <summary title="여섯 항목 모두 이 모델의 기본 동작입니다. 끄는 것은 반증·감사 목적이며, 끈 상태의 수치를 결과로 인용하면 안 됩니다.">⚙️ 모델 조건 (기본값 — 감사·반증용)</summary>
-      <p class="ctl-advanced-note">아래 여섯 항목은 <b>이 시뮬레이션의 기본 동작</b>입니다(전부 켜짐).
+      <summary title="여덟 항목 모두 이 모델의 기본 동작입니다. 끄는 것은 반증·감사 목적이며, 끈 상태의 수치를 결과로 인용하면 안 됩니다. 맨 아래 '원격 교전'만 기본 꺼짐 실험 옵션입니다.">⚙️ 모델 조건 · 실험 옵션</summary>
+      <p class="ctl-advanced-note">아래 <b>여덟 항목</b>은 <b>이 시뮬레이션의 기본 동작</b>입니다(전부 켜짐).
         끄면 각각의 구 동작이 재현되며 <b>반증·감사 목적으로만</b> 씁니다 — 끈 상태의 수치를 결과로 인용하면 안 됩니다.
-        딥링크로도 끌 수 있습니다: <code>#appr=0&amp;disp=0&amp;south=0&amp;linkv2=0&amp;rp=0&amp;cop=0</code></p>
+        딥링크로도 끌 수 있습니다: <code>#appr=0&amp;disp=0&amp;south=0&amp;linkv2=0&amp;rp=0&amp;cop=0&amp;saw=0&amp;sdf=0</code></p>
     <label class="ctl-check" title="As-Is 승인 계선(군단·수방사 AOC→MCRC 협조 홉 + 승인 대기 + 동적 위임)을 모델에 포함합니다(ADR-058). 끄면 ⑥⑦ 승인·협조 지표는 0이 아니라 '미측정'으로 표시됩니다.">
       <input type="checkbox" id="approval-chain-toggle" checked>
       승인 계선 모델 (ADR-058)
@@ -70,9 +70,15 @@
       <input type="checkbox" id="sawtooth-toggle" checked>
       보고 주기 톱니 신선도 (ADR-069)
     </label>
-    <label class="ctl-check" title="자위권 발사를 모델에 포함합니다(ADR-050·071). 지명·명령이 전혀 없어도 포대가 자기 레이더로 본 탄도 위협이 자기 반경 10km 안에 떨어질 것으로 예측되면 마지막 발사 시점에 발사합니다. 탄도탄·방사포에만 적용되며, 끄면 상류 지연(탐지·보고·식별)으로 놓친 위협이 구제되지 않아 현 체계가 실제보다 나쁘게 모델링됩니다. ⚠️ 이 경로는 C2 조정을 우회하므로 중복교전이 늘어납니다(실측 SC3 18.1→20.2).">
+    <label class="ctl-check" title="자위권 발사를 모델에 포함합니다(ADR-050·071). 지명·명령이 전혀 없어도 포대가 자기 레이더로 본 탄도 위협이 자기 반경 10km 안에 떨어질 것으로 예측되면 마지막 발사 시점에 발사합니다. 탄도탄·방사포에만 적용되며, 끄면 상류 지연(탐지·보고·식별)으로 놓친 위협이 구제되지 않아 현 체계가 실제보다 나쁘게 모델링됩니다. 이 경로는 C2 조정을 우회하므로 이웃 포대 잠금이 없고 원리상 중복 사격 여지가 생기지만, 실측(SC3 30 seed)에서는 중복교전이 늘지 않았습니다(19.7→18.6, 신뢰구간 중첩 — 방향 미확정). 켜면 현 체계 격추율이 38.5%→41.7%로 올라 통합 개선폭이 줄어듭니다.">
       <input type="checkbox" id="self-defense-toggle" checked>
       자위권 발사 (ADR-050·071)
+    </label>
+    <p class="ctl-advanced-note">🧪 <b>실험 옵션 (기본 꺼짐)</b> — 아래는 기본 동작이 <b>아닙니다</b>.
+      켠 상태의 수치는 "그 능력을 넣었다면" 반사실이며, 기본 결과로 인용하면 안 됩니다.</p>
+    <label class="ctl-check" title="통합 체계(To-Be)의 포대가 자기 레이더에 안 잡힌 표적도 같은 킬웹 안의 다른 포대가 만든 화력통제 항적을 받아 사격합니다(engage-on-remote, ADR-051·070). 조기경보 레이더 같은 탐지 전용 자산은 사격 자격을 주지 못하고, 국지방공·주한미군 웹 경계도 넘지 못합니다. ⚠️ 켜면 격추율이 오르지만 비용 지표가 폭주합니다 — SC2(무인기 8대)에서 요격탄 소모 35→290 M$, 비용교환비 103→620, 고가유도탄 보존율 0.20→0.01. 현 WTA 비용항이 탄도탄 전용(ADR-059)이라 비용 인식이 작동하지 않기 때문입니다. 이 대비를 보는 것이 이 옵션의 용도입니다.">
+      <input type="checkbox" id="engage-on-remote-toggle">
+      원격 교전 (engage-on-remote · ADR-070)
     </label>
     </details>
   </div>

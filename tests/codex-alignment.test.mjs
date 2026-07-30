@@ -153,7 +153,21 @@ var adv = html.slice(html.indexOf('<details class="ctl-advanced"'), html.indexOf
   var src = fs.readFileSync(path.join(repo, 'js', f), 'utf8');
   assert(/sawtoothFreshness\s*[:=]\s*.*saw !== '0'/.test(src) &&
     /selfDefenseFire\s*[:=]\s*.*sdf !== '0'/.test(src), f + ' modelConfig 배선');
+  // ADR-070: eor은 기본 꺼짐이므로 정규화 방향이 반대다 — `=== '1'`이어야 한다.
+  assert(/engageOnRemote\s*[:=]\s*.*eor === '1'/.test(src), f + ' engageOnRemote 배선(기본 OFF 방향)');
 });
+
+console.log('# 5 — ADR-070 원격 교전을 사용자 옵션으로 노출 (기본 꺼짐)');
+assert(/eor: '0'/.test(router), "라우터 DEFAULTS에 eor 기본 OFF");
+assert(/state\.eor = \(state\.eor === '1'/.test(router), "eor은 명시적 '1'만 ON으로 정규화");
+assert(adv.indexOf('id="engage-on-remote-toggle"') !== -1, '원격 교전 토글이 접기 섹션 안에 있음');
+// 기본 ON 여덟 개는 checked, eor만 unchecked여야 한다 — 실험 옵션과 기본 동작의 구분.
+var eorLabelIdx = adv.indexOf('id="engage-on-remote-toggle"');
+assert(!/checked/.test(adv.slice(eorLabelIdx, adv.indexOf('>', eorLabelIdx))),
+  'eor 체크박스는 checked가 아님 (기본 꺼짐)');
+// 🧪 표식으로 찾는다 — summary 제목에도 '실험 옵션' 문구가 있어 indexOf로는 구분되지 않는다.
+assert(adv.indexOf('🧪') !== -1 && adv.indexOf('🧪') > adv.indexOf('id="self-defense-toggle"') &&
+  adv.indexOf('🧪') < eorLabelIdx, '실험 옵션 구분 안내가 기본 ON 토글 뒤·eor 앞에 있음');
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');
 process.exit(fail ? 1 : 0);

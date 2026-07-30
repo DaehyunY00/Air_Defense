@@ -1244,6 +1244,14 @@ li.chk-fail { background: #43140f; }
   .pl-m-track { display: none; }
   .pl-m-na-note { grid-column: span 2; }
 }
+
+/* ADR-069: 모델 조건 토글 접기 섹션 — 여섯 항목은 기본 동작이고 끄는 것은 감사·반증용이므로
+   상단 컨트롤에서 접어 둔다(플래그·딥링크는 그대로 유지 — 반증 경로 보존). */
+.ctl-advanced { flex-basis: 100%; border: 1px solid var(--line, #d8dde5); border-radius: 4px;
+  padding: 4px 10px; background: rgba(0, 0, 0, 0.02); }
+.ctl-advanced > summary { cursor: pointer; font-size: 12.5px; color: var(--sub, #5a6270); font-weight: 600; }
+.ctl-advanced[open] > summary { margin-bottom: 6px; }
+.ctl-advanced-note { font-size: 11.5px; color: var(--sub, #5a6270); margin: 4px 0 8px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -1275,6 +1283,11 @@ li.chk-fail { background: #43140f; }
     <label>위협 강도</label>
     <input type="range" id="intensity-slider" min="0.5" max="3" step="0.1" value="1">
     <span id="intensity-value">×1.0</span>
+    <details class="ctl-advanced">
+      <summary title="여덟 항목 모두 이 모델의 기본 동작입니다. 끄는 것은 반증·감사 목적이며, 끈 상태의 수치를 결과로 인용하면 안 됩니다. 맨 아래 '원격 교전'만 기본 꺼짐 실험 옵션입니다.">⚙️ 모델 조건 · 실험 옵션</summary>
+      <p class="ctl-advanced-note">아래 <b>여덟 항목</b>은 <b>이 시뮬레이션의 기본 동작</b>입니다(전부 켜짐).
+        끄면 각각의 구 동작이 재현되며 <b>반증·감사 목적으로만</b> 씁니다 — 끈 상태의 수치를 결과로 인용하면 안 됩니다.
+        딥링크로도 끌 수 있습니다: <code>#appr=0&amp;disp=0&amp;south=0&amp;linkv2=0&amp;rp=0&amp;cop=0&amp;saw=0&amp;sdf=0</code></p>
     <label class="ctl-check" title="As-Is 승인 계선(군단·수방사 AOC→MCRC 협조 홉 + 승인 대기 + 동적 위임)을 모델에 포함합니다(ADR-058). 끄면 ⑥⑦ 승인·협조 지표는 0이 아니라 '미측정'으로 표시됩니다.">
       <input type="checkbox" id="approval-chain-toggle" checked>
       승인 계선 모델 (ADR-058)
@@ -1299,6 +1312,21 @@ li.chk-fail { background: #43140f; }
       <input type="checkbox" id="engagement-cop-toggle" checked>
       교전현황 공유 COP (ADR-056)
     </label>
+    <label class="ctl-check" title="탐지자산의 보고 주기를 톱니(sawtooth) 신선도로 산정합니다(ADR-069). 레이더가 주기 P마다 한 번 보고하면 지휘소가 보는 정보의 나이는 0~P 사이를 오갑니다 — IADS_codex 정본의 산정법입니다. 끄면 항상 최악(P 고정)으로 보는 보수적 근사로 돌아갑니다. 양 체계에 같은 주기로 적용되므로 비교 공정성은 유지됩니다.">
+      <input type="checkbox" id="sawtooth-toggle" checked>
+      보고 주기 톱니 신선도 (ADR-069)
+    </label>
+    <label class="ctl-check" title="자위권 발사를 모델에 포함합니다(ADR-050·071). 지명·명령이 전혀 없어도 포대가 자기 레이더로 본 탄도 위협이 자기 반경 10km 안에 떨어질 것으로 예측되면 마지막 발사 시점에 발사합니다. 탄도탄·방사포에만 적용되며, 끄면 상류 지연(탐지·보고·식별)으로 놓친 위협이 구제되지 않아 현 체계가 실제보다 나쁘게 모델링됩니다. 이 경로는 C2 조정을 우회하므로 이웃 포대 잠금이 없고 원리상 중복 사격 여지가 생기지만, 실측(SC3 30 seed)에서는 중복교전이 늘지 않았습니다(19.7→18.6, 신뢰구간 중첩 — 방향 미확정). 켜면 현 체계 격추율이 38.5%→41.7%로 올라 통합 개선폭이 줄어듭니다.">
+      <input type="checkbox" id="self-defense-toggle" checked>
+      자위권 발사 (ADR-050·071)
+    </label>
+    <p class="ctl-advanced-note">🧪 <b>실험 옵션 (기본 꺼짐)</b> — 아래는 기본 동작이 <b>아닙니다</b>.
+      켠 상태의 수치는 "그 능력을 넣었다면" 반사실이며, 기본 결과로 인용하면 안 됩니다.</p>
+    <label class="ctl-check" title="통합 체계(To-Be)의 포대가 자기 레이더에 안 잡힌 표적도 같은 킬웹 안의 다른 포대가 만든 화력통제 항적을 받아 사격합니다(engage-on-remote, ADR-051·070). 조기경보 레이더 같은 탐지 전용 자산은 사격 자격을 주지 못하고, 국지방공·주한미군 웹 경계도 넘지 못합니다. ⚠️ 켜면 격추율이 오르지만 비용 지표가 폭주합니다 — SC2(무인기 8대)에서 요격탄 소모 35→290 M$, 비용교환비 103→620, 고가유도탄 보존율 0.20→0.01. 현 WTA 비용항이 탄도탄 전용(ADR-059)이라 비용 인식이 작동하지 않기 때문입니다. 이 대비를 보는 것이 이 옵션의 용도입니다.">
+      <input type="checkbox" id="engage-on-remote-toggle">
+      원격 교전 (engage-on-remote · ADR-070)
+    </label>
+    </details>
   </div>
   <div id="deployment-warning" class="deployment-warning hidden" role="status"></div>
 
@@ -4055,6 +4083,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   // 종전에는 같은 축선의 모든 위협이 **정확히 같은 한 점**으로 향해, seed를 바꿔도 착탄점이
   // 변하지 않고 표적권역 주변 자산만 반복 교전했다. 표적을 권역(disk) 안에서 뽑아 위협마다
   // 다른 착탄점을 갖게 한다. 반경은 THREAT-TARGET-DISP-01(개념 설정·등급 C, docs/params.md).
+  // ADR-071: 자위권 반경 — IADS_codex ADR-050 `SELF_DEFENSE_RADIUS_KM = 10`
+  // ("조정 가능한 교리 상수"). 낙하 예측점이 포대 이 반경 안이면 자위권 발동 대상.
+  KJ.SELF_DEFENSE_RADIUS_KM = 10;
   KJ.THREAT_TARGET_SPREAD_KM = 15;
 
   /**
@@ -4501,7 +4532,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   // ADR-061: dep 기본값은 주 분석 배치, fid는 하위호환 파싱만 남기고 항상 iads-c2로 고정된다.
   // ADR-065: appr(승인 계선)·disp(표적 산포)·south(남부 축선)는 **기본 ON**이다('0'으로 해제).
   // ADR-066: linkv2(링크 의미론 codex 정합)도 **기본 ON** — 반증용 해제 경로로 linkv2=0을 신설.
-  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '1', disp: '1', south: '1', linkv2: '1', rp: '1', cop: '1', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
+  var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '1', disp: '1', south: '1', linkv2: '1', rp: '1', cop: '1', saw: '1', sdf: '1', eor: '0', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
   var VALID_TABS = ['sim', 'analysis', 'mc', 'data'];
   // 구 딥링크 호환: 지도/시나리오/DES/재생 탭은 통합 [시뮬레이션] 탭으로 흡수
   var LEGACY_TAB = { map: 'sim', scenario: 'sim', des: 'sim', playback: 'sim' };
@@ -4537,6 +4568,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       state.linkv2 = (state.linkv2 === '0' || state.linkv2 === false) ? '0' : '1'; // ADR-066
       state.rp = (state.rp === '0' || state.rp === false) ? '0' : '1'; // ADR-067
       state.cop = (state.cop === '0' || state.cop === false) ? '0' : '1'; // ADR-068
+      state.saw = (state.saw === '0' || state.saw === false) ? '0' : '1'; // ADR-069·072
+      state.sdf = (state.sdf === '0' || state.sdf === false) ? '0' : '1'; // ADR-071·072
+      // ADR-070: 기본 꺼짐 실험 옵션 — '1'만 인식(기본 ON 플래그들과 정규화 방향이 반대다).
+      state.eor = (state.eor === '1' || state.eor === true) ? '1' : '0';
       if (!KJ.DEPLOYMENT_IDS || KJ.DEPLOYMENT_IDS.indexOf(state.dep) === -1) {
         state.dep = DEFAULTS.dep; // 구 dep=legacy·HANBANDO_MINI_* 딥링크 폴백
       }
@@ -5988,6 +6023,33 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 엔진이 이미 최속 센서 경로를 고르므로(_iadsReportBundle) 융합 신선도는 링크 구조에서
     // 자연 발생하고, 일괄 1초는 이중 계상이다. 분기는 어댑터가 수행한다(변형 카탈로그 |rp).
     this.sensorReportParity = ff('sensorReportParity', true);
+    // ADR-069: 보고 주기 톱니 신선도 — IADS_codex `track-pool.reportingStaleness` 정합.
+    // codex는 flat 상수(LINEAR_AXIS_RELAY_DELAY 34s·KILLWEB_LINK_DELAY 1s)를 **폐기**하고
+    // "탐지자산이 주기 P마다 1회 보고 → C2가 보는 정보 나이는 [0,P) 톱니"로 대체했다.
+    // 우리는 P 고정(톱니 상한)으로 근사해 왔다 — 항상 최악을 보는 보수적 가정.
+    // ON이면 전역 동기 시계 톱니를 쓴다: staleness = t − floor(t/P)·P. RNG를 쓰지 않아 결정론 보존.
+    // ADR-072: 기본 ON 전환 — codex 정본의 신선도 산정법이다. 고정 지연(P)은 항상 톱니
+    // 상한만 보는 근사였고, 양 모드에 같은 주기로 적용되므로 ADR-067 대칭 원칙도 유지된다.
+    this.sawtoothFreshness = ff('sawtoothFreshness', true);
+    // ADR-070: 원격 교전(engage-on-remote) — IADS_codex ADR-051 D2 정합.
+    // codex 킬웹은 웹 융합 트랙이 fc-grade(웹 내 **어느 포대 MFR**이든 FC 제공)면 자기 MFR이
+    // FC가 아니어도 발사를 허용한다. 탐지 전용 레이더(그린파인·FPS-117·TPS-880K)는 감시급만
+    // 전파해 발사 자격을 주지 못한다 — 교전 추적 모드로 들어가면 광역 감시가 저하되므로
+    // 감시 모드에 남는다는 것이 codex 사유(kill-web.js D2). Linear(As-Is)는 무변경.
+    // 종전 Air_Defense는 **양 모드 모두** 자기 MFR FC를 요구해 킬웹의 핵심 이점 하나가 빠져 있었다.
+    this.engageOnRemote = ff('engageOnRemote', false);
+    // ADR-071: 자위권 발사 — IADS_codex ADR-050 축소 이식. 발사 3단 사다리의 ③.
+    // 지명·명령이 **전혀 없어도** 자기 레이더로 본 탄도 위협이 자기 근처에 떨어질 것으로
+    // 예측되면 마지막 발사 시점에 발사한다. ①정식(킬체인+명령)·②긴급(지명+마감)이 구제하지
+    // 못하는 **상류 전체 지연**(탐지·보고·식별)을 구제하는 경로다. 양 모드 공통(보편 권리 —
+    // 비교 오염 없음). ⚠️ 축소 이식: codex의 2단계 자위 태세(회전↔탄도집중 모드 전환)는
+    // 우리 센서 커널에 모드 개념이 없어 미구현 — 전환 소요를 0으로 보는 관대한 근사다.
+    // ADR-072: 기본 ON 전환 — codex ADR-050 발사 3단 사다리의 ③은 현 체계가 실제로 가진
+    // 권리다. 빠져 있으면 상류 지연으로 놓친 위협이 구제되지 않아 As-Is를 실제보다 나쁘게
+    // 모델링한다(개선폭 과대평가). 켜면 As-Is만 회복하므로 통합 개선폭은 오히려 줄어든다.
+    this.selfDefenseFire = ff('selfDefenseFire', true);
+    this.selfDefenseRadiusKm = (typeof f.selfDefenseRadiusKm === 'number' && f.selfDefenseRadiusKm > 0)
+      ? f.selfDefenseRadiusKm : (KJ.SELF_DEFENSE_RADIUS_KM || 10);
     this.targetSpreadKm = (typeof f.targetSpreadKm === 'number' && f.targetSpreadKm >= 0)
       ? f.targetSpreadKm : (KJ.THREAT_TARGET_SPREAD_KM || 0);
     // OFF wire shape은 기존 결과와 bit-exact로 유지한다. ON일 때만 결과 features에 노출.
@@ -6004,6 +6066,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (this.threatTargetDispersion) this.features.targetSpreadKm = this.targetSpreadKm;
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
+    this.features.sawtoothFreshness = this.sawtoothFreshness; // ADR-072: 항상 실제 해석값 신고
+    if (this.engageOnRemote) this.features.engageOnRemote = true; // ADR-070 (OFF wire shape 보존)
+    this.features.selfDefenseFire = this.selfDefenseFire; // ADR-072: 항상 실제 해석값 신고
+    if (this.selfDefenseFire) this.features.selfDefenseRadiusKm = this.selfDefenseRadiusKm;
     // Step 1: 비용 가중치 W(0~1). features.costWtaWeight 숫자로 재정의(스윕), 없으면 문서 기본.
     this.costWtaWeight = (typeof f.costWtaWeight === 'number') ? Math.max(0, Math.min(1, f.costWtaWeight)) : COST_WTA_WEIGHT;
     // Step 2: 재고 스윕용 균일 override(모든 무기 동일 magazine). 없으면 노드별 magazine 사용.
@@ -6057,6 +6123,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         hit: 0, miss: 0, released: 0, expired: 0, cancelled: 0,
         expiryByReason: {}, fireByCause: {}
       },
+      selfDefense: { fired: 0, failed: 0 }, // ADR-071
       statusSharing: {
         sent: 0, delivered: 0, dropped: 0, stale: 0, queued: 0,
         queueWaitSec: 0, deconflicted: 0, duplicatesDueToStaleState: 0
@@ -6701,13 +6768,125 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         threat.leakReason = null;
       }
     }
+    // ADR-071: 자위권 발사 — 정식 경로가 아무것도 만들지 못한 채 발사 마감이 닥친 경우.
+    // 별도 균일 감시 루프를 만들지 않고 기존 센서 스캔 사건에 얹는다(codex 구현 제약).
+    if (this.selfDefenseFire) this._tryIadsSelfDefense(threat, t);
     if (t + dt < threat.spawnT + threat.dwellSec) {
       this.schedule(t + dt, PRI.DETECT, 'IADS_SENSOR_SCAN', { threat: threat });
     }
   };
 
+  /**
+   * ADR-069 — 보고 주기 톱니 신선도 (IADS_codex `reportingStaleness` 정합).
+   *
+   * 탐지자산이 주기 P마다 1회 상위 C2로 그림을 보고하면, C2가 보는 정보의 나이는
+   * simTime − 최근 보고시각으로 [0, P) 구간을 톱니로 변동한다(보고 시각은 전역 동기 시계
+   * t = 0, P, 2P, …). 평균 나이가 P → P/2로 줄어들지만 **양 모드에 같은 주기로 적용**되므로
+   * ADR-067의 대칭 원칙은 유지된다. RNG를 소비하지 않아 결정론이 보존된다.
+   */
+  Simulation.prototype._reportingStaleness = function (period) {
+    if (!(period > 0)) return 0; // 실시간/전속 (포대 자기 MFR)
+    var s = this.now - Math.floor(this.now / period) * period;
+    return s < 0 ? 0 : s;
+  };
+
+  /**
+   * ADR-071 — 자위권 발사 시도 (codex ADR-050 축소 이식).
+   *
+   * codex 확정 조건 4개 중 3개를 그대로 쓴다:
+   *   ① 정보 조건 — 포대 **자기 MFR**의 자체 추적 성립 필수(상부 트랙 원용 금지).
+   *   ② 위협 조건 — 낙하 예측점이 포대 반경 `selfDefenseRadiusKm`(기본 10km) 이내.
+   *                 인근 도시·일반 방어구역 확대 금지(그건 분권 교전 = 킬웹 영역).
+   *   ③ 시점 조건 — 발사 마감 도달 시에만. 마감은 기존 `_iadsGeometryWindow().lastFire`를
+   *                 그대로 쓴다(새 상수 없음). 마감 전 정식 지명·명령 도착 시 정식 우선.
+   *   ④ 사후 — `launchCause='self_defense'` 표식. 이웃 포대 잠금을 유발하지 않는다(codex 명시)
+   *            → **중복교전 압력이 구조적으로 커진다**(관측 대상).
+   *
+   * 적용 범위는 codex와 같이 **탄도축 위협(srbm/mrl_large) 한정**이다.
+   */
+  Simulation.prototype._tryIadsSelfDefense = function (threat, t) {
+    if (!this.selfDefenseFire || !threat.alive) return;
+    if (iadsThreatCategory(threat.type) !== 'ballistic') return;
+    // 정식 우선: 지명·명령이 이미 있으면 자위권은 발동하지 않는다(②와 상호배타).
+    if (threat._hadIadsPlan) return;
+    if (threat._selfDefenseFired) return;
+    var impact = threat.target || (KJ.AXES[threat.axis] && KJ.AXES[threat.axis].target);
+    if (!impact) return;
+    var self = this, radius = this.selfDefenseRadiusKm;
+    var shooters = KJ.nodesInMode(this.mode, this.catalog).filter(function (n) {
+      if (n.category !== 'shooter' || !n.canEngage || !n.canEngage[threat.type]) return false;
+      if (n.forceOwner === 'USFK') return false; // ADR-036 독립축
+      // ② 위협 조건 — 낙하 예측점이 포대 반경 이내
+      return haversineKm({ lat: n.coord[0], lon: n.coord[1], altKm: 0 },
+        { lat: impact[0], lon: impact[1], altKm: 0 }) <= radius;
+    });
+    for (var i = 0; i < shooters.length; i++) {
+      var shooter = shooters[i];
+      // ① 정보 조건 — 자기 MFR의 자체 추적 성립(상부 트랙 원용 금지)
+      var own = shooter.mfrSensorId && threat._sensorTracks
+        ? threat._sensorTracks[shooter.mfrSensorId] : null;
+      if (this.iadsSensorPhysics && (!own || own.state === KJ.IADS.SENSOR_STATE.UNDETECTED)) continue;
+      // ③ 시점 조건 — 발사 마감 도달(이번 tick에 마감이 지나간다)
+      var win = this._iadsGeometryWindow(shooter, threat);
+      if (!win || !Number.isFinite(win.lastFire)) continue;
+      if (t < win.lastFire - KJ.IADS.SENSOR_SCAN_CADENCE_SECONDS || t > win.lastFire) continue;
+      var commander = this._iadsSelfDefenseCommander(shooter);
+      if (!commander) continue;
+      var feas = this._iadsEvaluate(shooter, threat, t);
+      if (!feas || !feas.feasible) {
+        // codex: 마감 내 FC 미성립 시 자위권 실패 기록
+        this.global.selfDefense.failed++;
+        this._recordFailureEvidence(threat, 'self_defense_failed',
+          { shooterId: shooter.id, reason: feas ? feas.reason : 'no_candidate' });
+        continue;
+      }
+      var plan = this._iadsCreatePlan(commander, shooter.id, t, threat, {
+        targetEcsId: shooter.ecsC2Id || null,
+        delegationLevel: 'SELF_DEFENSE',
+        launchCause: 'self_defense',
+        validUntil: win.lastFire + 3
+      });
+      threat._iadsPlans.push(plan);
+      threat._hadIadsPlan = true;
+      threat._selfDefenseFired = true;
+      threat._commandCause = 'self_defense';
+      this.global.c2Orders.created++;
+      this.global.selfDefense.fired++;
+      this._mark(threat, '자위권발사:' + shooter.id, t);
+      this._metricEvent('COMMAND_DECIDED', t, threat, {
+        nodeId: commander.id, shooterId: shooter.id, cause: 'self_defense',
+        directiveId: plan.directiveId, engagementId: plan.engagementId,
+        authorityLevel: plan.authorityLevel, delegationLevel: plan.delegationLevel,
+        commanderAxis: commander.axis, threatCategory: iadsThreatCategory(threat.type)
+      });
+      // 자위권은 포대 자체 발사이므로 상급 하달 링크 지연이 없다 — 즉시 발사 사건을 예약한다.
+      // (codex ADR-050: "지명·명령이 전혀 없어도" 마감에 발사 — 하달 경로를 타지 않는다.)
+      this._iadsTransitionPlan(plan, 'in_transit', t);
+      this.schedule(t, PRI.LINK_ARRIVE, 'IADS_FIRE',
+        { threat: threat, commander: commander, shooterId: shooter.id, plan: plan });
+      return;
+    }
+  };
+
+  /** 자위권은 포대 자체 권한이므로 자기 ECS(없으면 사수 자신)를 지휘자로 삼는다. */
+  Simulation.prototype._iadsSelfDefenseCommander = function (shooter) {
+    var ecsId = shooter.ecsC2Id || (shooter.controlledBy && shooter.controlledBy[this.mode] &&
+      shooter.controlledBy[this.mode][0]) || null;
+    var node = ecsId ? this._nodeById(ecsId) : null;
+    return {
+      id: node ? node.id : shooter.id,
+      axis: 'SELF_DEFENSE', scope: 'self_battery',
+      batteryIds: [shooter.id]
+    };
+  };
+
   Simulation.prototype._linkDelay = function (comm) {
     var base = comm.delaySec;
+    // ADR-069: 보고 주기 링크(report-cycle)만 톱니로 해석한다. 데이터링크·음성 절차 지연은
+    // 주기 개념이 아니라 전송·왕복 시간이므로 대상이 아니다.
+    if (this.sawtoothFreshness && comm.type === 'report-cycle') {
+      return this._reportingStaleness(comm.delaySec);
+    }
     if (comm.dist) {
       if (comm.dist.kind === 'triangular') base = this.rng.triangular(comm.dist.min, comm.dist.mode, comm.dist.max);
       else if (comm.dist.kind === 'uniform') base = this.rng.uniform(comm.dist.min, comm.dist.max);
@@ -6800,18 +6979,71 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     return r ? r.launchers.reduce(function (sum, l) { return sum + (l.reloadCompleteAt === null ? l.remaining : 0); }, 0) : 0;
   };
 
+  /**
+   * ADR-070 — 원격 교전 자격(codex ADR-051 D2). To-Be(킬웹)에서만, 웹 내 **다른 포대 MFR**이
+   * 이 위협을 화력통제 상태로 보고 있으면 발사 자격을 인정한다.
+   *
+   * 탐지 전용 레이더는 제외한다 — `hasFireControlCapability`가 false인 센서(그린파인 B/C·
+   * FPS-117·TPS-880K)는 감시급 트랙만 제공하므로 자격을 주지 못한다(codex kill-web.js D2).
+   * ⚠️ 우리 모델에는 웹 파티션(codex D1)이 없어 **To-Be 전 자산을 단일 웹으로** 본다 —
+   * codex보다 관대한 근사이며 ADR-070 §한계에 기록한다.
+   */
+  /**
+   * ADR-070 — 킬웹 파티션(codex kill-web.js D1). 포대·센서를 세 웹으로 분류한다:
+   *   `usfk`(독립축 — ROK와 완전 비공유 D5) · `local_ad`(육군 국지방공 SHORAD) · `upper`(상층 KAMD/MCRC).
+   *
+   * codex는 여단 ICC posKey 집합을 하드코딩하지만(ICC_BRIGADE_*·ARMY_*_FRONT_AD), 우리 배치는
+   * posKey 이름이 달라 **같은 구조 규칙**을 쓴다 — 판정에 쓰는 필드(forceOwner·localAdPosKey)는
+   * codex와 동일하고, 우리 iccPosKey는 전부 여단 ICC(ICC_W·C·E·MDU 계열)라 상층으로 떨어진다.
+   * 새 노드 필드를 만들지 않으므로 결과 wire shape이 보존된다.
+   */
+  Simulation.prototype._iadsWebOf = function (node) {
+    if (!node) return null;
+    if (node.forceOwner === 'USFK') return 'usfk';
+    if (node.forceOwner === 'ROK_LOCAL_AD') return 'local_ad';
+    if (node.category === 'sensor' && node.localAdPosKey) return 'local_ad';
+    return 'upper';
+  };
+
+  Simulation.prototype._iadsRemoteFcGrade = function (shooter, threat, t) {
+    if (!this.engageOnRemote || this.mode !== 'tobe' || !this.iadsSensorPhysics) return false;
+    var tracks = threat._sensorTracks;
+    if (!tracks) return false;
+    // D1: 포대는 **자기 웹 소속 센서**의 트랙만 통합해 본다 — 웹 밖 센서 그림은 웹 사설이다.
+    var myWeb = this._iadsWebOf(shooter);
+    if (!myWeb || myWeb === 'usfk') return false; // USFK는 독립축(ADR-036) — 원격 자격 부여·수령 모두 없음
+    var ids = Object.keys(tracks);
+    for (var i = 0; i < ids.length; i++) {
+      var tr = tracks[ids[i]];
+      if (!tr || tr.state !== KJ.IADS.SENSOR_STATE.FIRE_CONTROL) continue;
+      if (!KJ.IADS.trackFreshness(tr, t, 3).fresh) continue;
+      var sensor = this._nodeById(ids[i]);
+      var spec = sensor && KJ.SENSOR_TYPES[sensor.typeId];
+      // 탐지 전용 레이더는 발사 자격을 주지 못한다(D2 — 교전 추적 모드로 들어가면 광역 감시 저하).
+      if (!KJ.IADS.hasFireControlCapability(spec, threat.type)) continue;
+      if (this._iadsWebOf(sensor) !== myWeb) continue; // D1 웹 파티션
+      return true;
+    }
+    return false;
+  };
+
   Simulation.prototype._iadsFireControlState = function (shooter, threat, t) {
     if (!shooter.mfrSensorId) return { ready: true, readyAt: t, state: 'FIRE_CONTROL' };
     if (this.iadsSensorPhysics) {
       var physicalTrack = threat._sensorTracks && threat._sensorTracks[shooter.mfrSensorId];
       var state = physicalTrack ? physicalTrack.state : KJ.IADS.SENSOR_STATE.UNDETECTED;
       var freshness = KJ.IADS.trackFreshness(physicalTrack, t, 3);
+      var ownReady = state === KJ.IADS.SENSOR_STATE.FIRE_CONTROL && freshness.fresh;
+      // ADR-070: 자기 MFR이 FC가 아니어도 웹 내 다른 포대 MFR이 FC를 주면 발사 자격 인정.
+      var remote = !ownReady && this._iadsRemoteFcGrade(shooter, threat, t);
+      if (remote) this.global.remoteFcGrants = (this.global.remoteFcGrants || 0) + 1;
       return {
-        ready: state === KJ.IADS.SENSOR_STATE.FIRE_CONTROL && freshness.fresh,
+        ready: ownReady || remote,
         readyAt: t + KJ.IADS.SENSOR_SCAN_CADENCE_SECONDS,
-        state: state,
+        state: remote ? 'FIRE_CONTROL_REMOTE' : state,
         staleness: freshness.age,
-        confidence: freshness.confidence
+        confidence: freshness.confidence,
+        remote: remote
       };
     }
     var sensor = this._nodeById(shooter.mfrSensorId);
@@ -8095,6 +8327,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         meanTimeToKillN: ttk.length, // meanTTK가 평균 낸 표본 수(=격추 성공 수) — 생존자 편향 가시화
         // Phase 7(⑨): 교전당 발사수 = 총 발사수/최초교전 표적수. salvo·재교전으로 1발을 넘는 발사 부담을 노출.
         shotsFired: this.global.shotsFired,
+        // ADR-070: 원격 교전 자격 부여 횟수 — ON일 때만 노출(OFF wire shape 보존).
+        remoteFcGrants: this.engageOnRemote ? (this.global.remoteFcGrants || 0) : undefined,
         shotsPerEngagement: this.global.everEngaged ? this.global.shotsFired / this.global.everEngaged : 0,
         // 자원최적화 Step 1: 고가유도탄 보존율(MoFE, KJADS 5-1 직접지표) = 1 − 고가($≥5M)소모/전체소모.
         // 높을수록 고가 자산 보존. · 위협등급 대비 요격탄 단가 비율 = 총요격탄가/교전위협가치(격추 무관).
@@ -9663,6 +9897,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     features.linkSemanticsV2 = !state || state.linkv2 !== '0'; // ADR-066
     features.sensorReportParity = !state || state.rp !== '0'; // ADR-067
     features.unifiedEngagementState = !state || state.cop !== '0'; // ADR-068
+    features.sawtoothFreshness = !state || state.saw !== '0'; // ADR-069·072
+    features.selfDefenseFire = !state || state.sdf !== '0'; // ADR-071·072
+    features.engageOnRemote = !!state && state.eor === '1'; // ADR-070: 기본 꺼짐 실험 옵션
     return { deploymentId: state && state.dep, features: features, modelFidelity: 'iads-c2' };
   }
   function catalogFor(state) {
@@ -9691,7 +9928,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       state.south === '1' ? 'south' : '',
       state.linkv2 === '0' ? 'linkv1' : '',
       state.rp === '0' ? 'norp' : '',
-      state.cop === '0' ? 'nocop' : ''].join('|'); // ADR-062~068: 토글도 캐시 키
+      state.cop === '0' ? 'nocop' : '',
+      state.saw === '0' ? 'nosaw' : '',
+      state.sdf === '0' ? 'nosdf' : '',
+      state.eor === '1' ? 'eor' : ''].join('|'); // ADR-062~072: 토글도 캐시 키
     if (desCache.key === key) return desCache.data;
     if (desCache.errorKey === key) return null;
     if (desCache.pendingKey === key) return null;
@@ -10042,22 +10282,27 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
           { label: '그중 협조 홉 지연', mom: 'MoP', kind: 'sec', lower: true, na: apprNa,
             a: ga.meanCoordDelaySec, b: gb.meanCoordDelaySec,
             tip: '결심 지연 중 coord 협조 경로(육↔공 음성 등) 홉 지연 몫. ' +
+              '집계 방식: 책임 C2→승인권자 최소지연 경로(coord 링크만 사용하는 다익스트라)의 링크 지연 합을 위협별로 누적해, ' +
+              '결심 지연과 **같은 분모**(결심이 성립한 위협 수)로 나눈 평균이다 — 두 지표를 직접 뺄 수 있다. ' +
               '승인 계선(ADR-058)이 켜진 실행에서만 집계된다 — 꺼진 실행은 협조를 상태공유·plan 차단으로만 모델링하므로 ' +
-              '"0"이 아니라 "미측정"으로 표시한다(ADR-062). 실측(승인계선 ON): As-Is 20~37초. ' +
-              '**잔여(결심지연−협조)는 C2 처리·승인권자 대기(큐)·승인 서비스**다. ' +
-              '실측: As-Is 결심지연의 협조 홉은 17~38%뿐이고 나머지 62~83%가 승인 대기다 — ' +
-              '"데이터링크만 깔면 해결된다"는 함의는 절반만 맞다(승인권자 처리용량도 함께 봐야 한다). To-Be는 협조 홉이 대부분 생략되어 0에 가깝다.' },
+              '"0"이 아니라 "미측정"으로 표시한다(ADR-062). 실측(ADR-072 기본값 30 seed): As-Is 16.6~34.4초. ' +
+              '**잔여(결심지연−협조)는 항적·식별 지연 + C2 처리 + 승인 서비스 + 승인 대기의 합**이다. ' +
+              '실측: As-Is 결심지연에서 협조 홉이 차지하는 몫은 SC1 24% · SC2 8% · SC3 11%뿐이다 — ' +
+              '즉 "데이터링크만 깔면 해결된다"는 함의는 절반도 맞지 않다. ' +
+              '다만 **잔여 전체가 승인 대기인 것도 아니다** — 승인 대기(Wq)만 떼어 보면 SC1 1.5초 · SC2 9.8초 · SC3 45.1초로, ' +
+              '부하가 높은 SC3에서만 승인권자 대기행렬이 주된 몫이 된다(그래서 두 지표를 함께 봐야 한다). ' +
+              'To-Be는 협조 홉이 대부분 생략되어 0이다.' },
           { label: '승인 노드 최대 ρ (approval)', mom: 'MoP', kind: 'raw2', lower: true, max: 1, na: apprNa,
             a: maxRhoByKind(a, 'c2', 'approval'), b: maxRhoByKind(b, 'c2', 'approval'),
             tip: '교전승인권자 노드가 승인 처리(⑥⑦)로 점유된 이용률 — C2 서버풀 공유 부하 중 approval만 분리. ' +
               '승인 계선(ADR-058) OFF 실행은 책임 C2가 자체 승인해 승인 홉 자체가 없으므로 미측정으로 표시한다(그 부하는 ③④⑤ 카드에 포함). ' +
-              '실측(ON): ρ 0.18~0.44. ' +
+              '실측(ADR-072 기본값 30 seed): As-Is ρ 0.25~0.50. ' +
               '종전 ③④⑤ 카드의 C2 ρ에는 이 승인 부하가 섞여 있어(예: KAOC는 승인 전용에 가깝다) 항적처리 부하를 과대표시했다. ' +
               '이 지표가 ⑥⑦(한국 이원화 C2의 승인 병목)을 직접 측정한다.' },
           { label: '승인 대기 (Wq·approval)', mom: 'MoP', kind: 'sec', lower: true, na: apprNa,
             a: maxWqByKind(a, 'c2', 'approval'), b: maxWqByKind(b, 'c2', 'approval'),
             tip: '승인 대기행렬에서 승인권자 서버를 기다린 평균 시간(초) — ⑥⑦ 결심 병목의 직접 증거. ' +
-              '승인 계선(ADR-058) ON에서만 측정된다(실측 18~184초, 부하의 함수). ' +
+              '승인 계선(ADR-058) ON에서만 측정된다(실측 As-Is 1.5초(SC1)~45.1초(SC3) — 부하의 함수). ' +
               'To-Be는 사전승인 자동교전·동적 분권으로 승인 홉이 줄어 대기가 감소한다.' },
           { label: 'coord 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
             a: commMeanDelay(a, 'coord'), b: commMeanDelay(b, 'coord'),
@@ -10481,6 +10726,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     features.linkSemanticsV2 = !cfg || cfg.linkv2 !== '0'; // ADR-066
     features.sensorReportParity = !cfg || cfg.rp !== '0'; // ADR-067
     features.unifiedEngagementState = !cfg || cfg.cop !== '0'; // ADR-068
+    features.sawtoothFreshness = !cfg || cfg.saw !== '0'; // ADR-069·072
+    features.selfDefenseFire = !cfg || cfg.sdf !== '0'; // ADR-071·072
+    features.engageOnRemote = !!cfg && cfg.eor === '1'; // ADR-070: 기본 꺼짐 실험 옵션
     return { deploymentId: cfg && cfg.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -10493,7 +10741,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형') +
       ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 승인계선 ON' : '') + (cfg.disp === '1' ? ' · 표적산포 ON' : '') + (cfg.south === '1' ? ' · 남부축선 ON' : '') +
       // ADR-066: 기본 ON이라 해제했을 때만 표시한다 — 구 링크 의미론 실행임을 놓치지 않게.
-      (cfg.linkv2 === '0' ? ' · 구 링크의미론(OFF)' : '') + (cfg.rp === '0' ? ' · 보고주기 비대칭(OFF)' : '') + (cfg.cop === '0' ? ' · 교전현황 공유 OFF' : '') +
+      (cfg.linkv2 === '0' ? ' · 구 링크의미론(OFF)' : '') + (cfg.rp === '0' ? ' · 보고주기 비대칭(OFF)' : '') + (cfg.cop === '0' ? ' · 교전현황 공유 OFF' : '') + (cfg.saw === '0' ? ' · 톱니 OFF' : '') + (cfg.sdf === '0' ? ' · 자위권 OFF' : '') + (cfg.eor === '1' ? ' · 원격 교전 ON(실험)' : '') +
       ' · 강도 ×' + Number(cfg.x).toFixed(1) + ' · seed ' + cfg.seed;
   }
 
@@ -10532,6 +10780,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         linkv2: state.linkv2 === '0' ? '0' : '1', // ADR-066: 기본 ON
         rp: state.rp === '0' ? '0' : '1', // ADR-067: 기본 ON
         cop: state.cop === '0' ? '0' : '1', // ADR-068: 기본 ON
+        saw: state.saw === '0' ? '0' : '1', // ADR-069·072: 기본 ON
+        sdf: state.sdf === '0' ? '0' : '1', // ADR-071·072: 기본 ON
+        eor: state.eor === '1' ? '1' : '0', // ADR-070: 기본 OFF
         x: state.x, seed: seed, dur: dur };
       var btn = el('sim-run');
       btn.disabled = true; btn.textContent = '⏳ DES 실행 중...';
@@ -11567,7 +11818,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         southernAxes: state.south !== '0',
         linkSemanticsV2: state.linkv2 !== '0',
         sensorReportParity: state.rp !== '0',
-        unifiedEngagementState: state.cop !== '0'
+        unifiedEngagementState: state.cop !== '0',
+        sawtoothFreshness: state.saw !== '0',
+        selfDefenseFire: state.sdf !== '0',
+        engageOnRemote: state.eor === '1' // ADR-070: 기본 꺼짐 실험 옵션
       },
       modelFidelity: 'iads-c2' // ADR-061: compat 폐기 — 충실도는 1종뿐이다
     };
@@ -11918,6 +12172,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     features.linkSemanticsV2 = state.linkv2 !== '0'; // ADR-066
     features.sensorReportParity = state.rp !== '0'; // ADR-067
     features.unifiedEngagementState = state.cop !== '0'; // ADR-068
+    features.sawtoothFreshness = state.saw !== '0'; // ADR-069·072
+    features.selfDefenseFire = state.sdf !== '0'; // ADR-071·072
+    features.engageOnRemote = state.eor === '1'; // ADR-070: 기본 꺼짐 실험 옵션
     return { deploymentId: state.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -11968,6 +12225,12 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (rpBox) rpBox.checked = state.rp === '1'; // ADR-067
     var copBox = document.getElementById('engagement-cop-toggle');
     if (copBox) copBox.checked = state.cop === '1'; // ADR-068
+    var sawBox = document.getElementById('sawtooth-toggle');
+    if (sawBox) sawBox.checked = state.saw === '1'; // ADR-069·072
+    var sdfBox = document.getElementById('self-defense-toggle');
+    if (sdfBox) sdfBox.checked = state.sdf === '1'; // ADR-071·072
+    var eorBox = document.getElementById('engage-on-remote-toggle');
+    if (eorBox) eorBox.checked = state.eor === '1'; // ADR-070: 기본 꺼짐 실험 옵션
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
     document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
@@ -12050,6 +12313,31 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (copToggle) {
       copToggle.addEventListener('change', function (e) {
         setState({ cop: e.target.checked ? '1' : '0' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-069·072: 톱니 신선도 토글 — 보고 링크 지연 해석이 바뀌므로 실행 조건 변경.
+    var sawToggle = document.getElementById('sawtooth-toggle');
+    if (sawToggle) {
+      sawToggle.addEventListener('change', function (e) {
+        setState({ saw: e.target.checked ? '1' : '0' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-071·072: 자위권 발사 토글 — 발사 경로가 추가되므로 실행 조건 변경.
+    var sdfToggle = document.getElementById('self-defense-toggle');
+    if (sdfToggle) {
+      sdfToggle.addEventListener('change', function (e) {
+        setState({ sdf: e.target.checked ? '1' : '0' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-070: 원격 교전(engage-on-remote) — 기본 꺼짐 실험 옵션. 켜면 To-Be 격추율이 오르지만
+    // 비용 지표(교환비·고가유도탄 보존율)가 폭주하는 대비를 보여주는 것이 이 토글의 용도다.
+    var eorToggle = document.getElementById('engage-on-remote-toggle');
+    if (eorToggle) {
+      eorToggle.addEventListener('change', function (e) {
+        setState({ eor: e.target.checked ? '1' : '0' });
         if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
       });
     }

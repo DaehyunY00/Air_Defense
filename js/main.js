@@ -28,6 +28,7 @@
     features.unifiedEngagementState = state.cop !== '0'; // ADR-068
     features.sawtoothFreshness = state.saw !== '0'; // ADR-069·072
     features.selfDefenseFire = state.sdf !== '0'; // ADR-071·072
+    features.engageOnRemote = state.eor === '1'; // ADR-070: 기본 꺼짐 실험 옵션
     return { deploymentId: state.dep, features: features, modelFidelity: 'iads-c2' };
   }
 
@@ -82,6 +83,8 @@
     if (sawBox) sawBox.checked = state.saw === '1'; // ADR-069·072
     var sdfBox = document.getElementById('self-defense-toggle');
     if (sdfBox) sdfBox.checked = state.sdf === '1'; // ADR-071·072
+    var eorBox = document.getElementById('engage-on-remote-toggle');
+    if (eorBox) eorBox.checked = state.eor === '1'; // ADR-070: 기본 꺼짐 실험 옵션
     var sw = document.getElementById('mode-switch');
     sw.checked = state.mode === 'tobe';
     document.querySelector('.mode-switch').classList.toggle('tobe', state.mode === 'tobe');
@@ -180,6 +183,15 @@
     if (sdfToggle) {
       sdfToggle.addEventListener('change', function (e) {
         setState({ sdf: e.target.checked ? '1' : '0' });
+        if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
+      });
+    }
+    // ADR-070: 원격 교전(engage-on-remote) — 기본 꺼짐 실험 옵션. 켜면 To-Be 격추율이 오르지만
+    // 비용 지표(교환비·고가유도탄 보존율)가 폭주하는 대비를 보여주는 것이 이 토글의 용도다.
+    var eorToggle = document.getElementById('engage-on-remote-toggle');
+    if (eorToggle) {
+      eorToggle.addEventListener('change', function (e) {
+        setState({ eor: e.target.checked ? '1' : '0' });
         if (KJ.simView && KJ.simView.notePendingConfig) KJ.simView.notePendingConfig();
       });
     }

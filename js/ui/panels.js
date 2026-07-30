@@ -28,6 +28,7 @@
     features.unifiedEngagementState = !state || state.cop !== '0'; // ADR-068
     features.sawtoothFreshness = !state || state.saw !== '0'; // ADR-069·072
     features.selfDefenseFire = !state || state.sdf !== '0'; // ADR-071·072
+    features.engageOnRemote = !!state && state.eor === '1'; // ADR-070: 기본 꺼짐 실험 옵션
     return { deploymentId: state && state.dep, features: features, modelFidelity: 'iads-c2' };
   }
   function catalogFor(state) {
@@ -58,7 +59,8 @@
       state.rp === '0' ? 'norp' : '',
       state.cop === '0' ? 'nocop' : '',
       state.saw === '0' ? 'nosaw' : '',
-      state.sdf === '0' ? 'nosdf' : ''].join('|'); // ADR-062~072: 토글도 캐시 키
+      state.sdf === '0' ? 'nosdf' : '',
+      state.eor === '1' ? 'eor' : ''].join('|'); // ADR-062~072: 토글도 캐시 키
     if (desCache.key === key) return desCache.data;
     if (desCache.errorKey === key) return null;
     if (desCache.pendingKey === key) return null;
@@ -409,22 +411,27 @@
           { label: '그중 협조 홉 지연', mom: 'MoP', kind: 'sec', lower: true, na: apprNa,
             a: ga.meanCoordDelaySec, b: gb.meanCoordDelaySec,
             tip: '결심 지연 중 coord 협조 경로(육↔공 음성 등) 홉 지연 몫. ' +
+              '집계 방식: 책임 C2→승인권자 최소지연 경로(coord 링크만 사용하는 다익스트라)의 링크 지연 합을 위협별로 누적해, ' +
+              '결심 지연과 **같은 분모**(결심이 성립한 위협 수)로 나눈 평균이다 — 두 지표를 직접 뺄 수 있다. ' +
               '승인 계선(ADR-058)이 켜진 실행에서만 집계된다 — 꺼진 실행은 협조를 상태공유·plan 차단으로만 모델링하므로 ' +
-              '"0"이 아니라 "미측정"으로 표시한다(ADR-062). 실측(승인계선 ON): As-Is 20~37초. ' +
-              '**잔여(결심지연−협조)는 C2 처리·승인권자 대기(큐)·승인 서비스**다. ' +
-              '실측: As-Is 결심지연의 협조 홉은 17~38%뿐이고 나머지 62~83%가 승인 대기다 — ' +
-              '"데이터링크만 깔면 해결된다"는 함의는 절반만 맞다(승인권자 처리용량도 함께 봐야 한다). To-Be는 협조 홉이 대부분 생략되어 0에 가깝다.' },
+              '"0"이 아니라 "미측정"으로 표시한다(ADR-062). 실측(ADR-072 기본값 30 seed): As-Is 16.6~34.4초. ' +
+              '**잔여(결심지연−협조)는 항적·식별 지연 + C2 처리 + 승인 서비스 + 승인 대기의 합**이다. ' +
+              '실측: As-Is 결심지연에서 협조 홉이 차지하는 몫은 SC1 24% · SC2 8% · SC3 11%뿐이다 — ' +
+              '즉 "데이터링크만 깔면 해결된다"는 함의는 절반도 맞지 않다. ' +
+              '다만 **잔여 전체가 승인 대기인 것도 아니다** — 승인 대기(Wq)만 떼어 보면 SC1 1.5초 · SC2 9.8초 · SC3 45.1초로, ' +
+              '부하가 높은 SC3에서만 승인권자 대기행렬이 주된 몫이 된다(그래서 두 지표를 함께 봐야 한다). ' +
+              'To-Be는 협조 홉이 대부분 생략되어 0이다.' },
           { label: '승인 노드 최대 ρ (approval)', mom: 'MoP', kind: 'raw2', lower: true, max: 1, na: apprNa,
             a: maxRhoByKind(a, 'c2', 'approval'), b: maxRhoByKind(b, 'c2', 'approval'),
             tip: '교전승인권자 노드가 승인 처리(⑥⑦)로 점유된 이용률 — C2 서버풀 공유 부하 중 approval만 분리. ' +
               '승인 계선(ADR-058) OFF 실행은 책임 C2가 자체 승인해 승인 홉 자체가 없으므로 미측정으로 표시한다(그 부하는 ③④⑤ 카드에 포함). ' +
-              '실측(ON): ρ 0.18~0.44. ' +
+              '실측(ADR-072 기본값 30 seed): As-Is ρ 0.25~0.50. ' +
               '종전 ③④⑤ 카드의 C2 ρ에는 이 승인 부하가 섞여 있어(예: KAOC는 승인 전용에 가깝다) 항적처리 부하를 과대표시했다. ' +
               '이 지표가 ⑥⑦(한국 이원화 C2의 승인 병목)을 직접 측정한다.' },
           { label: '승인 대기 (Wq·approval)', mom: 'MoP', kind: 'sec', lower: true, na: apprNa,
             a: maxWqByKind(a, 'c2', 'approval'), b: maxWqByKind(b, 'c2', 'approval'),
             tip: '승인 대기행렬에서 승인권자 서버를 기다린 평균 시간(초) — ⑥⑦ 결심 병목의 직접 증거. ' +
-              '승인 계선(ADR-058) ON에서만 측정된다(실측 18~184초, 부하의 함수). ' +
+              '승인 계선(ADR-058) ON에서만 측정된다(실측 As-Is 1.5초(SC1)~45.1초(SC3) — 부하의 함수). ' +
               'To-Be는 사전승인 자동교전·동적 분권으로 승인 홉이 줄어 대기가 감소한다.' },
           { label: 'coord 링크 전달지연 (전달 1건 평균)', mom: 'MoP', kind: 'sec', lower: true,
             a: commMeanDelay(a, 'coord'), b: commMeanDelay(b, 'coord'),

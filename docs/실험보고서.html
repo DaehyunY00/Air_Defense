@@ -59,6 +59,28 @@
 모델링해 <b>현 체계를 실제보다 나쁘게 그리고 있었다</b>. 상세는 §5와 <code>docs/adr/ADR-066</code>.
 </div>
 
+<div class="box red"><span class="bt">🔴 기준선 재이동 공지 (2026-07-30 · ADR-069~072) — 본 판의 수치는 현 기본값이 아니다</span>
+본 판(v3.7) 측정 이후 기본값이 <b>두 개 더</b> 켜졌다: <b>보고 주기 톱니 신선도</b>(ADR-069) ·
+<b>자위권 사격</b>(ADR-071). 두 전환의 판정 근거와 편향 원장은
+<code>docs/adr/ADR-069·071·072</code>에 있다. 주 결과가 다시 이동했다:
+<table style="margin-top:10px">
+<thead><tr><th>SC3 지표</th><th class="num">본 판 v3.7 (ADR-068 기본값)</th><th class="num">현 기본값 (ADR-072)</th><th class="num">이동</th></tr></thead>
+<tbody>
+<tr><td>As-Is 격추율</td><td class="num">38.1%</td><td class="num"><b>41.7%</b></td><td class="num">+3.6pp</td></tr>
+<tr><td>To-Be 격추율</td><td class="num">56.8%</td><td class="num">57.0%</td><td class="num">+0.2pp</td></tr>
+<tr><td><b>격추율 개선폭 Δ</b></td><td class="num">+18.7pp</td><td class="num"><b>+15.3pp</b></td><td class="num"><b>−18%</b> 🔴</td></tr>
+<tr><td><b>결심지연 개선폭 Δ</b></td><td class="num">−46.2초</td><td class="num"><b>−36.7초</b></td><td class="num"><b>−21%</b> 🔴</td></tr>
+</tbody>
+</table>
+<b>또 As-Is만 움직였다</b> — 톱니는 느린 광역 센서(그린파인 16초·FPS-117 8초)에 의존하는 As-Is를
+더 빠르게 하고, 자위권 사격은 승인 대기가 있는 As-Is만 구제한다(To-Be 격추율은 57.0%로 불변).
+SC3 개선폭은 <b>+27.3pp(v3.5) → +18.7pp(v3.7) → +15.3pp(현재)</b> 로 단조 감소해 왔다.
+<br><br>⚠️ <b>인용 규칙</b>: 본 판 <b>§2·§3의 주 결과</b>와 위 표를 함께 읽고, <b>인용은 위 표(현
+기본값)를 쓰라.</b> 본 판 <b>§4~§7의 반사실 비교</b>(ADR-056~059 단독 효과·승인 계선 OFF·WTA·operator
+스윕)는 ADR-068 기본값 위에서 <b>내부적으로 일관되게</b> 측정된 것이므로 그 안에서는 유효하지만,
+위 표의 신 기본값 수치와 <b>섞어 인용하면 안 된다</b>. 반사실 셀 재측정 후 v3.8에서 통합한다.
+</div>
+
 <div class="box red"><span class="bt">🔴 강건성 경고 — 저부하 임무 지표 분리는 강건하지 않다</span>
 SC1 격추율 Δ가 네 판에 걸쳐 <b>미분리 → 유의 → 미분리</b>로 오갔고 부호까지 바뀌었다
 (구 기본값 +1.0pp n.s. → ADR-065 <b>+2.9pp 유의</b> → ADR-066 +0.2pp n.s. → 현재 <b>−0.6pp n.s.</b>).

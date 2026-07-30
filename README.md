@@ -138,8 +138,10 @@ DES 엔진(`js/engine/sim-engine.js`)은 개별 위협 객체를 이벤트 구�
   → PIP/PSSEK·발사대 탄약/재장전 → 교전(SLS 최대 2발) → BDA → 재교전/누출 분류
 ```
 
-legacy C2 이론은 **정책 계층으로 이식**되었습니다. 여섯 가지는 **기본 ON**(ADR-065~068 —
-끄면 모델이 As-Is를 실제보다 유리하게 표현하거나 정본과 어긋납니다), 나머지는 기본 OFF입니다:
+legacy C2 이론은 **정책 계층으로 이식**되었습니다. 여덟 가지는 **기본 ON**(ADR-065~072 —
+끄면 모델이 As-Is를 실제보다 유리하게 표현하거나 정본과 어긋납니다), 나머지는 기본 OFF입니다.
+기본 ON 여덟 개는 화면 상단 「⚙️ 모델 조건」 접힌 영역에 함께 모여 있습니다 — 감사·반증용이며
+일상 사용에서 건드릴 스위치가 아니기 때문입니다:
 
 | 플래그 | 기본 | 내용 | ADR |
 |---|---|---|
@@ -149,6 +151,9 @@ legacy C2 이론은 **정책 계층으로 이식**되었습니다. 여섯 가지
 | **`unifiedEngagementState`** | **ON** | To-Be 교전현황 공유(양방향 COP) — 중복해소 결함 수정. **끄면 To-Be 중복 사격이 As-Is보다 많아집니다**(SC3 28.7 vs 18.1). As-Is는 bit-exact 불변 | ADR-056·068 |
 | **`linkSemanticsV2`** | **ON** | codex 정합 링크 의미론 — 센서별 보고주기 차등·C2↔C2 양 모드 1초. **끄면 As-Is가 일률 16초로 느려져 To-Be 개선폭이 부풀려집니다**(SC3 격추율 개선 +18.4pp → +26.8pp) | ADR-057·066 |
 | **`sensorReportParity`** | **ON** | 레이더→C2 보고 주기를 양 모드 공통으로(킬웹 센서→IAOC 포함). 끄면 같은 그린파인이 To-Be에서 16배 빨리 보고합니다. ⚠️ codex `ifcn:1` 이탈 — 사유는 ADR-067 | ADR-067 |
+| **`sawtoothFreshness`** | **ON** | 센서 보고 지연을 주기 P 고정에서 `[0,P)` 톱니로 — codex ADR-014 정본 형태(그림 나이가 주기 안에서 변동, 평균 P/2). 양 모드 동일 적용 | ADR-069·072 |
+| **`selfDefenseFire`** (+반경 `selfDefenseRadiusKm`) | **ON** | 자위권 사격 — 상급·원격 화력통제가 없어도 포대 10 km 이내 예측 탄착 탄도탄에는 자체 판단으로 사격(codex ADR-050 3단 사다리 ③). ⚠️ 승인을 우회하므로 **As-Is 구제 효과가 더 커 To-Be 개선폭을 줄입니다** | ADR-071·072 |
+| `engageOnRemote` | OFF | 원격 화력통제 교전 — 킬웹 웹 파티션 안에서 다른 포대의 화력통제 항적으로 사격(탐지 전용 자산 제외). **반사실 전용** — 사유는 ADR-070 | ADR-070 |
 | `nativeWtaMode` (+반증 `nativeWtaCostAsis`) | OFF | WTA 모드 차등 — As-Is는 관측 가능한 것만, To-Be는 물리 점수×비용 인식 | ADR-059 |
 | `c2OperatorLevel` ('high'/'low') | mid | 운용자 처리시간 스윕 노브 | ADR-058 |
 
@@ -205,7 +210,7 @@ docs/
 scripts/
   serve.sh (macOS·Linux) · serve.bat + serve.ps1 (Windows 내장 PowerShell, 설치 불요)
   build-single.mjs · bias-ledger.mjs · experiment-lib/run/report.mjs 등
-tests/  run-all.js + 29개 스위트  # 아래 [검증] 참조. 폐기 스위트 원장: tests/retired-legacy-suites.md
+tests/  run-all.js + 30개 스위트  # 아래 [검증] 참조. 폐기 스위트 원장: tests/retired-legacy-suites.md
 ```
 
 ## 설계 원칙: 병목은 고정이 아니라 도출된다
@@ -220,13 +225,13 @@ tests/  run-all.js + 29개 스위트  # 아래 [검증] 참조. 폐기 스위트
 
 ## 딥링크 스킴
 
-`#tab=<sim|analysis|mc|data>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&south=<0|1>&linkv2=<0|1>&rp=<0|1>&cop=<0|1>&x=<강도배수>&seed=<정수>&dur=<초>`
+`#tab=<sim|analysis|mc|data>&sc=<시나리오ID>&mode=<asis|tobe>&dep=<배치ID>&appr=<0|1>&disp=<0|1>&south=<0|1>&linkv2=<0|1>&rp=<0|1>&cop=<0|1>&saw=<0|1>&sdf=<0|1>&x=<강도배수>&seed=<정수>&dur=<초>`
 
 - `dep`은 고해상도 6종 ID(기본 `HANBANDO_LEGACY_NORMAL`). 구 딥링크의 `dep=legacy`·MINI ID·
   `fid=` 파라미터는 기본값으로 자동 흡수됩니다(ADR-061).
-- `appr` · `disp` · `south` · `linkv2` · `rp` · `cop`은 **전부 기본 1(ON)** 입니다(ADR-065~068).
-  **`=0`으로 끄면 각각의 구 기본값이 재현**되며, 감사·반증 목적으로만 쓰십시오 — 상단 컨트롤의
-  체크박스와 같은 스위치입니다.
+- `appr` · `disp` · `south` · `linkv2` · `rp` · `cop` · `saw` · `sdf`는 **전부 기본 1(ON)** 입니다
+  (ADR-065~072). **`=0`으로 끄면 각각의 구 기본값이 재현**되며, 감사·반증 목적으로만 쓰십시오 —
+  화면 상단 「⚙️ 모델 조건」 접힌 영역의 체크박스와 같은 스위치입니다.
 - `appr=0` 승인 계선 해제(ADR-058·065). 끄면 As-Is 승인 대기가 0이 되고, ⑥⑦ 승인·협조 지표는
   0이 아니라 **"미측정"**으로 표시됩니다(ADR-062).
 - `disp=0` 표적권역 산포 해제(ADR-063·065). 끄면 같은 축선의 모든 위협이 seed와 무관하게 정확히
@@ -242,6 +247,16 @@ tests/  run-all.js + 29개 스위트  # 아래 [검증] 참조. 폐기 스위트
 - `cop=0` 교전현황 공유 COP 해제(ADR-056·068). 끄면 통합 지휘소가 군단 방공통제소의 교전현황을
   **받고도 소비하지 않아** To-Be 중복 사격이 As-Is보다 많아집니다(축 이름 `KILL_WEB`↔`MCRC`
   불일치에서 온 결함 상태). As-Is는 어느 쪽이든 bit-exact로 동일합니다.
+- `saw=0` 보고 주기 톱니 신선도 해제(ADR-069·072). 끄면 센서 보고 지연이 주기 P로 **고정**됩니다.
+  켜면 실제 주기 갱신처럼 그림 나이가 `[0, P)` 톱니로 변동해 평균이 `P/2`로 내려갑니다 —
+  codex ADR-014 정본 형태입니다. 양 모드에 동일하게 적용되므로 한쪽 팔만 빠르게 하지 않습니다.
+- `sdf=0` 자위권 사격 해제(ADR-071·072). 끄면 상급·원격 화력통제가 없는 포대는 **자기 머리 위로
+  떨어지는 탄도탄에도 사격하지 않습니다**. 켜면 예측 탄착점이 포대 10 km 이내인 탄도탄에 한해
+  자체 판단으로 사격합니다(codex ADR-050 3단 발사 사다리 ③). ⚠️ 이 경로는 승인·협조를 우회하므로
+  **As-Is 쪽 구제 효과가 더 큽니다** — 즉 To-Be 개선폭을 부풀리지 않고 **줄이는** 방향입니다.
+- `engageOnRemote`(ADR-070)는 **딥링크·토글이 없습니다** — `nativeWtaMode`·`approvalChainTobe`와
+  같은 반사실 전용 플래그라 `scripts/experiment-run.mjs --features`로만 켭니다. 기본값이 아닌 사유는
+  ADR-070 참조.
 - 구 `tab=map|scenario|des|playback`은 `sim` 탭으로 흡수됩니다.
 - [`#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345`](index.html#tab=sim&sc=sc3&mode=asis&x=1.5&seed=12345) — 섞어쏘기 As-Is 1.5배.
 - [`#tab=analysis&sc=sc1&mode=asis`](index.html#tab=analysis&sc=sc1&mode=asis) — 경계 침투 해석 분석.
@@ -250,7 +265,7 @@ tests/  run-all.js + 29개 스위트  # 아래 [검증] 참조. 폐기 스위트
 ## 검증
 
 ```bash
-node tests/run-all.js            # 전체 회귀 — js/ 구문검증 + 29개 스위트 (CI 게이트)
+node tests/run-all.js            # 전체 회귀 — js/ 구문검증 + 30개 스위트 (CI 게이트)
 ```
 
 | 스위트 | 검증 내용 |

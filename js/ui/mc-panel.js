@@ -33,7 +33,8 @@
         sensorReportParity: state.rp !== '0',
         unifiedEngagementState: state.cop !== '0',
         sawtoothFreshness: state.saw !== '0',
-        selfDefenseFire: state.sdf !== '0'
+        selfDefenseFire: state.sdf !== '0',
+        engageOnRemote: state.eor === '1' // ADR-070: 기본 꺼짐 실험 옵션
       },
       modelFidelity: 'iads-c2' // ADR-061: compat 폐기 — 충실도는 1종뿐이다
     };

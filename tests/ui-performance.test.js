@@ -52,10 +52,12 @@ assert(sim.indexOf("KJ.compute.run('mcPair'") === -1,
 assert(!/includeHeat\s*:\s*true/.test(sim),
   '결과 모달 축소: 중복교전 히트맵 선계산 요청 제거 (소비처 사라짐)');
 assert(sim.indexOf('run.modalRendered') !== -1, '결과 모달 1회 렌더 캐시 유지');
-assert(/움직였나요/.test(sim) && /plainCategory/.test(sim),
-  '결과 모달이 노드 활성화 여부를 쉬운 말로 표기');
-assert(/시뮬레이션 속에서 흐른 시간/.test(sim) && /컴퓨터가 계산하는 데 걸린 시간/.test(sim),
-  '결과 모달이 가상 시간과 실제 계산 시간을 구분해 표기');
+// ADR-076: 결과 모달은 **항적 병렬 대조 한 절만** 남기도록 더 줄였다(사용자 요청).
+// 실행 정보·시간 카드·노드 활성화 표는 [분석]·[C2 구조] 탭으로 옮겼다.
+assert(!/plainCategory/.test(sim) && !/시뮬레이션 속에서 흐른 시간/.test(sim),
+  '결과 모달에서 실행정보·시간카드·노드표 제거 (분석/C2 구조 탭으로 이관)');
+assert(/renderThreatCompare/.test(sim),
+  '결과 모달이 항적 병렬 대조 렌더러를 공용 진입점으로 노출 ([분석] 탭이 재사용)');
 // As-Is↔To-Be 항적 병렬 대조는 축소 후에도 **남긴** 섹션이다(사용자 요구).
 // 필터는 섹션만 다시 그려야 한다 — 모달 전체를 재렌더하면 펼쳐 둔 항목이 닫힌다.
 assert(/sim-compare-section/.test(sim) && /threatCompareSection/.test(sim),

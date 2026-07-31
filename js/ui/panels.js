@@ -645,154 +645,521 @@
   // 병렬 로그 필터 상태 (탭 재렌더에도 사용자의 선택 유지)
   var logFilter = 'diff';
 
+  // ══════════════ [분석] 탭 — 같은 항적이 두 체계에서 얼마나 걸렸나 ══════════════
+  // 요구는 하나다: **시간이 얼마나 걸렸고, 어디서 벌어졌는지 수치로 보인다.**
+  // 그래서 화면은 세 층뿐이다 — 총 소요시간 한 줄 → 단계별 차이 표 → 항적별 병렬 로그.
+  // 종전 [결심 비교] 탭의 게이지·분포·후보 팝오버는 읽는 데 사전지식이 필요해 걷어냈다.
+
+  /** 항적 단계 중 관문 하나의 시각(초). 없으면 null. */
+  function gateT(tr, kind) {
+    if (!tr || !tr.stages) return null;
+    for (var i = 0; i < tr.stages.length; i++) {
+      var n = tr.stages[i].name;
+      var hit =
+        kind === 'spawn' ? n === '생성' :
+        kind === 'detect' ? n === '탐지' :
+        kind === 'c2' ? n.indexOf('책임C2:') === 0 :
+        kind === 'ident' ? n.indexOf('식별확정:') === 0 :
+        kind === 'fire' ? (n.indexOf('발사:') === 0 || n.indexOf('자위권발사:') === 0) :
+        kind === 'end' ? (n.indexOf('BDA:') === 0 || n.indexOf('누수:') === 0) : false;
+      if (hit) return tr.stages[i].t;
+    }
+    return null;
+  }
+
+  // 관문 사이 구간 — 9단계 파이프라인을 사람이 읽는 다섯 토막으로 접었다.
+  var GATES = [
+    { key: 'detect', from: 'spawn', to: 'detect', label: '① 침투 → 탐지', why: '레이더가 볼 때까지' },
+    { key: 'assign', from: 'detect', to: 'c2', label: '② 탐지 → 담당 지휘소 지정', why: '누가 맡을지 정할 때까지' },
+    { key: 'ident', from: 'c2', to: 'ident', label: '③ 지정 → 식별 확정', why: '무엇인지 확인할 때까지' },
+    { key: 'fire', from: 'ident', to: 'fire', label: '④ 식별 → 발사', why: '쏘기로 결심하고 쏠 때까지' },
+    { key: 'total', from: 'spawn', to: 'fire', label: '⑤ 침투 → 발사 (합계)', why: '들어와서 요격탄이 나갈 때까지', total: true }
+  ];
+
+  /**
+   * 두 모드의 항적을 ID로 짝지어 구간별 평균 소요시간과 차이를 낸다.
+   *
+   * ⚠️ **전 구간을 같은 항적 집합(코호트)으로 계산한다.** 구간마다 "그 구간을 통과한
+   * 항적"만 따로 세면 표본이 달라져 **부분의 합이 합계와 어긋난다**(실측: 구간 합 −9.8초
+   * vs 합계 −21.9초). 그러면 "어디서 벌어졌나"를 이 표로 읽을 수 없다 — 각 줄이 서로 다른
+   * 위협들을 말하기 때문이다. 그래서 **양 체계에서 전 관문을 통과한 항적만** 코호트로 잡고,
+   * 그 집합 하나로 모든 줄을 낸다. 대가는 표본 축소이며, 제외 건수를 화면에 공시한다.
+   */
+  function gateStats(ta, tb) {
+    var byB = {};
+    (tb || []).forEach(function (t) { byB[t.id] = t; });
+    var KEYS = ['spawn', 'detect', 'c2', 'ident', 'fire'];
+    var cohort = [];
+    var paired = 0;
+    (ta || []).forEach(function (a) {
+      var b = byB[a.id];
+      if (!b) return;
+      paired++;
+      var ga = {}, gb = {};
+      for (var i = 0; i < KEYS.length; i++) {
+        ga[KEYS[i]] = gateT(a, KEYS[i]);
+        gb[KEYS[i]] = gateT(b, KEYS[i]);
+        if (ga[KEYS[i]] == null || gb[KEYS[i]] == null) return;   // 한 관문이라도 빠지면 제외
+      }
+      cohort.push({ a: ga, b: gb });
+    });
+    var n = cohort.length;
+    var rows = GATES.map(function (g) {
+      if (!n) return { g: g, n: 0, a: null, b: null, d: null };
+      var sa = 0, sb = 0;
+      cohort.forEach(function (c) {
+        sa += c.a[g.to] - c.a[g.from];
+        sb += c.b[g.to] - c.b[g.from];
+      });
+      return { g: g, n: n, a: sa / n, b: sb / n, d: sb / n - sa / n };
+    });
+    rows.cohort = n;
+    rows.paired = paired;
+    return rows;
+  }
+
+  function secTxt(v) { return v == null ? '—' : (Math.round(v * 10) / 10).toFixed(1) + '초'; }
+  function deltaTxt(v) {
+    if (v == null) return '—';
+    var r = Math.round(v * 10) / 10;
+    if (Math.abs(r) < 0.05) return '<span class="an-same">변화 없음</span>';
+    return r < 0 ? '<b class="an-fast">' + r.toFixed(1) + '초 (빨라짐)</b>'
+                 : '<b class="an-slow">+' + r.toFixed(1) + '초 (느려짐)</b>';
+  }
+
+  /** 구간별 막대 — 두 체계를 같은 척도로 그려 길이 차이가 곧 시간 차이가 되게 한다. */
+  function gateBar(a, b, max) {
+    if (a == null || b == null || !max) return '';
+    var wa = Math.max(1, a / max * 100), wb = Math.max(1, b / max * 100);
+    return '<div class="an-bars">' +
+      '<div class="an-bar an-bar-a" style="width:' + wa.toFixed(1) + '%"><span>As-Is</span></div>' +
+      '<div class="an-bar an-bar-b" style="width:' + wb.toFixed(1) + '%"><span>To-Be</span></div>' +
+      '</div>';
+  }
+
+  /**
+   * [C2 구조] 항적 재생 — 좌우 두 계층도를 **하나의 시계**로 몬다.
+   * 노드·간선은 `data-t`(최초 관여 시각)를 갖고, 재생헤드가 그 시각을 지나면 켜진다.
+   * rAF는 백그라운드 탭에서 멈추므로 타이머 안전장치로 반드시 끝을 맺는다.
+   */
+  function bindStructurePlay(box, span) {
+    var btn = el('sv-play');
+    if (!btn || !span) return;
+    var cols = box.querySelector('.sv-cols');
+    var lit = cols.querySelectorAll('.sv-node.sv-act, .sv-edge.sv-flow');
+    var clock = el('sv-clock');
+    var raf = null, guard = null;
+    function paint(t) {
+      Array.prototype.forEach.call(lit, function (n) {
+        n.classList.toggle('sv-on', parseFloat(n.getAttribute('data-t')) <= t);
+      });
+      if (clock) clock.textContent = fmtTime(t);
+    }
+    function finish() {
+      if (raf) cancelAnimationFrame(raf);
+      if (guard) clearTimeout(guard);
+      raf = guard = null;
+      cols.classList.remove('sv-playing');
+      paint(span.t1);
+      btn.disabled = false;
+    }
+    btn.addEventListener('click', function () {
+      if (raf) return;
+      var DUR = 3000, t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+      cols.classList.add('sv-playing');
+      btn.disabled = true;
+      paint(span.t0 - 1);
+      guard = setTimeout(finish, DUR + 1200);
+      (function step() {
+        var now = (window.performance && performance.now) ? performance.now() : Date.now();
+        var p = Math.min(1, (now - t0) / DUR);
+        paint(span.t0 + (span.t1 - span.t0) * p);
+        if (p < 1) raf = requestAnimationFrame(step); else finish();
+      })();
+    });
+  }
+
   KJ.panels = {
 
     /**
-     * [결심 비교] 탭 (ADR-075) — 4개 뷰를 순수 후처리로 렌더한다.
-     * 데이터는 [분석] 탭과 같은 desPair 캐시를 쓴다(계측이 관측 전용이라 결과가 동일).
+     * [분석] 탭 — 같은 항적이 두 체계에서 얼마나 걸렸고, 어디서 벌어졌나.
+     * ① 합계 한 줄 → ② 단계별 차이 표 → ③ 항적 로그 병렬 비교(결과 모달과 같은 렌더러).
      */
-    renderDecision: function (state) {
-      var ctx = el('decision-context');
+    renderAnalysis: function (state) {
+      var ctx = el('analysis-context');
       if (!ctx) return;
       var self = this;
-      var data = pipelineData(state, function () { self.renderDecision(state); });
+      var data = pipelineData(state, function () { self.renderAnalysis(state); });
       var sc = KJ.scenarioById(state.sc);
       ctx.innerHTML = '<b>' + esc(sc.name) + '</b> · ' + esc(state.dep) +
         ' · 강도 ×' + Number(state.x).toFixed(1) + ' · seed ' + state.seed +
-        ' · ' + state.dur + '초 · 동일 seed paired DES(CRN)';
+        ' · ' + state.dur + '초 · 동일 seed 짝지음(CRN — 두 체계가 같은 위협을 마주함)';
       if (!data) {
         var msg = desCache.error
           ? '<div class="bn-none">계산 실패: ' + esc(desCache.error) + '</div>'
-          : '<div class="bn-none">두 체계 DES 계산 중…</div>';
-        ['decision-gauges', 'decision-distributions', 'decision-timeline', 'decision-popover']
+          : '<div class="note">⏳ 두 체계 DES 계산 중…</div>';
+        ['analysis-headline', 'analysis-gates', 'analysis-threat-log']
           .forEach(function (id) { if (el(id)) el(id).innerHTML = msg; });
-        if (el('decision-rule')) el('decision-rule').innerHTML = '';
         return;
       }
-      // pipelineData는 mode:'asis'로 요청하므로 current=As-Is, other=To-Be로 고정된다.
-      var dcA = data.a.c2Analysis && data.a.c2Analysis.decisionComparison;
-      var dcB = data.b.c2Analysis && data.b.c2Analysis.decisionComparison;
+      // pipelineData는 mode:'asis'로 요청하므로 a=As-Is, b=To-Be로 고정된다.
+      var ta = data.a.threatTraces || [], tb = data.b.threatTraces || [];
+      var rows = gateStats(ta, tb);
+      var total = rows[rows.length - 1];
 
-      // ── 미측정 표시 규율: 판정은 런이 보고한 값에서 취한다 ──
-      if (!dcA || !dcB || !dcA.available || !dcB.available) {
-        var reason = (dcA && dcA.reason) || (dcB && dcB.reason) || '런이 계측 상태를 보고하지 않음';
-        ['decision-gauges', 'decision-distributions', 'decision-timeline', 'decision-popover']
-          .forEach(function (id) { if (el(id)) el(id).innerHTML = unmeasured(reason); });
-        if (el('decision-rule')) el('decision-rule').innerHTML = '';
-        return;
-      }
+      // ① 합계 — 이 화면에서 제일 먼저 읽혀야 하는 한 줄.
+      el('analysis-headline').innerHTML = total.n
+        ? '<div class="an-head">' +
+          '<div class="an-head-cell"><div class="an-head-val">' + secTxt(total.a) + '</div>' +
+          '<div class="an-head-lab">As-Is 분절형</div></div>' +
+          '<div class="an-head-op">→</div>' +
+          '<div class="an-head-cell"><div class="an-head-val">' + secTxt(total.b) + '</div>' +
+          '<div class="an-head-lab">To-Be 통합형</div></div>' +
+          '<div class="an-head-cell an-head-delta"><div class="an-head-val">' +
+          deltaTxt(total.d) + '</div><div class="an-head-lab">차이 (항적 ' + total.n + '건 평균)</div></div>' +
+          '</div>' +
+          '<div class="note">침투부터 요격탄이 나갈 때까지의 평균 시간입니다. ' +
+          '<b>양 체계에서 전 단계를 모두 통과한 항적 ' + total.n + '건</b>만 셉니다' +
+          (rows.paired ? ' (짝지어진 항적 ' + rows.paired + '건 중 ' + (rows.paired - total.n) +
+            '건은 한쪽이라도 발사까지 가지 못해 제외)' : '') + '. ' +
+          '한쪽만 도달한 항적을 섞으면 "빨라졌다"가 아니라 "못 간 것을 뺐다"가 되어 ' +
+          '수치가 거짓말을 합니다.</div>'
+        : '<div class="bn-none">두 체계가 모두 발사까지 도달한 항적이 없어 시간 비교를 낼 수 없습니다.</div>';
 
-      // ── ④ 게이지 ──
-      var gA = dcA.gauges, gB = dcB.gauges;
-      var gaugeHtml = '';
-      if (dcA.windowMargin && dcB.windowMargin && gA.missRate && gB.missRate) {
-        gaugeHtml += gaugeRow('교전창 놓침률 — 문이 닫히기 전에 결심했는가',
-          gA.missRate.rate, gB.missRate.rate,
-          'As-Is ' + gA.missRate.missed + '/' + gA.missRate.total +
-          ' · To-Be ' + gB.missRate.missed + '/' + gB.missRate.total +
-          ' (분모 = 교전창이 실제로 존재했던 위협. <b>결심조차 없던 위협을 놓침으로 셉니다</b> — ' +
-          '결심에 도달한 위협만 보면 생존 편향이 생깁니다. ADR-074)', true);
-      } else {
-        gaugeHtml += unmeasured('windowMargin OFF — 교전창 놓침률');
-      }
-      if (dcA.shadowEval && dcB.shadowEval && gA.optimalRate && gB.optimalRate) {
-        gaugeHtml += gaugeRow('전역 최적 일치율 — 최적 사수를 골랐는가',
-          gA.optimalRate.rate, gB.optimalRate.rate,
-          'As-Is ' + gA.optimalRate.optimal + '/' + gA.optimalRate.n +
-          ' · To-Be ' + gB.optimalRate.optimal + '/' + gB.optimalRate.n +
-          ' (분모 = 그림자 평가가 가능했던 결심. USFK 독립 축은 0이 아니라 미측정으로 제외 — ADR-036)',
-          false);
-      } else {
-        gaugeHtml += unmeasured('shadowEval OFF — 전역 최적 일치율');
-      }
-      el('decision-gauges').innerHTML = gaugeHtml +
-        '<div class="note">이 두 게이지가 <b>주장의 근거</b>입니다. 아래 타임라인·후보 명단은 ' +
-        '단일 실행의 사례(삽화)이며 그 자체로 인과를 증명하지 않습니다. 30시드 집계 방향과 ' +
-        '원인 귀속은 <code>docs/adr/ADR-074</code>에 기록돼 있습니다.</div>';
+      // ② 구간별 — 어디서 벌어졌는지 수치로.
+      var maxV = 0;
+      rows.forEach(function (r) {
+        if (r.g.total) return;
+        if (r.a != null) maxV = Math.max(maxV, r.a, r.b);
+      });
+      el('analysis-gates').innerHTML =
+        '<table class="an-table"><thead><tr>' +
+        '<th>구간</th><th class="num">As-Is</th><th class="num">To-Be</th><th>차이</th><th>비교</th>' +
+        '</tr></thead><tbody>' +
+        rows.map(function (r) {
+          return '<tr' + (r.g.total ? ' class="an-total"' : '') + '>' +
+            '<td>' + esc(r.g.label) + '<i class="an-why">' + esc(r.g.why) + '</i></td>' +
+            '<td class="num">' + secTxt(r.a) + '</td>' +
+            '<td class="num">' + secTxt(r.b) + '</td>' +
+            '<td>' + deltaTxt(r.d) + '</td>' +
+            '<td class="an-barcell">' + (r.g.total ? '' : gateBar(r.a, r.b, maxV)) + '</td>' +
+            '</tr>';
+        }).join('') +
+        '</tbody></table>' +
+        '<div class="note">전 구간을 <b>같은 항적 ' + (total.n || 0) + '건</b>으로 계산했습니다 — ' +
+        '그래서 <b>구간 소요시간의 합이 합계와 정확히 일치</b>합니다. 구간마다 표본을 달리 잡으면 ' +
+        '각 줄이 서로 다른 위협을 말하게 되어 "어디서 벌어졌나"를 이 표로 읽을 수 없습니다.</div>';
 
-      // ── ③ 분포 ──
-      var distHtml = '';
-      if (dcA.windowMargin && dcB.windowMargin) {
-        distHtml += '<h3>(가) 교전창 여유 분포 — 결심완료 시점의 남은 시간</h3>' +
-          histogram(dcA.distributions.margin.values, dcB.distributions.margin.values, {
-            fmt: function (v) { return Math.round(v) + 's'; },
-            xLabel: '교전창 마감 − 결심완료 (초) · 0 미만 = 문이 닫힌 뒤 결심',
-            shadeNegative: true,
-            undecidedA: gA.missRate ? gA.missRate.undecided : 0,
-            undecidedB: gB.missRate ? gB.missRate.undecided : 0,
-            emptyText: '결심이 없어 여유 표본이 없습니다.'
-          }) +
-          '<div class="note">왼쪽 회색 통 = <b>미결심</b>(결심 자체가 없어 여유를 잴 수 없는 위협). ' +
-          '0으로 접어 넣으면 "여유 0초"로 오독되므로 축 밖에 따로 세우며, ' +
-          '<b>곡선과 축척이 분리돼 있습니다</b>(건수는 통 아래 숫자로 병기 — 높이끼리 비교하지 마십시오). ' +
-          '⚠️ 곡선 부분은 <b>결심에 도달한 위협만</b>의 분포라 생존 편향이 있습니다 — ' +
-          '결심은 실현가능 PIP가 있어야 성립하므로 구조적으로 음수가 거의 나오지 않습니다. ' +
-          '체계 비교는 게이지(전수 분모)로 하십시오.</div>';
-      } else {
-        distHtml += unmeasured('windowMargin OFF — 교전창 여유 분포');
-      }
-      if (dcA.shadowEval && dcB.shadowEval) {
-        distHtml += '<h3>(나) 선택 손실 분포 — 전역 최적 대비 점수 차</h3>' +
-          histogram(dcA.distributions.regret.values, dcB.distributions.regret.values, {
-            fmt: function (v) { return v.toExponential(1); },
-            xLabel: '선택 손실 regret (WTA 점수 단위) · 0 = 전역 최적',
-            emptyText: '그림자 평가 표본이 없습니다.'
-          }) +
-          '<div class="note">가로축은 WTA 목적함수 점수 단위이며 격추 건수로 환산되지 않습니다. ' +
-          '그래서 크기가 아니라 <b>0에 몰린 비율</b>(위 게이지)로 읽습니다.</div>';
-      } else {
-        distHtml += unmeasured('shadowEval OFF — 선택 손실 분포');
-      }
-      el('decision-distributions').innerHTML =
-        '<div class="dc-legend"><span class="dc-key asis"></span>As-Is 분절형' +
-        '<span class="dc-key tobe"></span>To-Be 통합형</div>' + distHtml;
-
-      // ── ① 페어드 타임라인 ──
-      var byA = {}, byB = {};
-      dcA.threats.forEach(function (r) { byA[r.threatId] = r; });
-      dcB.threats.forEach(function (r) { byB[r.threatId] = r; });
-      var picked = pickThreats(byA, byB, 12);
-      el('decision-rule').innerHTML =
-        '<b>표시 사례 선정 규칙</b> — 임의 선택이 아닙니다. ' +
-        '① <b>As-Is 미격추 · To-Be 격추</b>로 결과가 갈린 위협을 먼저 놓고(이번 실행 ' +
-        picked.primary.length + '건), ② 나머지는 두 체계의 교전창 여유 차가 큰 순으로, ' +
-        '동순위는 threatId 오름차순(결정론)으로 최대 12건을 표시합니다. ' +
-        '<b>사례는 삽화이며 주장의 근거는 위 ③④ 분포·게이지입니다.</b> ' +
-        'CRN(공통난수)으로 위/아래는 같은 seed의 <b>같은 위협</b>이며 도착시각도 동일합니다.';
-      el('decision-timeline').innerHTML = picked.list.length
-        ? picked.list.map(function (id, i) {
-            var a = byA[id], b = byB[id];
-            var isSplit = picked.primary.indexOf(id) !== -1;
-            return '<div class="dc-tl-group' + (isSplit ? ' split' : '') +
-              (decisionSel.threatId === id ? ' sel' : '') + '" data-threat="' + esc(id) + '">' +
-              '<div class="dc-tl-key">' + esc(id) +
-              '<span class="dc-tl-axis">' + esc(a.axis || '') + ' · 생성 ' + secText(a.spawnT) + '</span>' +
-              (isSplit ? '<span class="dc-tl-tag">결과가 갈림</span>' : '') + '</div>' +
-              '<div class="dc-tl-lane"><span class="dc-tl-side asis">As-Is</span>' +
-              timelineBar(a, 'asis') + '</div>' +
-              '<div class="dc-tl-lane"><span class="dc-tl-side tobe">To-Be</span>' +
-              timelineBar(b, 'tobe') + '</div></div>';
-          }).join('')
-        : '<div class="bn-none">두 체계에 공통으로 기록된 위협이 없습니다.</div>';
-
-      // ── ② 후보 명단 팝오버 (막대 클릭) ──
-      if (!decisionSel.threatId || !byA[decisionSel.threatId]) {
-        decisionSel.threatId = picked.list[0] || null;
-      }
-      el('decision-popover').innerHTML =
-        candidatePanel(decisionSel.threatId, byA[decisionSel.threatId], byB[decisionSel.threatId]);
-      Array.prototype.forEach.call(
-        el('decision-timeline').querySelectorAll('.dc-tl-group'), function (node) {
-          node.addEventListener('click', function () {
-            decisionSel.threatId = node.dataset.threat;
-            self.renderDecision(state);
-            var card = el('decision-popover-card');
-            if (card && card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          });
+      // ③ 항적 로그 병렬 비교 — 결과 모달과 **같은 렌더러**를 재사용한다.
+      if (KJ.simView && KJ.simView.renderThreatCompare) {
+        KJ.simView.renderThreatCompare(el('analysis-threat-log'), {
+          asis: data.a, tobe: data.b,
+          audits: { asis: {}, tobe: {} },   // 감사 이벤트는 시뮬레이션 탭 실행에만 실린다
+          catalog: catalogFor(state)
         });
+      }
     },
 
-    /** 근거자료 탭: 제약 어서션 + 파라미터 문서 링크 */
+    /**
+     * [C2 구조] 탭 — As-Is ↔ To-Be를 **세로 계층**으로 나란히 놓는다.
+     *
+     * 계층은 사용자가 제시한 아키텍처를 따른다:
+     *   상위 작전사 → **합동방공 C2(조율층)** → C2 체계 → 교전통제(ICC·ECS) → 레이더·요격부대
+     * 하위 네 계층의 연결은 링크 데이터에서 나온 것이다(실측 흐름):
+     *   센서 →(report) ECS·C4I / ECS →(coord) ICC →(coord) C4I / ECS →(command) 사수
+     * To-Be의 핵심 차이인 조율층은 IAOC·EOC이며 As-Is에는 그 노드 자체가 없다.
+     *
+     * 항적을 고르면 탐지~요격까지 노드가 **시각 순서대로 점등**된다. 좌우가 같은 시계를
+     * 공유하므로 어느 쪽이 먼저 끝나는지가 그대로 보인다.
+     * ⚠️ 간선은 카탈로그에 실제로 있는 링크만 그린다(없는 연결을 지어내지 않는다).
+     */
+    renderStructure: function (state) {
+      var box = el('structure-diagram');
+      if (!box) return;
+      var self = this;
+      var cat = catalogFor(state);
+      if (!cat) { box.innerHTML = '<div class="bn-none">배치 카탈로그를 불러오지 못했습니다.</div>'; return; }
+      var data = pipelineData(state, function () { self.renderStructure(state); });
+
+      // ── 계층 정의 (사용자 제공 아키텍처 반영) ──
+      // 핵심: To-Be는 상위 작전사와 각 C2 체계 **사이에 「합동방공C2」 조율층이 끼어든다.**
+      // 모델에서 그 조율층에 해당하는 노드가 IAOC(통합공중작전통제소)·EOC(교전운영센터)이며,
+      // 둘 다 `modes:["tobe"]` — As-Is에는 존재하지 않는다. 그래서 As-Is 그림에서는 이 띠가
+      // 통째로 비고, **그 빈 칸이 곧 이 탭이 말하려는 구조 차이**다.
+      var COORD = { IAOC: 1, EOC: 1 };               // 합동방공C2 조율층
+      var SYSTEM = { KAMD_OPS: 1, MCRC: 1, ARMY_LOCAL_AD: 1 };  // C2 체계층
+      function tierOf(n) {
+        if (n.category === 'sensor') return 4;
+        if (n.category === 'shooter') return 5;
+        if (COORD[n.typeId]) return 1;
+        if (SYSTEM[n.typeId]) return 2;
+        if (n.typeId === 'ICC') return 3;
+        return 3;                                    // ECS·기타 포대급 C2도 교전통제층
+      }
+      // ⚠️ 상위 작전사(공작사·지작사·해작사·수방사)와 해상 계통(KNTDS·함정)은
+      //    **모델 범위 밖**이다 — 디스클레이머대로 이 모델은 지상배치 방공체계 C2에 한정하며
+      //    요격기·해상 자산을 포함하지 않는다(ADR-060). 아키텍처 맥락으로만 점선 표시하고,
+      //    시뮬레이션이 그것을 계산하는 것처럼 보이지 않게 링크는 긋지 않는다.
+      var OUT_OF_SCOPE = ['공작사', '지작사', '해작사', '수방사'];
+      var TIERS = [
+        { label: '상위 작전사', hint: '모델 범위 밖 — 아키텍처 맥락', ghost: true },
+        { label: '합동방공 C2 (조율층)', hint: 'To-Be에서 신설 — IAOC · EOC', band: true },
+        { label: 'C2 체계', hint: 'MCRC · KAMDOC · 방공C2A(군단·수방사 AOC)' },
+        { label: '교전통제 (ICC · ECS)', hint: '권역·포대 단위 사격통제' },
+        { label: '레이더', hint: '공군 레이더 · 그린파인 · 국지방공' },
+        { label: '요격부대', hint: '발사' }
+      ];
+
+      var resolver = KJ.simView && KJ.simView.buildNodeResolver
+        ? KJ.simView.buildNodeResolver(cat) : null;
+
+      // 유형 표시명 — 카탈로그 이름은 개체명(ICC W1)이라 묶음 라벨로는 유형명이 낫다.
+      var TYPE_LABEL = {
+        KAMD_OPS: 'KAMDOC', MCRC: 'MCRC', IAOC: '통합공중작전통제소', EOC: '교전운영센터',
+        ARMY_LOCAL_AD: '군단 방공상황실', ICC: 'ICC 교전통제소', ECS: 'ECS 포대지휘소',
+        FPS117: 'FPS-117', GREEN_PINE_B: 'Green Pine', LSAM_MFR: 'L-SAM MFR',
+        MSAM_MFR: 'M-SAM MFR', PATRIOT_RADAR: 'Patriot 레이더', TPS880K: 'TPS-880K',
+        BIHO: '비호', CHEONGUNG2: '천궁-II', CHUNMA: '천마', LSAM: 'L-SAM', PAC3: 'PAC-3'
+      };
+      function typeLabel(t) { return TYPE_LABEL[t] || t; }
+
+      /**
+       * 한 모드의 세로 계층 SVG.
+       *  · act 없음 → **집약 보기**: 계층×유형으로 묶어 16~18개 묶음만 그린다.
+       *    개별 노드 64개를 다 찍으면 같은 유형의 반복이 화면을 덮어 구조가 안 보인다.
+       *    묶음 반지름 = 개수, 간선 굵기 = 묶음 사이 링크 수.
+       *  · act 있음 → **개별 보기**: 그 항적에 관여한 노드만 이름까지 펼친다(보통 8~10개).
+       */
+      function column(mode, act) {
+        var links = KJ.linksInMode ? KJ.linksInMode(mode, cat) : cat.links;
+        // ⚠️ 노드도 **모드로 걸러야 한다.** 통합공중작전통제소(IAOC)·교전운영센터(EOC)는
+        //    모델상 `modes:["tobe"]` — To-Be에만 존재하는 노드다. 카탈로그 전체를 그리면
+        //    As-Is 그림에 없어야 할 통합 지휘소가 떠서, 이 탭이 보여주려는 구조 차이를
+        //    정반대로 오도한다(실제로 그렇게 나왔다).
+        var nodes = KJ.nodesInMode ? KJ.nodesInMode(mode, cat) : cat.nodes;
+        var present = {};
+        nodes.forEach(function (n) { present[n.id] = n; });
+
+        function keyOf(id) {
+          var n = present[id];
+          if (!act) return id;
+          if (act[id] != null) return id;
+          return (n && n.typeId && act[n.typeId] != null) ? n.typeId : id;
+        }
+        var detail = !!act;
+        // 개별 보기에서는 관여 노드만 남긴다(그래야 이름이 들어간다).
+        var shownNodes = detail
+          ? nodes.filter(function (n) { return act[keyOf(n.id)] != null; })
+          : nodes;
+
+        // 묶음 단위 결정: 집약이면 계층|유형, 개별이면 노드 자체.
+        function unitOf(n) { return detail ? n.id : (tierOf(n) + '|' + n.typeId); }
+        var units = {}, order = [];
+        shownNodes.forEach(function (n) {
+          var u = unitOf(n);
+          if (!units[u]) {
+            units[u] = { key: u, tier: tierOf(n), typeId: n.typeId, category: n.category,
+              n: 0, ids: [], t: null,
+              label: detail ? (n.name || n.id) : typeLabel(n.typeId) };
+            order.push(u);
+          }
+          units[u].n++;
+          units[u].ids.push(n.id);
+          if (detail) {
+            var at = act[keyOf(n.id)];
+            if (at != null && (units[u].t == null || at < units[u].t)) units[u].t = at;
+          }
+        });
+        var idToUnit = {};
+        Object.keys(units).forEach(function (u) {
+          units[u].ids.forEach(function (id) { idToUnit[id] = u; });
+        });
+
+        var rows = [[], [], [], [], [], []];
+        order.forEach(function (u) { rows[units[u].tier].push(units[u]); });
+        rows.forEach(function (r) { r.sort(function (x, y) { return x.label < y.label ? -1 : 1; }); });
+
+        var W = 470, PAD_X = 10, TOP = 16, tierH = 78;
+        var H = TOP + TIERS.length * tierH;
+        var pos = {};
+        rows.forEach(function (list, ti) {
+          var y = TOP + ti * tierH + 42;
+          var step = (W - PAD_X * 2) / Math.max(1, list.length);
+          // 한 계층에 4개 이상이면 라벨이 겹친다 — 위아래로 엇갈려 놓는다(점 위치는 그대로).
+          var stagger = list.length >= 4;
+          list.forEach(function (u, i) {
+            pos[u.key] = { x: PAD_X + step * (i + 0.5), y: y,
+              lab: stagger ? (i % 2 ? 1 : 0) : 0 };
+          });
+        });
+
+        // 묶음 사이 링크 집계 — 개별 링크를 다 긋지 않고 굵기로 표현한다.
+        var KIND = { report: '#3d8bd9', coord: '#a06ed2', command: '#3d8b40', status: '#6b7a8d' };
+        // ⚠️ 묶음 키에 이미 '|'가 들어 있다('0|KAMD_OPS'). 같은 구분자로 이어 붙여 문자열을
+        //    다시 쪼개면 파싱이 깨져 **간선이 한 줄도 안 그려진다**(실제로 그랬다).
+        //    그래서 키로 파싱하지 않고 객체에 양 끝을 그대로 담는다.
+        var agg = {}, shownLinks = 0;
+        (links || []).forEach(function (l) {
+          var ua = idToUnit[l.from], ub = idToUnit[l.to];
+          if (!ua || !ub || ua === ub) return;
+          shownLinks++;
+          var kind = l.kind || 'coord';
+          var k = ua + '\u0001' + ub + '\u0001' + kind;
+          if (!agg[k]) agg[k] = { from: ua, to: ub, kind: kind, n: 0 };
+          agg[k].n++;
+        });
+        var edges = Object.keys(agg).map(function (k) {
+          var e = agg[k], kind = e.kind, ends = [e.from, e.to];
+          var p = pos[ends[0]], q = pos[ends[1]];
+          if (!p || !q) return '';
+          var cnt = e.n;
+          var w = detail ? 1.2 : Math.min(4, 0.6 + Math.log(cnt + 1) * 1.1);
+          var ta = detail && units[ends[0]] ? units[ends[0]].t : null;
+          var tb = detail && units[ends[1]] ? units[ends[1]].t : null;
+          var lit = (ta != null && tb != null) ? Math.max(ta, tb) : null;
+          return '<line class="sv-edge' + (lit != null ? ' sv-flow' : '') + '"' +
+            (lit != null ? ' data-t="' + lit + '"' : '') +
+            ' x1="' + p.x.toFixed(1) + '" y1="' + p.y + '" x2="' + q.x.toFixed(1) + '" y2="' + q.y +
+            '" stroke="' + (KIND[kind] || '#6b7a8d') + '" stroke-width="' + w.toFixed(1) + '"' +
+            ' opacity="' + (detail ? 0.5 : 0.55) + '"' +
+            (kind === 'coord' ? ' stroke-dasharray="3 3"' : '') + '>' +
+            '<title>' + esc((units[ends[0]] || {}).label + ' → ' + (units[ends[1]] || {}).label +
+              ' · ' + kind + ' ' + cnt + '개') + '</title></line>';
+        }).join('');
+
+        var dots = order.map(function (u) {
+          var g = units[u], p = pos[u];
+          if (!p) return '';
+          if (g.tier === 1) return '';             // 조율층은 가로 띠로 대신 그린다
+          var r = detail ? 5 : Math.min(11, 4 + Math.sqrt(g.n) * 2.0);
+          return '<g class="sv-node sv-' + esc(g.category) + (g.tier === 0 ? ' sv-upper' : '') +
+            (g.t != null ? ' sv-act' : '') + '"' + (g.t != null ? ' data-t="' + g.t + '"' : '') + '>' +
+            '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y + '" r="' + r.toFixed(1) + '"></circle>' +
+            (!detail && g.n > 1 ? '<text class="sv-cnt" x="' + p.x.toFixed(1) + '" y="' + (p.y + 2.4) +
+              '" text-anchor="middle">' + g.n + '</text>' : '') +
+            '<text x="' + p.x.toFixed(1) + '" y="' + (p.y + r + 8 + (p.lab ? 8 : 0)) +
+            '" text-anchor="middle">' + esc(g.label) + '</text>' +
+            '<title>' + esc(g.label + ' · ' + g.n + '개' +
+              (g.t != null ? ' · 관여 ' + fmtTime(g.t) : '')) + '</title></g>';
+        }).join('');
+
+        var bands = TIERS.map(function (T, ti) {
+          var y = TOP + ti * tierH;
+          var g = '<g class="sv-band"><rect x="0" y="' + y + '" width="' + W + '" height="' + tierH +
+            '" fill="' + (ti % 2 ? '#111823' : '#0d1117') + '"></rect>' +
+            '<text class="sv-tier" x="6" y="' + (y + 12) + '">' + esc(T.label) +
+            ' <tspan class="sv-hint">' + esc(T.hint) + '</tspan></text>';
+          if (T.ghost) {
+            // 모델 범위 밖 — 점선 상자로 맥락만 보여주고 링크는 긋지 않는다.
+            var bw = (W - 20) / OUT_OF_SCOPE.length;
+            g += OUT_OF_SCOPE.map(function (name, i) {
+              var bx = 10 + bw * i + 4;
+              return '<g class="sv-ghost"><rect x="' + bx.toFixed(1) + '" y="' + (y + 26) +
+                '" width="' + (bw - 8).toFixed(1) + '" height="22" rx="3"></rect>' +
+                '<text x="' + (bx + (bw - 8) / 2).toFixed(1) + '" y="' + (y + 40) +
+                '" text-anchor="middle">' + esc(name) + '</text></g>';
+            }).join('');
+          }
+          if (T.band) {
+            // 조율층 — 있으면 가로 띠, 없으면 그 사실을 글자로 남긴다(빈 칸이 곧 차이다).
+            var coord = (rows[1] || []);
+            if (coord.length) {
+              g += '<rect class="sv-coordbar" x="10" y="' + (y + 28) + '" width="' + (W - 20) +
+                '" height="20" rx="4"></rect>' +
+                '<text class="sv-coordtxt" x="' + (W / 2) + '" y="' + (y + 42) +
+                '" text-anchor="middle">합동방공 C2 — ' +
+                esc(coord.map(function (u) { return u.label; }).join(' · ')) + '</text>';
+            } else {
+              g += '<text class="sv-none" x="' + (W / 2) + '" y="' + (y + 42) +
+                '" text-anchor="middle">조율층 없음 — 각 C2 체계가 작전사로 직접 올라간다</text>';
+            }
+          }
+          return g + '</g>';
+        }).join('');
+
+        return { svg: '<svg class="sv-svg" viewBox="0 0 ' + W + ' ' + H + '">' +
+          bands + edges + dots + '</svg>',
+          links: shownLinks, nodes: nodes.length, units: order.length, detail: detail };
+      }
+
+      // ── 항적 선택 목록 (판정이 갈린 항적을 위로) ──
+      var options = '', actA = null, actB = null, span = null;
+      var sel = box.getAttribute('data-threat') || '';
+      if (data && resolver) {
+        var ta = data.a.threatTraces || [], tb = data.b.threatTraces || [];
+        var byB = {};
+        tb.forEach(function (t) { byB[t.id] = t; });
+        var cands = ta.filter(function (t) { return byB[t.id]; }).map(function (t) {
+          var o = byB[t.id];
+          return { id: t.id, a: t, b: o, diff: t.outcome !== o.outcome };
+        });
+        cands.sort(function (x, y) { return (y.diff ? 1 : 0) - (x.diff ? 1 : 0); });
+        options = cands.slice(0, 60).map(function (c) {
+          return '<option value="' + esc(c.id) + '"' + (c.id === sel ? ' selected' : '') + '>' +
+            esc(c.id) + (c.diff ? ' — 판정이 갈림' : '') + '</option>';
+        }).join('');
+        var pick = cands.find(function (c) { return c.id === sel; });
+        if (pick) {
+          var mk = function (tr) {
+            var m = {}, lo = Infinity, hi = -Infinity;
+            (tr.stages || []).forEach(function (s) {
+              resolver.keysInStage(s.name).forEach(function (k) {
+                if (m[k] == null || s.t < m[k]) m[k] = s.t;
+              });
+              if (s.t < lo) lo = s.t;
+              if (s.t > hi) hi = s.t;
+            });
+            return { act: m, lo: lo, hi: hi };
+          };
+          var A = mk(pick.a), B = mk(pick.b);
+          actA = A.act; actB = B.act;
+          span = { t0: Math.min(A.lo, B.lo), t1: Math.max(A.hi, B.hi) };
+        }
+      }
+
+      var colA = column('asis', actA), colB = column('tobe', actB);
+      box.innerHTML =
+        '<div class="sv-controls">' +
+        '<label>항적 <select id="sv-threat"><option value="">— 정적 구조만 보기 —</option>' +
+        options + '</select></label>' +
+        (span ? '<button type="button" id="sv-play">▶ 탐지→요격 재생</button>' +
+          '<span id="sv-clock" class="sv-clock">' + fmtTime(span.t0) + '</span>' : '') +
+        '</div>' +
+        (data ? '' : '<div class="note">⏳ 두 체계 DES 계산 중…</div>') +
+        '<div class="sv-cols" data-t0="' + (span ? span.t0 : 0) + '" data-t1="' + (span ? span.t1 : 1) + '">' +
+        '<div class="sv-col"><h4>As-Is 분절형 <span>' +
+        (colA.detail ? '관여 노드 ' + colA.units + '개' : '노드 ' + colA.nodes + '개 → ' + colA.units + '묶음 · 링크 ' + colA.links) +
+        '</span></h4>' + colA.svg + '</div>' +
+        '<div class="sv-col"><h4>To-Be 통합형 <span>' +
+        (colB.detail ? '관여 노드 ' + colB.units + '개' : '노드 ' + colB.nodes + '개 → ' + colB.units + '묶음 · 링크 ' + colB.links) +
+        '</span></h4>' + colB.svg + '</div>' +
+        '</div>' +
+        '<div class="sv-legend"><i style="background:#3d8bd9"></i>항적보고' +
+        '<i style="background:#a06ed2"></i>협조<i style="background:#3d8b40"></i>교전명령' +
+        '<i style="background:#6b7a8d"></i>현황</div>' +
+        '<div class="note">아래 네 계층(C2 체계·교전통제·레이더·요격부대)의 연결은 링크 데이터에서 나온 것입니다 — ' +
+        '센서가 ECS·상급에 보고하고, ' +
+        'ECS가 ICC를 거쳐 상급과 협조하며, 교전명령은 ECS에서 포대로 내려갑니다. ' +
+        (colA.detail
+          ? '<b>고른 항적에 실제로 관여한 노드만</b> 펼쳐 놓았습니다. 재생을 누르면 두 체계가 ' +
+            '같은 시계로 점등됩니다 — 어느 쪽이 먼저 요격까지 가는지 그대로 보입니다.'
+          : '같은 유형은 <b>하나로 묶어</b> 그렸습니다(원 안 숫자 = 개수, 선 굵기 = 링크 수). ' +
+            '개별 노드 ' + colA.nodes + '개를 다 찍으면 같은 것의 반복이 화면을 덮어 구조가 안 보입니다 — ' +
+            '개별 노드는 위에서 <b>항적을 고르면</b> 관여한 것만 펼쳐집니다.') +
+        ' <b>To-Be에만 존재하는 노드</b>가 있습니다 — 통합공중작전통제소(IAOC)·교전운영센터(EOC)는 ' +
+        '모델상 To-Be 전용이라 As-Is 그림에는 나타나지 않습니다(노드 ' + colA.nodes + ' → ' + colB.nodes + '). ' +
+        '그리고 <b>To-Be에서만</b> 센서·ECS가 상급 지휘소로 <b>직접</b> 보고하는 링크가 생깁니다 — ' +
+        '링크 수 차이(' + colA.links + ' → ' + colB.links + ')가 그것입니다.</div>';
+
+      var selEl = el('sv-threat');
+      if (selEl) {
+        selEl.addEventListener('change', function () {
+          box.setAttribute('data-threat', selEl.value);
+          self.renderStructure(state);
+        });
+      }
+      bindStructurePlay(box, span);
+    },
     renderData: function (state) {
       var checks = KJ.runConstraintChecks();
       el('constraint-list').innerHTML = checks.map(function (c) {

@@ -336,6 +336,10 @@
     /** [분석] 탭 항적 병렬 로그와 공유하는 표시 규약 — 단계 라벨·위협 색을 한 곳에서 정의한다
      *  (분석 탭은 자체 desPair 결과를 쓰므로 실행 결과 자체는 공유하지 않는다). */
     stageLabel: stageLabel,
+    /** [분석] 탭이 같은 렌더러를 재사용한다(중복 구현 금지). */
+    renderThreatCompare: renderThreatCompare,
+    /** [C2 구조] 탭이 같은 노드 해석기를 쓴다. */
+    buildNodeResolver: buildNodeResolver,
     threatColor: function (type) { return THREAT_COLOR[type] || '#f00'; }
   };
 
@@ -659,24 +663,13 @@
   //   ② 노드 활성화 — 어떤 장비가 실제로 한 번이라도 일을 했는가
   // 문구는 초등학생도 읽을 수 있는 말로 쓴다(전문용어는 괄호로 원어를 덧붙인다).
 
-  /** 초 → "N분 N초" (사람이 읽는 말). 0초면 "0초". */
-  function plainDuration(sec) {
-    var s = Math.max(0, Math.round(sec));
-    var m = Math.floor(s / 60), r = s % 60;
-    if (m === 0) return r + '초';
-    if (r === 0) return m + '분';
-    return m + '분 ' + r + '초';
-  }
 
-  /** 노드 종류를 쉬운 우리말로. */
-  function plainCategory(cat) {
-    if (cat === 'c2') return '지휘소';
-    if (cat === 'shooter') return '요격 부대';
-    if (cat === 'sensor') return '레이더';
-    return cat;
-  }
 
-  // ── As-Is ↔ To-Be 항적 병렬 대조 ──
+  // ── As-Is ↔ To-Be 항적 병렬 대조 (결과 모달 · [분석] 탭 공용) ──
+  // ⚠️ 이 블록은 모듈 전역 `run`을 보지 않는다. 두 화면이 **같은 렌더러**를 쓰기 때문이다 —
+  // 한쪽에만 있는 상태를 참조하면 다른 쪽에서 조용히 빈 화면이 된다.
+  // 필요한 것은 전부 `cmp`(주입 문맥)에서 읽는다: {asis, tobe, audits:{asis,tobe}, catalog}.
+  var cmp = null;
   // CRN(공통난수) 설계상 두 모드의 위협 집단(ID·발생시각·축선)은 **같다**. 따라서 같은 ID끼리
   // 1:1로 놓을 수 있고, **판정이 갈린 항적이 곧 지휘 구조가 만든 차이**다.
   // 색은 보조 수단일 뿐이며 아이콘·글자로도 같은 정보를 준다(색만으로 뜻을 싣지 않는다).
@@ -776,46 +769,47 @@
   //    주축에서 성립하지 않는다(ADR-073 §발견 — 주축 사수 풀은 두 구조가 동일). 그래서
   //    축(scope)을 읽어 아래 축별 주석을 붙인다 — 반증을 숨기지 않는 것이 이 화면의 조건이다.
 
-  var _nodeIdx = null;
   /**
-   * 단계 이름에서 노드를 찾기 위한 색인.
+   * 카탈로그 → 단계 이름에서 노드를 찾는 해석기(순수 팩토리).
    * ⚠️ 엔진은 노드를 **두 가지 방식**으로 적는다: 센서·포대는 노드 id 그대로
    * (`SENSOR_ACR_E`·`BATTERY_BAT_E1`), C2는 **typeId**(`KAMD_OPS`·`IAOC`·`MCRC`·`ICC`).
-   * 그래서 두 키를 모두 색인한다 — id만 보면 지휘소 행이 통째로 빠진다(실제로 그랬다).
-   * typeId가 여러 노드에 걸리면(ICC W1·W2) 개별 노드를 특정할 수 없으므로 typeId를
-   * 한 행으로 묶고 라벨도 typeId로 둔다 — 없는 정보를 지어내지 않는다.
+   * 그래서 두 키를 모두 색인한다 — id만 보면 지휘소가 통째로 빠진다(실제로 그랬다).
+   * typeId가 여러 노드에 걸리면(ICC W1·W2) 개별 노드를 특정할 수 없으므로 한 행으로 묶는다.
+   * [C2 구조] 탭도 같은 해석기를 쓴다(중복 구현 금지).
    */
-  function nodeIndex() {
-    if (_nodeIdx) return _nodeIdx;
-    var cat = runCatalog();
-    var byType = {};
-    _nodeIdx = { map: {}, keys: [] };
+  function buildNodeResolver(cat) {
+    var map = {}, byType = {};
     ((cat && cat.nodes) || []).forEach(function (n) {
-      _nodeIdx.map[n.id] = { key: n.id, name: n.name || n.id, category: n.category };
+      map[n.id] = { key: n.id, name: n.name || n.id, category: n.category, typeId: n.typeId };
       if (n.typeId) (byType[n.typeId] = byType[n.typeId] || []).push(n);
     });
     Object.keys(byType).forEach(function (tid) {
-      if (_nodeIdx.map[tid]) return;                 // id와 충돌하면 id 우선
-      var group = byType[tid];
-      _nodeIdx.map[tid] = {
-        key: tid, category: group[0].category,
-        name: group.length === 1 ? (group[0].name || tid) : tid
-      };
+      if (map[tid]) return;                      // id와 충돌하면 id 우선
+      var g = byType[tid];
+      map[tid] = { key: tid, category: g[0].category, typeId: tid,
+        name: g.length === 1 ? (g[0].name || tid) : tid };
     });
     // 긴 키부터 찾아야 부분일치 오검출을 막는다(BAT_E1 ⊂ BATTERY_BAT_E1).
-    _nodeIdx.keys = Object.keys(_nodeIdx.map).sort(function (x, y) { return y.length - x.length; });
-    return _nodeIdx;
+    var keys = Object.keys(map).sort(function (x, y) { return y.length - x.length; });
+    return {
+      map: map,
+      /** 단계 이름에 등장하는 노드 키들(중복 제거). */
+      keysInStage: function (name) {
+        var rest = String(name), found = [];
+        for (var i = 0; i < keys.length; i++) {
+          if (rest.indexOf(keys[i]) !== -1) { found.push(keys[i]); rest = rest.split(keys[i]).join(' '); }
+        }
+        return found;
+      }
+    };
   }
 
-  /** 단계 이름에 등장하는 노드 키들(중복 제거). 긴 키부터 소거해 부분일치를 피한다. */
-  function nodesInStage(name) {
-    var idx = nodeIndex(), rest = String(name), found = [];
-    for (var i = 0; i < idx.keys.length; i++) {
-      var k = idx.keys[i];
-      if (rest.indexOf(k) !== -1) { found.push(k); rest = rest.split(k).join(' '); }
-    }
-    return found;
+  var _nodeIdx = null;
+  function nodeIndex() {
+    if (!_nodeIdx) _nodeIdx = buildNodeResolver(cmp.catalog);
+    return _nodeIdx;
   }
+  function nodesInStage(name) { return nodeIndex().keysInStage(name); }
 
   /** 한 항적의 노드 참여 구간·주요 사건·책임 C2(scope)를 뽑는다. */
   function participationOf(tr) {
@@ -862,7 +856,7 @@
   var _linkIdx = null;
   function linkIndex() {
     if (_linkIdx) return _linkIdx;
-    var cat = runCatalog();
+    var cat = cmp.catalog;
     _linkIdx = {};
     ((cat && cat.links) || []).forEach(function (l) {
       (_linkIdx[l.from] = _linkIdx[l.from] || {})[l.to] = l.kind || 'coord';
@@ -877,7 +871,7 @@
    * typeId를 그대로 둔 채 **간선 없이** 표시한다(없는 연결을 만들지 않는다).
    */
   function resolveConcrete(part) {
-    var cat = runCatalog(), all = (cat && cat.nodes) || [], links = linkIndex();
+    var cat = cmp.catalog, all = (cat && cat.nodes) || [], links = linkIndex();
     var byType = {};
     all.forEach(function (n) { if (n.typeId) (byType[n.typeId] = byType[n.typeId] || []).push(n); });
     var byId = {};
@@ -915,7 +909,7 @@
     // "항적 기록에는 없음"으로 표시한다 — 연결을 지어내는 게 아니라 모델이 가진 경로를 밝힌다.
     var have = {};
     nodes.forEach(function (n) { have[n.id] = true; });
-    var cat = runCatalog(), allNodes = (cat && cat.nodes) || [];
+    var cat = cmp.catalog, allNodes = (cat && cat.nodes) || [];
     var byIdAll = {};
     allNodes.forEach(function (n) { byIdAll[n.id] = n; });
     // ⚠️ part.c2.id는 항적이 적은 **typeId**(`IAOC`)일 수 있다. 링크 색인은 노드 id
@@ -1108,8 +1102,8 @@
 
   /** 결심 순간 해부 — 좌 As-Is · 우 To-Be. */
   function anatomyHtml(threatId, ta, tb) {
-    if (!run.audits) return '';
-    var aa = run.audits.asis[threatId], ab = run.audits.tobe[threatId];
+    if (!cmp.audits) return '';
+    var aa = cmp.audits.asis[threatId], ab = cmp.audits.tobe[threatId];
     if ((!aa || !aa.length) && (!ab || !ab.length)) {
       return '<div class="dca-wrap"><div class="note">이 항적은 두 모드 모두 결심 감사 기록이 없습니다 ' +
         '(결심 미도달 또는 표본 제외).</div></div>';
@@ -1278,12 +1272,12 @@
 
   /** 결과 모달 ④ — 같은 위협이 두 지휘 방식에서 어떻게 달랐는지 나란히 본다. */
   function threatCompareSection() {
-    var a = run.cfg.mode === 'asis' ? run.res : run.resOther;   // 좌 = 항상 As-Is
-    var b = run.cfg.mode === 'asis' ? run.resOther : run.res;   // 우 = 항상 To-Be
+    var a = cmp.asis;   // 좌 = 항상 As-Is
+    var b = cmp.tobe;   // 우 = 항상 To-Be
     if (!a || !b) return '';
     var ta = (a && a.threatTraces) || [], tb = (b && b.threatTraces) || [];
     if (!ta.length && !tb.length) {
-      return '<h3>4. 두 방식이 어떻게 달랐나요?</h3>' +
+      return '<h3>위협 항적 병렬 대조 — As-Is ↔ To-Be</h3>' +
         '<div class="bn-none">이 설정에서 생성된 위협 항적이 없습니다.</div>';
     }
 
@@ -1302,7 +1296,7 @@
     });
     var unpaired = rows.filter(function (r) { return !r.a || !r.b; }).length;
 
-    var html = '<h3>4. 위협 항적 병렬 대조 — As-Is ↔ To-Be</h3>' +
+    var html = '<h3>위협 항적 병렬 대조 — As-Is ↔ To-Be</h3>' +
       '<p>동일 seed 결정론 DES 1복제에서 <b>같은 위협이 두 지휘구조를 각각 통과한 경로</b>를 ' +
       '나란히 놓은 로그입니다. 공통난수(CRN) 설계상 두 실행의 위협 집단(ID·발생시각·축선)은 ' +
       '동일하므로, <b>판정이 갈린 항적이 곧 C2 구조가 만든 차이</b>입니다.</p>' +
@@ -1382,80 +1376,34 @@
     });
   }
 
+  /** 주어진 문맥으로 항적 병렬 대조를 컨테이너에 그린다. 모달·[분석] 탭 공용 진입점. */
+  function renderThreatCompare(box, ctx) {
+    if (!box) return;
+    cmp = ctx;
+    if (!cmp || !cmp.asis || !cmp.tobe) {
+      box.innerHTML = '<div class="bn-none">두 체계의 항적 기록이 아직 없습니다.</div>';
+      return;
+    }
+    if (!cmp.audits) cmp.audits = { asis: {}, tobe: {} };
+    box.innerHTML = '<section id="sim-compare-section">' + threatCompareSection() + '</section>';
+    bindCompareFilters();
+    bindTimelinePlay(box);
+  }
+
   function renderModal() {
     if (!run) return;
-    var cfg = run.cfg;
-    var modeName = cfg.mode === 'asis' ? 'As-Is 분절형(지금 방식)' : 'To-Be 통합형(바뀐 방식)';
-    var nodes = run.res.nodes.slice();
-    var activeNodes = nodes.filter(function (n) { return n.arrivals > 0; });
-    var html = '';
-
-    // ① 무엇을 돌렸는지 — 결과를 읽기 전에 알아야 하는 전제.
-    // 기술적인 설정 문자열(contextLabel)은 감사에 필요하므로 버리지 않고 맨 아래로 내린다.
-    html += '<h3>1. 무엇을 돌려 봤나요?</h3>' +
-      '<table><tbody>' +
-      '<tr><th>상황</th><td>' + esc(KJ.scenarioById(cfg.sc).name) + '</td></tr>' +
-      '<tr><th>지휘 방식</th><td>' + esc(modeName) + '</td></tr>' +
-      '<tr><th>적이 오는 양</th><td>보통의 ' + esc(Number(cfg.x).toFixed(1)) + '배</td></tr>' +
-      '<tr><th>무작위 번호 (seed)</th><td>' + esc(String(cfg.seed)) +
-      ' — 이 번호가 같으면 몇 번을 다시 돌려도 결과가 똑같이 나와요</td></tr>' +
-      '</tbody></table>';
-
-    // ② 시간 — 가상 시간과 실제 계산 시간은 다른 것이다(헷갈리기 쉬운 지점)
-    html += '<h3>2. 시간이 얼마나 걸렸나요?</h3><div class="stat-grid">' +
-      statCard('시뮬레이션 속에서 흐른 시간', plainDuration(cfg.dur)) +
-      statCard('컴퓨터가 계산하는 데 걸린 시간', (run.elapsedMs / 1000).toFixed(1) + '초') +
-      statCard('컴퓨터가 처리한 사건 수', run.res.eventCount.toLocaleString() + '번') +
-      '</div>' +
-      '<div class="note">위의 두 시간은 서로 다른 시간이에요. <b>첫 번째</b>는 이야기 속에서 흐른 시간이고 ' +
-      '(예: 30분짜리 상황), <b>두 번째</b>는 그 30분을 컴퓨터가 계산해 내는 데 실제로 걸린 시간이에요. ' +
-      '<b>사건</b>은 "레이더가 무언가를 봤다", "명령이 도착했다"처럼 시뮬레이션 안에서 일어난 일 하나하나를 말해요.</div>';
-
-    // ③ 노드 활성화 — "한 번이라도 일이 들어왔는가"만 본다(부하·성능 판단이 아니다)
-    html += '<h3>3. 어떤 장비가 움직였나요?</h3>' +
-      '<p>이번 시뮬레이션에 등장한 지휘소·요격 부대는 모두 <b>' + nodes.length + '곳</b>이고, ' +
-      '그중 <b>' + activeNodes.length + '곳</b>이 실제로 한 번이라도 일을 했어요. ' +
-      '나머지 ' + (nodes.length - activeNodes.length) + '곳은 이번 상황에서는 할 일이 없었어요.</p>';
-
-    var rows = nodes.sort(function (a, b) {
-      var aa = a.arrivals > 0 ? 0 : 1, bb = b.arrivals > 0 ? 0 : 1;
-      if (aa !== bb) return aa - bb;                       // 움직인 것부터
-      if (a.category !== b.category) return a.category < b.category ? -1 : 1;
-      return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0);
-    }).map(function (n) {
-      var on = n.arrivals > 0;
-      return '<tr><td>' + esc(n.name) + '</td>' +
-        '<td>' + esc(plainCategory(n.category)) + '</td>' +
-        '<td>' + (on ? '<b class="node-on">● 움직였어요</b>' : '<span class="node-off">○ 안 움직였어요</span>') +
-        '</td></tr>';
-    }).join('');
-
-    html += '<table><thead><tr><th>장비 이름</th><th>종류</th><th>움직였나요?</th></tr></thead>' +
-      '<tbody>' + (rows || '<tr><td colspan="3" class="bn-none">움직인 장비가 없어요.</td></tr>') +
-      '</tbody></table>';
-
-    // ④ 두 지휘 방식의 항적 병렬 대조 (필터로 다시 그리므로 전용 컨테이너에 담는다)
-    html += '<section id="sim-compare-section">' + threatCompareSection() + '</section>';
-
-    html += '<div class="note">여기 나오는 숫자는 공개 자료로 만든 <b>연구용 가상 값</b>이에요. 실제 군사 자료가 아니에요. ' +
-      '격추 수·요격 실패율 같은 자세한 분석은 화면을 새로 만드는 중이라 지금은 보여주지 않아요.</div>';
-
-    // 감사용 원문 설정 — 위의 쉬운 말 표가 줄인 정보(배치·충실도·모델 조건 토글)를 그대로 남긴다.
-    html += '<details class="run-config-detail"><summary>자세한 설정 (어른용)</summary>' +
-      '<div class="analysis-context">' + esc(contextLabel(cfg)) + '</div></details>';
-
-    el('modal-body').innerHTML = html;
+    // ⚠️ 결과 모달은 **항적 병렬 대조 한 절만** 보여준다. 종전의 실행 정보·시간 카드·노드
+    // 활성화 표는 사용자 요청으로 걷어냈다 — 같은 정보가 [분석]·[C2 구조] 탭에 있고,
+    // 실행 직후 이 화면에서 정말 보고 싶은 것은 "이번 실행에서 무엇이 갈렸나"이기 때문이다.
+    renderThreatCompare(el('modal-body'), {
+      asis: run.cfg.mode === 'asis' ? run.res : run.resOther,
+      tobe: run.cfg.mode === 'asis' ? run.resOther : run.res,
+      audits: run.audits,
+      catalog: runCatalog()
+    });
     run.modalRendered = true;
-    bindCompareFilters();
-    bindTimelinePlay(el('modal-body'));
-    if (KJ.tableSort) KJ.tableSort.attachAll(el('modal-body')); // 표 열 정렬 유지
   }
 
-  function statCard(label, val, cls) {
-    return '<div class="stat-card' + (cls ? ' stat-' + cls : '') + '">' +
-      '<div class="stat-val">' + esc(val) + '</div>' +
-      '<div class="stat-label">' + esc(label) + '</div></div>';
-  }
 
   // seed/dur 입력을 사용자가 만진 뒤에는 re-render가 값을 덮어쓰지 않음
   document.addEventListener('DOMContentLoaded', function () {

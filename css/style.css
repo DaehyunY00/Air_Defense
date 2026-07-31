@@ -952,3 +952,99 @@ li.chk-fail { background: #43140f; }
 .dca-note, .dca-legend { grid-column: 1 / -1; }
 .dca-legend { color: var(--muted); font-size: 10px; line-height: 1.5; }
 @media (max-width: 760px) { .dca-wrap { grid-template-columns: 1fr; } }
+
+/* ══ [분석] 탭 (ADR-076) — 합계 한 줄 + 구간별 소요시간 ══ */
+.an-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin: 4px 0 6px; }
+.an-head-cell { text-align: center; min-width: 120px; }
+.an-head-val { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.an-head-lab { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.an-head-op { font-size: 20px; color: var(--muted); }
+.an-head-delta .an-head-val { font-size: 20px; }
+.an-fast { color: #46d17f; }
+.an-slow { color: #ff6b6b; }
+.an-same { color: var(--muted); }
+
+.an-table { width: 100%; font-size: 12px; }
+.an-table th { text-align: left; color: var(--muted); font-weight: 400; padding: 4px 8px 4px 0; }
+.an-table td { padding: 5px 8px 5px 0; vertical-align: middle; border-top: 1px solid #222b38; }
+.an-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.an-why { display: block; color: var(--muted); font-style: normal; font-size: 10px; margin-top: 1px; }
+.an-total td { border-top: 2px solid var(--border); font-weight: 700; }
+.an-barcell { width: 42%; min-width: 160px; }
+.an-bars { display: flex; flex-direction: column; gap: 2px; }
+.an-bar {
+  height: 12px; border-radius: 2px; position: relative; min-width: 24px;
+  display: flex; align-items: center;
+}
+.an-bar span { font-size: 9px; color: #0d1117; font-weight: 700; margin-left: 4px; }
+.an-bar-a { background: #e05545; }
+.an-bar-b { background: #3d8b40; }
+
+/* ══ [C2 구조] 탭 (ADR-076) — 정적 노드·링크 계층도 ══ */
+.st-meta { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.st-meta b { color: var(--text); }
+.st-legend { margin-left: 10px; }
+.st-legend i {
+  display: inline-block; width: 10px; height: 3px; border-radius: 2px;
+  margin: 0 4px 0 10px; vertical-align: 3px;
+}
+.st-cols {
+  display: grid; grid-template-columns: repeat(4, 1fr); font-size: 10px;
+  color: var(--muted); margin-bottom: 2px;
+}
+.st-cols span:nth-child(4) { text-align: right; }
+.st-svg { width: 100%; height: auto; background: #0d1117; border-radius: 6px; }
+.st-svg text { font-size: 6px; fill: #7f93ab; }
+.st-node circle { stroke: #0d1117; stroke-width: 0.8; }
+.st-sensor circle { fill: #3d8bd9; }
+.st-c2 circle { fill: #a06ed2; }
+.st-shooter circle { fill: #3d8b40; }
+.st-upper circle { stroke: #ffd27d; stroke-width: 1.6; }
+.st-upper text { fill: #dbe4ee; font-size: 8px; font-weight: 700; }
+
+/* ══ [C2 구조] 탭 (ADR-076) — As-Is ↔ To-Be 세로 계층 + 항적 재생 ══ */
+.sv-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; font-size: 12px; }
+.sv-controls label { color: var(--muted); }
+.sv-controls select {
+  background: var(--panel); color: var(--text); border: 1px solid var(--border);
+  padding: 4px 8px; border-radius: 5px; margin-left: 5px; max-width: 320px; font-size: 12px;
+}
+#sv-play {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 5px; padding: 4px 12px; cursor: pointer; font-size: 12px;
+}
+#sv-play:hover:not(:disabled) { background: #2a3440; border-color: #3a4a5e; }
+#sv-play:disabled { opacity: .5; cursor: default; }
+.sv-clock { font-variant-numeric: tabular-nums; color: #ffd27d; font-weight: 700; }
+
+.sv-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+.sv-col { min-width: 0; }
+.sv-col h4 { font-size: 12px; color: #aecbeb; margin: 0 0 3px; display: flex; gap: 8px; align-items: baseline; }
+.sv-col h4 span { color: var(--muted); font-weight: 400; font-size: 10px; }
+.sv-svg { width: 100%; height: auto; border-radius: 6px; }
+.sv-tier { font-size: 7px; fill: #6b7a8d; }
+.sv-hint { fill: #4a5666; }
+.sv-svg text { font-size: 6.5px; fill: #8fa6bd; }
+.sv-node circle { stroke: #0d1117; stroke-width: 0.8; }
+.sv-sensor circle { fill: #3d8bd9; }
+.sv-c2 circle { fill: #a06ed2; }
+.sv-shooter circle { fill: #3d8b40; }
+.sv-upper circle { stroke: #ffd27d; stroke-width: 1.6; }
+.sv-upper text { fill: #dbe4ee; font-size: 7.5px; font-weight: 700; }
+
+/* 재생 중에만 소등 상태를 쓴다 — 정지 화면은 전체 구조가 보여야 보고서 캡처가 된다 */
+.sv-cols.sv-playing .sv-node { opacity: .16; transition: opacity .12s linear; }
+.sv-cols.sv-playing .sv-node.sv-on { opacity: 1; }
+.sv-cols.sv-playing .sv-node.sv-act.sv-on circle { stroke: #ffd27d; stroke-width: 2; }
+.sv-cols.sv-playing .sv-edge { opacity: .06; transition: opacity .12s linear; }
+.sv-cols.sv-playing .sv-edge.sv-flow.sv-on { opacity: .95; stroke-width: 1.6; }
+.sv-legend { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--muted); margin-top: 6px; }
+.sv-legend i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin: 0 4px 0 10px; vertical-align: 3px; }
+@media (max-width: 900px) { .sv-cols { grid-template-columns: 1fr; } }
+.sv-cnt { font-size: 6px; fill: #0d1117; font-weight: 700; }
+/* 조율층 띠 · 모델 범위 밖 맥락 상자 (사용자 제공 아키텍처 반영) */
+.sv-coordbar { fill: #2e7cb8; }
+.sv-coordtxt { font-size: 8px; fill: #0d1117; font-weight: 700; }
+.sv-none { font-size: 7px; fill: #6b7a8d; font-style: italic; }
+.sv-ghost rect { fill: none; stroke: #4a5666; stroke-width: 0.8; stroke-dasharray: 3 2; }
+.sv-ghost text { font-size: 7px; fill: #6b7a8d; }

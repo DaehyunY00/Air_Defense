@@ -6,7 +6,7 @@
   <title>K-JAMDS C2 시뮬레이터 — KJADS 3대 문제 상황</title>
   <!-- Leaflet 1.9.4 동봉본(vendor/) — CDN 의존 제거. 출처·라이선스·해시는 vendor/leaflet-1.9.4/README.md -->
   <link rel="stylesheet" href="vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="stylesheet" href="css/style.css?v=20260731a">
+  <link rel="stylesheet" href="css/style.css?v=20260731g">
 </head>
 <body>
   <!-- 제약 (c): 디스클레이머 상시 표출 -->
@@ -86,7 +86,8 @@
 
   <nav class="tabs">
     <button class="tab-btn" data-tab="sim">🎮 시뮬레이션</button>
-    <button class="tab-btn" data-tab="decision">⚖️ 결심 비교</button>
+    <button class="tab-btn" data-tab="analysis">📊 분석</button>
+    <button class="tab-btn" data-tab="structure">🔗 C2 구조</button>
     <button class="tab-btn" data-tab="mc">🎲 Monte Carlo</button>
     <button class="tab-btn" data-tab="data">📚 근거자료·제약검증</button>
   </nav>
@@ -188,46 +189,50 @@
       </details>
     </section>
 
-    <!-- ── 결심 비교 탭 (ADR-064): 교전창 여유 + 선택 손실을 인과 사슬 한 줄로 ── -->
-    <section class="tab-panel" id="panel-decision">
+    <!-- ── 분석 탭: 같은 항적이 두 체계에서 얼마나 걸렸나 (ADR-076) ── -->
+    <section class="tab-panel" id="panel-analysis">
       <div class="card">
-        <h2>⚖️ 결심 비교 — 교전창 여유(시간) · 선택 손실(점수)</h2>
-        <p>동일 seed의 As-Is/To-Be를 짝지어(CRN — 두 체계가 <b>같은 위협</b>을 마주함),
-           결심이 <b>제때</b> 났는지(교전창 여유)와 <b>최적 사수</b>를 골랐는지(선택 손실)를
-           나란히 봅니다. 두 지표 모두 엔진이 결심 순간에 이미 계산한 값을 기록한 것이며
-           (ADR-062), 기준값은 난수를 쓰지 않는 관측 전용 계산입니다(ADR-063).</p>
-        <div id="decision-context" class="analysis-context"></div>
+        <h2>📊 분석 — 같은 위협, 두 지휘구조, 걸린 시간</h2>
+        <p>동일 seed로 짝지은 두 실행(CRN — 두 체계가 <b>같은 위협</b>을 마주함)에서,
+           위협이 들어와 요격탄이 나갈 때까지 <b>얼마나 걸렸고 어디서 벌어졌는지</b>를 봅니다.
+           상단 컨트롤바의 시나리오·배치·강도·seed가 적용됩니다.</p>
+        <div id="analysis-context" class="analysis-context"></div>
       </div>
 
       <div class="card">
-        <h2>④ 헤드라인 게이지 — 주장의 근거</h2>
-        <div id="decision-gauges"></div>
+        <h2>① 침투부터 발사까지 — 합계</h2>
+        <div id="analysis-headline"></div>
       </div>
 
       <div class="card">
-        <h2>③ 두 분포 — 교전창 여유 · 선택 손실</h2>
-        <div id="decision-distributions"></div>
+        <h2>② 어디서 벌어졌나 — 구간별 소요시간</h2>
+        <div id="analysis-gates"></div>
       </div>
 
       <div class="card">
-        <h2>① 페어드 타임라인 — 위협별 사례(삽화)</h2>
-        <div id="decision-rule" class="dc-rule"></div>
-        <div id="decision-timeline"></div>
-        <div class="tl-legend">
-          <span><span class="sw" style="background:#2e6fd8"></span>탐지 대기</span>
-          <span><span class="sw dc-sw-hatch"></span>C2 대기 Wq</span>
-          <span><span class="sw" style="background:#f0a020"></span>C2 서비스</span>
-          <span><span class="sw" style="background:#00838f"></span>결심→발사</span>
-          <span><span class="sw" style="background:#3d8b40"></span>교전·요격</span>
-          <span><span class="sw dc-sw-idle"></span>결심 없이 교전창 경과</span>
-          <span><span class="sw dc-sw-close"></span>교전창 마감</span>
-          <span><span class="dc-sw-appr">◆</span>협조 연락·승인 절차</span>
-        </div>
+        <h2>③ 항적 로그 병렬 비교 — As-Is ↔ To-Be</h2>
+        <p>판정이 갈린 항적을 펼치면 C2 계통 다이어그램·참여 노드 타임라인·단계별 차이를
+           나란히 볼 수 있습니다. 결과 모달과 같은 화면입니다.</p>
+        <div id="analysis-threat-log"></div>
       </div>
+    </section>
 
-      <div class="card" id="decision-popover-card">
-        <h2>② 후보 명단 — 그 결심이 무엇을 보고 있었나</h2>
-        <div id="decision-popover"></div>
+    <!-- ── C2 구조 탭: 지금 배치의 노드 연결 형태 (ADR-076) ── -->
+    <section class="tab-panel" id="panel-structure">
+      <div class="card">
+        <h2>🔗 C2 구조 — 지금 무엇이 무엇과 연결돼 있나</h2>
+        <p><b>As-Is와 To-Be를 나란히</b> 놓고, 위에서부터 상위 작전사 → <b>합동방공 C2(조율층)</b> →
+           C2 체계(MCRC·KAMDOC·방공C2A) → 교전통제(ICC·ECS) → 레이더 · 요격부대로 쌓았습니다.</p>
+        <p><b>To-Be의 핵심 차이는 「합동방공 C2」 조율층입니다.</b> 모델에서 이 층에 해당하는
+           노드는 통합공중작전통제소(IAOC)·교전운영센터(EOC)이며 둘 다 To-Be 전용입니다 —
+           그래서 As-Is 그림에서는 이 띠가 <b>통째로 비어 있고, 그 빈 칸이 곧 구조 차이</b>입니다.</p>
+        <p class="note">⚠️ 맨 위 <b>상위 작전사(공작사·지작사·해작사·수방사)</b>와 해상 계통
+           (KNTDS·함정)은 <b>이 모델의 범위 밖</b>입니다(ADR-060 — 지상배치 방공체계 C2에 한정,
+           요격기·해상 자산 미포함). 아키텍처 맥락으로 점선 표시만 하고 링크는 긋지 않습니다 —
+           시뮬레이션이 그 계층을 계산하는 것처럼 보이지 않게 하기 위해서입니다.</p>
+        <p>아래에서 <b>항적을 고르고 [탐지→요격 재생]</b>을 누르면, 그 위협이 탐지되고 요격되기까지
+           어느 노드가 언제 반응했는지 두 체계에서 <b>같은 시계로</b> 재생됩니다.</p>
+        <div id="structure-diagram"></div>
       </div>
     </section>
 
@@ -346,7 +351,7 @@
        function`으로 즉사한다(실측 재현). 형제 파일과 같은 마커를 붙여 캐시를 끊는다. -->
   <script src="js/data/axes.js?v=20260730a"></script>
   <script src="js/config/deployment-adapter.js?v=20260724a"></script>
-  <script src="js/core/router.js?v=20260730a"></script>
+  <script src="js/core/router.js?v=20260731b"></script>
   <script src="js/core/constraints.js"></script>
   <script src="js/core/rng.js"></script>
   <script src="js/core/heap.js"></script>
@@ -360,9 +365,9 @@
   <script src="js/ui/geo.js"></script>
   <script src="js/ui/table-sort.js"></script>
   <script src="js/ui/map-view.js?v=20260724a"></script>
-  <script src="js/ui/panels.js?v=20260731a"></script>
-  <script src="js/ui/sim-view.js?v=20260731a"></script>
+  <script src="js/ui/panels.js?v=20260731h"></script>
+  <script src="js/ui/sim-view.js?v=20260731c"></script>
   <script src="js/ui/mc-panel.js?v=20260724a"></script>
-  <script src="js/main.js?v=20260731a"></script>
+  <script src="js/main.js?v=20260731b"></script>
 </body>
 </html>

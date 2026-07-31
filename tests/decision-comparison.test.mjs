@@ -1,5 +1,10 @@
 /**
- * ADR-075 — [결심 비교] 탭 회귀.
+ * ADR-075 → ADR-076 — [분석] 탭 회귀 (구 [결심 비교]).
+ *
+ * ⚠️ ADR-076에서 이 탭은 **[분석]으로 개명·단순화**됐다. 종전 화면(게이지·두 분포·후보
+ * 팝오버)은 읽는 데 사전지식이 필요해 걷어내고, **시간 중심 3층**(합계 → 구간별 차이 →
+ * 항적 로그 병렬 비교)으로 다시 세웠다. 아래 §1~§3(순수 후처리·미측정 규율·게이지 정의)은
+ * 후처리기 계약이라 화면과 무관하게 그대로 유효하다 — §4~§6만 새 구조로 옮겼다.
  *
  * 시각화 계층은 **순수 후처리**여야 한다. 이 스위트가 고정하는 것:
  *  1) 순수성 — `buildC2Analysis`가 c2Events를 읽기만 하고 되쓰지 않으며, 두 번 불러도 같은 값
@@ -113,11 +118,15 @@ console.log('\n== 3) 게이지 정의 ==');
 console.log('\n== 4) 딥링크 하위호환 ==');
 {
   const routerSrc = fs.readFileSync(path.join(root, 'core/router.js'), 'utf8');
-  assert(/VALID_TABS\s*=\s*\[[^\]]*'decision'/.test(routerSrc), "'decision' 탭이 유효 탭에 등록");
-  ['sim', 'analysis', 'mc', 'data'].forEach(function (tab) {
+  assert(/VALID_TABS\s*=\s*\[[^\]]*'analysis'/.test(routerSrc), "'analysis' 탭이 유효 탭에 등록");
+  assert(/VALID_TABS\s*=\s*\[[^\]]*'structure'/.test(routerSrc), "'structure'(C2 구조) 탭이 유효 탭에 등록");
+  ['sim', 'mc', 'data'].forEach(function (tab) {
     assert(routerSrc.indexOf("'" + tab + "'") !== -1, '기존 탭 ' + tab + ' 유지');
   });
   assert(/LEGACY_TAB\s*=\s*\{[^}]*map:\s*'sim'/.test(routerSrc), '구 탭ID 폴백(map→sim) 유지');
+  // 개명 전 딥링크(#tab=decision)가 죽으면 안 된다 — [분석]으로 흡수한다.
+  assert(/LEGACY_TAB\s*=\s*\{[^}]*decision:\s*'analysis'/.test(routerSrc),
+    "구 'decision' 딥링크가 [분석]으로 폴백");
   // v4가 신설한 모델 조건 토글(ADR-065~072)도 함께 살아 있어야 한다 — 신규 탭 추가가
   // 기존 딥링크 스킴을 조금이라도 깎지 않았음을 고정한다.
   ['sc', 'mode', 'dep', 'seed', 'dur', 'x', 't', 'open',
@@ -131,28 +140,62 @@ console.log('\n== 5) UI 계약 ==');
 {
   const html = fs.readFileSync(path.join(repo, 'index.html'), 'utf8');
   const panels = fs.readFileSync(path.join(root, 'ui/panels.js'), 'utf8');
-  assert(html.indexOf('data-tab="decision"') !== -1, '탭 버튼 존재');
-  assert(html.indexOf('id="panel-decision"') !== -1, '탭 패널 존재 (main.js의 panel-<tab> 규약)');
-  ['decision-context', 'decision-gauges', 'decision-distributions',
-    'decision-rule', 'decision-timeline', 'decision-popover'].forEach(function (id) {
+  const mainSrc = fs.readFileSync(path.join(root, 'main.js'), 'utf8');
+  assert(html.indexOf('data-tab="analysis"') !== -1, '[분석] 탭 버튼 존재');
+  assert(html.indexOf('id="panel-analysis"') !== -1, '[분석] 패널 존재 (main.js의 panel-<tab> 규약)');
+  assert(html.indexOf('data-tab="structure"') !== -1, '[C2 구조] 탭 버튼 존재');
+  assert(html.indexOf('id="panel-structure"') !== -1, '[C2 구조] 패널 존재');
+  ['analysis-context', 'analysis-headline', 'analysis-gates', 'analysis-threat-log',
+    'structure-diagram'].forEach(function (id) {
     assert(html.indexOf('id="' + id + '"') !== -1, '컨테이너 ' + id + ' 존재');
     assert(panels.indexOf("'" + id + "'") !== -1, '렌더러가 ' + id + '를 채움');
   });
-  assert(/KJ\.panels\.renderDecision/.test(fs.readFileSync(path.join(root, 'main.js'), 'utf8')),
-    'main.js가 decision 탭을 렌더러로 디스패치');
-  assert(/renderDecision:\s*function/.test(panels), 'panels.renderDecision 정의');
+  assert(/KJ\.panels\.renderAnalysis/.test(mainSrc), 'main.js가 analysis 탭을 렌더러로 디스패치');
+  assert(/KJ\.panels\.renderStructure/.test(mainSrc), 'main.js가 structure 탭을 렌더러로 디스패치');
+  assert(/renderAnalysis:\s*function/.test(panels), 'panels.renderAnalysis 정의');
+  assert(/renderStructure:\s*function/.test(panels), 'panels.renderStructure 정의');
   // 계측 플래그는 카탈로그 해석이 아니라 DES 실행에만 얹는다.
   assert(/runFeatures[\s\S]{0,400}decisionAudit:\s*true/.test(panels),
     'runFeatures가 계측 3종을 DES 실행에 얹음');
   assert(!/function modelConfig[\s\S]{0,200}decisionAudit/.test(panels),
     'modelConfig(카탈로그 해석)에는 계측 플래그를 넣지 않음');
+  // ⚠️ 구간별 표는 **전 구간을 같은 코호트**로 내야 한다. 구간마다 표본이 다르면 부분의 합이
+  //    합계와 어긋나 각 줄이 서로 다른 위협을 말하게 된다(실측: 구간합 −9.8초 vs 합계 −21.9초).
+  assert(/cohort/.test(panels) && /한 관문이라도 빠지면 제외/.test(panels),
+    '구간별 표가 단일 코호트로 계산됨 (부분의 합 = 합계 보장)');
+  // 항적 로그 병렬 비교는 결과 모달과 **같은 렌더러**를 재사용한다(중복 구현 금지).
+  assert(/KJ\.simView\.renderThreatCompare/.test(panels),
+    '[분석] 탭이 결과 모달과 같은 병렬 비교 렌더러를 재사용');
+  // C2 구조도는 카탈로그를 넘겨야 한다 — 빼면 기본 배치로 폴백해 조용히 틀린 구조를 그린다.
+  assert(/linksInMode\s*\?\s*KJ\.linksInMode\(mode,\s*cat\)/.test(panels),
+    'linksInMode에 카탈로그 전달 (기본 배치 폴백 방지)');
+  // [C2 구조]는 As-Is/To-Be를 **병렬 세로 계층**으로 놓고, 항적 재생을 지원한다.
+  assert(/function column\(mode, act\)/.test(panels), 'C2 구조도가 모드별 컬럼 렌더러로 분리됨');
+  assert(/'상위 작전사'/.test(panels) && /'합동방공 C2 \(조율층\)'/.test(panels) &&
+    /'C2 체계'/.test(panels) && /'교전통제 \(ICC · ECS\)'/.test(panels),
+    '세로 계층이 작전사 → 합동방공C2 → C2 체계 → 교전통제 순으로 정의됨');
+  // To-Be의 핵심 차이 = 조율층. As-Is에는 그 노드(IAOC·EOC)가 아예 없어야 한다.
+  assert(/var COORD = \{ IAOC: 1, EOC: 1 \}/.test(panels), '조율층 노드가 IAOC·EOC로 정의됨');
+  assert(/조율층 없음/.test(panels),
+    'As-Is에서 조율층이 비었음을 글자로 남김 (빈 칸이 곧 구조 차이)');
+  // 모델 범위 밖 요소는 맥락으로만 — 링크를 그으면 시뮬레이션이 계산하는 것처럼 오도한다.
+  assert(/OUT_OF_SCOPE/.test(panels) && /모델 범위 밖/.test(panels),
+    '상위 작전사·해상 계통을 모델 범위 밖으로 명시 (ADR-060)');
+  assert(/bindStructurePlay/.test(panels) && /sv-play/.test(panels),
+    '항적 재생(탐지→요격) 컨트롤 배선');
+  // 좌우가 **같은 시계**를 써야 어느 쪽이 먼저 끝나는지 읽을 수 있다.
+  assert(/data-t0="'\s*\+\s*\(span \? span\.t0/.test(panels),
+    '좌우 두 계층도가 하나의 시간 구간을 공유');
+  // 노드 해석기는 결과 모달과 공용 — C2가 typeId로 기록되는 문제를 한 곳에서만 푼다.
+  assert(/KJ\.simView\.buildNodeResolver/.test(panels),
+    'C2 구조 탭이 공용 노드 해석기를 재사용 (id/typeId 이중 색인)');
+  // rAF는 백그라운드 탭에서 멈춘다 — 타이머 안전장치가 없으면 재생이 굳는다.
+  assert(/guard = setTimeout\(finish/.test(panels),
+    'C2 구조 재생에 타이머 확정 장치 존재');
   // 디스클레이머 2곳(헤더 pill·푸터 성격 문구) 불변 — 제약 (c)
   assert(html.indexOf('정책연구용 개념값 · 실제 작전자료 아님') !== -1, '헤더 디스클레이머 유지');
   assert(html.indexOf('지상배치 방공체계 C2에 한정') !== -1, 'ADR-060 범위 문구 유지');
-  assert((html.match(/tab-btn/g) || []).length >= 5, '탭 버튼 5개 이상(기존 4 + 신규 1)');
-  // 대표 위협 선정 규칙이 화면 문구로 존재해야 한다(§0-5: 단일 런 인과 주장 금지).
-  assert(/표시 사례 선정 규칙/.test(panels), '대표 위협 선정 규칙이 UI에 명시');
-  assert(/삽화이며 주장의 근거는/.test(panels), '사례=삽화, 주장=분포·게이지 문구 명시');
+  assert((html.match(/tab-btn/g) || []).length >= 5, '탭 버튼 5개 이상');
 }
 
 console.log('\n== 6) 단일본 인라인 ==');
@@ -162,10 +205,12 @@ console.log('\n== 6) 단일본 인라인 ==');
     assert(false, '단일본 파일이 존재해야 한다');
   } else {
     const single = fs.readFileSync(singlePath, 'utf8');
-    assert(single.indexOf('id="panel-decision"') !== -1, '단일본에 결심 비교 패널 인라인');
-    assert(single.indexOf('renderDecision:') !== -1, '단일본에 렌더러 인라인');
+    assert(single.indexOf('id="panel-analysis"') !== -1, '단일본에 [분석] 패널 인라인');
+    assert(single.indexOf('id="panel-structure"') !== -1, '단일본에 [C2 구조] 패널 인라인');
+    assert(single.indexOf('renderAnalysis:') !== -1, '단일본에 [분석] 렌더러 인라인');
+    assert(single.indexOf('renderStructure:') !== -1, '단일본에 [C2 구조] 렌더러 인라인');
     assert(single.indexOf('decisionComparison') !== -1, '단일본에 후처리기 인라인');
-    assert(single.indexOf('.dc-gauge') !== -1, '단일본에 신규 CSS 인라인');
+    assert(single.indexOf('.an-table') !== -1, '단일본에 신규 CSS 인라인');
     assert(single.indexOf('_emitDecisionAudit') !== -1, '단일본에 엔진 계측 인라인');
   }
 }

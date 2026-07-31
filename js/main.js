@@ -2,8 +2,7 @@
  * K-JAMDS 시뮬레이터 — 부트스트랩·상태 관리
  * 상태 단일원천: 딥링크 해시(#tab=&sc=&mode=&x=&seed=&dur=) ↔ UI 동기화.
  *
- * 탭 구조: [시뮬레이션(지도·실행·결과창)] [결심 비교(ADR-075)] [Monte Carlo] [근거자료].
- * ADR-076: [분석] 탭은 전면 개편을 위해 제거됐다(레거시 딥링크는 라우터가 흡수).
+ * 탭 구조: [시뮬레이션] [분석(시간 비교·항적 병렬 로그)] [C2 구조] [Monte Carlo] [근거자료].
  * 체계 모드는 단일 토글 스위치(off=As-Is 분절형, on=To-Be 통합형)로 단순화.
  */
 (function () {
@@ -98,8 +97,10 @@
     if (state.tab === 'sim') {
       KJ.mapView.invalidateSize();
       KJ.simView.render(state, analysis);
-    } else if (state.tab === 'decision') {
-      KJ.panels.renderDecision(state);
+    } else if (state.tab === 'analysis') {
+      KJ.panels.renderAnalysis(state);
+    } else if (state.tab === 'structure') {
+      KJ.panels.renderStructure(state);
     } else if (state.tab === 'mc') {
       KJ.mcPanel.render(state);
     } else if (state.tab === 'data') {

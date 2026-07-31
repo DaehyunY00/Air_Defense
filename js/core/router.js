@@ -18,14 +18,12 @@
   // ADR-065: appr(승인 계선)·disp(표적 산포)·south(남부 축선)는 **기본 ON**이다('0'으로 해제).
   // ADR-066: linkv2(링크 의미론 codex 정합)도 **기본 ON** — 반증용 해제 경로로 linkv2=0을 신설.
   var DEFAULTS = { tab: 'sim', sc: 'sc1', mode: 'asis', dep: 'HANBANDO_LEGACY_NORMAL', fid: 'iads-c2', appr: '1', disp: '1', south: '1', linkv2: '1', rp: '1', cop: '1', saw: '1', sdf: '1', eor: '0', t: 0, open: '', x: 1, seed: 12345, dur: 1800 };
-  // ADR-075: 'decision'(결심 비교) 탭. 기존 탭ID·파라미터 스킴은 그대로라 구 딥링크는
-  // 전부 하위호환이다(모르는 키는 무시, 모르는 탭은 기본값으로 폴백 — 종전 동작 유지).
-  // ADR-076: 'analysis'는 전면 개편을 위해 제거했다 — 아래 레거시 매핑으로 흡수한다.
-  var VALID_TABS = ['sim', 'decision', 'mc', 'data'];
+  // ADR-076: [분석] 탭을 시간 중심으로 다시 세우고(구 'decision' 대체), [C2 구조] 탭을 신설했다.
+  // 기존 탭ID·파라미터 스킴은 그대로라 구 딥링크는 전부 하위호환이다.
+  var VALID_TABS = ['sim', 'analysis', 'structure', 'mc', 'data'];
   // 구 딥링크 호환: 지도/시나리오/DES/재생 탭은 통합 [시뮬레이션] 탭으로 흡수.
-  // analysis도 제거된 탭이므로 기존 #tab=analysis 링크가 죽지 않도록 [시뮬레이션]으로
-  // 보낸다(새 분석 화면이 생기면 다시 매핑을 끊는다).
-  var LEGACY_TAB = { map: 'sim', scenario: 'sim', des: 'sim', playback: 'sim', analysis: 'sim' };
+  // 'decision'은 [분석]으로 이름이 바뀌었으므로 그 링크는 [분석]으로 보낸다.
+  var LEGACY_TAB = { map: 'sim', scenario: 'sim', des: 'sim', playback: 'sim', decision: 'analysis' };
 
   KJ.router = {
     /** 현재 해시를 상태 객체로 파싱 (유효성 검증 포함) */

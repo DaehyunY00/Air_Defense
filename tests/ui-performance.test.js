@@ -41,22 +41,27 @@ assert(map.indexOf('groupBySite') !== -1 && map.indexOf('node-site-stack') !== -
 assert(map.indexOf('asset-range-ring') !== -1 && map.indexOf('if (fallback)') !== -1,
   'SVG fallback 탐지·교전 범위 링과 토글 재렌더');
 assert(sim.indexOf("KJ.compute.run('desPair'") !== -1, '주 시뮬레이션 DES Worker 분리');
-assert(sim.indexOf('includeHeat: true') !== -1, '중복교전 위험 Worker 선계산 요청');
-assert(sim.indexOf("KJ.compute.run('mcPair'") !== -1, '백그라운드 MC Worker 분리');
-assert(sim.indexOf("pair.execution === 'web-worker'") !== -1 && sim.indexOf('run.mc.skipped = true') !== -1,
-  '메인 스레드 폴백 자동 MC 차단');
-assert(sim.indexOf('KJ.computeOverlapHeat') === -1, '결과 모달 메인 스레드 overlap 재계산 제거');
-assert(sim.indexOf('renderMcSectionIfOpen') !== -1 && sim.indexOf('run.modalRendered') !== -1,
-  'MC 부분 갱신·결과 모달 캐시');
-assert(sim.indexOf('관측 종료 미해결') !== -1 && sim.indexOf('확정 누출 (전체 생성 기준)') !== -1,
-  '결과 요약에 확정 누출·관측 종료 미해결 분리 표시');
-assert(sim.indexOf('전체 생성 기준 요격 실패율 평균') !== -1 &&
-  sim.indexOf('delta.leakRateSpawn') !== -1 &&
-  sim.indexOf('rateOf(asisG.leaked, asisG.spawned)') !== -1,
-  'MC·단일 DES 모두 전체 생성 분모와 paired Δ를 명시');
-assert(sim.indexOf('명령 수명주기·항적 신선도·교전 기회') !== -1 &&
-  sim.indexOf('교전 기회 손실률') !== -1 && sim.indexOf('결심 항적 age p90') !== -1,
-  '단일 DES 결과에 명령·신선도·기회손실 비교 노출');
+// ⚠️ 결과 모달은 [분석] 탭 전면 개편에 맞춰 **시간·노드 활성화만** 남기도록 축소됐다.
+// 종전에 여기서 잠그던 정량 지표 어서션(확정 누출·관측 종료 미해결·paired Δ·명령 수명주기
+// ·기회손실 등)은 그 화면과 함께 사라졌으므로 제거한다. 되살릴 때 이 블록도 함께 되살린다.
+// 자동 MC(mcPair)도 모달의 신뢰구간 섹션 전용이었어서 함께 걷어냈다 — 대신 "다시 살아나지
+// 않았는지"를 부재 어서션으로 고정한다(아무도 안 보는 30~200복제가 조용히 복귀하는 것을 막는다).
+assert(sim.indexOf("KJ.compute.run('mcPair'") === -1,
+  '결과 모달 축소: 자동 백그라운드 MC 제거 (소비처였던 신뢰구간 섹션이 사라짐)');
+// 주석에도 'includeHeat'가 등장하므로(제거 사유 설명) 실제 **요청 형태**로만 판정한다.
+assert(!/includeHeat\s*:\s*true/.test(sim),
+  '결과 모달 축소: 중복교전 히트맵 선계산 요청 제거 (소비처 사라짐)');
+assert(sim.indexOf('run.modalRendered') !== -1, '결과 모달 1회 렌더 캐시 유지');
+assert(/움직였나요/.test(sim) && /plainCategory/.test(sim),
+  '결과 모달이 노드 활성화 여부를 쉬운 말로 표기');
+assert(/시뮬레이션 속에서 흐른 시간/.test(sim) && /컴퓨터가 계산하는 데 걸린 시간/.test(sim),
+  '결과 모달이 가상 시간과 실제 계산 시간을 구분해 표기');
+// As-Is↔To-Be 항적 병렬 대조는 축소 후에도 **남긴** 섹션이다(사용자 요구).
+// 필터는 섹션만 다시 그려야 한다 — 모달 전체를 재렌더하면 펼쳐 둔 항목이 닫힌다.
+assert(/sim-compare-section/.test(sim) && /threatCompareSection/.test(sim),
+  '결과 모달에 As-Is↔To-Be 항적 병렬 대조 섹션 존재');
+assert(/box\.innerHTML = threatCompareSection\(\)/.test(sim),
+  '병렬 대조 필터는 섹션만 부분 갱신 (펼친 항목 보존)');
 assert(sim.indexOf('renderEveryMs = objectCount > 160 ? 100 : 33') !== -1 && sim.indexOf('lastRingWall') !== -1,
   'FULL 지도 적응형 프레임률·링 갱신 제한');
 assert(mc.indexOf("KJ.compute.run('mcBundle'") !== -1, 'MC·민감도 Worker 분리');

@@ -69,14 +69,12 @@ assert(maxWq(sat, 'shooter') === 0,
 assert(sat.nodes.some(function (n) { return n.category === 'shooter' && n.capacityBlocks > 0; }),
   '사수 drops는 capacityBlocks(차단)로 계상됨 — 영구 상실 라벨이 아님');
 
-// ── 2. 분석 탭 소스가 死 지표를 다시 노출하지 않는지 (회귀 잠금) ──
-console.log('# 분석 탭 소스 잠금');
-var panels = fs.readFileSync(path.join(root, 'js', 'ui', 'panels.js'), 'utf8');
-assert(panels.indexOf("label: '무기 최대 평균대기 (Wq)'") === -1,
-  "'무기 최대 평균대기 (Wq)' 행이 분석 탭에서 제거됨(ADR-062)");
-assert(panels.indexOf("label: '동시교전 슬롯 차단 (재시도)'") !== -1,
-  "사수 차단 지표 라벨이 '동시교전 슬롯 차단 (재시도)'로 정정됨");
-assert(/na: apprNa/.test(panels), '⑥⑦ 승인·협조 지표에 미측정(na) 표기가 배선됨');
+// ── 2. (삭제) 분석 탭 소스 잠금 ──
+// [분석] 탭은 전면 개편을 위해 제거됐다. 종전 이 절은 panels.js가 死 지표
+// ('무기 최대 평균대기 (Wq)')를 다시 노출하지 않는지, 사수 차단 라벨이 정정됐는지,
+// 미측정(na) 표기가 배선됐는지를 소스 문자열로 잠갔다. 그 화면이 사라졌으므로
+// 소스 어서션도 함께 걷어낸다 — **엔진 쪽 근거(§1·§3)는 그대로 남는다.**
+// ⚠️ 새 분석 화면을 만들 때 이 세 가지는 다시 잠가야 한다(ADR-062의 요구사항 자체는 유효).
 
 // ── 3. 승인 계선 OFF는 '0'이 아니라 '미측정' 조건 ──
 console.log('# ⑥⑦ 승인·협조 지표의 측정 조건');

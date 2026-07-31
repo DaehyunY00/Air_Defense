@@ -1,5 +1,11 @@
 /**
- * 분석 탭 위협 항적 병렬 로그 (As-Is ↔ To-Be) 회귀.
+ * 위협 항적 CRN 짝맞춤 · trace 비침습성 회귀.
+ *
+ * ⚠️ 원래는 [분석] 탭의 As-Is↔To-Be 병렬 로그를 위한 스위트였다. 그 탭은 전면 개편을 위해
+ * 제거됐고, **병렬 대조 자체는 결과 모달(js/ui/sim-view.js)로 옮겨 살아 있다.** ④의 검증
+ * 대상 파일이 panels.js → sim-view.js로 바뀌었을 뿐 잠그는 명제는 같다. 여기에 더해
+ * "어디가 다른지"를 색으로 구분하는 배선(sd-only/diff/shift/same)도 함께 고정한다 —
+ * 색만으로 뜻을 싣지 않도록 아이콘 채널이 함께 있는지까지 본다.
  *
  * 이 로그의 전제는 하나다: **동일 seed에서 두 모드의 위협 집단이 같다**(CRN — 공통난수).
  * 도착 스트림이 모드 의존 로직과 분리돼 있어야만 성립하며, 이것이 깨지면 좌·우를 나란히
@@ -12,8 +18,9 @@
  *     보여줄 것이 없다는 뜻이므로 유의미한 대조가 성립하는지 함께 고정한다.
  *  3) desPair 배선: tracePair 없이는 반대 모드 trace가 없고(기존 재생 경로 성능 보존),
  *     tracePair=true면 양쪽 다 생긴다.
- *  4) UI 배선: panels.js가 tracePair를 요청하고, 단일 실행(getLastRun)이 아니라
- *     desPair 결과를 쓰며, 두 렌더러가 공용 콜백으로 갱신된다.
+ *  4) UI 배선: sim-view.js(결과 모달)가 tracePair를 요청하고 desPair 결과를 쓰며,
+ *     좌=As-Is·우=To-Be가 현재 모드와 무관하게 고정되고, 차이 강조가 색 + 아이콘
+ *     **두 채널**로 표시된다.
  */
 import path from 'node:path';
 import fs from 'node:fs';
@@ -77,17 +84,81 @@ assert(/tracePair\s*\?\s*cfg\.trace\s*:\s*false/.test(runtime),
 assert(/tracePair\s*\?\s*cfg\.trace\s*:\s*false/.test(client),
   '메인스레드 폴백: 동일 규약 — 실행 경로에 따라 화면이 달라지지 않음');
 
-console.log('# ④ UI 배선 — 분석 탭이 단일 실행이 아니라 쌍 실행을 쓴다');
-var panels = fs.readFileSync(path.join(root, 'js/ui/panels.js'), 'utf8');
-assert(/tracePair:\s*true/.test(panels), 'panels.js가 desPair에 tracePair를 요청');
-assert(/trace:\s*true,\s*traceCap:\s*300/.test(panels), 'panels.js가 cfg에 trace를 켬 — 없으면 양쪽 다 빈 로그');
-assert(!/getLastRun/.test(panels),
-  '분석 탭이 getLastRun(단일 모드 최근 실행)에 의존하지 않음 — 병렬 대조로 대체됨');
-assert(/threatTraces/.test(panels), 'panels.js가 desPair 결과의 threatTraces를 직접 읽음');
-assert((panels.match(/pipelineData\(state,\s*function\s*\(\)\s*\{\s*renderAnalysisPanels\(state\);\s*\}\)/g) || []).length === 2,
-  '두 렌더러가 공용 콜백(renderAnalysisPanels)으로 구독 — 나중 구독자가 갱신을 놓치지 않음');
-assert(/좌\s*=?\s*As-Is|As-Is 분절형/.test(panels) && /To-Be 통합형/.test(panels),
-  '좌=As-Is·우=To-Be 라벨이 코드에 고정');
+console.log('# ④ UI 배선 — 병렬 대조가 단일 실행이 아니라 쌍 실행을 쓴다');
+// [분석] 탭이 제거되면서 이 병렬 대조는 **결과 모달(js/ui/sim-view.js)**로 옮겨졌다.
+// 검증 대상 파일만 바뀌었을 뿐 잠그는 명제는 종전과 같다.
+var sim = fs.readFileSync(path.join(root, 'js/ui/sim-view.js'), 'utf8');
+assert(/tracePair:\s*true/.test(sim), 'sim-view.js가 desPair에 tracePair를 요청');
+assert(/trace:\s*true,\s*traceCap:\s*300/.test(sim), 'sim-view.js가 cfg에 trace를 켬 — 없으면 양쪽 다 빈 로그');
+assert(/threatTraces/.test(sim), 'sim-view.js가 desPair 결과의 threatTraces를 직접 읽음');
+assert(/run\.cfg\.mode === 'asis' \? run\.res : run\.resOther/.test(sim),
+  '좌=As-Is·우=To-Be가 현재 모드와 무관하게 고정 (상단 토글이 좌우를 뒤집지 않는다)');
+assert(/As-Is/.test(sim) && /To-Be/.test(sim), '좌우 라벨이 코드에 고정');
+// 차이 강조는 색만으로 뜻을 싣지 않는다 — 아이콘·글자 채널이 함께 있어야 한다.
+assert(/sd-only/.test(sim) && /sd-diff/.test(sim) && /sd-shift/.test(sim) && /sd-same/.test(sim),
+  '단계 차이 4분류(only·diff·shift·same)가 배선됨');
+assert(/＋/.test(sim) && /◆/.test(sim) && /⏱/.test(sim),
+  '차이 표시가 색 외에 아이콘 채널도 사용 (색각 이상·흑백에서도 구분 가능)');
+var css = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
+assert(/\.alog-stages li\.sd-only/.test(css) && /\.alog-stages li\.sd-diff/.test(css) &&
+  /\.alog-stages li\.sd-shift/.test(css), '단계 차이 3종 스타일 존재');
+assert(/\.dv-gain-row/.test(css) && /\.dv-loss-row/.test(css),
+  '판정이 갈린 행의 좌측 색 띠 스타일 존재');
+
+console.log('# ④-2 참여 노드 타임라인 — 개발 중 실제로 밟은 결함 2건을 고정한다');
+assert(/timelineHtml/.test(sim) && /ptl-wrap/.test(sim), '참여 노드 타임라인이 배선됨');
+// ① C2는 노드 id가 아니라 typeId로 기록된다(`책임C2:KAMD_OPS`). id만 색인하면
+//    **지휘소 행이 통째로 사라진다** — 실제로 그렇게 나왔다.
+assert(/책임C2:'\s*\+\s*commander\.typeId/.test(
+  fs.readFileSync(path.join(root, 'js/engine/sim-engine.js'), 'utf8')),
+  '엔진이 책임 C2를 typeId로 기록 (색인 전제)');
+assert(/n\.typeId/.test(sim) && /byType/.test(sim),
+  'sim-view.js 노드 색인이 id와 typeId를 모두 잡음 — 지휘소 행 누락 방지');
+// ② rAF는 백그라운드 탭에서 멈춘다. 타이머 안전장치가 없으면 막대가 흐린 채,
+//    버튼이 비활성인 채로 굳는다 — 실측으로 확인한 상태다.
+assert(/_guard\s*=\s*setTimeout\(finish/.test(sim),
+  '재생 애니메이션에 타이머 확정 장치 존재 (rAF throttle 시 UI 고착 방지)');
+assert(/\.ptl-row\s*\{[^}]*display:\s*grid/.test(css),
+  '타임라인 행이 grid — 레거시 .tl-row(flex)와 클래스가 충돌하지 않음');
+assert(!/class="tl-(row|label|bar|track)"/.test(sim),
+  '레거시 .tl-* 클래스명을 재사용하지 않음 (충돌로 트랙 폭이 0이 됐던 회귀)');
+
+console.log('# ④-3 C2 계통 다이어그램 — 간선은 카탈로그 링크만');
+assert(/diagramHtml/.test(sim) && /cdg-wrap/.test(sim), 'C2 계통 다이어그램이 배선됨');
+// ⚠️ 핵심 규율: 항적 단계가 시간상 인접하다고 선을 그으면 **모델에 없는 연결을 지어낸다.**
+//    간선은 반드시 카탈로그 링크 색인(linkIndex)을 조회해서만 나와야 한다.
+assert(/function linkIndex/.test(sim) && /links\[a\.id\] && links\[a\.id\]\[b\.id\]/.test(sim),
+  '간선이 카탈로그 링크 조회로만 생성됨 (시간 인접으로 선을 긋지 않음)');
+assert(/cdg-bridge/.test(sim) && /경로상 노드/.test(sim),
+  '기록에 없는 경로상 홉(ECS 등)은 별도 표기로 구분');
+// 책임 C2는 항적에 typeId로 적히므로 노드 id로 환산해야 한다. 환산이 빠지면
+// 강조·센서 직결 집계·경로 보완이 조용히 전부 빗나간다(실측 0/7로 나왔다).
+assert(/byIdAll\[n\.id\]\.typeId === respKey/.test(sim),
+  '책임 C2의 typeId → 노드 id 환산 (안 하면 집계가 조용히 0이 된다)');
+var cdgCss = css;
+assert(/\.cdg-wrap\.cdg-playing/.test(cdgCss),
+  '다이어그램 소등은 재생 중에만 — 정지 화면은 전부 켜져 보고서 캡처가 가능해야 한다');
+
+console.log('# ④-4 결심 순간 해부 (ADR-073 감사 + ADR-074 그림자 평가)');
+assert(/anatomyHtml/.test(sim) && /dca-wrap/.test(sim), '결심 순간 해부 섹션이 배선됨');
+assert(/decisionAudit: true, shadowEval: true, windowMargin: true/.test(sim),
+  '결심 감사 계측을 실행에 켠다 (OFF/ON bit-exact가 ADR-073·074에서 증명됨)');
+// 감사 이벤트는 c2Events에 실려 오는데 워커가 그걸 지운다 — **지우기 전에** 뽑아야 하고,
+// 워커와 메인스레드 폴백이 같은 규약이어야 실행 경로에 따라 화면이 달라지지 않는다.
+assert(/pickDecisionAudits/.test(runtime) && /pickDecisionAudits/.test(client),
+  '워커·폴백 양쪽이 동일하게 decision_audit을 추출 (c2Events 삭제 전에)');
+assert(/currentAudits/.test(runtime) && /currentAudits/.test(client),
+  '양 경로가 같은 필드명으로 감사 이벤트를 실어 보냄');
+// regret null은 0이 아니라 미측정이다(USFK 독립 축 — ADR-036/074).
+assert(/미측정/.test(sim) && /d\.regret == null/.test(sim),
+  'regret null을 0이 아니라 미측정으로 표기');
+// 결심이 없었으면 빈칸으로 두지 않고 그 사실을 적는다.
+assert(/결심에 도달하지 못했습니다/.test(sim), '결심 미도달을 빈칸이 아니라 문장으로 표기');
+// ⚠️ 회귀 방지: .dca-block을 닫지 않아 To-Be 블록이 As-Is 안에 중첩됐고, 그 결과
+//    두 블록의 표가 겹쳐 읽혀 As-Is에 To-Be 지휘소가 표시됐다(실측).
+var anatomy = sim.slice(sim.indexOf('function anatomyBlock'), sim.indexOf('function anatomyHtml'));
+assert((anatomy.match(/<div/g) || []).length === (anatomy.match(/<\/div>/g) || []).length,
+  'anatomyBlock의 <div> 개폐 수가 일치 (닫기 누락 시 좌우 블록이 중첩된다)');
 
 console.log('# ⑤ 기존 경로 보존 — tracePair 없는 호출은 반대 모드 trace를 만들지 않음');
 var other = run('tobe', { trace: false });

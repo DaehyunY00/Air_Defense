@@ -63,16 +63,17 @@ var suites = [
   ,['link-semantics.test.mjs', 'ADR-057 링크 의미론 codex 정합 (보고주기 차등·C2 전송 1초·OFF 불변)']
   ,['approval-chain.test.mjs', 'ADR-058 승인 계선 이식 (coord 홉·approval 서비스·위임·USFK 불변·반증)']
   ,['native-wta.test.mjs', 'ADR-059 native WTA 모드 차등 (As-Is 부하선택·보존율 차등·비용항 반증)']
-  ,['analysis-metric-honesty.test.mjs', 'ADR-062 분석 탭 지표 정직성 (死 지표 제거·미측정 표기·승인계선 토글·OFF bit-exact)']
+  ,['analysis-metric-honesty.test.mjs', 'ADR-062 지표 정직성 (死 지표 근거·승인계선 토글 배선·OFF bit-exact)']
   ,['target-dispersion.test.mjs', 'ADR-063 표적권역 산포 (OFF bit-exact·균등원판·seed 의존·스트림 분리·권역 무결성·제약 불변)']
   ,['southern-axes.test.mjs', 'ADR-064 남부 종심 축선 (OFF bit-exact·coverage 분리·사거리 정합·체공 환산·남부 자산 활성화)']
   ,['sensor-report-parity.test.mjs', 'ADR-067 레이더→C2 보고 주기 양 모드 공통 (대칭·킬웹 포함·음성 비대칭 유지·As-Is 불변)']
   ,['codex-alignment.test.mjs', 'ADR-069~072 IADS_codex 정본 정합 (톱니 신선도·원격교전+웹파티션·자위권 발사·기본값 전환)']
-  ,['threat-log-pairing.test.mjs', '분석 탭 항적 병렬 로그 (CRN 위협집단 동일성·판정 분기 실재·tracePair 배선)']
+  ,['threat-log-pairing.test.mjs', '항적 CRN 짝맞춤·trace 비침습성 (위협집단 동일성·판정 분기 실재·tracePair 배선)']
   ,['decision-audit.test.mjs', 'ADR-073 결심 감사 로깅 (OFF bit-exact·RNG 소비 불변·상한/표본 결정론)']
   ,['decision-audit.test.mjs', 'ADR-062 결심 감사 로깅 (OFF bit-exact·RNG 소비 불변·상한/표본 결정론)']
   ,['shadow-eval.test.mjs', 'ADR-074 그림자 평가·교전창 계측 (RNG 불변·regret≥0·USFK 제외·전수 분모)']
   ,['decision-comparison.test.mjs', 'ADR-075 결심 비교 탭 (순수 후처리·미측정 표시·딥링크 하위호환·단일본)']
+  ,['geometry-window-cache.test.mjs', 'ADR-076 교전창 캐시 키 정합 (순수함수 캐시·순서 독립·종전 키 충돌 실측·산포 OFF 불변)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

@@ -15,6 +15,19 @@
 
   function progress(id, stage) { self.postMessage({ id: id, progress: stage }); }
 
+  /**
+   * ADR-073/074 결심 감사 이벤트를 결과에 실어 보낸다.
+   * ⚠️ c2Events는 곧 삭제되므로(용량) **삭제 전에** 여기서 뽑아야 한다.
+   * decision_audit만 남기고 나머지 이벤트는 버린다 — 결과 화면이 쓰는 것은 이것뿐이다.
+   * 계측이 꺼져 있으면 undefined를 남겨 wire shape를 종전과 같게 둔다.
+   */
+  function pickDecisionAudits(res) {
+    if (!res || !res.c2Events) return undefined;
+    var out = res.c2Events.filter(function (e) { return e.type === 'decision_audit'; });
+    return out.length ? out : undefined;
+  }
+
+
   function execute(id, task, payload) {
     var cfg, otherMode, base;
     if (task === 'desPair') {
@@ -30,9 +43,12 @@
       }));
       current.c2Analysis = KJ.buildC2Analysis(current.c2Events, current);
       other.c2Analysis = KJ.buildC2Analysis(other.c2Events, other);
+      var currentAudits = pickDecisionAudits(current);
+      var otherAudits = pickDecisionAudits(other);
       delete current.c2Events;
       delete other.c2Events;
       var desOut = { current: current, other: other, otherMode: otherMode,
+        currentAudits: currentAudits, otherAudits: otherAudits,
         execution: 'web-worker', workerLoader: KJ.IADS ? 'module' : 'classic' };
       if (payload.includeHeat) {
         var modelCfg = { deploymentId: cfg.deploymentId, features: cfg.features };

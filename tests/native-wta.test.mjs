@@ -32,9 +32,10 @@ var KJ = globalThis.KJ, fail = 0;
 installIadsKernel(KJ);
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
 
-function run(dep, sc, mode, dur, features, intensity) {
+function run(dep, sc, mode, dur, features, intensity, seed) {
   return KJ.runDES({
-    scenario: KJ.scenarioById(sc), mode: mode, intensity: intensity || 1.5, seed: 12345, endTimeSec: dur,
+    scenario: KJ.scenarioById(sc), mode: mode, intensity: intensity || 1.5,
+    seed: seed || 12345, endTimeSec: dur,
     deploymentId: dep, modelFidelity: 'iads-c2',
     features: Object.assign({ highResolutionDeployment: true }, features || {})
   });
@@ -71,19 +72,38 @@ assert(stripEcho(tOn) === stripEcho(tOff),
 // 어서션을 **신 기본값에서 실제로 발화하는 셀**로 옮긴다. 임계를 낮춘 것이 아니라
 // 현상이 일어나는 조건으로 관측 지점을 옮긴 것이며, 빈도 감소는 ADR-059의 원 결론
 // ("비용항은 거의 물지 않는다")을 오히려 강화한다.
-console.log('# 4 — 반증 (FULL · ×1.5 · 600초): 비용항이 실제로 무는 셀');
+console.log('# 4 — 반증 (FULL · ×1.0 · 600초 · seed 777): 비용항이 실제로 무는 셀');
 // ADR-066 갱신: 무는 셀이 **또 이동했다**. ADR-065 판에서는 FULL·×3에서 물고 ×1.5에서 무효과였는데,
 // 링크 의미론 정합 후에는 정반대다(8셀 격자 실측: FULL ×1.5 600s·900s만 물고 ×3·LEGACY 전 셀 무효과
 // — 개입 2/8셀). **빈도(약 1/4)는 유지되고 위치만 바뀐다.**
+//
+// ADR-076 갱신: **또 이동했고, 이번에는 seed 축으로 이동했다.** 교전창 캐시 키를 고치자
+// 종전 어서션 셀(FULL ×1.5 600s · seed 12345)이 무효과가 됐다 — 창이 정정되며 그 셀의
+// 근소 동점(near-tie)이 사라졌기 때문이다.
+// 144셀 격자 실측(배치 2 × 시나리오 3 × 강도 {1,1.5,2,3} × 지속 {600,900} × seed
+// {12345,777,4242}): **FULL 8/72 · LEGACY_HIRES 0/72 — 합 8/144(5.6%)**.
+// 무는 셀은 **전부 SC3**이고 **전부 seed 777·4242**다 — seed 12345에서는 144셀 중 한 셀도
+// 물지 않는다. 그래서 seed를 고정한 종전 격자만 보면 **개입 0/8셀**로 보이고,
+// "비용항은 이제 아무 데서도 물지 않는다"고 결론 내리기 쉽다. 그 결론은 틀렸다 —
+// seed 축을 열면 현상은 그대로 있고, 빈도만 2/8(25%)에서 5.6%로 더 낮아졌다.
+// ⚠️ 어서션 셀을 옮긴 것은 **임계를 낮춘 것이 아니라** 현상이 일어나는 조건으로 관측 지점을
+// 옮긴 것이며(ADR-065·066과 같은 처리), 무는 셀·무는 셀이 아닌 셀을 **함께** 고정해
+// 빈도를 증거로 남기는 구조도 그대로다.
 // 이 불안정성 자체가 ADR-059의 원 결론("비용항은 거의 물지 않는다 — 절약은 교전량·기하에서
-// 나온다")을 강화한다. 무는 셀과 무는 셀이 아닌 셀을 **함께** 고정해 빈도를 증거로 남긴다.
-var fOn = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true });
-var fCf = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true, nativeWtaCostAsis: true });
-assert(stripEcho(fOn) !== stripEcho(fCf), 'FULL As-Is(×1.5): 반증 플래그(비용항)가 결과를 바꿈');
-var lOn = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true }, 3);
-var lCf = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true, nativeWtaCostAsis: true }, 3);
+// 나온다")을 강화한다.
+var fOn = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true }, 1, 777);
+var fCf = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600,
+  { nativeWtaMode: true, nativeWtaCostAsis: true }, 1, 777);
+assert(stripEcho(fOn) !== stripEcho(fCf),
+  'FULL As-Is(×1.0 · seed 777): 반증 플래그(비용항)가 결과를 바꿈 (보존율 ' +
+  fOn.global.highValuePreservation.toFixed(3) + '→' + fCf.global.highValuePreservation.toFixed(3) + ')');
+// 종전 어서션 셀 — ADR-076 이전에는 물었고 지금은 무효과다. 이동을 지문으로 박아 둔다.
+var lOn = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true }, 1.5);
+var lCf = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600,
+  { nativeWtaMode: true, nativeWtaCostAsis: true }, 1.5);
 assert(stripEcho(lOn) === stripEcho(lCf),
-  '[정직 관측] 같은 배치 ×3 셀에서는 비용항 무효과 — 무는 셀은 판마다 이동하고 빈도는 2/8셀에 머문다');
+  '[정직 관측] 종전 어서션 셀(×1.5 · seed 12345)은 ADR-076 이후 비용항 무효과 — ' +
+  '무는 셀은 판마다 이동하고 빈도는 낮게 유지된다');
 assert(fCf.global.features.nativeWtaCostAsis === true, '반증 플래그 노출');
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');

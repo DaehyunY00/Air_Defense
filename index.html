@@ -6,7 +6,7 @@
   <title>K-JAMDS C2 시뮬레이터 — KJADS 3대 문제 상황</title>
   <!-- Leaflet 1.9.4 동봉본(vendor/) — CDN 의존 제거. 출처·라이선스·해시는 vendor/leaflet-1.9.4/README.md -->
   <link rel="stylesheet" href="vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="stylesheet" href="css/style.css?v=20260730a">
+  <link rel="stylesheet" href="css/style.css?v=20260731a">
 </head>
 <body>
   <!-- 제약 (c): 디스클레이머 상시 표출 -->
@@ -86,7 +86,6 @@
 
   <nav class="tabs">
     <button class="tab-btn" data-tab="sim">🎮 시뮬레이션</button>
-    <button class="tab-btn" data-tab="analysis">📊 분석</button>
     <button class="tab-btn" data-tab="decision">⚖️ 결심 비교</button>
     <button class="tab-btn" data-tab="mc">🎲 Monte Carlo</button>
     <button class="tab-btn" data-tab="data">📚 근거자료·제약검증</button>
@@ -187,44 +186,6 @@
           </div>
         </div>
       </details>
-    </section>
-
-    <!-- ── 분석 탭: 9단계 파이프라인 병목·해결 지표 + 위협 항적 로그 ── -->
-    <section class="tab-panel" id="panel-analysis">
-      <div class="card">
-        <h2>🧭 9단계 파이프라인 — 병목·해결 지표 (As-Is ↔ To-Be)</h2>
-        <p>엔진 9단계(F2T2EA/OODA/TEWA 대응)의 각 단계가 <b>어떤 병목을 드러내고 어떤 지표로
-           관측되는지</b>를, 동일 seed의 As-Is/To-Be 결정론 DES 1복제로 나란히 비교합니다.
-           단계·함수·실패코드는 <code>js/engine/sim-engine.js</code> 구현과 1:1 대응하며,
-           정밀 통계 검증(95% CI)은 [Monte Carlo] 탭을 이용하세요.</p>
-        <div id="pipeline-context" class="analysis-context"></div>
-        <div id="pipeline-stages"></div>
-      </div>
-
-      <div class="card">
-        <h2>병목 taxonomy ↔ 발생 단계 (이번 설정의 관측 건수)</h2>
-        <table>
-          <thead>
-            <tr><th>#</th><th>실패코드</th><th>라벨</th><th>발생 단계</th><th>구조적?</th>
-                <th>해결 주체</th><th>As-Is</th><th>To-Be</th><th>Δ</th></tr>
-          </thead>
-          <tbody id="taxonomy-body"></tbody>
-        </table>
-        <div class="note"><b>[구조] 표시(structural=true) 원인은 C2 통합(To-Be)으로 감소가
-          기대</b>되는 병목입니다. 비구조(no_shooter·missed)는 C2가 아니라 무기체계 능력·요격확률
-          문제 — 통합해도 줄지 않는 것이 정상이며, 구조적 원인의 일부가 순수 명중 실패(missed)로
-          이동하는 것이 구조 개선의 정상 경로입니다.</div>
-      </div>
-
-      <div class="card">
-        <h2>🛰 위협 항적 로그 — As-Is ↔ To-Be 병렬 대조</h2>
-        <p>동일 seed 결정론 DES 1복제에서 <b>같은 위협이 두 지휘구조를 각각 통과한 경로</b>를
-           나란히 놓은 로그입니다. 공통난수(CRN) 설계상 두 실행의 위협 집단(ID·발생시각·축선)은
-           동일하므로, <b>판정이 갈린 항적이 곧 C2 구조가 만든 차이</b>입니다.
-           각 항적을 클릭하면 좌(As-Is 분절형)·우(To-Be 통합형)의
-           생성→탐지→보고→식별·평가→결심·협조→교전명령→교전→BDA 단계별 시각을 대조할 수 있습니다.</p>
-        <div id="analysis-threat-log"></div>
-      </div>
     </section>
 
     <!-- ── 결심 비교 탭 (ADR-064): 교전창 여유 + 선택 손실을 인과 사슬 한 줄로 ── -->
@@ -359,7 +320,7 @@
     <div id="result-modal" class="modal-backdrop hidden">
       <div class="modal">
         <div class="modal-head">
-          <h2>📊 시뮬레이션 결과 — 정량 분석</h2>
+          <h2>📊 시뮬레이션 결과</h2>
           <button id="modal-close" title="닫기">✕</button>
         </div>
         <div id="modal-body" class="modal-body"></div>
@@ -399,9 +360,9 @@
   <script src="js/ui/geo.js"></script>
   <script src="js/ui/table-sort.js"></script>
   <script src="js/ui/map-view.js?v=20260724a"></script>
-  <script src="js/ui/panels.js?v=20260730a"></script>
-  <script src="js/ui/sim-view.js?v=20260724a"></script>
+  <script src="js/ui/panels.js?v=20260731a"></script>
+  <script src="js/ui/sim-view.js?v=20260731a"></script>
   <script src="js/ui/mc-panel.js?v=20260724a"></script>
-  <script src="js/main.js?v=20260730a"></script>
+  <script src="js/main.js?v=20260731a"></script>
 </body>
 </html>

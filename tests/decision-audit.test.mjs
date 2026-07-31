@@ -58,11 +58,14 @@ const CASES = ['sc1|asis', 'sc1|tobe', 'sc3|asis', 'sc3|tobe'];
 // 계측 도입 직전 상태(v4 기본값 — ADR-065~072로 승인계선·링크v2·산포·남부축선·보고주기
 // 대칭·COP·톱니·자위권이 전부 기본 ON인 상태)의 지문. c2Analysis:true 포함 — 계측이 실제로
 // 흐르는 경로다. ⚠️ 이 값들은 v4 기본값에 묶여 있다. 기본값이 또 바뀌면 함께 재측정해야 한다.
+// ADR-076 재산출 — 교전창 캐시 키 결함(착탄점 누락)을 고치면서 실제 경로의 값이 바뀌었다.
+// 이 지문이 잠그는 명제는 종전과 같다("계측 OFF면 계측 도입 전과 한 발도 다르지 않다").
+// 바뀐 것은 비교 대상 기준선이지 명제가 아니다.
 const OFF_SHA = {
-  'sc1|asis': '5e2e98d64462e2bd9df5c51911dccee4aedddcd6dddd5758326aa8f5ef475887',
-  'sc1|tobe': 'f81664d17f40bc9b3edab6b60ceea4857254c12c3c07e1b03d8acfbf9955b77a',
-  'sc3|asis': 'af12836c10b2895c1718a67c77a6b4e212fc77856df4006a6b3444c81200b589',
-  'sc3|tobe': 'f7f8c40010b669924d41d91216d86aacd69d51ffb219bf9261eed0df74e897d4'
+  'sc1|asis': 'eac25343cdb7c0e0db8ec896631ee0c3c67f590c35ce9375915d368b0b36e809',
+  'sc1|tobe': '950f373207c2de28c2dd5449d247f626dcde3e9aff4f3b8f767372616cf77fab',
+  'sc3|asis': 'c49e7bc4bfa8a639db31bc5c31bc14c3635e1be3474a67e4867ecc9d621830af',
+  'sc3|tobe': '02115f8ace0d32a7bb9a26af842a2c2ed401740e22d49599f155a121abe17932'
 };
 
 function run(key, features) {

@@ -55,8 +55,29 @@
     if (name.indexOf('격추성공#') === 0) return '⑨ BDA: 격추 ✔';
     if (name.indexOf('교전실패#') === 0) return '⑨ BDA: ' + name;
     if (name.indexOf('누수:') === 0) return '✖ 요격 실패: ' + leakLabel(name.slice(3));
+    // 종전에 원문 그대로 노출되던 엔진 이벤트명(SENSOR_DETECTED:… 등)을 우리말로 옮긴다.
+    // ⚠️ 등록(register)은 **보고서용**이다 — 원문 식별자처럼 날것도 아니고 구어체도 아닌,
+    // 기존 단계 라벨(①침투 개시·②탐지·④⑤식별·평가)과 같은 결의 용어를 쓴다.
+    // 이 함수는 지도 위 항적 로그와 공유하므로 양쪽 표기가 함께 정렬된다.
+    if (name.indexOf('책임C2:') === 0) return '① 책임 C2 지정: ' + name.slice(5);
+    if (name.indexOf('SENSOR_DETECTED:') === 0) return '② 센서 탐지: ' + name.slice(16);
+    if (name.indexOf('SENSOR_TRACKED:') === 0) return '② 추적 유지: ' + name.slice(15);
+    if (name.indexOf('SENSOR_FIRE_CONTROL:') === 0) return '② 사격통제 추적(FC): ' + name.slice(20);
+    if (name.indexOf('SENSOR_FC_DEGRADED:') === 0) return '② 사격통제 강등: ' + name.slice(19);
+    if (name.indexOf('SENSOR_TRACK_LOST:') === 0) return '② 추적 상실: ' + name.slice(18);
+    if (name.indexOf('식별확정:') === 0) return '④ 식별 확정: ' + name.slice(5);
+    if (name.indexOf('자위권발사:') === 0) return '⑧ 자위권 발사: ' + name.slice(6);
+    if (name.indexOf('발사:') === 0) return '⑧ 발사: ' + name.slice(3);
+    if (name.indexOf('BDA:HIT:') === 0) return '⑨ BDA: 명중 — ' + name.slice(8);
+    if (name.indexOf('BDA:MISS:') === 0) return '⑨ BDA: 빗나감 — ' + name.slice(9);
+    if (name.indexOf('항적폐기:') === 0) return '✖ 항적 폐기: ' + name.slice(5);
+    if (name.indexOf('교전현황드롭') === 0) return '⑦ 교전현황 전달 실패';
     return name;
   }
+
+  /** 누수 원인코드 → 사람이 읽는 라벨. 위 stageLabel(지도 위 위협 항적 로그)이 쓴다.
+   *  ⚠️ 결과 모달용 헬퍼가 아니다 — 모달을 축소할 때 함께 지웠다가 항적 로그가 깨졌다. */
+  function leakLabel(code) { return KJ.leakTaxonomy(code).label; }
 
   function el(id) { return document.getElementById(id); }
   function esc(s) {
@@ -84,7 +105,7 @@
   }
 
   // ── 모듈 상태 ──
-  var run = null;   // { cfg, res, resOther, heat, threats, nodeMeta, mc, modalRendered }
+  var run = null;   // { cfg, res, elapsedMs, execution, threats, nodeMeta, modalRendered }
   var anim = {
     playing: false, t: 0, speed: 30, lastTs: null, raf: null, done: false,
     lastRenderWall: 0, lastRingWall: 0
@@ -170,35 +191,41 @@
       setComputeNotice('checking');
 
       var highCfg = modelConfig(cfg);
+      // ADR-073/074 결심 감사 계측을 켠다 — 결과 화면의 「결심 순간 해부」가 쓰는 재료다.
+      // ⚠️ 켜도 결과는 한 발도 안 바뀐다: OFF/ON bit-exact·RNG 소비 횟수 동일이 두 ADR에서
+      //    증명돼 있고, ADR-076로 관측이 실제 경로를 흔들던 경로(캐시 순서 의존)까지 제거됐다.
+      //    난수를 쓰지 않는 순수 관측이므로 기본 실행에 상시 켜 둔다.
+      var auditFeatures = Object.assign({}, highCfg.features, {
+        decisionAudit: true, shadowEval: true, windowMargin: true
+      });
       var computeCfg = {
         scenarioId: cfg.sc, mode: cfg.mode, intensity: cfg.x,
         seed: cfg.seed, endTimeSec: cfg.dur, trace: true, traceCap: 300,
-        deploymentId: highCfg.deploymentId, features: highCfg.features,
+        deploymentId: highCfg.deploymentId, features: auditFeatures,
         modelFidelity: highCfg.modelFidelity
       };
       var t0 = now();
-      KJ.compute.run('desPair', { cfg: computeCfg, includeHeat: true }, function (stage) {
+      // tracePair=true — 결과 화면의 As-Is↔To-Be 항적 병렬 대조가 **양쪽 trace**를 요구한다.
+      // 반대 모드 DES는 desPair가 어차피 돌리므로 추가 비용은 trace 수집분뿐이다.
+      // 중복교전 히트맵(includeHeat)은 소비처가 없어 요청하지 않는다.
+      KJ.compute.run('desPair', { cfg: computeCfg, tracePair: true }, function (stage) {
         if (generation !== computeGeneration) return;
         setStatus(stage === 'comparison-des' ? '비교 체계 DES 계산 중…' : '현재 체계 DES 계산 중…');
       }).then(function (pair) {
         if (generation !== computeGeneration) return;
         var res = pair.current;
-        var resOther = pair.other;
-        var other = pair.otherMode;
-        var computeLabel = pair.execution === 'web-worker'
-          ? (pair.workerLoader === 'module' ? 'Module Worker' : 'Classic Worker') : '메인 스레드 폴백';
         var elapsed = now() - t0;
-        var currentHeat = { axes: pair.heatCurrentAxes || [], total: pair.heatCurrent || 0 };
-        var otherHeat = { axes: pair.heatOtherAxes || [], total: pair.heatOther || 0 };
 
+        _nodeIdx = null; _linkIdx = null;  // 배치·플래그가 바뀌면 색인도 다시 만든다
+        // 결심 감사 이벤트를 위협 id로 묶어 둔다(좌=As-Is·우=To-Be 고정).
+        var auditsCur = pair.currentAudits || [], auditsOth = pair.otherAudits || [];
         run = {
-          cfg: cfg, res: res, resOther: resOther, otherMode: other,
+          cfg: cfg, res: res, resOther: pair.other, otherMode: pair.otherMode,
+          audits: cfg.mode === 'asis'
+            ? { asis: groupAudits(auditsCur), tobe: groupAudits(auditsOth) }
+            : { asis: groupAudits(auditsOth), tobe: groupAudits(auditsCur) },
           elapsedMs: elapsed, execution: pair.execution,
           nodeMeta: {}, threats: buildThreats(res),
-          heat: cfg.mode === 'asis'
-            ? { asis: currentHeat, tobe: otherHeat }
-            : { asis: otherHeat, tobe: currentHeat },
-          mc: { pending: pair.execution === 'web-worker', skipped: false, error: null, asis: null, tobe: null, paired: null },
           modalRendered: false
         };
         setComputeNotice(pair.execution, cfg.dep !== 'legacy');
@@ -207,42 +234,10 @@
         // 병목 하이라이트를 이번 DES 실행 결과로 갱신 (해석 근사 아님)
         KJ.mapView.render(currentState, { nodes: res.nodes });
 
-        // 자동 MC는 실제 Web Worker에서만 실행한다. setTimeout 기반 메인 스레드 폴백은
-        // FULL에서 최소 60회의 DES를 동기 실행해 수분간 UI를 멈추므로 명시적으로 차단한다.
-        if (pair.execution === 'web-worker' && cfg.fid !== 'iads-c2') {
-          setStatus('백그라운드 Monte Carlo 수렴 중… (' + computeLabel + ')');
-          KJ.compute.run('mcPair', {
-            cfg: Object.assign({}, computeCfg, { trace: false }),
-            opts: { minReps: 30, maxReps: 200, tol: 0.01, primary: 'leakRateSpawn' }
-          }, function (stage) {
-            if (generation !== computeGeneration) return;
-            setStatus((stage === 'comparison-mc' ? '백그라운드 비교 체계 MC 중…' : '백그라운드 현재 체계 MC 중…') +
-              ' (' + computeLabel + ')');
-          }).then(function (mcPair) {
-            if (generation !== computeGeneration || !run) return;
-            if (cfg.mode === 'asis') {
-              run.mc.asis = mcPair.current; run.mc.tobe = mcPair.other;
-            } else {
-              run.mc.tobe = mcPair.current; run.mc.asis = mcPair.other;
-            }
-            run.mc.paired = mcPair.paired || null;
-            run.mc.pending = false;
-            setStatus(anim.playing ? '재생 중 — MC 수렴 완료 (' + run.mc.asis.reps + '·' + run.mc.tobe.reps + '복제)' : 'MC 수렴 완료');
-            renderMcSectionIfOpen();
-          }).catch(function (err) {
-            if (generation !== computeGeneration || !run) return;
-            run.mc.pending = false;
-            run.mc.error = err.message;
-            setStatus('MC 계산 실패: ' + err.message);
-            renderMcSectionIfOpen();
-          });
-        } else {
-          run.mc.pending = false;
-          run.mc.skipped = true;
-          setStatus(cfg.fid === 'iads-c2'
-            ? 'IADS_C2 물리 DES 완료 — 고비용 물리 프로파일은 자동 MC를 생략합니다.'
-            : 'DES 완료 — 메인 스레드 보호를 위해 자동 MC를 생략했습니다.');
-        }
+        // 자동 Monte Carlo는 결과 모달의 신뢰구간 섹션 전용이었다. 그 섹션을 내리면서
+        // 함께 걷어낸다 — 아무도 보지 않는 30~200복제를 백그라운드로 돌릴 이유가 없다.
+        // 통계가 필요하면 [Monte Carlo] 탭이 자체 러너로 수행한다.
+        setStatus('DES 완료 — 결과 보기에서 시간·노드 활성화를 확인하세요.');
 
         el('sim-results').disabled = false;
         btn.disabled = false; btn.textContent = '↺ 다시 실행';
@@ -288,8 +283,8 @@
       if (!run) return;
       pause();
       el('result-modal').classList.remove('hidden');
-      if (run.modalRendered) renderMcSection();
-      else renderModal();
+      // 내용이 실행 직후 확정되는 값(시간·노드 활성화)뿐이라 한 번만 그리면 된다.
+      if (!run.modalRendered) renderModal();
     },
 
     hideResults: function () {
@@ -657,500 +652,809 @@
   }
 
   // ── 결과 모달 ──
-  function renderMcSectionIfOpen() {
-    if (!el('result-modal').classList.contains('hidden')) renderMcSection();
+  // 이 화면은 **일부러 최소한만** 보여준다. 종전에는 격추·누수·병목·MC 신뢰구간 등
+  // 정량 지표를 한꺼번에 띄웠는데, 그 수치들은 분석 계층을 전면 개편하는 동안
+  // 근거가 흔들릴 수 있어 화면에서 내렸다. 남긴 것은 **해석이 필요 없는 사실** 둘뿐이다:
+  //   ① 시간 — 시뮬레이션 안에서 흐른 시간과 계산에 걸린 실제 시간
+  //   ② 노드 활성화 — 어떤 장비가 실제로 한 번이라도 일을 했는가
+  // 문구는 초등학생도 읽을 수 있는 말로 쓴다(전문용어는 괄호로 원어를 덧붙인다).
+
+  /** 초 → "N분 N초" (사람이 읽는 말). 0초면 "0초". */
+  function plainDuration(sec) {
+    var s = Math.max(0, Math.round(sec));
+    var m = Math.floor(s / 60), r = s % 60;
+    if (m === 0) return r + '초';
+    if (r === 0) return m + '분';
+    return m + '분 ' + r + '초';
   }
 
-  function mcSectionHtml() {
-    if (run.mc.pending) {
-      return '<h3>Monte Carlo 95% 신뢰구간 (백그라운드 다중복제)</h3>' +
-        '<div class="bn-none">⏳ 백그라운드 수렴 중 — 완료되면 이 영역만 갱신됩니다.</div>';
+  /** 노드 종류를 쉬운 우리말로. */
+  function plainCategory(cat) {
+    if (cat === 'c2') return '지휘소';
+    if (cat === 'shooter') return '요격 부대';
+    if (cat === 'sensor') return '레이더';
+    return cat;
+  }
+
+  // ── As-Is ↔ To-Be 항적 병렬 대조 ──
+  // CRN(공통난수) 설계상 두 모드의 위협 집단(ID·발생시각·축선)은 **같다**. 따라서 같은 ID끼리
+  // 1:1로 놓을 수 있고, **판정이 갈린 항적이 곧 지휘 구조가 만든 차이**다.
+  // 색은 보조 수단일 뿐이며 아이콘·글자로도 같은 정보를 준다(색만으로 뜻을 싣지 않는다).
+
+  /** trace.outcome → 판정 객체. 엔진 정본: 'killed' | 'leaked:<코드>' | null(관측 종료 미해결).
+   *  ⚠️ 라벨 등록은 **보고서용**이다(ADR 원문·실험보고서와 같은 용어를 쓴다). */
+  function outcomeOf(tr) {
+    if (!tr) return { kind: 'absent', label: '해당 없음' };
+    if (tr.outcome === 'killed') return { kind: 'killed', label: '격추' };
+    if (typeof tr.outcome === 'string' && tr.outcome.indexOf('leaked:') === 0) {
+      var code = tr.outcome.slice(7);
+      var meta = KJ.leakTaxonomy(code);
+      return { kind: 'leaked', code: code, label: meta.label, structural: !!meta.structural };
     }
-    if (run.mc.skipped) {
-      if (run.cfg.fid === 'iads-c2') {
-        return '<h3>Monte Carlo 95% 신뢰구간</h3>' +
-          '<div class="compute-warning">IADS_C2 물리 프로파일은 센서별 0.2초 스캔과 PIP 후보 평가 비용이 커 자동 MC를 생략합니다. ' +
-          '단일 DES 결과의 절대값보다 동일 seed의 As-Is/To-Be 파이프라인 차이를 확인하십시오.</div>';
+    return { kind: 'open', label: '미해결(관측 종료)' };
+  }
+  function outcomeBadge(o) {
+    if (o.kind === 'killed') return '<span class="badge badge-ok">격추</span>';
+    if (o.kind === 'leaked') return '<span class="badge badge-bad">' + esc(o.label) + '</span>';
+    if (o.kind === 'open') return '<span class="badge badge-idle">미해결</span>';
+    return '<span class="badge badge-idle">—</span>';
+  }
+
+  /** 같은 위협에 대한 As-Is↔To-Be 판정 변화 분류. */
+  function divergenceOf(oa, ob) {
+    if (oa.kind === ob.kind) {
+      return oa.kind === 'killed' ? { key: 'same', label: '동일 (양측 격추)', cls: 'dv-same' }
+        : oa.kind === 'leaked' ? (oa.code === ob.code
+          ? { key: 'same', label: '동일 (양측 실패)', cls: 'dv-same' }
+          : { key: 'same', label: '양측 실패 (사유 변화)', cls: 'dv-same' })
+        : { key: 'same', label: '동일 (미해결)', cls: 'dv-same' };
+    }
+    if (ob.kind === 'killed') return { key: 'gain', label: '개선 (To-Be 격추)', cls: 'dv-gain' };
+    if (oa.kind === 'killed') return { key: 'loss', label: '악화 (To-Be 실패)', cls: 'dv-loss' };
+    return { key: 'other', label: '변화 (미해결 ↔ 실패)', cls: 'dv-other' };
+  }
+
+  /**
+   * 단계 이름의 **종류 키**. 엔진의 단계명은 `책임C2:KAMD_OPS(global)`·`교전명령#3`처럼
+   * 뒤에 노드 id·일련번호가 붙는데, 그 부분은 모드마다 당연히 다르다(As-Is는 KAMD_OPS,
+   * To-Be는 IAOC). 전체 문자열로 맞대면 **거의 모든 줄이 "다름"으로 칠해져 색이 뜻을 잃는다.**
+   * 그래서 `:`·`#` 앞의 종류만 키로 삼아 같은 단계끼리 맞대고, 내용 차이는 따로 표시한다.
+   */
+  function stageKey(name) { return String(name).split(':')[0].split('#')[0]; }
+
+  /**
+   * 두 항적의 단계 목록을 맞대어 줄 단위로 차이를 표시한다. 같은 종류의 단계를 등장
+   * 순서(k번째)로 짝지어 네 가지로 분류한다:
+   *   - 짝 없음            → 'only'  ＋ 이쪽에서만 일어난 일
+   *   - 짝 있고 내용 다름  → 'diff'  ◆ 같은 단계인데 맡은 곳이 다름
+   *   - 짝 있고 시각차 ≥1초 → 'shift' ⏱ 같은 일인데 시점이 다름 (Δ 표기)
+   *   - 그 외              → 'same'  회색
+   * 위협 하나당 단계 수가 수십 개라 단순 O(n) 매칭으로 충분하다.
+   */
+  function stageIndex(tr) {
+    var map = {};
+    ((tr && tr.stages) || []).forEach(function (s) {
+      var k = stageKey(s.name);
+      (map[k] = map[k] || []).push(s);
+    });
+    return map;
+  }
+  function diffStageList(tr, otherTr) {
+    if (!tr) return '<ul class="alog-stages"><li class="bn-none">이 모드에 대응 항적 없음</li></ul>';
+    if (!tr.stages || !tr.stages.length) return '<ul class="alog-stages"><li class="bn-none">기록된 단계 없음</li></ul>';
+    var otherMap = stageIndex(otherTr), seen = {};
+    return '<ul class="alog-stages">' + tr.stages.map(function (s) {
+      var key = stageKey(s.name);
+      var k = (seen[key] = (seen[key] || 0) + 1) - 1;
+      var mate = otherMap[key] && otherMap[key].length > k ? otherMap[key][k] : null;
+      var cls = 'sd-same', mark = '', tip = '';
+      if (!mate) {
+        cls = 'sd-only';
+        mark = '<span class="sd-mark">＋</span>';
+        tip = '해당 계통에만 존재하는 단계';
+      } else if (mate.name !== s.name) {
+        cls = 'sd-diff';
+        mark = '<span class="sd-mark">◆</span>';
+        tip = '담당 노드 상이 — 반대 계통: ' + stageLabel(mate.name);
+      } else if (Math.abs(s.t - mate.t) >= 1) {
+        var dt = s.t - mate.t;
+        cls = 'sd-shift';
+        mark = '<span class="sd-mark">⏱</span><span class="sd-dt">' +
+          (dt > 0 ? '+' : '−') + Math.abs(dt).toFixed(0) + '초</span>';
+        tip = '동일 단계, 시각 차이 (반대 계통 ' + fmtTime(mate.t) + ')';
       }
-      return '<h3>Monte Carlo 95% 신뢰구간</h3>' +
-        '<div class="compute-warning">메인 스레드 정지를 방지하기 위해 자동 MC를 생략했습니다. ' +
-        '<code>./scripts/serve.sh</code> 실행 후 <code>http://127.0.0.1:8000</code>으로 접속하면 ' +
-        'Web Worker에서 MC가 실행됩니다.</div>';
-    }
-    if (run.mc.error) {
-      return '<h3>Monte Carlo 95% 신뢰구간</h3><div class="compute-warning">MC 계산 실패: ' +
-        esc(run.mc.error) + '</div>';
-    }
-    if (!run.mc.asis || !run.mc.tobe) {
-      return '<h3>Monte Carlo 95% 신뢰구간</h3><div class="bn-none">MC 결과 없음</div>';
-    }
-    var ma = run.mc.asis.metrics.leakRateSpawn, mb = run.mc.tobe.metrics.leakRateSpawn;
-    var delta = run.mc.paired && run.mc.paired.delta ? run.mc.paired.delta.leakRateSpawn : null;
-    var separated = delta && delta.lo != null && delta.hi != null && (delta.lo > 0 || delta.hi < 0);
-    return '<h3>Monte Carlo 95% 신뢰구간 (동일 seed 쌍대비교)</h3>' +
-      '<table><thead><tr><th>모드</th><th>전체 생성 기준 요격 실패율 평균</th><th>95% CI</th><th>복제수</th></tr></thead><tbody>' +
-      '<tr><td>As-Is</td><td class="num">' + (ma.mean * 100).toFixed(1) + '%</td><td class="num">±' +
-      (ma.ci * 100).toFixed(2) + '%p</td><td class="num">' + ma.n + '</td></tr>' +
-      '<tr><td>To-Be</td><td class="num">' + (mb.mean * 100).toFixed(1) + '%</td><td class="num">±' +
-      (mb.ci * 100).toFixed(2) + '%p</td><td class="num">' + mb.n + '</td></tr></tbody></table>' +
-      '<div class="note">모든 생성 위협을 분모에 포함하며 미해결은 별도 censoredRate로 보존합니다. ' +
-      (delta ? '쌍대 Δ(To-Be−As-Is)=' + (delta.mean * 100).toFixed(2) + '%p [95% CI ' +
-        (delta.lo * 100).toFixed(2) + ', ' + (delta.hi * 100).toFixed(2) + '] — ' +
-        (separated ? '✅ 0을 제외해 구조 차이가 통계적으로 분리됩니다.' : '0을 포함해 구조 차이를 단정할 수 없습니다.')
-        : '쌍대 Δ 결과가 없습니다.') + '</div>';
+      return '<li class="' + cls + '"' + (tip ? ' title="' + esc(tip) + '"' : '') + '>' +
+        '<span class="alog-t">' + fmtTime(s.t) + '</span> ' +
+        esc(stageLabel(s.name)) + mark + '</li>';
+    }).join('') + '</ul>';
   }
 
-  function renderMcSection() {
-    if (!run) return;
-    var section = el('sim-mc-section');
-    if (!section) return;
-    section.innerHTML = mcSectionHtml();
-    if (KJ.tableSort) KJ.tableSort.attachAll(section);
+  // ── 참여 노드 타임라인 ──
+  // 「분절된 구조 vs 통합 구조」를 **모양으로** 보여준다. As-Is는 승인·협조 홉을 순차로 밟아
+  // 막대가 계단처럼 길게 늘어지고, To-Be는 같은 일이 겹쳐 일어나 짧게 끝난다.
+  // ⚠️ 이 그림이 뒷받침하는 주장은 **시간**이다. "통합하면 더 많은 사수를 고려한다"는 주장은
+  //    주축에서 성립하지 않는다(ADR-073 §발견 — 주축 사수 풀은 두 구조가 동일). 그래서
+  //    축(scope)을 읽어 아래 축별 주석을 붙인다 — 반증을 숨기지 않는 것이 이 화면의 조건이다.
+
+  var _nodeIdx = null;
+  /**
+   * 단계 이름에서 노드를 찾기 위한 색인.
+   * ⚠️ 엔진은 노드를 **두 가지 방식**으로 적는다: 센서·포대는 노드 id 그대로
+   * (`SENSOR_ACR_E`·`BATTERY_BAT_E1`), C2는 **typeId**(`KAMD_OPS`·`IAOC`·`MCRC`·`ICC`).
+   * 그래서 두 키를 모두 색인한다 — id만 보면 지휘소 행이 통째로 빠진다(실제로 그랬다).
+   * typeId가 여러 노드에 걸리면(ICC W1·W2) 개별 노드를 특정할 수 없으므로 typeId를
+   * 한 행으로 묶고 라벨도 typeId로 둔다 — 없는 정보를 지어내지 않는다.
+   */
+  function nodeIndex() {
+    if (_nodeIdx) return _nodeIdx;
+    var cat = runCatalog();
+    var byType = {};
+    _nodeIdx = { map: {}, keys: [] };
+    ((cat && cat.nodes) || []).forEach(function (n) {
+      _nodeIdx.map[n.id] = { key: n.id, name: n.name || n.id, category: n.category };
+      if (n.typeId) (byType[n.typeId] = byType[n.typeId] || []).push(n);
+    });
+    Object.keys(byType).forEach(function (tid) {
+      if (_nodeIdx.map[tid]) return;                 // id와 충돌하면 id 우선
+      var group = byType[tid];
+      _nodeIdx.map[tid] = {
+        key: tid, category: group[0].category,
+        name: group.length === 1 ? (group[0].name || tid) : tid
+      };
+    });
+    // 긴 키부터 찾아야 부분일치 오검출을 막는다(BAT_E1 ⊂ BATTERY_BAT_E1).
+    _nodeIdx.keys = Object.keys(_nodeIdx.map).sort(function (x, y) { return y.length - x.length; });
+    return _nodeIdx;
+  }
+
+  /** 단계 이름에 등장하는 노드 키들(중복 제거). 긴 키부터 소거해 부분일치를 피한다. */
+  function nodesInStage(name) {
+    var idx = nodeIndex(), rest = String(name), found = [];
+    for (var i = 0; i < idx.keys.length; i++) {
+      var k = idx.keys[i];
+      if (rest.indexOf(k) !== -1) { found.push(k); rest = rest.split(k).join(' '); }
+    }
+    return found;
+  }
+
+  /** 한 항적의 노드 참여 구간·주요 사건·책임 C2(scope)를 뽑는다. */
+  function participationOf(tr) {
+    if (!tr || !tr.stages || !tr.stages.length) return null;
+    var idx = nodeIndex(), byNode = {}, marks = [], c2 = null;
+    tr.stages.forEach(function (s) {
+      var kind = s.name.indexOf('발사:') === 0 || s.name.indexOf('자위권발사:') === 0 ? 'fire'
+        : s.name.indexOf('BDA:HIT') === 0 ? 'hit'
+        : s.name.indexOf('BDA:MISS') === 0 ? 'miss'
+        : s.name.indexOf('누수:') === 0 ? 'leak' : null;
+      if (kind) marks.push({ t: s.t, kind: kind });
+      if (s.name.indexOf('책임C2:') === 0 && !c2) {
+        var m = /\(([^)]+)\)/.exec(s.name);
+        c2 = { id: (nodesInStage(s.name)[0] || null), scope: m ? m[1] : null };
+      }
+      nodesInStage(s.name).forEach(function (id) {
+        var b = byNode[id] || (byNode[id] = { id: id, first: s.t, last: s.t, n: 0 });
+        if (s.t < b.first) b.first = s.t;
+        if (s.t > b.last) b.last = s.t;
+        b.n++;
+      });
+    });
+    var ORDER = { sensor: 0, c2: 1, shooter: 2 };
+    var rows = Object.keys(byNode).map(function (id) {
+      var meta = idx.map[id] || { key: id, name: id, category: 'c2' };
+      return { id: id, name: meta.name, category: meta.category,
+        first: byNode[id].first, last: byNode[id].last, n: byNode[id].n };
+    }).sort(function (x, y) {
+      var ox = ORDER[x.category] === undefined ? 9 : ORDER[x.category];
+      var oy = ORDER[y.category] === undefined ? 9 : ORDER[y.category];
+      return ox !== oy ? ox - oy : (x.first - y.first);
+    });
+    return { rows: rows, marks: marks, c2: c2, endT: tr.exitT != null ? tr.exitT : tr.stages[tr.stages.length - 1].t };
+  }
+
+  // ── C2 계통 다이어그램 (항적별 · 상태에 따라 점등) ──
+  // 타임라인이 **얼마나 걸렸나**를 보여준다면, 이 그림은 **누가 누구를 거쳤나**를 보여준다.
+  // 분절(As-Is)은 센서→하위C2→상위C2→사수로 홉이 늘어지고, 통합(To-Be)은 IAOC 한 점으로 모인다.
+  //
+  // ⚠️ 간선은 **카탈로그에 실제로 존재하는 링크만** 그린다. 항적 단계가 시간상 인접하다는
+  //    이유로 선을 그으면 모델에 없는 연결을 지어내는 것이다 — 그 선을 보고 "이렇게
+  //    연결돼 있구나"라고 읽을 것이기 때문이다. 링크가 없으면 선도 없다.
+
+  var _linkIdx = null;
+  function linkIndex() {
+    if (_linkIdx) return _linkIdx;
+    var cat = runCatalog();
+    _linkIdx = {};
+    ((cat && cat.links) || []).forEach(function (l) {
+      (_linkIdx[l.from] = _linkIdx[l.from] || {})[l.to] = l.kind || 'coord';
+    });
+    return _linkIdx;
+  }
+
+  /**
+   * 참여 노드 키(id 또는 typeId)를 **카탈로그 노드 id**로 확정한다.
+   * typeId가 여러 노드에 걸리면(ICC W1·W2) 어느 것인지 항적만으로는 알 수 없다 —
+   * 그때는 다른 참여 노드와 실제 링크가 있는 후보를 고르고, 그래도 못 고르면
+   * typeId를 그대로 둔 채 **간선 없이** 표시한다(없는 연결을 만들지 않는다).
+   */
+  function resolveConcrete(part) {
+    var cat = runCatalog(), all = (cat && cat.nodes) || [], links = linkIndex();
+    var byType = {};
+    all.forEach(function (n) { if (n.typeId) (byType[n.typeId] = byType[n.typeId] || []).push(n); });
+    var byId = {};
+    all.forEach(function (n) { byId[n.id] = n; });
+
+    var direct = {}, pending = [];
+    part.rows.forEach(function (r) {
+      if (byId[r.id]) { direct[r.id] = r; return; }
+      var group = byType[r.id] || [];
+      if (group.length === 1) { direct[group[0].id] = { id: group[0].id, name: group[0].name, category: group[0].category, first: r.first, last: r.last }; return; }
+      pending.push({ row: r, group: group });
+    });
+    pending.forEach(function (p) {
+      var pick = p.group.find(function (n) {
+        return Object.keys(direct).some(function (o) {
+          return (links[n.id] && links[n.id][o]) || (links[o] && links[o][n.id]);
+        });
+      });
+      if (pick) direct[pick.id] = { id: pick.id, name: pick.name, category: pick.category, first: p.row.first, last: p.row.last };
+      else direct[p.row.id] = { id: p.row.id, name: p.row.name, category: p.row.category, first: p.row.first, last: p.row.last, abstract: true };
+    });
+    return Object.keys(direct).map(function (k) { return direct[k]; });
+  }
+
+  var EDGE_COLOR = { report: '#3d8bd9', coord: '#a06ed2', command: '#3d8b40', status: '#6b7a8d' };
+
+  /** 한 모드의 C2 계통 다이어그램(SVG). 열 배치는 고정이라 좌우를 그대로 겹쳐 읽을 수 있다. */
+  function diagramBlock(title, part, respScope) {
+    if (!part) return '<div class="cdg-block"><h4>' + esc(title) + '</h4>' +
+      '<div class="bn-none">대응 항적 없음</div></div>';
+    var nodes = resolveConcrete(part), links = linkIndex();
+    // 교전명령은 상급 C2 → **ECS** → 포대로 간다. 항적은 `사수선정·표적할당:IAOC→BATTERY_…`
+    // 처럼 양 끝만 적어 중간 ECS 홉이 빠지고, 그러면 사수가 선 없이 떠 버린다.
+    // 카탈로그에 1홉 경로가 실재할 때만 그 중간 노드를 **점선·속 빈 원**으로 보완하고
+    // "항적 기록에는 없음"으로 표시한다 — 연결을 지어내는 게 아니라 모델이 가진 경로를 밝힌다.
+    var have = {};
+    nodes.forEach(function (n) { have[n.id] = true; });
+    var cat = runCatalog(), allNodes = (cat && cat.nodes) || [];
+    var byIdAll = {};
+    allNodes.forEach(function (n) { byIdAll[n.id] = n; });
+    // ⚠️ part.c2.id는 항적이 적은 **typeId**(`IAOC`)일 수 있다. 링크 색인은 노드 id
+    //    (`C2_IAOC_IAOC`)로 되어 있으므로 여기서 실제 id로 환산한다 — 안 하면 책임 C2
+    //    강조도, 센서 직결 집계도, 경로 보완도 전부 조용히 빗나간다(실제로 0/7로 나왔다).
+    var respKey = part.c2 && part.c2.id;
+    var respId = null;
+    if (respKey) {
+      if (byIdAll[respKey] && have[respKey]) respId = respKey;
+      else {
+        var hit = nodes.find(function (n) {
+          return n.id === respKey || (byIdAll[n.id] && byIdAll[n.id].typeId === respKey);
+        });
+        respId = hit ? hit.id : null;
+      }
+    }
+    if (respId && have[respId]) {
+      nodes.filter(function (n) { return n.category === 'shooter'; }).forEach(function (sh) {
+        if (links[respId] && links[respId][sh.id]) return;                 // 직접 링크가 있으면 불필요
+        var mid = Object.keys(links[respId] || {}).find(function (m) {
+          return links[m] && links[m][sh.id] && !have[m];
+        });
+        if (!mid || !byIdAll[mid]) return;
+        have[mid] = true;
+        nodes.push({ id: mid, name: byIdAll[mid].name || mid, category: byIdAll[mid].category,
+          first: sh.first, last: sh.first, bridge: true });
+      });
+    }
+    var COL = { sensor: 0, c2: 1, shooter: 2 };
+    var cols = [[], [], []];
+    nodes.forEach(function (n) {
+      var c = COL[n.category]; if (c === undefined) c = 1;
+      cols[c].push(n);
+    });
+    cols.forEach(function (list) { list.sort(function (a, b) { return a.first - b.first; }); });
+
+    var W = 330, PAD = 8, colX = [58, 165, 285];
+    var rowH = 26, maxRows = Math.max(1, cols[0].length, cols[1].length, cols[2].length);
+    var H = PAD * 2 + maxRows * rowH;
+    var posOf = {};
+    cols.forEach(function (list, ci) {
+      var offset = (maxRows - list.length) / 2;
+      list.forEach(function (n, i) {
+        posOf[n.id] = { x: colX[ci], y: PAD + (offset + i) * rowH + rowH / 2, node: n };
+      });
+    });
+
+    // 간선 — 카탈로그에 실제 존재하는 링크만.
+    var edges = '';
+    nodes.forEach(function (a) {
+      nodes.forEach(function (b) {
+        if (a.id === b.id) return;
+        var kind = links[a.id] && links[a.id][b.id];
+        if (!kind) return;
+        var pa = posOf[a.id], pb = posOf[b.id];
+        if (!pa || !pb || pa.x === pb.x) return;      // 같은 열끼리는 생략(가독성)
+        // 간선은 **뒤쪽 노드가 켜질 때** 함께 켜진다.
+        var t = Math.max(a.first, b.first);
+        edges += '<line class="cdg-edge" data-t="' + t + '" x1="' + pa.x + '" y1="' + pa.y +
+          '" x2="' + pb.x + '" y2="' + pb.y + '" stroke="' + (EDGE_COLOR[kind] || '#6b7a8d') +
+          '" stroke-width="1.4"' + (kind === 'coord' ? ' stroke-dasharray="3 3"' : '') +
+          '><title>' + esc(a.name + ' → ' + b.name + ' (' + kind + ')') + '</title></line>';
+      });
+    });
+
+    var circles = nodes.map(function (n) {
+      var p = posOf[n.id];
+      var isResp = respId && n.id === respId;
+      var short = n.name.length > 13 ? n.name.slice(0, 12) + '…' : n.name;
+      return '<g class="cdg-node cdg-' + esc(n.category) + (isResp ? ' cdg-resp' : '') +
+        (n.bridge ? ' cdg-bridge' : '') + '" data-t="' + n.first + '">' +
+        '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (isResp ? 8 : 6) + '"></circle>' +
+        '<text x="' + p.x + '" y="' + (p.y - 10) + '" text-anchor="middle">' + esc(short) + '</text>' +
+        '<title>' + esc(n.name + (n.bridge ? ' · 경로상 노드(항적 기록에는 없음)' : ' · 최초 관여 ' + fmtTime(n.first))) +
+        '</title></g>';
+    }).join('');
+
+    // 센서가 책임 C2에 실제로 보고 링크를 갖는 비율 — 흩어진 점이 "렌더 오류"가 아니라
+    // **관측 결과**임을 숫자로 못박는다.
+    var sensors = nodes.filter(function (n) { return n.category === 'sensor'; });
+    var linkedSensors = respId ? sensors.filter(function (n) {
+      return (links[n.id] && links[n.id][respId]) || (links[respId] && links[respId][n.id]);
+    }).length : 0;
+    return '<div class="cdg-block"><h4>' + esc(title) +
+      '<span class="cdg-count">노드 ' + nodes.length +
+      (sensors.length ? ' · 센서 ' + linkedSensors + '/' + sensors.length + ' 가 책임 C2와 직결' : '') +
+      '</span>' +
+      (respScope ? '<span class="cdg-scope">' + esc(respScope) + '</span>' : '') + '</h4>' +
+      '<svg class="cdg-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet">' +
+      edges + circles + '</svg></div>';
+  }
+
+  /** 항적별 C2 계통 다이어그램 — 좌 As-Is · 우 To-Be. 재생헤드 시각에 따라 점등된다. */
+  function diagramHtml(pa, pb) {
+    if (!pa && !pb) return '';
+    return '<div class="cdg-wrap">' +
+      diagramBlock('As-Is 분절형', pa, pa && pa.c2 ? 'scope=' + pa.c2.scope : '') +
+      diagramBlock('To-Be 통합형', pb, pb && pb.c2 ? 'scope=' + pb.c2.scope : '') +
+      '<div class="cdg-legend">실선 파랑 = 항적보고 · 점선 보라 = 협조 · 실선 초록 = 교전명령 · ' +
+      '굵은 원 = 책임 C2. <b>카탈로그에 실제로 있는 링크만 그립니다</b>(시간상 인접해도 링크가 없으면 선도 없음).</div>' +
+      '</div>';
+  }
+
+  // ── 결심 순간 해부 (ADR-073 결심 감사 + ADR-074 그림자 평가·교전창) ──
+  // 다이어그램이 「누가 보였나」, 타임라인이 「얼마나 걸렸나」를 말한다면 여기는
+  // 「그래서 무엇을 놓고 골랐고, 그 선택이 최선이었나」를 말한다.
+  //
+  // ⚠️ 이 절이 지켜야 할 정직성 세 가지:
+  //  1) 표본에서 빠졌거나 결심 자체가 없었으면 **빈칸으로 두지 않고 그 사실을 적는다.**
+  //  2) regret이 null이면 0이 아니라 **미측정**이다(USFK 독립 축 — ADR-036/074).
+  //  3) 시야 폭(visibleUnitCount)이 두 모드에서 같으면 그대로 보여 준다 —
+  //     주축에서 후보 풀이 동일하다는 ADR-073 반증이 화면에서 확인돼야 한다.
+
+  /** 위협 id → 그 위협의 결심 감사 이벤트 배열(시간순). */
+  function groupAudits(list) {
+    var by = {};
+    (list || []).forEach(function (e) { (by[e.threatId] = by[e.threatId] || []).push(e); });
+    Object.keys(by).forEach(function (k) {
+      by[k].sort(function (a, b) { return a.t - b.t; });
+    });
+    return by;
+  }
+
+  function fmtScore(v) { return (v == null || !isFinite(v)) ? '—' : Number(v).toFixed(4); }
+
+  /** 후보 카드 한 장. 선택·전역최적을 배지로 구분한다. */
+  function candidateCard(c, chosenId, bestId) {
+    var isChosen = c.unitId === chosenId, isBest = c.unitId === bestId;
+    return '<li class="dca-cand' + (isChosen ? ' dca-chosen' : '') + (isBest ? ' dca-best' : '') + '">' +
+      '<span class="dca-unit">' + esc(c.unitId) + '<i>' + esc(c.unitType || '') + '</i></span>' +
+      '<span class="dca-score">' + fmtScore(c.score) + '</span>' +
+      '<span class="dca-attrs">Pk ' + (c.pk != null ? Number(c.pk).toFixed(2) : '—') +
+      ' · ' + (c.rangeKm != null ? Number(c.rangeKm).toFixed(0) + 'km' : '—') +
+      ' · 잔탄 ' + (c.ammoRatio != null ? Math.round(c.ammoRatio * 100) + '%' : '—') +
+      ' · 부하 ' + (c.load != null ? Math.round(c.load * 100) + '%' : '—') + '</span>' +
+      '<span class="dca-tags">' +
+      (isChosen ? '<b class="dca-tag-chosen">선택</b>' : '') +
+      (isBest ? '<b class="dca-tag-best">★ 전역최적</b>' : '') +
+      '</span></li>';
+  }
+
+  /** 한 모드의 결심 해부 블록. 결심이 없으면 그 사실을 명시한다. */
+  function anatomyBlock(title, audits, tr) {
+    if (!audits || !audits.length) {
+      var why = !tr ? '이 모드에 대응 항적이 없습니다.'
+        : (tr.outcome === 'killed'
+          ? '결심 감사 기록이 없습니다(자위권 발사 등 후보 명단을 거치지 않은 경로일 수 있습니다).'
+          : '<b>결심에 도달하지 못했습니다</b> — 후보를 놓고 고르는 단계까지 가지 못했습니다.');
+      return '<div class="dca-block"><h4>' + esc(title) + '</h4>' +
+        '<div class="bn-none">' + why + '</div></div>';
+    }
+    var d = audits[0];   // 최초 결심(재교전이 있으면 첫 결심을 대표로 본다)
+    var cands = (d.candidates || []).slice().sort(function (a, b) { return b.score - a.score; });
+    var regretTxt = d.regret == null
+      ? '<b class="dca-na">미측정</b>'
+      : (d.regret > 0 ? '<b class="dca-loss">' + fmtScore(d.regret) + '</b>' : '<b class="dca-ok">0 (최적 선택)</b>');
+    var marginTxt = d.engagementWindowMargin == null
+      ? '<b class="dca-na">미측정</b>'
+      : (d.engagementWindowMargin >= 0
+        ? '<b class="dca-ok">+' + Math.round(d.engagementWindowMargin) + '초 여유</b>'
+        : '<b class="dca-loss">' + Math.round(d.engagementWindowMargin) + '초 초과</b>');
+    var reasons = Object.keys(d.infeasibleReasons || {}).map(function (k) {
+      return esc(k) + ' ' + d.infeasibleReasons[k];
+    }).join(' · ');
+
+    return '<div class="dca-block"><h4>' + esc(title) +
+      '<span class="dca-when">결심 ' + fmtTime(d.t) + '</span></h4>' +
+      '<table class="dca-facts"><tbody>' +
+      '<tr><th>결심자</th><td>' + esc(d.commanderId || '—') +
+      ' <i>(' + esc(d.commanderAxis || '—') + ' · ' + esc(d.commanderScope || '—') + ')</i></td></tr>' +
+      '<tr><th>C2 시야 폭</th><td>' + (d.visibleUnitCount != null ? d.visibleUnitCount + '문' : '—') +
+      ' <i>이 결심자가 볼 수 있었던 발사대</i></td></tr>' +
+      '<tr><th>실현가능 후보</th><td>' + (d.candidateCount != null ? d.candidateCount + '문' : '—') +
+      (reasons ? ' <i>탈락: ' + reasons + '</i>' : '') + '</td></tr>' +
+      '<tr><th>선택 손실 (regret)</th><td>' + regretTxt +
+      (d.globalBestUnitId ? ' <i>전역최적 ' + esc(d.globalBestUnitId) + ' ' + fmtScore(d.globalBestScore) + '</i>' : '') +
+      '</td></tr>' +
+      '<tr><th>교전창 여유</th><td>' + marginTxt +
+      (d.engagementWindowCloseT != null ? ' <i>마감 ' + fmtTime(d.engagementWindowCloseT) + '</i>' : '') +
+      '</td></tr>' +
+      '</tbody></table>' +
+      (cands.length
+        ? '<ul class="dca-cands">' + cands.map(function (c) {
+          return candidateCard(c, d.chosenUnitId, d.globalBestUnitId);
+        }).join('') + '</ul>'
+        : '<div class="bn-none">후보 명단이 비어 있습니다.</div>') +
+      '</div>';   // ⚠️ .dca-block 닫기 — 빠뜨리면 To-Be 블록이 As-Is 안에 중첩돼
+                  //    두 블록의 표가 겹쳐 읽히고(뒤 값이 이김) 후보 카드도 합쳐진다.
+  }
+
+  /** 결심 순간 해부 — 좌 As-Is · 우 To-Be. */
+  function anatomyHtml(threatId, ta, tb) {
+    if (!run.audits) return '';
+    var aa = run.audits.asis[threatId], ab = run.audits.tobe[threatId];
+    if ((!aa || !aa.length) && (!ab || !ab.length)) {
+      return '<div class="dca-wrap"><div class="note">이 항적은 두 모드 모두 결심 감사 기록이 없습니다 ' +
+        '(결심 미도달 또는 표본 제외).</div></div>';
+    }
+    var note = '';
+    if (aa && aa.length && ab && ab.length && aa[0].visibleUnitCount === ab[0].visibleUnitCount) {
+      note = '<div class="note dca-note">⚠️ 두 모드의 <b>C2 시야 폭이 같습니다</b>(' +
+        aa[0].visibleUnitCount + '문) — 이 항적에서 통합의 이득은 <b>후보가 늘어서가 아닙니다</b>. ' +
+        'ADR-073 §발견(주축 사수 풀 동일)이 화면에서 확인되는 지점입니다.</div>';
+    }
+    return '<div class="dca-wrap">' +
+      anatomyBlock('As-Is 분절형', aa, ta) +
+      anatomyBlock('To-Be 통합형', ab, tb) +
+      note +
+      '<div class="dca-legend">점수는 개념 가중치(C2-WTA-*)의 합성이라 <b>단위가 없습니다</b> — ' +
+      '크기가 아니라 <b>순위와 일치 여부</b>로 읽으십시오. regret은 「전역최적 점수 − 실제선택 점수」이며, ' +
+      '전 자산이 다 보였다면 골랐을 최고점과의 차이입니다(USFK 독립 축은 제외 — ADR-036).</div>' +
+      '</div>';
+  }
+
+  var MARK_ICON = { fire: '▲', hit: '●', miss: '○', leak: '✕' };
+  var MARK_TIP = { fire: '발사', hit: 'BDA 명중', miss: 'BDA 빗나감', leak: '요격 실패' };
+
+  /** 한 모드의 타임라인 블록. t0~t1은 두 모드 공통 축이라 좌우를 그대로 겹쳐 읽을 수 있다. */
+  function timelineBlock(title, part, t0, span) {
+    if (!part) return '<div class="ptl-block"><h4>' + esc(title) + '</h4>' +
+      '<div class="bn-none">대응 항적 없음</div></div>';
+    var pos = function (t) { return ((t - t0) / span * 100).toFixed(2); };
+    var rows = part.rows.map(function (r) {
+      var left = pos(r.first), w = Math.max(0.6, (r.last - r.first) / span * 100);
+      return '<div class="ptl-row">' +
+        '<div class="ptl-label ptl-' + esc(r.category) + '" title="' + esc(r.id) + '">' +
+        esc(r.name) + '</div>' +
+        '<div class="ptl-track">' +
+        '<div class="ptl-bar ptl-' + esc(r.category) + '" style="left:' + left + '%;width:' + w.toFixed(2) + '%"' +
+        ' title="' + esc(r.name + ' · ' + fmtTime(r.first) + '~' + fmtTime(r.last) + ' · 관여 ' + r.n + '회') + '"></div>' +
+        '</div></div>';
+    }).join('');
+    var marks = part.marks.map(function (m) {
+      return '<span class="ptl-mark ptl-mark-' + m.kind + '" style="left:' + pos(m.t) + '%"' +
+        ' title="' + esc(MARK_TIP[m.kind] + ' · ' + fmtTime(m.t)) + '">' + MARK_ICON[m.kind] + '</span>';
+    }).join('');
+    return '<div class="ptl-block"><h4>' + esc(title) +
+      '<span class="ptl-end">종료 ' + fmtTime(part.endT) + '</span></h4>' +
+      rows +
+      '<div class="ptl-row ptl-marks"><div class="ptl-label"></div>' +
+      '<div class="ptl-track">' + marks + '<div class="ptl-playhead"></div></div></div>' +
+      '</div>';
+  }
+
+  /** 축(scope) 주석 — ADR-073 반증을 화면에서 명시한다. */
+  function axisNote(pa, pb) {
+    var sa = pa && pa.c2 ? pa.c2.scope : null;
+    if (sa === 'self_battery') {
+      return '<div class="note ptl-axis ptl-axis-local">이 항적은 <b>국지방공 축(군단 AOC)</b>이 맡았습니다 — ' +
+        '이 축은 <b>자기 포대만 관측</b>합니다(<code>scope=self_battery</code>). ' +
+        '통합 시 <b>관측 범위가 실제로 넓어지는 구간</b>이며, 선택 손실(regret)이 줄어드는 것도 이 축입니다(ADR-073).</div>';
+    }
+    return '<div class="note ptl-axis">이 항적은 <b>주축</b>이 맡았습니다' +
+      (pa && pa.c2 && pa.c2.id ? ' (As-Is ' + esc(pa.c2.id) + ' → To-Be ' + esc((pb && pb.c2 && pb.c2.id) || '—') + ')' : '') +
+      '. ⚠️ <b>주축의 사수 후보 풀은 두 구조가 동일합니다</b>(ADR-073 §발견 — 「명단이 좁아 차선을 고른다」 가설은 ' +
+      '주축에서 반증됐습니다). 따라서 아래 그림에서 읽어야 할 차이는 <b>후보 수가 아니라 시간</b>입니다.</div>';
+  }
+
+  /** 참여 노드 타임라인 — 같은 시간축 위에 As-Is/To-Be를 위아래로 놓는다. */
+  function timelineHtml(ta, tb, uid) {
+    var pa = participationOf(ta), pb = participationOf(tb);
+    if (!pa && !pb) return '';
+    var lo = [], hi = [];
+    [ta, tb].forEach(function (t) {
+      if (t && t.stages && t.stages.length) {
+        lo.push(t.stages[0].t);
+        hi.push(t.stages[t.stages.length - 1].t);
+      }
+    });
+    var t0 = Math.min.apply(null, lo), t1 = Math.max.apply(null, hi);
+    var span = Math.max(1, t1 - t0);
+    // 눈금 — 5개 내외로 균등 분할(초 단위 반올림).
+    var ticks = '';
+    for (var k = 0; k <= 4; k++) {
+      var tt = t0 + span * k / 4;
+      ticks += '<span class="ptl-tick" style="left:' + (k / 4 * 100).toFixed(2) + '%">' + fmtTime(tt) + '</span>';
+    }
+    return '<div class="ptl-wrap" data-uid="' + esc(uid) + '" data-t0="' + t0 + '" data-span="' + span + '">' +
+      axisNote(pa, pb) +
+      diagramHtml(pa, pb) +
+      anatomyHtml(uid, ta, tb) +
+      '<div class="ptl-head">' +
+      '<button type="button" class="ptl-play">▶ 동시 재생</button>' +
+      '<span class="ptl-legend"><i class="ptl-sensor"></i>레이더<i class="ptl-c2"></i>지휘소<i class="ptl-shooter"></i>요격부대' +
+      '<b>▲</b>발사 <b>●</b>명중 <b>✕</b>요격 실패</span>' +
+      '</div>' +
+      '<div class="ptl-row ptl-axisrow"><div class="ptl-label"></div><div class="ptl-track">' + ticks + '</div></div>' +
+      timelineBlock('As-Is 분절형', pa, t0, span) +
+      timelineBlock('To-Be 통합형', pb, t0, span) +
+      '</div>';
+  }
+
+  /** ▶ 동시 재생 — 두 블록의 재생헤드를 같은 시간축으로 함께 움직인다.
+   *  좌우가 같은 축이라 To-Be가 **먼저 끝나는 것**이 그대로 체감된다. */
+  function bindTimelinePlay(scope) {
+    Array.prototype.forEach.call((scope || document).querySelectorAll('.ptl-play'), function (btn) {
+      if (btn._bound) return;
+      btn._bound = true;
+      btn.addEventListener('click', function () {
+        var wrap = btn.closest('.ptl-wrap');
+        var heads = wrap.querySelectorAll('.ptl-playhead');
+        var bars = wrap.querySelectorAll('.ptl-bar');
+        var marks = wrap.querySelectorAll('.ptl-mark');
+        if (wrap._raf) cancelAnimationFrame(wrap._raf);
+        if (wrap._guard) clearTimeout(wrap._guard);
+        var DUR = 2600, t0 = now(), done = false;
+        // 다이어그램 점등 — 타임라인과 **같은 재생헤드**가 몰기 때문에 두 그림이 항상 같은
+        // 시각을 가리킨다(따로 돌면 어느 쪽을 믿어야 할지 알 수 없다).
+        var domain0 = parseFloat(wrap.getAttribute('data-t0')) || 0;
+        var domainSpan = parseFloat(wrap.getAttribute('data-span')) || 1;
+        var lit = wrap.querySelectorAll('.cdg-node, .cdg-edge');
+        var cdg = wrap.querySelector('.cdg-wrap');
+        if (cdg) cdg.classList.add('cdg-playing');   // 재생 중에만 소등 상태를 쓴다
+        Array.prototype.forEach.call(bars, function (b) { b.classList.add('ptl-dim'); });
+        Array.prototype.forEach.call(marks, function (m) { m.classList.add('ptl-dim'); });
+        Array.prototype.forEach.call(lit, function (n) { n.classList.remove('cdg-on'); });
+        btn.disabled = true;
+
+        /** 최종 상태로 확정 — 애니메이션이 끝났든 중단됐든 화면은 항상 여기로 수렴한다. */
+        function finish() {
+          if (done) return;
+          done = true;
+          if (wrap._raf) { cancelAnimationFrame(wrap._raf); wrap._raf = null; }
+          clearTimeout(wrap._guard); wrap._guard = null;
+          Array.prototype.forEach.call(bars, function (b) { b.classList.remove('ptl-dim'); });
+          Array.prototype.forEach.call(marks, function (m) { m.classList.remove('ptl-dim'); });
+          Array.prototype.forEach.call(lit, function (n) { n.classList.add('cdg-on'); });
+          if (cdg) cdg.classList.remove('cdg-playing');   // 정지 화면은 항상 전부 켜짐
+          Array.prototype.forEach.call(heads, function (h) { h.style.opacity = 0; });
+          btn.disabled = false;
+        }
+        // ⚠️ rAF는 탭이 화면에 없으면 멈춘다(백그라운드 throttle). 그때 rAF만 믿으면
+        // 막대가 흐린 채·버튼이 비활성인 채로 **영구히 굳는다**(실측). 타이머로 확정한다.
+        wrap._guard = setTimeout(finish, DUR + 400);
+
+        (function step() {
+          if (done) return;
+          var p = Math.min(1, (now() - t0) / DUR);
+          var pctX = (p * 100).toFixed(2) + '%';
+          Array.prototype.forEach.call(heads, function (h) { h.style.left = pctX; h.style.opacity = 1; });
+          Array.prototype.forEach.call(bars, function (b) {
+            if (parseFloat(b.style.left) <= p * 100) b.classList.remove('ptl-dim');
+          });
+          Array.prototype.forEach.call(marks, function (m) {
+            if (parseFloat(m.style.left) <= p * 100) m.classList.remove('ptl-dim');
+          });
+          var tNow = domain0 + domainSpan * p;
+          Array.prototype.forEach.call(lit, function (n) {
+            n.classList.toggle('cdg-on', parseFloat(n.getAttribute('data-t')) <= tNow);
+          });
+          if (p < 1) wrap._raf = requestAnimationFrame(step);
+          else finish();
+        })();
+      });
+    });
+  }
+
+  // 병렬 대조 필터 (모달을 다시 열어도 선택 유지)
+  var compareFilter = 'diff';
+
+  /** 결과 모달 ④ — 같은 위협이 두 지휘 방식에서 어떻게 달랐는지 나란히 본다. */
+  function threatCompareSection() {
+    var a = run.cfg.mode === 'asis' ? run.res : run.resOther;   // 좌 = 항상 As-Is
+    var b = run.cfg.mode === 'asis' ? run.resOther : run.res;   // 우 = 항상 To-Be
+    if (!a || !b) return '';
+    var ta = (a && a.threatTraces) || [], tb = (b && b.threatTraces) || [];
+    if (!ta.length && !tb.length) {
+      return '<h3>4. 두 방식이 어떻게 달랐나요?</h3>' +
+        '<div class="bn-none">이 설정에서 생성된 위협 항적이 없습니다.</div>';
+    }
+
+    var byIdB = {};
+    tb.forEach(function (tr) { byIdB[tr.id] = tr; });
+    var seen = {};
+    var rows = ta.map(function (tr) { seen[tr.id] = 1; return { id: tr.id, a: tr, b: byIdB[tr.id] || null }; });
+    // 대응이 깨진 항적(설계상 없어야 함)도 숨기지 않는다 — 모델 결함 신호다.
+    tb.forEach(function (tr) { if (!seen[tr.id]) rows.push({ id: tr.id, a: null, b: tr }); });
+
+    var tally = { gain: 0, loss: 0, other: 0, same: 0 };
+    rows.forEach(function (r) {
+      r.oa = outcomeOf(r.a); r.ob = outcomeOf(r.b);
+      r.dv = divergenceOf(r.oa, r.ob);
+      tally[r.dv.key]++;
+    });
+    var unpaired = rows.filter(function (r) { return !r.a || !r.b; }).length;
+
+    var html = '<h3>4. 위협 항적 병렬 대조 — As-Is ↔ To-Be</h3>' +
+      '<p>동일 seed 결정론 DES 1복제에서 <b>같은 위협이 두 지휘구조를 각각 통과한 경로</b>를 ' +
+      '나란히 놓은 로그입니다. 공통난수(CRN) 설계상 두 실행의 위협 집단(ID·발생시각·축선)은 ' +
+      '동일하므로, <b>판정이 갈린 항적이 곧 C2 구조가 만든 차이</b>입니다.</p>' +
+      '<div class="cmp-tally">' +
+      '<span class="dv-gain">개선 <b>' + tally.gain + '</b></span>' +
+      '<span class="dv-loss">악화 <b>' + tally.loss + '</b></span>' +
+      (tally.other ? '<span class="dv-other">변화 <b>' + tally.other + '</b></span>' : '') +
+      '<span class="dv-same">동일 <b>' + tally.same + '</b></span>' +
+      '<span class="cmp-total">추적 ' + rows.length + '건</span></div>';
+
+    if (a.traceTruncated || b.traceTruncated) {
+      html += '<div class="note">⚠️ 추적 상한(300건) 절삭 — 아래 목록은 <b>표본</b>입니다.</div>';
+    }
+    if (unpaired) {
+      html += '<div class="note">⚠️ 두 모드에서 대응되지 않는 항적 ' + unpaired + '건 — ' +
+        'CRN(공통난수) 설계상 위협 집단은 모드와 무관하게 같아야 합니다. 대응 실패는 모델 결함 신호입니다.</div>';
+    }
+
+    var FILTERS = [
+      { key: 'diff', label: '판정이 갈린 항적', n: tally.gain + tally.loss + tally.other },
+      { key: 'gain', label: '개선', n: tally.gain },
+      { key: 'loss', label: '악화', n: tally.loss },
+      { key: 'all', label: '전체', n: rows.length }
+    ];
+    html += '<div class="alog-filters">' + FILTERS.map(function (f) {
+      return '<button type="button" class="alog-filter' + (compareFilter === f.key ? ' is-on' : '') +
+        '" data-filter="' + f.key + '">' + esc(f.label) + ' <b>' + f.n + '</b></button>';
+    }).join('') + '</div>';
+
+    var shown = rows.filter(function (r) {
+      if (compareFilter === 'all') return true;
+      if (compareFilter === 'diff') return r.dv.key !== 'same';
+      return r.dv.key === compareFilter;
+    });
+    if (!shown.length) {
+      return html + '<div class="bn-none">이 조건에 해당하는 항적이 없습니다.</div>';
+    }
+
+    html += '<div class="alog-legend">' +
+      '<span>좌 <b>As-Is 분절형</b></span><span>우 <b>To-Be 통합형</b></span>' +
+      '<span class="sd-key sd-only"><span class="sd-mark">＋</span> 해당 계통에만 존재</span>' +
+      '<span class="sd-key sd-diff"><span class="sd-mark">◆</span> 담당 노드 상이</span>' +
+      '<span class="sd-key sd-shift"><span class="sd-mark">⏱</span> 시각 차이</span>' +
+      '<span class="sd-key sd-same">회색 = 동일</span></div>';
+
+    html += shown.map(function (r) {
+      var ref = r.a || r.b;
+      return '<details class="alog-row ' + r.dv.cls + '-row">' +
+        '<summary class="alog-hdr">' +
+        '<span class="tlog-dot" style="background:' + THREAT_COLOR[ref.type] + '"></span>' +
+        '<span class="alog-id">' + esc(r.id) + ' <i>(' + esc(ref.axis) + ')</i></span>' +
+        '<span class="alog-time">' + fmtTime(ref.spawnT) + ' 침투</span>' +
+        '<span class="alog-pair">' + outcomeBadge(r.oa) +
+        '<span class="alog-arrow">→</span>' + outcomeBadge(r.ob) + '</span>' +
+        '<span class="alog-dv ' + r.dv.cls + '">' + esc(r.dv.label) + '</span>' +
+        '</summary>' +
+        timelineHtml(r.a, r.b, r.id) +
+        '<div class="alog-cols">' +
+        '<div class="alog-col"><h4>As-Is 분절형</h4>' + diffStageList(r.a, r.b) + '</div>' +
+        '<div class="alog-col"><h4>To-Be 통합형</h4>' + diffStageList(r.b, r.a) + '</div>' +
+        '</div></details>';
+    }).join('');
+    return html;
+  }
+
+  /** 필터 버튼은 섹션만 다시 그린다(모달 전체 재렌더 방지 — 열어 둔 항목이 닫히지 않게). */
+  function bindCompareFilters() {
+    var box = el('sim-compare-section');
+    if (!box) return;
+    Array.prototype.forEach.call(box.querySelectorAll('.alog-filter'), function (btn) {
+      btn.addEventListener('click', function () {
+        compareFilter = btn.getAttribute('data-filter');
+        box.innerHTML = threatCompareSection();
+        bindCompareFilters();
+        bindTimelinePlay(box);
+      });
+    });
   }
 
   function renderModal() {
     if (!run) return;
-    var g = run.res.global, o = run.resOther.global;
-    var modeName = run.cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형';
-    var otherName = run.otherMode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형';
+    var cfg = run.cfg;
+    var modeName = cfg.mode === 'asis' ? 'As-Is 분절형(지금 방식)' : 'To-Be 통합형(바뀐 방식)';
+    var nodes = run.res.nodes.slice();
+    var activeNodes = nodes.filter(function (n) { return n.arrivals > 0; });
     var html = '';
 
-    html += '<div class="analysis-context">' + esc(contextLabel(run.cfg)) +
-      ' · 시뮬레이션 ' + run.cfg.dur + '초 · 처리 ' + run.res.eventCount.toLocaleString() +
-      '이벤트 · 벽시계 ' + run.elapsedMs.toFixed(0) + 'ms (결정론적 재현 가능)</div>';
-
-    // ① 결과 요약
-    html += '<h3>결과 요약 (' + esc(modeName) + ')</h3><div class="stat-grid">' +
-      statCard('생성 위협', g.spawned + '건') +
-      statCard('탐지', g.detected + '건') +
-      statCard('격추 (전체 생성 기준)', g.killed + '건 (' + pct(rateOf(g.killed, g.spawned)) + ')') +
-      statCard('확정 누출 (전체 생성 기준)', g.leaked + '건 (' + pct(rateOf(g.leaked, g.spawned)) + ')',
-        rateOf(g.leaked, g.spawned) > 0.3 ? 'crit' : '') +
-      statCard('관측 종료 미해결', (g.censoredRaw || 0) + '건 (' +
-        pct(rateOf(g.censoredRaw || 0, g.spawned)) + ')') +
-      statCard('해결분 기준 요격 실패율', pct(g.leakRate), g.leakRate > 0.3 ? 'crit' : '') +
-      statCard('평균 격추시간', g.meanTimeToKillSec.toFixed(0) + '초') +
-      statCard('결심 지연', g.meanDecisionDelaySec.toFixed(0) + '초') +
-      statCard('분권 전환', g.delegation.count + '건' +
-        (g.delegation.firstT !== null ? ' (최초 ' + fmtTime(g.delegation.firstT) + ')' : '')) +
-      statCard('도출 병목', run.res.bottlenecks.length + '건') + '</div>';
-
-    // ② As-Is ↔ To-Be 좌·우 직관 비교 (현재 모드와 무관하게 좌=As-Is, 우=To-Be로 고정)
-    var asisG = run.cfg.mode === 'asis' ? g : o;
-    var tobeG = run.cfg.mode === 'asis' ? o : g;
-    var asisRes = run.cfg.mode === 'asis' ? run.res : run.resOther;
-    var tobeRes = run.cfg.mode === 'asis' ? run.resOther : run.res;
-    html += '<h3>As-Is ↔ To-Be 정량 비교 (좌: 분절형 · 우: 통합형, 동일 seed)</h3>' +
-      vsCompare(asisG, tobeG, asisRes, tobeRes, run.heat.asis.total, run.heat.tobe.total);
-
-    // ③ Monte Carlo 95% CI (백그라운드)
-    html += '<section id="sim-mc-section">' + mcSectionHtml() + '</section>';
-
-    // ④ 도출된 병목
-    html += '<h3>🔎 도출된 병목 (관측 통계 기반)</h3>';
-    html += run.res.bottlenecks.length
-      ? '<ul class="modal-bn">' + run.res.bottlenecks.map(function (b) {
-        return '<li class="bn-item bn-sev' + b.severity + '">' + KIND_ICON[b.kind] +
-          ' <b>' + esc(b.name) + '</b><br><span class="bn-detail">' + esc(b.detail) + '</span></li>';
-      }).join('') + '</ul>'
-      : '<div class="bn-none">이 실행에서 도출된 병목 없음 (병목은 부하의 함수 — 강도·시나리오를 바꿔보세요)</div>';
-    html += c2AnalysisSection(asisRes, tobeRes, run.res);
-
-    // ⑤ 요격 실패 원인 분해 — As-Is ↔ To-Be 대조표 (Phase C: 원인코드 × 모드 건수/비율)
-    html += '<h3>요격 실패 원인 분해 — As-Is ↔ To-Be 대조 (동일 seed·강도)</h3>' +
-      leakCompareTable(asisG, tobeG);
-
-    var c2a = g.coordination && g.coordination.trackFusion ? g.coordination : null;
-    if (c2a) {
-      var tf = c2a.trackFusion, ss = c2a.statusSharing;
-      html += '<h3>군단 AOC 방공 C2A 정보상태</h3>' +
-        '<table><thead><tr><th>MCRC+국지 복수출처 융합</th><th>현황 전송</th><th>수신</th><th>대기</th><th>드롭</th><th>지연·드롭 중복교전</th></tr></thead><tbody><tr>' +
-        '<td class="num">' + tf.multiSourceTracks + '</td><td class="num">' + ss.sent + '</td>' +
-        '<td class="num">' + ss.delivered + '</td><td class="num">' + ss.queued + '</td>' +
-        '<td class="num">' + ss.dropped + '</td><td class="num">' + ss.duplicatesDueToStaleState + '</td>' +
-        '</tr></tbody></table><div class="note">군단 AOC는 MCRC 공중항적과 국지레이더 항적을 융합해 자체 할당·교전합니다. ' +
-        'As-Is 교전현황은 음성/VTC 1채널·4건 제한으로 MCRC에 전파되며, 지연·드롭으로 상태 원장이 달라지면 중복교전이 발생합니다.</div>';
-    }
-
-    if (g.trackQuality && g.c2Orders) {
-      var tq = g.trackQuality, co = g.c2Orders, sp = g.sensorPhysics || {};
-      html += '<h3>IADS_C2 추적·식별·명령 충실도</h3>' +
-        '<table><thead><tr><th>MFR FC 전이</th><th>상관 정상</th><th>오상관</th><th>상관 실패</th><th>신선도 폐기</th><th>식별 확정</th><th>명령 생성</th><th>발사</th><th>HIT/MISS</th></tr></thead><tbody><tr>' +
-        '<td class="num">' + (sp.fireControl || 0) + '</td><td class="num">' + tq.correct + '</td>' +
-        '<td class="num">' + tq.mis + '</td><td class="num">' + tq.failed + '</td>' +
-        '<td class="num">' + tq.stale + '</td><td class="num">' + tq.identified + '</td>' +
-        '<td class="num">' + co.created + '</td><td class="num">' + co.fired + '</td>' +
-        '<td class="num">' + co.hit + ' / ' + co.miss + '</td></tr></tbody></table>' +
-        '<div class="note">MFR은 3회 연속 miss에서만 추적을 잃고, FIRE_CONTROL은 TRACKED로 강등될 수 있습니다. ' +
-        '교전은 신선한 FC 트랙, 거리·접근각 PSSEK, 최초 도달 가능 PIP, 탄약·동시교전 조건과 명시적 C2 명령을 모두 통과해야 합니다.</div>';
-    }
-
-    // ⑤-2 실패 항적 타임라인 (Phase C: 개별 항적이 9단계 중 어디서 왜 멈췄는지)
-    html += failedTimelineSection(run.res);
-
-    // ⑥ 단계별 흐름 (funnel) — 라벨의 번호는 9단계 파이프라인 관문([분석] 탭과 동일 기준)
-    var f = run.res.flow;
-    var stages = [
-      { label: '생성 (위협 도착)', n: f.spawned }, { label: '① 탐지', n: f.detected },
-      { label: '②~⑤ C2 도달·처리', n: f.reachedC2 }, { label: '⑥~⑧ 교전 개시', n: f.everEngaged },
-      { label: '⑨ 격추', n: f.killed }
-    ];
-    var maxN = f.spawned || 1;
-    html += '<h3>단계별 흐름 — 9단계 파이프라인 관문 통과 (생성→탐지→C2→교전→격추)</h3>' + stages.map(function (s, i) {
-      var w = (s.n / maxN * 100).toFixed(1);
-      var loss = i > 0 ? stages[i - 1].n - s.n : 0;
-      return '<div class="pb-funnel-row"><div class="pb-funnel-label">' + s.label + '</div>' +
-        '<div class="pb-funnel-track"><div class="pb-funnel-bar" style="width:' + w + '%"></div>' +
-        '<span>' + s.n + '건</span></div>' +
-        (loss > 0 ? '<span class="pb-loss">−' + loss + '</span>' : '<span class="pb-loss"></span>') + '</div>';
-    }).join('');
-
-    // ⑦ 중복교전 위험 (As-Is ↔ To-Be, 축선별)
-    var ha = run.heat.asis;
-    var hb = run.heat.tobe;
-    html += '<h3>축선별 중복교전 위험 (As-Is ↔ To-Be)</h3>' +
-      '<div class="pb-heat-legend"><span class="sw" style="background:#e05545"></span>As-Is ' +
-      '<span class="sw" style="background:#3d8b40"></span>To-Be</div>' +
-      ha.axes.map(function (axA, i) {
-        var axB = hb.axes[i];
-        var maxRaw = Math.max(axA.raw, axB.raw, 0.001);
-        return '<div class="pb-heat-row"><div class="pb-heat-label">' + esc(axA.label) + '</div>' +
-          '<div class="pb-heat-bars">' +
-          '<div class="pb-heat-bar asis" style="width:' + (axA.raw / maxRaw * 100).toFixed(0) + '%"></div>' +
-          '<div class="pb-heat-bar tobe" style="width:' + (axB.raw / maxRaw * 100).toFixed(0) + '%"></div>' +
-          '</div><div class="pb-heat-vals">' + axA.raw.toFixed(1) + ' → ' + axB.raw.toFixed(1) + '</div></div>';
-      }).join('');
-
-    // ⑧ 노드 관측 통계
-    html += '<h3>노드 관측 통계 (ρ 내림차순)</h3>' +
-      '<table><thead><tr><th>노드</th><th>구분</th><th>도착</th><th>완료</th><th>드롭</th>' +
-      '<th>관측 ρ</th><th>평균대기</th><th>판정</th></tr></thead><tbody>' +
-      (run.res.nodes.slice().filter(function (n) { return n.arrivals > 0; })
-        .sort(function (a, b) { return b.rho - a.rho; })
-        .map(function (n) {
-          var bar = Math.min(100, n.rho * 100);
-          return '<tr class="row-' + n.level + '"><td>' + esc(n.name) + '</td>' +
-            '<td>' + (n.category === 'c2' ? 'C2' : '교전') + '</td>' +
-            '<td class="num">' + n.arrivals + '</td><td class="num">' + n.completions + '</td>' +
-            '<td class="num">' + (n.drops > 0 ? '<b style="color:#ff9a8d">' + n.drops + '</b>' : '0') + '</td>' +
-            '<td><div class="rho-bar"><div class="rho-fill lv-' + n.level + '" style="width:' + bar +
-            '%"></div><span>' + n.rho.toFixed(2) + '</span></div></td>' +
-            '<td class="num">' + n.Wq.toFixed(1) + 's</td>' +
-            '<td>' + LEVEL_BADGE[n.level] + '</td></tr>';
-        }).join('') ||
-        '<tr><td colspan="8" class="bn-none">C2·무기 노드에 도달한 항적이 없습니다.</td></tr>') +
+    // ① 무엇을 돌렸는지 — 결과를 읽기 전에 알아야 하는 전제.
+    // 기술적인 설정 문자열(contextLabel)은 감사에 필요하므로 버리지 않고 맨 아래로 내린다.
+    html += '<h3>1. 무엇을 돌려 봤나요?</h3>' +
+      '<table><tbody>' +
+      '<tr><th>상황</th><td>' + esc(KJ.scenarioById(cfg.sc).name) + '</td></tr>' +
+      '<tr><th>지휘 방식</th><td>' + esc(modeName) + '</td></tr>' +
+      '<tr><th>적이 오는 양</th><td>보통의 ' + esc(Number(cfg.x).toFixed(1)) + '배</td></tr>' +
+      '<tr><th>무작위 번호 (seed)</th><td>' + esc(String(cfg.seed)) +
+      ' — 이 번호가 같으면 몇 번을 다시 돌려도 결과가 똑같이 나와요</td></tr>' +
       '</tbody></table>';
 
-    html += '<div class="note">모든 수치는 공개자료 기반 정책연구용 개념값이며 실제 작전자료가 아닙니다. ' +
-      '정밀 검토는 [분석]·[Monte Carlo] 탭(9단계 파이프라인 지표·민감도 토네이도·임계 전환점 포함)을 이용하세요.</div>';
+    // ② 시간 — 가상 시간과 실제 계산 시간은 다른 것이다(헷갈리기 쉬운 지점)
+    html += '<h3>2. 시간이 얼마나 걸렸나요?</h3><div class="stat-grid">' +
+      statCard('시뮬레이션 속에서 흐른 시간', plainDuration(cfg.dur)) +
+      statCard('컴퓨터가 계산하는 데 걸린 시간', (run.elapsedMs / 1000).toFixed(1) + '초') +
+      statCard('컴퓨터가 처리한 사건 수', run.res.eventCount.toLocaleString() + '번') +
+      '</div>' +
+      '<div class="note">위의 두 시간은 서로 다른 시간이에요. <b>첫 번째</b>는 이야기 속에서 흐른 시간이고 ' +
+      '(예: 30분짜리 상황), <b>두 번째</b>는 그 30분을 컴퓨터가 계산해 내는 데 실제로 걸린 시간이에요. ' +
+      '<b>사건</b>은 "레이더가 무언가를 봤다", "명령이 도착했다"처럼 시뮬레이션 안에서 일어난 일 하나하나를 말해요.</div>';
+
+    // ③ 노드 활성화 — "한 번이라도 일이 들어왔는가"만 본다(부하·성능 판단이 아니다)
+    html += '<h3>3. 어떤 장비가 움직였나요?</h3>' +
+      '<p>이번 시뮬레이션에 등장한 지휘소·요격 부대는 모두 <b>' + nodes.length + '곳</b>이고, ' +
+      '그중 <b>' + activeNodes.length + '곳</b>이 실제로 한 번이라도 일을 했어요. ' +
+      '나머지 ' + (nodes.length - activeNodes.length) + '곳은 이번 상황에서는 할 일이 없었어요.</p>';
+
+    var rows = nodes.sort(function (a, b) {
+      var aa = a.arrivals > 0 ? 0 : 1, bb = b.arrivals > 0 ? 0 : 1;
+      if (aa !== bb) return aa - bb;                       // 움직인 것부터
+      if (a.category !== b.category) return a.category < b.category ? -1 : 1;
+      return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0);
+    }).map(function (n) {
+      var on = n.arrivals > 0;
+      return '<tr><td>' + esc(n.name) + '</td>' +
+        '<td>' + esc(plainCategory(n.category)) + '</td>' +
+        '<td>' + (on ? '<b class="node-on">● 움직였어요</b>' : '<span class="node-off">○ 안 움직였어요</span>') +
+        '</td></tr>';
+    }).join('');
+
+    html += '<table><thead><tr><th>장비 이름</th><th>종류</th><th>움직였나요?</th></tr></thead>' +
+      '<tbody>' + (rows || '<tr><td colspan="3" class="bn-none">움직인 장비가 없어요.</td></tr>') +
+      '</tbody></table>';
+
+    // ④ 두 지휘 방식의 항적 병렬 대조 (필터로 다시 그리므로 전용 컨테이너에 담는다)
+    html += '<section id="sim-compare-section">' + threatCompareSection() + '</section>';
+
+    html += '<div class="note">여기 나오는 숫자는 공개 자료로 만든 <b>연구용 가상 값</b>이에요. 실제 군사 자료가 아니에요. ' +
+      '격추 수·요격 실패율 같은 자세한 분석은 화면을 새로 만드는 중이라 지금은 보여주지 않아요.</div>';
+
+    // 감사용 원문 설정 — 위의 쉬운 말 표가 줄인 정보(배치·충실도·모델 조건 토글)를 그대로 남긴다.
+    html += '<details class="run-config-detail"><summary>자세한 설정 (어른용)</summary>' +
+      '<div class="analysis-context">' + esc(contextLabel(cfg)) + '</div></details>';
 
     el('modal-body').innerHTML = html;
     run.modalRendered = true;
-    if (KJ.tableSort) KJ.tableSort.attachAll(el('modal-body')); // 모달 표도 열 정렬 지원
+    bindCompareFilters();
+    bindTimelinePlay(el('modal-body'));
+    if (KJ.tableSort) KJ.tableSort.attachAll(el('modal-body')); // 표 열 정렬 유지
   }
 
-  function leakLabel(r) { return KJ.leakTaxonomy(r).label; }
-
-  function c2AnalysisSection(asisRes, tobeRes, currentRes) {
-    var a = asisRes.c2Analysis, b = tobeRes.c2Analysis, current = currentRes.c2Analysis;
-    if (!a || !b || !a.available || !b.available) {
-      return '<h3>C2 병목 귀속·해결 증거</h3><div class="bn-none">구조화 C2 계측 없음 — 0건으로 해석하지 않습니다.</div>';
-    }
-    function maxPeak(report) {
-      var vals = Object.keys(report.c2Load.nodes).map(function (id) {
-        var n = report.c2Load.nodes[id];
-        return n.peakRho == null ? n.rho : n.peakRho;
-      }).filter(function (v) { return v != null && isFinite(v); });
-      return vals.length ? Math.max.apply(null, vals) : null;
-    }
-    function p90(report, key) {
-      var q = report.killchainDelays[key];
-      return q && q.p90 != null ? q.p90 : null;
-    }
-    function num(v, digits) {
-      return v == null || !isFinite(v) ? '—' : Number(v).toFixed(digits == null ? 1 : digits);
-    }
-    var rows = [
-      ['C2 대기·처리 중 누출', a.c2Attribution.byState.queued + a.c2Attribution.byState.processing,
-        b.c2Attribution.byState.queued + b.c2Attribution.byState.processing, '건'],
-      ['C2 미도달 누출', a.c2Attribution.byState.noC2Contact, b.c2Attribution.byState.noC2Contact, '건'],
-      ['탐지→결심 p90', p90(a, 'detectToDecision'), p90(b, 'detectToDecision'), '초'],
-      ['결심→발사 p90', p90(a, 'decisionToFire'), p90(b, 'decisionToFire'), '초'],
-      ['C2 최대 60초 피크 ρ', maxPeak(a), maxPeak(b), 'ρ'],
-      ['동시 중복교전 위협', a.duplicateEngagement.concurrent, b.duplicateEngagement.concurrent, '건']
-    ];
-    var mechanismRows = [
-      ['명령 활성 성공률',
-        a.c2Command.directives && a.c2Command.directives.activationRate != null ? a.c2Command.directives.activationRate * 100 : null,
-        b.c2Command.directives && b.c2Command.directives.activationRate != null ? b.c2Command.directives.activationRate * 100 : null, '%'],
-      ['명령 만료율',
-        a.c2Command.directives && a.c2Command.directives.expiryRate != null ? a.c2Command.directives.expiryRate * 100 : null,
-        b.c2Command.directives && b.c2Command.directives.expiryRate != null ? b.c2Command.directives.expiryRate * 100 : null, '%'],
-      ['비상발사 비율',
-        a.emergencyFire.ratio != null ? a.emergencyFire.ratio * 100 : null,
-        b.emergencyFire.ratio != null ? b.emergencyFire.ratio * 100 : null, '%'],
-      ['결심 항적 age p50',
-        a.trackFreshness.decisionTrackAge.p50, b.trackFreshness.decisionTrackAge.p50, '초'],
-      ['결심 항적 age p90',
-        a.trackFreshness.decisionTrackAge.p90, b.trackFreshness.decisionTrackAge.p90, '초'],
-      ['탐지→C2 보고 p50',
-        a.trackFreshness.detectToReport.p50, b.trackFreshness.detectToReport.p50, '초'],
-      ['교전 기회 손실률',
-        a.lostOpportunity.lossRate != null ? a.lostOpportunity.lossRate * 100 : null,
-        b.lostOpportunity.lossRate != null ? b.lostOpportunity.lossRate * 100 : null, '%'],
-      ['발사 전 교전공백 p50',
-        a.engagementGap.preFire.p50, b.engagementGap.preFire.p50, '초'],
-      ['누출 전 교전공백 p50',
-        a.engagementGap.beforeLeak.p50, b.engagementGap.beforeLeak.p50, '초'],
-      ['미교전 누출',
-        a.engagementGap.neverEngagedLeaked, b.engagementGap.neverEngagedLeaked, '건']
-    ];
-    var evidence = (current.bottleneckEvidence || []).slice(0, 10);
-    var evidenceHtml = evidence.length ? '<table><thead><tr><th>C2 노드</th><th>평균/피크 ρ</th><th>대기 p90</th>' +
-      '<th>드롭</th><th>귀속 누출</th><th>검증할 해결안</th></tr></thead><tbody>' +
-      evidence.map(function (e) {
-        return '<tr class="row-' + esc(e.level) + '"><td><code>' + esc(e.nodeId) + '</code></td>' +
-          '<td class="num">' + num(e.rho, 2) + ' / ' + num(e.peakRho, 2) + '</td>' +
-          '<td class="num">' + num(e.queueP90Sec, 1) + 's</td><td class="num">' + e.drops + '</td>' +
-          '<td class="num">' + e.attributedLeaks + '</td><td>' + esc(e.recommendation) + '</td></tr>';
-      }).join('') + '</tbody></table>'
-      : '<div class="bn-none">현재 모드에서 C2 직접 병목 증거 없음 — 누출이 C2 완료 후인지 미도달인지 아래 귀속표로 구분하십시오.</div>';
-    return '<h3>🧭 C2 병목 귀속·해결 증거 (구조화 이벤트)</h3>' +
-      '<table><thead><tr><th>지표</th><th>As-Is</th><th>To-Be</th><th>Δ(To-Be−As-Is)</th></tr></thead><tbody>' +
-      rows.map(function (r) {
-        var delta = (r[1] == null || r[2] == null) ? null : r[2] - r[1];
-        return '<tr><td>' + esc(r[0]) + '</td><td class="num">' + num(r[1], r[3] === 'ρ' ? 2 : 1) + r[3] +
-          '</td><td class="num">' + num(r[2], r[3] === 'ρ' ? 2 : 1) + r[3] +
-          '</td><td class="num">' + (delta == null ? '—' : (delta > 0 ? '+' : '') +
-            num(delta, r[3] === 'ρ' ? 2 : 1) + r[3]) + '</td></tr>';
-      }).join('') + '</tbody></table>' +
-      '<div class="note">위 표는 동일 seed 단일 DES의 구조 차이입니다. 해결 확정은 아래 Monte Carlo의 paired Δ 95% CI로 판단합니다. ' +
-      '누출 귀속은 발생 시점의 C2 상태를 나타내며 단독으로 인과를 확정하지 않습니다.</div>' +
-      '<h4>명령 수명주기·항적 신선도·교전 기회</h4>' +
-      '<table><thead><tr><th>지표</th><th>As-Is</th><th>To-Be</th><th>Δ(To-Be−As-Is)</th></tr></thead><tbody>' +
-      mechanismRows.map(function (r) {
-        var delta = (r[1] == null || r[2] == null) ? null : r[2] - r[1];
-        var av = r[1] == null ? '—' : num(r[1], 1) + r[3];
-        var bv = r[2] == null ? '—' : num(r[2], 1) + r[3];
-        return '<tr><td>' + esc(r[0]) + '</td><td class="num">' + av +
-          '</td><td class="num">' + bv + '</td><td class="num">' +
-          (delta == null ? '—' : (delta > 0 ? '+' : '') + num(delta, 1) + r[3]) + '</td></tr>';
-      }).join('') + '</tbody></table>' +
-      '<div class="note">‘—’는 0이 아니라 해당 실행에서 명령/항적 표본이 없음을 뜻합니다. 비상발사는 명시적 교리 플래그와 ' +
-      '교전창 임박 조건을 모두 만족할 때만 분류하며, 명령 부재만으로 발사하지 않습니다.</div>' +
-      '<h4>현재 선택 모드의 병목 증거와 검증할 해결안</h4>' + evidenceHtml +
-      (current.truncated ? '<div class="compute-warning">구조화 이벤트 상한 절삭 — 표시된 분포의 coverage가 불완전합니다.</div>' : '');
-  }
-
-  /**
-   * Phase C — 요격 실패 원인 대조표: 원인코드 × 모드(As-Is/To-Be) 건수·비율(생성 대비)·Δ.
-   * 구조적 원인(공백·포화·지연)이 To-Be에서 줄고 일부가 순수 명중 실패로 이동하는
-   * "구조 개선의 이동 경로"를 드러낸다. 라벨·분류는 엔진 정본 KJ.LEAK_TAXONOMY.
-   */
-  function leakCompareTable(asisG, tobeG) {
-    var codes = {};
-    Object.keys(asisG.leakReasons).forEach(function (r) { codes[r] = true; });
-    Object.keys(tobeG.leakReasons).forEach(function (r) { codes[r] = true; });
-    var list = Object.keys(codes);
-    if (list.length === 0) return '<div class="bn-none">양 모드 모두 요격 실패 없음</div>';
-    list.sort(function (a, b) {
-      return (asisG.leakReasons[b] || 0) - (asisG.leakReasons[a] || 0);
-    });
-    var rows = list.map(function (r) {
-      var tax = KJ.leakTaxonomy(r);
-      var a = asisG.leakReasons[r] || 0, b = tobeG.leakReasons[r] || 0;
-      var ap = asisG.spawned ? (a / asisG.spawned * 100) : 0;
-      var bp = tobeG.spawned ? (b / tobeG.spawned * 100) : 0;
-      var d = bp - ap; // 비율 기준 Δ(%p) — 모드 간 생성 수 차이를 보정
-      var cls = Math.abs(d) < 0.05 ? 'vs-flat' : (tax.structural ? (d < 0 ? 'vs-good' : 'vs-bad') : 'vs-flat');
-      var causeBadge = tax.structurality === 'structural'
-        ? ' <span class="badge badge-warn" title="반사실 판정상 구조·능력 개입이 필요한 주원인">구조</span>'
-        : (tax.structurality === 'conditional'
-          ? ' <span class="badge" title="paired-seed 반복·지속성 증거 후 구조로 승격">조건부</span>'
-          : (tax.structurality === 'unknown' ? ' <span class="badge">미분해</span>' : ''));
-      return '<tr><td>' + esc(tax.family || 'unknown') + ' / ' + esc(tax.group) + causeBadge +
-        '</td><td>' + esc(tax.label) + '</td>' +
-        '<td>' + esc(tax.stage || '—') + '</td>' +
-        '<td class="num">' + a + ' (' + ap.toFixed(1) + '%)</td>' +
-        '<td class="num">' + b + ' (' + bp.toFixed(1) + '%)</td>' +
-        '<td class="num"><span class="' + cls + '">' + (d > 0 ? '+' : '') + d.toFixed(1) + '%p</span></td></tr>';
-    }).join('');
-    return '<table><thead><tr><th>원인 계열 / 분류</th><th>주원인</th><th>발생 단계</th><th>As-Is 건수(비율)</th>' +
-      '<th>To-Be 건수(비율)</th><th>Δ%p</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<div class="note">비율 = 각 모드 생성 위협 대비. [구조]는 배치·권한·경로·능력 개입으로만 해결되는 주원인, ' +
-      '[조건부]는 단일 실행으로 단정하지 않고 paired-seed 반복·지속성 증거가 필요한 용량·화력통제 원인입니다.</div>';
-  }
-
-  /**
-   * Phase C — 실패 항적 타임라인: trace된 실패 항적별로 "생성→…→(멈춘 단계)"와 멈춘 사유를
-   * 표시. 모든 단계 시각은 엔진이 [spawnT, exitT] 경계 내로 보장(Phase 5 exitT 클램프 회귀).
-   */
-  var FAILED_TL_CAP = 40;
-  function failedTimelineSection(res) {
-    var failed = (res.threatTraces || []).filter(function (tr) {
-      return tr.outcome && tr.outcome.indexOf('leaked:') === 0;
-    });
-    var html = '<h3>실패 항적 타임라인 (개별 항적 — 멈춘 단계·사유)</h3>';
-    if (failed.length === 0) {
-      return html + '<div class="bn-none">추적된 실패 항적 없음' +
-        (res.traceTruncated ? ' (trace 상한 절삭 — 통계는 전체 모집단 기준)' : '') + '</div>';
-    }
-    var shown = failed.slice(0, FAILED_TL_CAP);
-    html += shown.map(function (tr) {
-      var reason = tr.outcome.slice(7);
-      var tax = KJ.leakTaxonomy(reason);
-      // 멈춘 단계 = 마지막 '누수:' 단계 직전의 실제 진행 단계
-      var lastIdx = tr.stages.length - 1;
-      while (lastIdx > 0 && tr.stages[lastIdx].name.indexOf('누수:') === 0) lastIdx--;
-      var stopped = tr.stages[lastIdx];
-      var tt = KJ.threatType(tr.type);
-      return '<details class="ftl"><summary>' +
-        '<b>' + esc(tr.id) + '</b> <i>(' + esc(tt ? tt.name : tr.type) + ' · ' + esc(tr.axis) + ')</i> — ' +
-        '멈춘 단계: <b>' + esc(stageLabel(stopped.name)) + '</b> (' + fmtTime(stopped.t) + ') · ' +
-        '사유: <span class="badge badge-bad">' + esc(tax.label) + '</span> <i>[' + esc(tax.group) + ']</i>' +
-        '</summary><ul class="tlog-stages">' +
-        tr.stages.map(function (s) {
-          return '<li>' + fmtTime(s.t) + ' · ' + esc(stageLabel(s.name)) + '</li>';
-        }).join('') +
-        '</ul></details>';
-    }).join('');
-    if (failed.length > shown.length) {
-      html += '<div class="note">실패 항적 ' + failed.length + '건 중 ' + shown.length +
-        '건 표시 (표시 상한 — 통계·대조표는 전체 기준)</div>';
-    }
-    return html;
-  }
   function statCard(label, val, cls) {
     return '<div class="stat-card' + (cls ? ' stat-' + cls : '') + '">' +
       '<div class="stat-val">' + esc(val) + '</div>' +
       '<div class="stat-label">' + esc(label) + '</div></div>';
-  }
-  function signed(n) { return (n > 0 ? '+' : '') + n; }
-
-  /** 링크 전달 1건당 평균 통신지연(초) — panels.js의 MoP 지표와 동일 정의.
-   * kind 지정 시 그 종류(report/coord/command)만 집계. 생략 시 전 링크(하위호환).
-   * ⚠️ 대표값(delaySec) 기반 — 현재 분포(삼각·균등)가 대칭이라 평균=대표값이나,
-   * 비대칭 분포 도입 시 샘플 합 집계로 교체 필요(panels.js 동일 주석 참조). */
-  function commMeanDelay(res, kind) {
-    var num = 0, den = 0;
-    res.links.forEach(function (l) {
-      if (kind && l.kind !== kind) return;
-      num += l.delaySec * l.count; den += l.count;
-    });
-    return den ? num / den : 0;
-  }
-  /** 구조적 실패(공백·포화·지연) 건수 — taxonomy structural 합 (MoCE) */
-  function structuralLeaks(g) {
-    if (g.failureSummary) return g.failureSummary.structuralPrimary || 0;
-    var n = 0;
-    Object.keys(g.leakReasons).forEach(function (r) {
-      if (KJ.leakTaxonomy(r).structural) n += g.leakReasons[r];
-    });
-    return n;
-  }
-  function conditionalLeaks(g) {
-    return g.failureSummary ? (g.failureSummary.conditionalPrimary || 0) : 0;
-  }
-  // MoM 계층 라벨 (NATO COBP/SAS-026, ENV-MOM-COBP-01): MoP 과정(성능) ·
-  // MoCE C2 효과성 · MoFE 전력 효과성. 각 지표에 정의·근거 툴팁을 부착한다.
-  var MOM_TIP = {
-    MoP: 'Measure of Performance — 체계 내부 과정 성능 (NATO COBP/SAS-026)',
-    MoCE: 'Measure of C2 Effectiveness — 지휘통제 효과성 (NATO COBP/SAS-026)',
-    MoFE: 'Measure of Force Effectiveness — 전력 전체의 임무 효과 (NATO COBP/SAS-026)'
-  };
-
-  /**
-   * As-Is(좌)↔To-Be(우) 좌·우 발산형 시각 비교 블록 (Phase D 확장).
-   * 우선 대조 지표(결심 지연·누출률·격추율·중복교전 위험·비용교환비)를 상단에 두고,
-   * 과정(MoP)·C2 효과성(MoCE)·결과(MoFE) 지표를 MoM 계층 라벨·툴팁과 함께 나란히 보인다.
-   */
-  function vsCompare(asisG, tobeG, asisRes, tobeRes, asisHeatTotal, tobeHeatTotal) {
-    var rows = [
-      // ── 우선 대조 지표 (상단 강조) ──
-      { label: '결심 지연 (탐지→교전개시)', mom: 'MoP', a: asisG.meanDecisionDelaySec, b: tobeG.meanDecisionDelaySec, kind: 'sec', lower: true,
-        tip: 'F2T2EA Find→Engage 평균 소요(초). 협조·승인·권한위임 홉과 C2 대기(Wq)가 모두 포함된 관측치 — As-Is 음성 협조(≥180s) 부담이 드러남.' },
-      { label: '확정 누출률 (전체 생성 기준)', mom: 'MoFE',
-        a: rateOf(asisG.leaked, asisG.spawned), b: rateOf(tobeG.leaked, tobeG.spawned), kind: 'rate', lower: true, max: 1,
-        tip: '전체 생성 위협 중 격추하지 못하고 공역을 통과한 비율. 관측 종료 미해결을 분모에 포함한다.' },
-      { label: '격추율 (전체 생성 기준)', mom: 'MoFE',
-        a: rateOf(asisG.killed, asisG.spawned), b: rateOf(tobeG.killed, tobeG.spawned), kind: 'rate', lower: false, max: 1,
-        tip: '전체 생성 위협 중 격추한 비율. 관측 종료 미해결을 분모에 포함한다.' },
-      { label: '관측 종료 미해결률', mom: 'MoFE',
-        a: rateOf(asisG.censoredRaw || 0, asisG.spawned), b: rateOf(tobeG.censoredRaw || 0, tobeG.spawned), kind: 'rate', lower: true, max: 1,
-        tip: '시뮬레이션 종료 시점까지 격추나 누출로 확정되지 않은 항적. 이를 제외한 해결분 기준 비율과 반드시 구분한다.' },
-      { label: '중복교전 위험 (축선 합)', mom: 'MoCE', a: asisHeatTotal, b: tobeHeatTotal, kind: 'raw', lower: true,
-        tip: '서로 다른 통제계통이 제때 협조 불가(협조지연 ≥ 0.5×체공창, ENV-OVERLAP-RISK-01)한 무기쌍 × 부하(λ)의 축선 합.' },
-      { label: '비용교환비 (저가 포화위협)', mom: 'MoFE', a: asisG.cost.exchangeSat, b: tobeG.cost.exchangeSat, kind: 'ratio', lower: true,
-        tip: '무인기·장사정포 대응에 소모한 개념 요격탄 비용 ÷ 격추 위협가치 (WPN/THR-*-COST-01, 타 전역 공개수치 기반 개념값 — 한반도 보정 필요). >1이면 아군이 더 비싼 자원 소모. ' +
-          '⚠️ 함정: 분모에 "격추한" 위협만 들어가 아무것도 안 쏘면 0으로 "최적"이 된다(패배가 경제성으로 계상) — 반드시 아래 "방어효율"·격추율과 함께 읽어라. To-Be가 항상 개선되는 지표가 아님(docs/모의논리서.html §5).' },
-      { label: '방어효율 (방어한 위협가치 비율)', mom: 'MoFE', a: asisG.cost.defenseEfficiency, b: tobeG.cost.defenseEfficiency, kind: 'rate', lower: false, max: 1,
-        tip: '격추 위협가치 ÷ (격추 + 누수 위협가치) — 전체 위협가치 중 실제로 방어(격추)한 비율. 비용교환비의 "안 쏘면 최적" 함정을 반전한다(안 쏘면 방어효율 0=최악). exchange가 누수를 경제성으로 보상하던 결함(⑨ 사실 c)의 보완 지표 — exchange는 회귀 안전을 위해 그대로 유지.' },
-      // ── 보조 지표 ──
-      { label: '평균 격추시간 (조건부·생존자편향 주의)', mom: 'MoP', a: asisG.meanTimeToKillSec, b: tobeG.meanTimeToKillSec, kind: 'sec', lower: true,
-        tip: '격추 성공 항적의 생성→격추 평균 소요(n=As-Is ' + (asisG.meanTimeToKillN || 0) + ' · To-Be ' + (tobeG.meanTimeToKillN || 0) + '). ' +
-          '⚠️ 생존자 편향: "격추한 것"에만 조건화된 평균이라 To-Be가 As-Is가 놓치던 어려운(느린) 표적까지 격추하면 오히려 커질 수 있다 — 격추율(n)과 함께 읽어라.' },
-      { label: 'report 링크 전달지연 (전달 1건 평균)', mom: 'MoP', a: commMeanDelay(asisRes, 'report'), b: commMeanDelay(tobeRes, 'report'), kind: 'sec', lower: true,
-        tip: 'report(센서→담당 C2) 링크 전달의 평균 지연만 집계(coord·command 제외). As-Is도 이 경로는 대부분 데이터링크/KVMF라 음성 180s는 여기서 발화하지 않음 — 음성 협조 180s는 ⑥⑦(coord)단계다.' },
-      { label: '구조적 실패 (공백·포화·지연)', mom: 'MoCE', a: structuralLeaks(asisG), b: structuralLeaks(tobeG), kind: 'cnt', lower: true,
-        tip: '구조·능력 개입으로만 해결되는 최종 주원인 합. 고해상도는 failureSummary.primary 기준.' },
-      { label: '조건부 구조 후보 (반복증거 필요)', mom: 'MoCE', a: conditionalLeaks(asisG), b: conditionalLeaks(tobeG), kind: 'cnt', lower: true,
-        tip: '용량·화력통제·세부원인 미분해 지연. paired-seed 반복 또는 구조 개입 반사실에서 지속되어야 구조적으로 승격.' },
-      { label: '도출 병목 수', mom: 'MoCE', a: asisRes.bottlenecks.length, b: tobeRes.bottlenecks.length, kind: 'cnt', lower: true,
-        tip: '관측 통계(ρ≥0.9·드롭·공백)에서 도출된 병목 수 (ENV-RHO-THRESH-01).' }
-    ];
-    function fmt(v, kind) {
-      if (v === null || v === undefined || (kind !== 'cnt' && !isFinite(v))) return '—';
-      if (kind === 'rate') return (v * 100).toFixed(0) + '%';
-      if (kind === 'sec') return v.toFixed(0) + '초';
-      if (kind === 'raw') return v.toFixed(1);
-      if (kind === 'ratio') return v.toFixed(2) + '배';
-      return v + '건';
-    }
-    function deltaText(d, kind) {
-      var av = Math.abs(d);
-      if (kind === 'rate') return (av * 100).toFixed(0) + '%p';
-      if (kind === 'sec') return av.toFixed(0) + '초';
-      if (kind === 'raw') return av.toFixed(1);
-      if (kind === 'ratio') return av.toFixed(2);
-      return av + '건';
-    }
-    var body = rows.map(function (r) {
-      var aNum = (typeof r.a === 'number' && isFinite(r.a)) ? r.a : null;
-      var bNum = (typeof r.b === 'number' && isFinite(r.b)) ? r.b : null;
-      var max = r.max || Math.max(aNum || 0, bNum || 0, 1e-9);
-      var aw = aNum === null ? 0 : Math.min(100, aNum / max * 100);
-      var bw = bNum === null ? 0 : Math.min(100, bNum / max * 100);
-      var deltaLabel, dcls;
-      if (aNum === null || bNum === null) {
-        deltaLabel = '판정 불가'; dcls = 'vs-flat';
-      } else {
-        var d = bNum - aNum;                   // To-Be − As-Is
-        var improved = r.lower ? d < 0 : d > 0;
-        var same = Math.abs(d) < (r.kind === 'cnt' ? 0.5 : 1e-9);
-        // 화살표 = 값 변화 방향(▲증가·▼감소), 색·라벨 = 개선/악화 (지표별 좋은 방향이 다름)
-        var arrow = same ? '=' : (d > 0 ? '▲' : '▼');
-        dcls = same ? 'vs-flat' : (improved ? 'vs-good' : 'vs-bad');
-        deltaLabel = same ? '동일' : (arrow + ' ' + deltaText(d, r.kind) + (improved ? ' 개선' : ' 악화'));
-      }
-      return '<div class="vs-row" title="' + esc(r.tip || '') + '">' +
-        '<div class="vs-val asis">' + fmt(r.a, r.kind) + '</div>' +
-        '<div class="vs-track l"><div class="vs-fill asis" style="width:' + aw.toFixed(0) + '%"></div></div>' +
-        '<div class="vs-mid"><div class="vs-metric"><span class="mom mom-' + r.mom.toLowerCase() +
-        '" title="' + esc(MOM_TIP[r.mom]) + '">' + r.mom + '</span> ' + esc(r.label) + '</div>' +
-        '<div class="vs-delta ' + dcls + '">' + deltaLabel + '</div></div>' +
-        '<div class="vs-track r"><div class="vs-fill tobe" style="width:' + bw.toFixed(0) + '%"></div></div>' +
-        '<div class="vs-val tobe">' + fmt(r.b, r.kind) + '</div>' +
-        '</div>';
-    }).join('');
-    return '<div class="vs-block">' +
-      '<div class="vs-headrow"><div class="vs-side asis">◀ As-Is 분절형</div>' +
-      '<div class="vs-side-mid">지표</div>' +
-      '<div class="vs-side tobe">To-Be 통합형 ▶</div></div>' +
-      body +
-      '<div class="note">막대 길이 = 값의 상대 크기(비율 지표는 0~100%, 나머지는 두 값 중 최대 기준). ' +
-      '가운데 화살표 초록 ▼/▲ = To-Be가 개선된 방향. 상단 5개가 우선 대조 지표. ' +
-      'MoM 계층: MoP 과정(성능) · MoCE C2 효과성 · MoFE 전력 효과성 — NATO COBP(SAS-026) 근거, ' +
-      '지표 위에 마우스를 올리면 정의·근거 툴팁이 표시됩니다. 비용교환비는 개념 단가 기반(한반도 보정 필요).</div></div>';
   }
 
   // seed/dur 입력을 사용자가 만진 뒤에는 re-render가 값을 덮어쓰지 않음

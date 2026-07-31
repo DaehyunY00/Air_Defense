@@ -39,14 +39,17 @@ function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fa
 
 // 명시적 OFF(= 결함 상태) 지문 — LEGACY_HIRES × iads-c2 × ×1.5 × seed 12345 × 900초.
 // ⚠️ 이 지문의 의미: "OFF == ADR-056 도입 전"이 아니라 **"OFF == 현행 기준선의 결함 팔"**이다.
-// 기본값이 여섯 번 재기준화되며(ADR-061 이관 → 065 → 066 → 067 → 068 → 072) 배경이 계속 바뀌었다.
+// 기본값이 일곱 번 재기준화되며(ADR-061 이관 → 065 → 066 → 067 → 068 → 072 → 076) 배경이
+// 계속 바뀌었다. ADR-076(교전창 캐시 키 정합)에서 **SC3만** 움직였다 — SC1 두 지문은 글자
+// 그대로 종전 값이다. SC3는 위협 밀도가 높아 오염된 창을 읽는 분기에 실제로 닿았다.
 var OFF_SHA = {
   'sc1|asis': '84603e5203e044d6f60ebb44eb741dafb6f1e6e2ed588b05bf5f7d753a588d4e',
   'sc1|tobe': 'aa72230fde80c9988e0a194667b766cd372ddbd0ff5dc954e97ea4b364470e37',
-  'sc3|asis': 'd8a8f85ed55a3ccb43f4c60c71a108f56d39a3c513911fd66f5778b100d94a79',
-  'sc3|tobe': '49c4944a212f3dd5eb856acb9c3796a2421aa14e2521c8e8a3a2c764c3636147'
+  'sc3|asis': 'caabc531e11a74f7fb74b7980e5c3d396eac4ef8dd722a3117f5f0a6bce86bf2',
+  'sc3|tobe': '1489cb9f134bef910fa651005cc1cc636803645269d561a0f275f4702a4ae867'
 };
-var OFF_TOBE_DUP = { sc1: 12, sc3: 12 }; // OFF To-Be 중복교전 — 결함이 남아 있다는 증거
+// OFF To-Be 중복교전 — 결함이 남아 있다는 증거. ADR-076에서 sc3 12 → 13.
+var OFF_TOBE_DUP = { sc1: 12, sc3: 13 };
 
 function run(sc, mode, flags) {
   return KJ.runDES({

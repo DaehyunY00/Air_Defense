@@ -51,11 +51,14 @@ KJ.IADS = Object.assign({}, KJ.IADS, {
 const CASES = ['sc1|asis', 'sc1|tobe', 'sc3|asis', 'sc3|tobe'];
 // ADR-073 종료 시점(`decisionAudit`만 ON)의 지문 — Phase B 신규 플래그가 OFF면 여기서
 // 한 발도 안 움직여야 한다. 전 플래그 OFF 지문은 `decision-audit.test.mjs`가 따로 잠근다.
+// ADR-076 재산출 — 교전창 캐시 키 결함 수정으로 실제 경로의 값이 바뀌었다. 같은 커밋에서
+// `_engagementWindowOf`의 전용 빈 캐시 격리 장치도 걷어냈다(키가 순수해져 불필요해졌다).
+// 그 제거가 결과 중립임은 전 케이스 bit-exact로 실증했다 — 아래 지문은 제거 후 값이다.
 const AUDIT_ONLY_SHA = {
-  'sc1|asis': 'c2fd837d6ec984c8b7c72b781198a181f1b2250b53ce01d83045eb1ce83a2626',
-  'sc1|tobe': 'c0999317a28449ffde48bc77d0aa94c50b4f0985cd56b9efde580fc3e5cdce4f',
-  'sc3|asis': '025489ca5ec479964bc82a21c73c24dc960d877d23655ae5f1d61f47e40237fb',
-  'sc3|tobe': '655175933526034eab9148b0fdb22009c2c2b2117a414eee4302681941eee273'
+  'sc1|asis': 'c98ab9ad26c187ab19149b85eea322dcb167e90a055d4cc3421a4de17bd9f8d0',
+  'sc1|tobe': '3898871e2ddc19e84c0087aa6909be631b1c6ba041935c725492826091d62eed',
+  'sc3|asis': '9511554701b681b7ba512b40b3978640442a9e15f27a7554d031e692e5adb0b5',
+  'sc3|tobe': '12203f492e6d780ed825f4ddfb66d4da79c6954f5d67f85730da63a91d3df745'
 };
 
 function run(key, features, deploymentId) {

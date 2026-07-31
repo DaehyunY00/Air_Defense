@@ -37,6 +37,19 @@
 
   function runLocal(task, payload) {
     var cfg, otherMode, base;
+
+  /**
+   * ADR-073/074 결심 감사 이벤트를 결과에 실어 보낸다.
+   * ⚠️ c2Events는 곧 삭제되므로(용량) **삭제 전에** 여기서 뽑아야 한다.
+   * decision_audit만 남기고 나머지 이벤트는 버린다 — 결과 화면이 쓰는 것은 이것뿐이다.
+   * 계측이 꺼져 있으면 undefined를 남겨 wire shape를 종전과 같게 둔다.
+   */
+  function pickDecisionAudits(res) {
+    if (!res || !res.c2Events) return undefined;
+    var out = res.c2Events.filter(function (e) { return e.type === 'decision_audit'; });
+    return out.length ? out : undefined;
+  }
+
     if (task === 'desPair') {
       cfg = Object.assign(scenarioConfig(payload.cfg), { c2Analysis: true });
       otherMode = cfg.mode === 'asis' ? 'tobe' : 'asis';
@@ -47,12 +60,16 @@
       }));
       currentDes.c2Analysis = KJ.buildC2Analysis(currentDes.c2Events, currentDes);
       otherDes.c2Analysis = KJ.buildC2Analysis(otherDes.c2Events, otherDes);
+      var currentAudits = pickDecisionAudits(currentDes);
+      var otherAudits = pickDecisionAudits(otherDes);
       delete currentDes.c2Events;
       delete otherDes.c2Events;
       var desOut = {
         current: currentDes,
         other: otherDes,
         otherMode: otherMode,
+        currentAudits: currentAudits,
+        otherAudits: otherAudits,
         execution: 'main-thread-fallback'
       };
       if (payload.includeHeat) {

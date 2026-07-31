@@ -377,7 +377,9 @@
     this.threatSeq = 0;
     this.nodeState = {};
     this.linkStat = {};   // "from>to" -> {count, delaySec, type, kind}
-    this._geometryWindowCache = {}; // shooter x threat x axis counterfactual PIP window cache
+    // ADR-076: 키는 사수 × 유형 × 축 × 체공창 × **착탄점**. 착탄점까지 넣어야 캐시가
+    // 창 계산의 순수함수 캐시가 된다(산포 ON에서 위협마다 궤적 종점이 다르다).
+    this._geometryWindowCache = {}; // shooter x threat x axis x impact counterfactual PIP window cache
     this.global = {
       spawned: 0, detected: 0, engaged: 0, killed: 0, leaked: 0,
       reachedC2: 0, everEngaged: 0,
@@ -1673,7 +1675,14 @@
   /** 탄약·채널·FC를 정상화한 반사실에서 전 비행창 중 PIP가 한 번이라도 가능한지 검사한다. */
   Simulation.prototype._iadsGeometryWindow = function (shooter, threat) {
     if (!this._iadsCanEngage(shooter, threat)) return null;
-    var cacheKey = shooter.id + '|' + threat.type + '|' + threat.axis + '|' + threat.dwellSec;
+    // ADR-076: 키에 **착탄점**이 들어가야 한다. 창은 궤적의 함수이고 궤적의 종점은
+    // `threat.target`인데(ADR-063 표적권역 산포가 켜지면 위협마다 다르다), 종전 키
+    // (사수|유형|축|체공창)는 그 종점을 빠뜨렸다 — 같은 키의 두 위협이 서로 다른 착탄점을
+    // 가지면 먼저 계산된 쪽의 창이 뒤 위협에게 그대로 나갔다. 산포 OFF면 `target`이
+    // undefined라 키가 종전과 완전히 같다(bit-exact 보존). 좌표는 반올림하지 않는다 —
+    // 자릿수를 줄이면 서로 다른 착탄점이 다시 한 칸을 공유하게 되어 결함이 부분 재발한다.
+    var cacheKey = shooter.id + '|' + threat.type + '|' + threat.axis + '|' + threat.dwellSec +
+      (threat.target ? '|' + threat.target[0] + ',' + threat.target[1] : '');
     var cached = this._geometryWindowCache[cacheKey];
     if (cached !== undefined) {
       return cached === null ? null : {
@@ -1833,30 +1842,19 @@
    */
   Simulation.prototype._engagementWindowOf = function (threat) {
     if (threat._auditWindow !== undefined) return threat._auditWindow;
-    // ⚠️ 관측이 관측 대상을 바꾸지 않게 하는 장치 —— 반드시 필요하다.
-    // `_iadsGeometryWindow`의 공유 캐시 키는 (사수 × 위협유형 × 축 × 체공창)인데, ADR-063
-    // 표적권역 산포가 켜지면 **같은 키의 두 위협이 서로 다른 착탄점**을 갖는다. 즉 캐시는
-    // 먼저 계산된 위협의 창을 뒤 위협에게도 돌려준다. 우리는 결심보다 이른 시점(위협 생성)에
-    // 이 함수를 부르므로, 공유 캐시를 그대로 쓰면 **캐시가 채워지는 순서를 바꿔 실제 경로의
-    // 값까지 흔든다**(실측: SC3 To-Be에서 격추 95→91로 이동). 계측은 관측 전용이어야 하므로
-    // 위협마다 전용 빈 캐시로 갈아끼우고 끝나면 되돌린다 — 공유 캐시는 한 글자도 건드리지
-    // 않으며, 위협 간 키 충돌도 동시에 회피된다.
-    // ※ 공유 캐시 키가 착탄점을 빠뜨린 것 자체는 이 계측과 무관한 **기존 결함**이다
-    //    (`_terminalIadsFailure`·`_classifyNativeExitFailure`도 같은 캐시를 읽는다).
-    //    고치면 결과가 바뀌므로 이 계측 계층에서 손대지 않고 별도 과제로 남긴다.
-    var sharedCache = this._geometryWindowCache;
-    this._geometryWindowCache = {};
+    // ADR-076로 공유 캐시를 그대로 쓸 수 있게 되었다. ADR-074 당시에는 캐시 키가 착탄점을
+    // 빠뜨려(같은 키 × 다른 착탄점) **캐시가 채워지는 순서가 실제 경로의 값을 바꿨고**,
+    // 우리는 결심보다 이른 시점(위협 생성)에 이 함수를 부르므로 계측이 관측 대상을 흔들었다
+    // (실측: SC3 To-Be 격추 95→91). 그래서 위협마다 전용 빈 캐시로 갈아끼웠다. 이제 키에
+    // 착탄점이 들어가 캐시는 순수함수 캐시이고(캐시 유/무 bit-exact 실증), 순서 의존이
+    // 사라져 그 격리 장치가 필요 없다 — 공유 캐시를 쓰면 계측 비용도 함께 줄어든다.
     var first = Infinity, last = -Infinity;
-    try {
-      this._shadowShooters().forEach(function (n) {
-        var w = this._iadsGeometryWindow(n, threat);
-        if (!w) return;
-        if (w.firstFire < first) first = w.firstFire;
-        if (w.lastFire > last) last = w.lastFire;
-      }, this);
-    } finally {
-      this._geometryWindowCache = sharedCache;
-    }
+    this._shadowShooters().forEach(function (n) {
+      var w = this._iadsGeometryWindow(n, threat);
+      if (!w) return;
+      if (w.firstFire < first) first = w.firstFire;
+      if (w.lastFire > last) last = w.lastFire;
+    }, this);
     threat._auditWindow = Number.isFinite(last)
       ? { openT: first, closeT: last }
       : { openT: null, closeT: null };

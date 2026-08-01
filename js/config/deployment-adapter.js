@@ -333,8 +333,16 @@
       });
     }
 
+    // ⚠️ resolveRoleId는 **등록되지 않은 키를 그대로 반환한다**. 그 값은 nodeId가 아니므로
+    //    엔진의 `!this.nodeState[approvalId]` 가드(sim-engine.js)에 걸려 "승인 불필요"로
+    //    조용히 처리된다 — 승인 홉이 사라지는데 실행은 성공한다. 그래서 데이터(threats.js)가
+    //    쓰는 역할 이름은 **빠짐없이 여기 있어야** 한다. approval-authority.test.mjs가 잠근다.
     var roles = {
       fusionC2: iaoc ? iaoc.id : null,
+      // ADR-077: 합동방공C2 조율층. fusionC2와 같은 노드를 가리키는 별칭이다 — 데이터가
+      // 'fusionC2'(내부 배선 이름) 대신 편제 이름으로 승인권자를 적을 수 있게 한다.
+      // KAOC/MCRC가 이미 같은 노드를 두 이름으로 가리키는 것과 같은 방식.
+      IAOC: iaoc ? iaoc.id : null,
       KAMDOC: kamdoc ? kamdoc.id : null,
       MCRC: mcrc ? mcrc.id : null,
       KAOC: mcrc ? mcrc.id : (kamdoc ? kamdoc.id : null),

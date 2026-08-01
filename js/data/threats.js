@@ -4,8 +4,16 @@
  * 위협 클래스 키는 노드의 detects/canEngage 키와 일치해야 함.
  * detectFactor: 센서 스캔당 탐지 용이성(0~1 개념값). 낮을수록 재탐지·항적소실 반복
  *   → 분석 모듈에서 항적 재생성 부하 배수(1/detectFactor 상한 적용)로 반영.
- * approvalLevel: As-Is에서 교전승인이 요구되는 상위 제대(병목 후보를 '고정'하는 것이 아니라
+ * approvalLevel: 교전승인이 요구되는 상위 제대(병목 후보를 '고정'하는 것이 아니라
  *   승인 경로에 부하를 부과할 뿐이며, 실제 병목 여부는 시나리오 부하 분석으로 도출됨).
+ *   값은 **역할 이름**이며 deployment-adapter.js의 catalog.roles가 실제 노드로 해소한다
+ *   (KAOC·MCRC·KAMDOC·IAOC). ⚠️ 여기에 roles에 없는 이름을 적으면 resolveRoleId가 그
+ *   문자열을 그대로 돌려주고, 엔진이 "그런 노드 없음 → 승인 불필요"로 **조용히 넘어간다**.
+ *   승인 홉이 통째로 사라지는데 실행은 성공하므로 눈치채기 어렵다 — 역할 이름을 새로 쓸
+ *   때는 roles에 먼저 등록할 것(approval-authority.test.mjs가 이 대응을 잠근다).
+ *   ADR-077: To-Be의 ABT 승인권자를 MCRC → IAOC(합동방공C2 조율층)로 옮겼다. To-Be
+ *   구조의 요체가 기존 C2 체계 위에 얹힌 조율층인데, 승인만 옛 계선(MCRC)으로 붙어
+ *   조율층을 건너뛰고 있었다.
  * dwellSec: 위협이 요격 가능 공역에 머무는 시간 창(개념값, 초). 이 시간 내 격추하지 못하면
  *   누수(leak)로 처리 — DES 엔진(Phase 2)의 교전기회 상실 판정에 사용. 탄도탄은 비행시간이
  *   짧아 창이 좁고(승인 지연이 곧 요격기회 상실), 저속 무인기는 창이 넓다.
@@ -51,7 +59,7 @@
       detectFactor: 0.6, paramRef: 'THR-AN2-RCS-01',
       rangeBandKm: { min: 100, max: 900 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-AN2-RNG-01',
       unitCostM: 0.3, costRef: 'THR-AN2-COST-01',
-      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' },
+      approvalLevel: { asis: 'KAOC', tobe: 'IAOC' },
       automation: { asis: 'human-in-loop', tobe: 'human-on-loop' }
     },
     heli: {
@@ -60,7 +68,7 @@
       detectFactor: 0.7, paramRef: 'THR-HELI-RCS-01',
       rangeBandKm: { min: 50, max: 500 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-HELI-RNG-01',
       unitCostM: 3, costRef: 'THR-HELI-COST-01',
-      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' },
+      approvalLevel: { asis: 'KAOC', tobe: 'IAOC' },
       automation: { asis: 'human-in-loop', tobe: 'human-on-loop' }
     },
     fighter: {
@@ -69,7 +77,7 @@
       detectFactor: 0.9, paramRef: 'SEN-ACR-PD-01',
       rangeBandKm: { min: 200, max: 1500 }, originZones: ['dmz', 'coastal', 'deep'], rangeRef: 'THR-FTR-RNG-01',
       unitCostM: 25, costRef: 'THR-FTR-COST-01',
-      approvalLevel: { asis: 'KAOC', tobe: 'MCRC' },
+      approvalLevel: { asis: 'KAOC', tobe: 'IAOC' },
       automation: { asis: 'human-in-loop', tobe: 'human-on-loop' }
     },
     cruise: {

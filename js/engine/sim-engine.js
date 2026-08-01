@@ -151,7 +151,7 @@
     this.catalog = KJ.resolveModelCatalog
       ? KJ.resolveModelCatalog(cfg)
       : { id: 'legacy', nodes: KJ.NODES, links: KJ.LINKS,
-          roles: { fusionC2: 'JAMDC2', KAMDOC: 'KAMDOC', MCRC: 'MCRC', KAOC: 'KAOC' } };
+          roles: { fusionC2: 'JAMDC2', IAOC: 'JAMDC2', KAMDOC: 'KAMDOC', MCRC: 'MCRC', KAOC: 'KAOC' } };
     // ADR-061: legacy 배치·compat 충실도 폐기 — 고해상도 iads-c2가 유일한 정본 경로다.
     if (cfg.features && cfg.features.highResolutionDeployment === false) {
       throw new Error('legacy 배치는 폐기되었다(ADR-061) — 고해상도 배치 6종만 지원');

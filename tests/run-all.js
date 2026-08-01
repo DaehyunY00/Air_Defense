@@ -69,11 +69,13 @@ var suites = [
   ,['sensor-report-parity.test.mjs', 'ADR-067 레이더→C2 보고 주기 양 모드 공통 (대칭·킬웹 포함·음성 비대칭 유지·As-Is 불변)']
   ,['codex-alignment.test.mjs', 'ADR-069~072 IADS_codex 정본 정합 (톱니 신선도·원격교전+웹파티션·자위권 발사·기본값 전환)']
   ,['threat-log-pairing.test.mjs', '항적 CRN 짝맞춤·trace 비침습성 (위협집단 동일성·판정 분기 실재·tracePair 배선)']
-  ,['decision-audit.test.mjs', 'ADR-073 결심 감사 로깅 (OFF bit-exact·RNG 소비 불변·상한/표본 결정론)']
-  ,['decision-audit.test.mjs', 'ADR-062 결심 감사 로깅 (OFF bit-exact·RNG 소비 불변·상한/표본 결정론)']
+  // 종전에 decision-audit이 두 줄(ADR-073·ADR-062 라벨)로 등록돼 같은 파일을 두 번 돌렸다.
+  // 라벨만 다를 뿐 같은 스위트라 게이트 시간만 늘었다 — 한 줄로 합친다(ADR 두 개를 다 적는다).
+  ,['decision-audit.test.mjs', 'ADR-062·073 결심 감사 로깅 (OFF bit-exact·RNG 소비 불변·상한/표본 결정론)']
   ,['shadow-eval.test.mjs', 'ADR-074 그림자 평가·교전창 계측 (RNG 불변·regret≥0·USFK 제외·전수 분모)']
   ,['decision-comparison.test.mjs', 'ADR-075 결심 비교 탭 (순수 후처리·미측정 표시·딥링크 하위호환·단일본)']
   ,['geometry-window-cache.test.mjs', 'ADR-076 교전창 캐시 키 정합 (순수함수 캐시·순서 독립·종전 키 충돌 실측·산포 OFF 불변)']
+  ,['approval-authority.test.mjs', 'ADR-077 교전승인권자 해소 정합 (미등록 역할=승인 증발 방지·To-Be 조율층 경유·As-Is 불변)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

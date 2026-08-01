@@ -56,9 +56,10 @@ const CASES = ['sc1|asis', 'sc1|tobe', 'sc3|asis', 'sc3|tobe'];
 // 그 제거가 결과 중립임은 전 케이스 bit-exact로 실증했다 — 아래 지문은 제거 후 값이다.
 const AUDIT_ONLY_SHA = {
   'sc1|asis': 'c98ab9ad26c187ab19149b85eea322dcb167e90a055d4cc3421a4de17bd9f8d0',
-  'sc1|tobe': '3898871e2ddc19e84c0087aa6909be631b1c6ba041935c725492826091d62eed',
+  // ADR-077 재고정: To-Be ABT 승인권자 MCRC → IAOC. As-Is 2케이스는 지문 불변.
+  'sc1|tobe': 'c816e4a62b3f9ec31e17fc7a57b8bcd18c96cac69d5a178616ae4149e6364755',
   'sc3|asis': '9511554701b681b7ba512b40b3978640442a9e15f27a7554d031e692e5adb0b5',
-  'sc3|tobe': '12203f492e6d780ed825f4ddfb66d4da79c6954f5d67f85730da63a91d3df745'
+  'sc3|tobe': '06343d984218f14044b4ae0134c0f268f3dfee4b275b9b29d4cdbe9ec4d0394b'
 };
 
 function run(key, features, deploymentId) {

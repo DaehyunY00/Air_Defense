@@ -1048,3 +1048,6 @@ li.chk-fail { background: #43140f; }
 .sv-none { font-size: 7px; fill: #6b7a8d; font-style: italic; }
 .sv-ghost rect { fill: none; stroke: #4a5666; stroke-width: 0.8; stroke-dasharray: 3 2; }
 .sv-ghost text { font-size: 7px; fill: #6b7a8d; }
+/* 경로상 보완 노드 — 카탈로그 링크는 있으나 항적에 기록되지 않은 홉 (C2 계층 공용) */
+.sv-bridge circle { fill: none; stroke: #8a97a8; stroke-width: 1.4; stroke-dasharray: 2 2; }
+.sv-bridge text { fill: #6b7a8d; font-style: italic; }

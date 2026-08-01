@@ -170,7 +170,13 @@ console.log('\n== 5) UI 계약 ==');
   assert(/linksInMode\s*\?\s*KJ\.linksInMode\(mode,\s*cat\)/.test(panels),
     'linksInMode에 카탈로그 전달 (기본 배치 폴백 방지)');
   // [C2 구조]는 As-Is/To-Be를 **병렬 세로 계층**으로 놓고, 항적 재생을 지원한다.
-  assert(/function column\(mode, act\)/.test(panels), 'C2 구조도가 모드별 컬럼 렌더러로 분리됨');
+  assert(/function c2Column\(cat, mode, act\)/.test(panels), 'C2 구조도가 모드별 컬럼 렌더러로 분리됨');
+  // ⚠️ [C2 구조]와 [분석]의 항적별 다이어그램은 **같은 레이아웃**이어야 한다 —
+  //    두 벌로 두면 계층 정의가 갈라져 같은 항적이 화면마다 다르게 보인다.
+  assert(/c2Column: c2Column/.test(panels), 'C2 계층 레이아웃을 공용으로 노출');
+  const simSrc = fs.readFileSync(path.join(root, 'ui/sim-view.js'), 'utf8');
+  assert(/KJ\.panels\.c2Column/.test(simSrc),
+    '[분석] 탭의 항적별 다이어그램이 같은 C2 계층 레이아웃을 재사용');
   assert(/'상위 작전사'/.test(panels) && /'합동방공 C2 \(조율층\)'/.test(panels) &&
     /'C2 체계'/.test(panels) && /'교전통제 \(ICC · ECS\)'/.test(panels),
     '세로 계층이 작전사 → 합동방공C2 → C2 체계 → 교전통제 순으로 정의됨');

@@ -216,7 +216,7 @@
         var res = pair.current;
         var elapsed = now() - t0;
 
-        _nodeIdx = null; _linkIdx = null;  // 배치·플래그가 바뀌면 색인도 다시 만든다
+        _nodeIdx = null;   // 배치·플래그가 바뀌면 노드 색인도 다시 만든다
         // 결심 감사 이벤트를 위협 id로 묶어 둔다(좌=As-Is·우=To-Be 고정).
         var auditsCur = pair.currentAudits || [], auditsOth = pair.otherAudits || [];
         run = {
@@ -853,163 +853,38 @@
   //    이유로 선을 그으면 모델에 없는 연결을 지어내는 것이다 — 그 선을 보고 "이렇게
   //    연결돼 있구나"라고 읽을 것이기 때문이다. 링크가 없으면 선도 없다.
 
-  var _linkIdx = null;
-  function linkIndex() {
-    if (_linkIdx) return _linkIdx;
-    var cat = cmp.catalog;
-    _linkIdx = {};
-    ((cat && cat.links) || []).forEach(function (l) {
-      (_linkIdx[l.from] = _linkIdx[l.from] || {})[l.to] = l.kind || 'coord';
-    });
-    return _linkIdx;
-  }
+
 
   /**
-   * 참여 노드 키(id 또는 typeId)를 **카탈로그 노드 id**로 확정한다.
-   * typeId가 여러 노드에 걸리면(ICC W1·W2) 어느 것인지 항적만으로는 알 수 없다 —
-   * 그때는 다른 참여 노드와 실제 링크가 있는 후보를 고르고, 그래도 못 고르면
-   * typeId를 그대로 둔 채 **간선 없이** 표시한다(없는 연결을 만들지 않는다).
+   * 항적별 C2 계통 다이어그램 — 좌 As-Is · 우 To-Be.
+   * ⚠️ [C2 구조] 탭과 **같은 세로 계층 레이아웃**을 쓴다(KJ.panels.c2Column).
+   *    종전에는 이 화면만 3열 가로 배치(센서/C2/사수)를 써서, 같은 항적이 탭마다 다른
+   *    모양으로 보였다 — 계층 정의가 두 벌이면 반드시 갈라진다.
+   *    관여 노드의 최초 시각(act)을 넘기면 c2Column이 개별 보기로 그린다.
    */
-  function resolveConcrete(part) {
-    var cat = cmp.catalog, all = (cat && cat.nodes) || [], links = linkIndex();
-    var byType = {};
-    all.forEach(function (n) { if (n.typeId) (byType[n.typeId] = byType[n.typeId] || []).push(n); });
-    var byId = {};
-    all.forEach(function (n) { byId[n.id] = n; });
-
-    var direct = {}, pending = [];
-    part.rows.forEach(function (r) {
-      if (byId[r.id]) { direct[r.id] = r; return; }
-      var group = byType[r.id] || [];
-      if (group.length === 1) { direct[group[0].id] = { id: group[0].id, name: group[0].name, category: group[0].category, first: r.first, last: r.last }; return; }
-      pending.push({ row: r, group: group });
-    });
-    pending.forEach(function (p) {
-      var pick = p.group.find(function (n) {
-        return Object.keys(direct).some(function (o) {
-          return (links[n.id] && links[n.id][o]) || (links[o] && links[o][n.id]);
-        });
-      });
-      if (pick) direct[pick.id] = { id: pick.id, name: pick.name, category: pick.category, first: p.row.first, last: p.row.last };
-      else direct[p.row.id] = { id: p.row.id, name: p.row.name, category: p.row.category, first: p.row.first, last: p.row.last, abstract: true };
-    });
-    return Object.keys(direct).map(function (k) { return direct[k]; });
-  }
-
-  var EDGE_COLOR = { report: '#3d8bd9', coord: '#a06ed2', command: '#3d8b40', status: '#6b7a8d' };
-
-  /** 한 모드의 C2 계통 다이어그램(SVG). 열 배치는 고정이라 좌우를 그대로 겹쳐 읽을 수 있다. */
-  function diagramBlock(title, part, respScope) {
-    if (!part) return '<div class="cdg-block"><h4>' + esc(title) + '</h4>' +
-      '<div class="bn-none">대응 항적 없음</div></div>';
-    var nodes = resolveConcrete(part), links = linkIndex();
-    // 교전명령은 상급 C2 → **ECS** → 포대로 간다. 항적은 `사수선정·표적할당:IAOC→BATTERY_…`
-    // 처럼 양 끝만 적어 중간 ECS 홉이 빠지고, 그러면 사수가 선 없이 떠 버린다.
-    // 카탈로그에 1홉 경로가 실재할 때만 그 중간 노드를 **점선·속 빈 원**으로 보완하고
-    // "항적 기록에는 없음"으로 표시한다 — 연결을 지어내는 게 아니라 모델이 가진 경로를 밝힌다.
-    var have = {};
-    nodes.forEach(function (n) { have[n.id] = true; });
-    var cat = cmp.catalog, allNodes = (cat && cat.nodes) || [];
-    var byIdAll = {};
-    allNodes.forEach(function (n) { byIdAll[n.id] = n; });
-    // ⚠️ part.c2.id는 항적이 적은 **typeId**(`IAOC`)일 수 있다. 링크 색인은 노드 id
-    //    (`C2_IAOC_IAOC`)로 되어 있으므로 여기서 실제 id로 환산한다 — 안 하면 책임 C2
-    //    강조도, 센서 직결 집계도, 경로 보완도 전부 조용히 빗나간다(실제로 0/7로 나왔다).
-    var respKey = part.c2 && part.c2.id;
-    var respId = null;
-    if (respKey) {
-      if (byIdAll[respKey] && have[respKey]) respId = respKey;
-      else {
-        var hit = nodes.find(function (n) {
-          return n.id === respKey || (byIdAll[n.id] && byIdAll[n.id].typeId === respKey);
-        });
-        respId = hit ? hit.id : null;
-      }
-    }
-    if (respId && have[respId]) {
-      nodes.filter(function (n) { return n.category === 'shooter'; }).forEach(function (sh) {
-        if (links[respId] && links[respId][sh.id]) return;                 // 직접 링크가 있으면 불필요
-        var mid = Object.keys(links[respId] || {}).find(function (m) {
-          return links[m] && links[m][sh.id] && !have[m];
-        });
-        if (!mid || !byIdAll[mid]) return;
-        have[mid] = true;
-        nodes.push({ id: mid, name: byIdAll[mid].name || mid, category: byIdAll[mid].category,
-          first: sh.first, last: sh.first, bridge: true });
-      });
-    }
-    var COL = { sensor: 0, c2: 1, shooter: 2 };
-    var cols = [[], [], []];
-    nodes.forEach(function (n) {
-      var c = COL[n.category]; if (c === undefined) c = 1;
-      cols[c].push(n);
-    });
-    cols.forEach(function (list) { list.sort(function (a, b) { return a.first - b.first; }); });
-
-    var W = 330, PAD = 8, colX = [58, 165, 285];
-    var rowH = 26, maxRows = Math.max(1, cols[0].length, cols[1].length, cols[2].length);
-    var H = PAD * 2 + maxRows * rowH;
-    var posOf = {};
-    cols.forEach(function (list, ci) {
-      var offset = (maxRows - list.length) / 2;
-      list.forEach(function (n, i) {
-        posOf[n.id] = { x: colX[ci], y: PAD + (offset + i) * rowH + rowH / 2, node: n };
-      });
-    });
-
-    // 간선 — 카탈로그에 실제 존재하는 링크만.
-    var edges = '';
-    nodes.forEach(function (a) {
-      nodes.forEach(function (b) {
-        if (a.id === b.id) return;
-        var kind = links[a.id] && links[a.id][b.id];
-        if (!kind) return;
-        var pa = posOf[a.id], pb = posOf[b.id];
-        if (!pa || !pb || pa.x === pb.x) return;      // 같은 열끼리는 생략(가독성)
-        // 간선은 **뒤쪽 노드가 켜질 때** 함께 켜진다.
-        var t = Math.max(a.first, b.first);
-        edges += '<line class="cdg-edge" data-t="' + t + '" x1="' + pa.x + '" y1="' + pa.y +
-          '" x2="' + pb.x + '" y2="' + pb.y + '" stroke="' + (EDGE_COLOR[kind] || '#6b7a8d') +
-          '" stroke-width="1.4"' + (kind === 'coord' ? ' stroke-dasharray="3 3"' : '') +
-          '><title>' + esc(a.name + ' → ' + b.name + ' (' + kind + ')') + '</title></line>';
-      });
-    });
-
-    var circles = nodes.map(function (n) {
-      var p = posOf[n.id];
-      var isResp = respId && n.id === respId;
-      var short = n.name.length > 13 ? n.name.slice(0, 12) + '…' : n.name;
-      return '<g class="cdg-node cdg-' + esc(n.category) + (isResp ? ' cdg-resp' : '') +
-        (n.bridge ? ' cdg-bridge' : '') + '" data-t="' + n.first + '">' +
-        '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (isResp ? 8 : 6) + '"></circle>' +
-        '<text x="' + p.x + '" y="' + (p.y - 10) + '" text-anchor="middle">' + esc(short) + '</text>' +
-        '<title>' + esc(n.name + (n.bridge ? ' · 경로상 노드(항적 기록에는 없음)' : ' · 최초 관여 ' + fmtTime(n.first))) +
-        '</title></g>';
-    }).join('');
-
-    // 센서가 책임 C2에 실제로 보고 링크를 갖는 비율 — 흩어진 점이 "렌더 오류"가 아니라
-    // **관측 결과**임을 숫자로 못박는다.
-    var sensors = nodes.filter(function (n) { return n.category === 'sensor'; });
-    var linkedSensors = respId ? sensors.filter(function (n) {
-      return (links[n.id] && links[n.id][respId]) || (links[respId] && links[respId][n.id]);
-    }).length : 0;
-    return '<div class="cdg-block"><h4>' + esc(title) +
-      '<span class="cdg-count">노드 ' + nodes.length +
-      (sensors.length ? ' · 센서 ' + linkedSensors + '/' + sensors.length + ' 가 책임 C2와 직결' : '') +
-      '</span>' +
-      (respScope ? '<span class="cdg-scope">' + esc(respScope) + '</span>' : '') + '</h4>' +
-      '<svg class="cdg-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet">' +
-      edges + circles + '</svg></div>';
-  }
-
-  /** 항적별 C2 계통 다이어그램 — 좌 As-Is · 우 To-Be. 재생헤드 시각에 따라 점등된다. */
   function diagramHtml(pa, pb) {
     if (!pa && !pb) return '';
+    if (!KJ.panels || !KJ.panels.c2Column || !cmp.catalog) return '';
+    function actOf(part) {
+      if (!part) return null;
+      var m = {};
+      part.rows.forEach(function (r) {
+        if (m[r.id] == null || r.first < m[r.id]) m[r.id] = r.first;
+      });
+      return m;
+    }
+    var A = KJ.panels.c2Column(cmp.catalog, 'asis', actOf(pa));
+    var B = KJ.panels.c2Column(cmp.catalog, 'tobe', actOf(pb));
     return '<div class="cdg-wrap">' +
-      diagramBlock('As-Is 분절형', pa, pa && pa.c2 ? 'scope=' + pa.c2.scope : '') +
-      diagramBlock('To-Be 통합형', pb, pb && pb.c2 ? 'scope=' + pb.c2.scope : '') +
-      '<div class="cdg-legend">실선 파랑 = 항적보고 · 점선 보라 = 협조 · 실선 초록 = 교전명령 · ' +
-      '굵은 원 = 책임 C2. <b>카탈로그에 실제로 있는 링크만 그립니다</b>(시간상 인접해도 링크가 없으면 선도 없음).</div>' +
+      '<div class="cdg-block"><h4>As-Is 분절형' +
+      (pa && pa.c2 ? '<span class="cdg-scope">scope=' + esc(pa.c2.scope) + '</span>' : '') +
+      '<span class="cdg-count">관여 노드 ' + A.units + '</span></h4>' + A.svg + '</div>' +
+      '<div class="cdg-block"><h4>To-Be 통합형' +
+      (pb && pb.c2 ? '<span class="cdg-scope">scope=' + esc(pb.c2.scope) + '</span>' : '') +
+      '<span class="cdg-count">관여 노드 ' + B.units + '</span></h4>' + B.svg + '</div>' +
+      '<div class="cdg-legend">파랑 = 항적보고 · 점선 보라 = 협조 · 초록 = 교전명령. ' +
+      '<b>카탈로그에 실제로 있는 링크만 그립니다</b>(시간상 인접해도 링크가 없으면 선도 없음). ' +
+      '계층은 [C2 구조] 탭과 동일합니다 — 합동방공 C2 조율층은 To-Be에만 있습니다.</div>' +
       '</div>';
   }
 

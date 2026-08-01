@@ -125,18 +125,21 @@ assert(!/class="tl-(row|label|bar|track)"/.test(sim),
 
 console.log('# ④-3 C2 계통 다이어그램 — 간선은 카탈로그 링크만');
 assert(/diagramHtml/.test(sim) && /cdg-wrap/.test(sim), 'C2 계통 다이어그램이 배선됨');
-// ⚠️ 핵심 규율: 항적 단계가 시간상 인접하다고 선을 그으면 **모델에 없는 연결을 지어낸다.**
-//    간선은 반드시 카탈로그 링크 색인(linkIndex)을 조회해서만 나와야 한다.
-assert(/function linkIndex/.test(sim) && /links\[a\.id\] && links\[a\.id\]\[b\.id\]/.test(sim),
-  '간선이 카탈로그 링크 조회로만 생성됨 (시간 인접으로 선을 긋지 않음)');
-assert(/cdg-bridge/.test(sim) && /경로상 노드/.test(sim),
+// ⚠️ [분석] 탭의 항적별 다이어그램과 [C2 구조] 탭은 **같은 레이아웃**이어야 한다.
+//    두 벌로 두면 계층 정의가 갈라져 같은 항적이 화면마다 다른 모양으로 보인다.
+var panelsSrc = fs.readFileSync(path.join(root, 'js/ui/panels.js'), 'utf8');
+assert(/KJ\.panels\.c2Column/.test(sim) && /c2Column: c2Column/.test(panelsSrc),
+  '항적별 다이어그램이 [C2 구조]와 같은 c2Column 레이아웃을 재사용');
+// 핵심 규율: 항적 단계가 시간상 인접하다고 선을 그으면 **모델에 없는 연결을 지어낸다.**
+// 간선은 카탈로그 링크(linksInMode)에서만 나와야 한다.
+assert(/KJ\.linksInMode\(mode, cat\)/.test(panelsSrc),
+  '간선이 카탈로그 링크에서만 생성됨 (시간 인접으로 선을 긋지 않음)');
+assert(/sv-bridge/.test(panelsSrc) && /경로상 노드/.test(panelsSrc),
   '기록에 없는 경로상 홉(ECS 등)은 별도 표기로 구분');
-// 책임 C2는 항적에 typeId로 적히므로 노드 id로 환산해야 한다. 환산이 빠지면
-// 강조·센서 직결 집계·경로 보완이 조용히 전부 빗나간다(실측 0/7로 나왔다).
-assert(/byIdAll\[n\.id\]\.typeId === respKey/.test(sim),
-  '책임 C2의 typeId → 노드 id 환산 (안 하면 집계가 조용히 0이 된다)');
-var cdgCss = css;
-assert(/\.cdg-wrap\.cdg-playing/.test(cdgCss),
+// 항적은 C2를 typeId로 적는다 — 노드 id로 환산하지 않으면 관여 노드가 조용히 빠진다.
+assert(/act\[n\.typeId\] != null/.test(panelsSrc),
+  '관여 시각 조회가 id·typeId 두 키를 모두 봄 (지휘소 누락 방지)');
+assert(/\.sv-cols\.sv-playing/.test(css),
   '다이어그램 소등은 재생 중에만 — 정지 화면은 전부 켜져 보고서 캡처가 가능해야 한다');
 
 console.log('# ④-4 결심 순간 해부 (ADR-073 감사 + ADR-074 그림자 평가)');

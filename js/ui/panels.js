@@ -779,7 +779,244 @@
     });
   }
 
+  // ══════════════ C2 계통 세로 계층 레이아웃 (공용) ══════════════
+  // ⚠️ [C2 구조] 탭과 [분석] 탭의 **항적별 다이어그램이 같은 그림이어야** 한다.
+  //    두 벌로 두면 계층 정의가 갈라져 같은 항적이 화면마다 다르게 보인다.
+  //    그래서 레이아웃을 여기 한 곳에 두고 양쪽이 호출한다(sim-view는 KJ.panels.c2Column).
+
+  // ── 계층 정의 (사용자 제공 아키텍처 반영) ──
+  // 핵심: To-Be는 상위 작전사와 각 C2 체계 **사이에 「합동방공C2」 조율층이 끼어든다.**
+  // 모델에서 그 조율층에 해당하는 노드가 IAOC(통합공중작전통제소)·EOC(교전운영센터)이며,
+  // 둘 다 `modes:["tobe"]` — As-Is에는 존재하지 않는다. 그래서 As-Is 그림에서는 이 띠가
+  // 통째로 비고, **그 빈 칸이 곧 이 탭이 말하려는 구조 차이**다.
+  var COORD = { IAOC: 1, EOC: 1 };               // 합동방공C2 조율층
+  var SYSTEM = { KAMD_OPS: 1, MCRC: 1, ARMY_LOCAL_AD: 1 };  // C2 체계층
+  function tierOf(n) {
+    if (n.category === 'sensor') return 4;
+    if (n.category === 'shooter') return 5;
+    if (COORD[n.typeId]) return 1;
+    if (SYSTEM[n.typeId]) return 2;
+    if (n.typeId === 'ICC') return 3;
+    return 3;                                    // ECS·기타 포대급 C2도 교전통제층
+  }
+  // ⚠️ 상위 작전사(공작사·지작사·해작사·수방사)와 해상 계통(KNTDS·함정)은
+  //    **모델 범위 밖**이다 — 디스클레이머대로 이 모델은 지상배치 방공체계 C2에 한정하며
+  //    요격기·해상 자산을 포함하지 않는다(ADR-060). 아키텍처 맥락으로만 점선 표시하고,
+  //    시뮬레이션이 그것을 계산하는 것처럼 보이지 않게 링크는 긋지 않는다.
+  var OUT_OF_SCOPE = ['공작사', '지작사', '해작사', '수방사'];
+  var TIERS = [
+    { label: '상위 작전사', hint: '모델 범위 밖 — 아키텍처 맥락', ghost: true },
+    { label: '합동방공 C2 (조율층)', hint: 'To-Be에서 신설 — IAOC · EOC', band: true },
+    { label: 'C2 체계', hint: 'MCRC · KAMDOC · 방공C2A(군단·수방사 AOC)' },
+    { label: '교전통제 (ICC · ECS)', hint: '권역·포대 단위 사격통제' },
+    { label: '레이더', hint: '공군 레이더 · 그린파인 · 국지방공' },
+    { label: '요격부대', hint: '발사' }
+  ];
+
+  // 유형 표시명 — 카탈로그 이름은 개체명(ICC W1)이라 묶음 라벨로는 유형명이 낫다.
+  var TYPE_LABEL = {
+    KAMD_OPS: 'KAMDOC', MCRC: 'MCRC', IAOC: '통합공중작전통제소', EOC: '교전운영센터',
+    ARMY_LOCAL_AD: '군단 방공상황실', ICC: 'ICC 교전통제소', ECS: 'ECS 포대지휘소',
+    FPS117: 'FPS-117', GREEN_PINE_B: 'Green Pine', LSAM_MFR: 'L-SAM MFR',
+    MSAM_MFR: 'M-SAM MFR', PATRIOT_RADAR: 'Patriot 레이더', TPS880K: 'TPS-880K',
+    BIHO: '비호', CHEONGUNG2: '천궁-II', CHUNMA: '천마', LSAM: 'L-SAM', PAC3: 'PAC-3'
+  };
+  function typeLabel(t) { return TYPE_LABEL[t] || t; }
+
+  /**
+   * 한 모드의 세로 계층 SVG.
+   *  · act 없음 → **집약 보기**: 계층×유형으로 묶어 16~18개 묶음만 그린다.
+   *    개별 노드 64개를 다 찍으면 같은 유형의 반복이 화면을 덮어 구조가 안 보인다.
+   *    묶음 반지름 = 개수, 간선 굵기 = 묶음 사이 링크 수.
+   *  · act 있음 → **개별 보기**: 그 항적에 관여한 노드만 이름까지 펼친다(보통 8~10개).
+   */
+  function c2Column(cat, mode, act) {
+    var links = KJ.linksInMode ? KJ.linksInMode(mode, cat) : cat.links;
+    // ⚠️ 노드도 **모드로 걸러야 한다.** 통합공중작전통제소(IAOC)·교전운영센터(EOC)는
+    //    모델상 `modes:["tobe"]` — To-Be에만 존재하는 노드다. 카탈로그 전체를 그리면
+    //    As-Is 그림에 없어야 할 통합 지휘소가 떠서, 이 탭이 보여주려는 구조 차이를
+    //    정반대로 오도한다(실제로 그렇게 나왔다).
+    var nodes = KJ.nodesInMode ? KJ.nodesInMode(mode, cat) : cat.nodes;
+    var present = {};
+    nodes.forEach(function (n) { present[n.id] = n; });
+
+    function keyOf(id) {
+      var n = present[id];
+      if (!act) return id;
+      if (act[id] != null) return id;
+      return (n && n.typeId && act[n.typeId] != null) ? n.typeId : id;
+    }
+    var detail = !!act;
+    // 개별 보기에서는 관여 노드만 남긴다(그래야 이름이 들어간다).
+    var shownNodes = detail
+      ? nodes.filter(function (n) { return act[keyOf(n.id)] != null; })
+      : nodes;
+
+    // 교전명령은 상급 C2 → **ECS** → 포대로 간다. 항적은 `사수선정·표적할당:IAOC→BATTERY_…`
+    // 처럼 양 끝만 적어 중간 ECS 홉이 빠지고, 그러면 사수가 선 없이 떠 버린다.
+    // 카탈로그에 1홉 경로가 실재할 때만 그 중간 노드를 **경로상 노드**로 보완한다 —
+    // 연결을 지어내는 게 아니라 모델이 가진 경로를 밝히는 것이며, 표기로 구분한다.
+    if (detail) {
+      var byId = {};
+      nodes.forEach(function (n) { byId[n.id] = n; });
+      var adj = {};
+      (links || []).forEach(function (l) { (adj[l.from] = adj[l.from] || {})[l.to] = 1; });
+      var have = {};
+      shownNodes.forEach(function (n) { have[n.id] = 1; });
+      var bridges = [];
+      shownNodes.filter(function (n) { return n.category === 'shooter'; }).forEach(function (sh) {
+        var src = shownNodes.find(function (n) {
+          return n.category === 'c2' && adj[n.id] && !adj[n.id][sh.id];
+        });
+        if (!src) return;
+        var mid = Object.keys(adj[src.id] || {}).find(function (m) {
+          return adj[m] && adj[m][sh.id] && !have[m] && byId[m];
+        });
+        if (!mid || have[mid]) return;
+        have[mid] = 1;
+        var bn = byId[mid];
+        bridges.push({ id: bn.id, name: bn.name, category: bn.category, typeId: bn.typeId,
+          modes: bn.modes, _bridge: true });
+      });
+      shownNodes = shownNodes.concat(bridges);
+    }
+
+    // 묶음 단위 결정: 집약이면 계층|유형, 개별이면 노드 자체.
+    function unitOf(n) { return detail ? n.id : (tierOf(n) + '|' + n.typeId); }
+    var units = {}, order = [];
+    shownNodes.forEach(function (n) {
+      var u = unitOf(n);
+      if (!units[u]) {
+        units[u] = { key: u, tier: tierOf(n), typeId: n.typeId, category: n.category,
+          n: 0, ids: [], t: null, bridge: !!n._bridge,
+          label: detail ? (n.name || n.id) : typeLabel(n.typeId) };
+        order.push(u);
+      }
+      units[u].n++;
+      units[u].ids.push(n.id);
+      if (detail) {
+        var at = act[keyOf(n.id)];
+        if (at != null && (units[u].t == null || at < units[u].t)) units[u].t = at;
+      }
+    });
+    var idToUnit = {};
+    Object.keys(units).forEach(function (u) {
+      units[u].ids.forEach(function (id) { idToUnit[id] = u; });
+    });
+
+    var rows = [[], [], [], [], [], []];
+    order.forEach(function (u) { rows[units[u].tier].push(units[u]); });
+    rows.forEach(function (r) { r.sort(function (x, y) { return x.label < y.label ? -1 : 1; }); });
+
+    var W = 470, PAD_X = 10, TOP = 16, tierH = 78;
+    var H = TOP + TIERS.length * tierH;
+    var pos = {};
+    rows.forEach(function (list, ti) {
+      var y = TOP + ti * tierH + 42;
+      var step = (W - PAD_X * 2) / Math.max(1, list.length);
+      // 한 계층에 4개 이상이면 라벨이 겹친다 — 위아래로 엇갈려 놓는다(점 위치는 그대로).
+      var stagger = list.length >= 4;
+      list.forEach(function (u, i) {
+        pos[u.key] = { x: PAD_X + step * (i + 0.5), y: y,
+          lab: stagger ? (i % 2 ? 1 : 0) : 0 };
+      });
+    });
+
+    // 묶음 사이 링크 집계 — 개별 링크를 다 긋지 않고 굵기로 표현한다.
+    var KIND = { report: '#3d8bd9', coord: '#a06ed2', command: '#3d8b40', status: '#6b7a8d' };
+    // ⚠️ 묶음 키에 이미 '|'가 들어 있다('0|KAMD_OPS'). 같은 구분자로 이어 붙여 문자열을
+    //    다시 쪼개면 파싱이 깨져 **간선이 한 줄도 안 그려진다**(실제로 그랬다).
+    //    그래서 키로 파싱하지 않고 객체에 양 끝을 그대로 담는다.
+    var agg = {}, shownLinks = 0;
+    (links || []).forEach(function (l) {
+      var ua = idToUnit[l.from], ub = idToUnit[l.to];
+      if (!ua || !ub || ua === ub) return;
+      shownLinks++;
+      var kind = l.kind || 'coord';
+      var k = ua + '\u0001' + ub + '\u0001' + kind;
+      if (!agg[k]) agg[k] = { from: ua, to: ub, kind: kind, n: 0 };
+      agg[k].n++;
+    });
+    var edges = Object.keys(agg).map(function (k) {
+      var e = agg[k], kind = e.kind, ends = [e.from, e.to];
+      var p = pos[ends[0]], q = pos[ends[1]];
+      if (!p || !q) return '';
+      var cnt = e.n;
+      var w = detail ? 1.2 : Math.min(4, 0.6 + Math.log(cnt + 1) * 1.1);
+      var ta = detail && units[ends[0]] ? units[ends[0]].t : null;
+      var tb = detail && units[ends[1]] ? units[ends[1]].t : null;
+      var lit = (ta != null && tb != null) ? Math.max(ta, tb) : null;
+      return '<line class="sv-edge' + (lit != null ? ' sv-flow' : '') + '"' +
+        (lit != null ? ' data-t="' + lit + '"' : '') +
+        ' x1="' + p.x.toFixed(1) + '" y1="' + p.y + '" x2="' + q.x.toFixed(1) + '" y2="' + q.y +
+        '" stroke="' + (KIND[kind] || '#6b7a8d') + '" stroke-width="' + w.toFixed(1) + '"' +
+        ' opacity="' + (detail ? 0.5 : 0.55) + '"' +
+        (kind === 'coord' ? ' stroke-dasharray="3 3"' : '') + '>' +
+        '<title>' + esc((units[ends[0]] || {}).label + ' → ' + (units[ends[1]] || {}).label +
+          ' · ' + kind + ' ' + cnt + '개') + '</title></line>';
+    }).join('');
+
+    var dots = order.map(function (u) {
+      var g = units[u], p = pos[u];
+      if (!p) return '';
+      if (g.tier === 1) return '';             // 조율층은 가로 띠로 대신 그린다
+      var r = detail ? 5 : Math.min(11, 4 + Math.sqrt(g.n) * 2.0);
+      return '<g class="sv-node sv-' + esc(g.category) + (g.tier === 0 ? ' sv-upper' : '') +
+        (g.bridge ? ' sv-bridge' : '') +
+        (g.t != null ? ' sv-act' : '') + '"' + (g.t != null ? ' data-t="' + g.t + '"' : '') + '>' +
+        '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y + '" r="' + r.toFixed(1) + '"></circle>' +
+        (!detail && g.n > 1 ? '<text class="sv-cnt" x="' + p.x.toFixed(1) + '" y="' + (p.y + 2.4) +
+          '" text-anchor="middle">' + g.n + '</text>' : '') +
+        '<text x="' + p.x.toFixed(1) + '" y="' + (p.y + r + 8 + (p.lab ? 8 : 0)) +
+        '" text-anchor="middle">' + esc(g.label) + '</text>' +
+        '<title>' + esc(g.label + ' · ' + g.n + '개' +
+          (g.bridge ? ' · 경로상 노드(항적 기록에는 없음)' : '') +
+          (g.t != null ? ' · 관여 ' + fmtTime(g.t) : '')) + '</title></g>';
+    }).join('');
+
+    var bands = TIERS.map(function (T, ti) {
+      var y = TOP + ti * tierH;
+      var g = '<g class="sv-band"><rect x="0" y="' + y + '" width="' + W + '" height="' + tierH +
+        '" fill="' + (ti % 2 ? '#111823' : '#0d1117') + '"></rect>' +
+        '<text class="sv-tier" x="6" y="' + (y + 12) + '">' + esc(T.label) +
+        ' <tspan class="sv-hint">' + esc(T.hint) + '</tspan></text>';
+      if (T.ghost) {
+        // 모델 범위 밖 — 점선 상자로 맥락만 보여주고 링크는 긋지 않는다.
+        var bw = (W - 20) / OUT_OF_SCOPE.length;
+        g += OUT_OF_SCOPE.map(function (name, i) {
+          var bx = 10 + bw * i + 4;
+          return '<g class="sv-ghost"><rect x="' + bx.toFixed(1) + '" y="' + (y + 26) +
+            '" width="' + (bw - 8).toFixed(1) + '" height="22" rx="3"></rect>' +
+            '<text x="' + (bx + (bw - 8) / 2).toFixed(1) + '" y="' + (y + 40) +
+            '" text-anchor="middle">' + esc(name) + '</text></g>';
+        }).join('');
+      }
+      if (T.band) {
+        // 조율층 — 있으면 가로 띠, 없으면 그 사실을 글자로 남긴다(빈 칸이 곧 차이다).
+        var coord = (rows[1] || []);
+        if (coord.length) {
+          g += '<rect class="sv-coordbar" x="10" y="' + (y + 28) + '" width="' + (W - 20) +
+            '" height="20" rx="4"></rect>' +
+            '<text class="sv-coordtxt" x="' + (W / 2) + '" y="' + (y + 42) +
+            '" text-anchor="middle">합동방공 C2 — ' +
+            esc(coord.map(function (u) { return u.label; }).join(' · ')) + '</text>';
+        } else {
+          g += '<text class="sv-none" x="' + (W / 2) + '" y="' + (y + 42) +
+            '" text-anchor="middle">조율층 없음 — 각 C2 체계가 작전사로 직접 올라간다</text>';
+        }
+      }
+      return g + '</g>';
+    }).join('');
+
+    return { svg: '<svg class="sv-svg" viewBox="0 0 ' + W + ' ' + H + '">' +
+      bands + edges + dots + '</svg>',
+      links: shownLinks, nodes: nodes.length, units: order.length, detail: detail };
+  }
+
+
   KJ.panels = {
+    /** [분석] 탭의 항적별 다이어그램이 같은 레이아웃을 쓴다(중복 구현 금지). */
+    c2Column: c2Column,
 
     /**
      * [분석] 탭 — 같은 항적이 두 체계에서 얼마나 걸렸고, 어디서 벌어졌나.
@@ -881,206 +1118,9 @@
       if (!cat) { box.innerHTML = '<div class="bn-none">배치 카탈로그를 불러오지 못했습니다.</div>'; return; }
       var data = pipelineData(state, function () { self.renderStructure(state); });
 
-      // ── 계층 정의 (사용자 제공 아키텍처 반영) ──
-      // 핵심: To-Be는 상위 작전사와 각 C2 체계 **사이에 「합동방공C2」 조율층이 끼어든다.**
-      // 모델에서 그 조율층에 해당하는 노드가 IAOC(통합공중작전통제소)·EOC(교전운영센터)이며,
-      // 둘 다 `modes:["tobe"]` — As-Is에는 존재하지 않는다. 그래서 As-Is 그림에서는 이 띠가
-      // 통째로 비고, **그 빈 칸이 곧 이 탭이 말하려는 구조 차이**다.
-      var COORD = { IAOC: 1, EOC: 1 };               // 합동방공C2 조율층
-      var SYSTEM = { KAMD_OPS: 1, MCRC: 1, ARMY_LOCAL_AD: 1 };  // C2 체계층
-      function tierOf(n) {
-        if (n.category === 'sensor') return 4;
-        if (n.category === 'shooter') return 5;
-        if (COORD[n.typeId]) return 1;
-        if (SYSTEM[n.typeId]) return 2;
-        if (n.typeId === 'ICC') return 3;
-        return 3;                                    // ECS·기타 포대급 C2도 교전통제층
-      }
-      // ⚠️ 상위 작전사(공작사·지작사·해작사·수방사)와 해상 계통(KNTDS·함정)은
-      //    **모델 범위 밖**이다 — 디스클레이머대로 이 모델은 지상배치 방공체계 C2에 한정하며
-      //    요격기·해상 자산을 포함하지 않는다(ADR-060). 아키텍처 맥락으로만 점선 표시하고,
-      //    시뮬레이션이 그것을 계산하는 것처럼 보이지 않게 링크는 긋지 않는다.
-      var OUT_OF_SCOPE = ['공작사', '지작사', '해작사', '수방사'];
-      var TIERS = [
-        { label: '상위 작전사', hint: '모델 범위 밖 — 아키텍처 맥락', ghost: true },
-        { label: '합동방공 C2 (조율층)', hint: 'To-Be에서 신설 — IAOC · EOC', band: true },
-        { label: 'C2 체계', hint: 'MCRC · KAMDOC · 방공C2A(군단·수방사 AOC)' },
-        { label: '교전통제 (ICC · ECS)', hint: '권역·포대 단위 사격통제' },
-        { label: '레이더', hint: '공군 레이더 · 그린파인 · 국지방공' },
-        { label: '요격부대', hint: '발사' }
-      ];
-
+      // (레이아웃은 모듈 최상위 c2Column으로 옮겼다 — 두 탭이 공유한다)
       var resolver = KJ.simView && KJ.simView.buildNodeResolver
         ? KJ.simView.buildNodeResolver(cat) : null;
-
-      // 유형 표시명 — 카탈로그 이름은 개체명(ICC W1)이라 묶음 라벨로는 유형명이 낫다.
-      var TYPE_LABEL = {
-        KAMD_OPS: 'KAMDOC', MCRC: 'MCRC', IAOC: '통합공중작전통제소', EOC: '교전운영센터',
-        ARMY_LOCAL_AD: '군단 방공상황실', ICC: 'ICC 교전통제소', ECS: 'ECS 포대지휘소',
-        FPS117: 'FPS-117', GREEN_PINE_B: 'Green Pine', LSAM_MFR: 'L-SAM MFR',
-        MSAM_MFR: 'M-SAM MFR', PATRIOT_RADAR: 'Patriot 레이더', TPS880K: 'TPS-880K',
-        BIHO: '비호', CHEONGUNG2: '천궁-II', CHUNMA: '천마', LSAM: 'L-SAM', PAC3: 'PAC-3'
-      };
-      function typeLabel(t) { return TYPE_LABEL[t] || t; }
-
-      /**
-       * 한 모드의 세로 계층 SVG.
-       *  · act 없음 → **집약 보기**: 계층×유형으로 묶어 16~18개 묶음만 그린다.
-       *    개별 노드 64개를 다 찍으면 같은 유형의 반복이 화면을 덮어 구조가 안 보인다.
-       *    묶음 반지름 = 개수, 간선 굵기 = 묶음 사이 링크 수.
-       *  · act 있음 → **개별 보기**: 그 항적에 관여한 노드만 이름까지 펼친다(보통 8~10개).
-       */
-      function column(mode, act) {
-        var links = KJ.linksInMode ? KJ.linksInMode(mode, cat) : cat.links;
-        // ⚠️ 노드도 **모드로 걸러야 한다.** 통합공중작전통제소(IAOC)·교전운영센터(EOC)는
-        //    모델상 `modes:["tobe"]` — To-Be에만 존재하는 노드다. 카탈로그 전체를 그리면
-        //    As-Is 그림에 없어야 할 통합 지휘소가 떠서, 이 탭이 보여주려는 구조 차이를
-        //    정반대로 오도한다(실제로 그렇게 나왔다).
-        var nodes = KJ.nodesInMode ? KJ.nodesInMode(mode, cat) : cat.nodes;
-        var present = {};
-        nodes.forEach(function (n) { present[n.id] = n; });
-
-        function keyOf(id) {
-          var n = present[id];
-          if (!act) return id;
-          if (act[id] != null) return id;
-          return (n && n.typeId && act[n.typeId] != null) ? n.typeId : id;
-        }
-        var detail = !!act;
-        // 개별 보기에서는 관여 노드만 남긴다(그래야 이름이 들어간다).
-        var shownNodes = detail
-          ? nodes.filter(function (n) { return act[keyOf(n.id)] != null; })
-          : nodes;
-
-        // 묶음 단위 결정: 집약이면 계층|유형, 개별이면 노드 자체.
-        function unitOf(n) { return detail ? n.id : (tierOf(n) + '|' + n.typeId); }
-        var units = {}, order = [];
-        shownNodes.forEach(function (n) {
-          var u = unitOf(n);
-          if (!units[u]) {
-            units[u] = { key: u, tier: tierOf(n), typeId: n.typeId, category: n.category,
-              n: 0, ids: [], t: null,
-              label: detail ? (n.name || n.id) : typeLabel(n.typeId) };
-            order.push(u);
-          }
-          units[u].n++;
-          units[u].ids.push(n.id);
-          if (detail) {
-            var at = act[keyOf(n.id)];
-            if (at != null && (units[u].t == null || at < units[u].t)) units[u].t = at;
-          }
-        });
-        var idToUnit = {};
-        Object.keys(units).forEach(function (u) {
-          units[u].ids.forEach(function (id) { idToUnit[id] = u; });
-        });
-
-        var rows = [[], [], [], [], [], []];
-        order.forEach(function (u) { rows[units[u].tier].push(units[u]); });
-        rows.forEach(function (r) { r.sort(function (x, y) { return x.label < y.label ? -1 : 1; }); });
-
-        var W = 470, PAD_X = 10, TOP = 16, tierH = 78;
-        var H = TOP + TIERS.length * tierH;
-        var pos = {};
-        rows.forEach(function (list, ti) {
-          var y = TOP + ti * tierH + 42;
-          var step = (W - PAD_X * 2) / Math.max(1, list.length);
-          // 한 계층에 4개 이상이면 라벨이 겹친다 — 위아래로 엇갈려 놓는다(점 위치는 그대로).
-          var stagger = list.length >= 4;
-          list.forEach(function (u, i) {
-            pos[u.key] = { x: PAD_X + step * (i + 0.5), y: y,
-              lab: stagger ? (i % 2 ? 1 : 0) : 0 };
-          });
-        });
-
-        // 묶음 사이 링크 집계 — 개별 링크를 다 긋지 않고 굵기로 표현한다.
-        var KIND = { report: '#3d8bd9', coord: '#a06ed2', command: '#3d8b40', status: '#6b7a8d' };
-        // ⚠️ 묶음 키에 이미 '|'가 들어 있다('0|KAMD_OPS'). 같은 구분자로 이어 붙여 문자열을
-        //    다시 쪼개면 파싱이 깨져 **간선이 한 줄도 안 그려진다**(실제로 그랬다).
-        //    그래서 키로 파싱하지 않고 객체에 양 끝을 그대로 담는다.
-        var agg = {}, shownLinks = 0;
-        (links || []).forEach(function (l) {
-          var ua = idToUnit[l.from], ub = idToUnit[l.to];
-          if (!ua || !ub || ua === ub) return;
-          shownLinks++;
-          var kind = l.kind || 'coord';
-          var k = ua + '\u0001' + ub + '\u0001' + kind;
-          if (!agg[k]) agg[k] = { from: ua, to: ub, kind: kind, n: 0 };
-          agg[k].n++;
-        });
-        var edges = Object.keys(agg).map(function (k) {
-          var e = agg[k], kind = e.kind, ends = [e.from, e.to];
-          var p = pos[ends[0]], q = pos[ends[1]];
-          if (!p || !q) return '';
-          var cnt = e.n;
-          var w = detail ? 1.2 : Math.min(4, 0.6 + Math.log(cnt + 1) * 1.1);
-          var ta = detail && units[ends[0]] ? units[ends[0]].t : null;
-          var tb = detail && units[ends[1]] ? units[ends[1]].t : null;
-          var lit = (ta != null && tb != null) ? Math.max(ta, tb) : null;
-          return '<line class="sv-edge' + (lit != null ? ' sv-flow' : '') + '"' +
-            (lit != null ? ' data-t="' + lit + '"' : '') +
-            ' x1="' + p.x.toFixed(1) + '" y1="' + p.y + '" x2="' + q.x.toFixed(1) + '" y2="' + q.y +
-            '" stroke="' + (KIND[kind] || '#6b7a8d') + '" stroke-width="' + w.toFixed(1) + '"' +
-            ' opacity="' + (detail ? 0.5 : 0.55) + '"' +
-            (kind === 'coord' ? ' stroke-dasharray="3 3"' : '') + '>' +
-            '<title>' + esc((units[ends[0]] || {}).label + ' → ' + (units[ends[1]] || {}).label +
-              ' · ' + kind + ' ' + cnt + '개') + '</title></line>';
-        }).join('');
-
-        var dots = order.map(function (u) {
-          var g = units[u], p = pos[u];
-          if (!p) return '';
-          if (g.tier === 1) return '';             // 조율층은 가로 띠로 대신 그린다
-          var r = detail ? 5 : Math.min(11, 4 + Math.sqrt(g.n) * 2.0);
-          return '<g class="sv-node sv-' + esc(g.category) + (g.tier === 0 ? ' sv-upper' : '') +
-            (g.t != null ? ' sv-act' : '') + '"' + (g.t != null ? ' data-t="' + g.t + '"' : '') + '>' +
-            '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y + '" r="' + r.toFixed(1) + '"></circle>' +
-            (!detail && g.n > 1 ? '<text class="sv-cnt" x="' + p.x.toFixed(1) + '" y="' + (p.y + 2.4) +
-              '" text-anchor="middle">' + g.n + '</text>' : '') +
-            '<text x="' + p.x.toFixed(1) + '" y="' + (p.y + r + 8 + (p.lab ? 8 : 0)) +
-            '" text-anchor="middle">' + esc(g.label) + '</text>' +
-            '<title>' + esc(g.label + ' · ' + g.n + '개' +
-              (g.t != null ? ' · 관여 ' + fmtTime(g.t) : '')) + '</title></g>';
-        }).join('');
-
-        var bands = TIERS.map(function (T, ti) {
-          var y = TOP + ti * tierH;
-          var g = '<g class="sv-band"><rect x="0" y="' + y + '" width="' + W + '" height="' + tierH +
-            '" fill="' + (ti % 2 ? '#111823' : '#0d1117') + '"></rect>' +
-            '<text class="sv-tier" x="6" y="' + (y + 12) + '">' + esc(T.label) +
-            ' <tspan class="sv-hint">' + esc(T.hint) + '</tspan></text>';
-          if (T.ghost) {
-            // 모델 범위 밖 — 점선 상자로 맥락만 보여주고 링크는 긋지 않는다.
-            var bw = (W - 20) / OUT_OF_SCOPE.length;
-            g += OUT_OF_SCOPE.map(function (name, i) {
-              var bx = 10 + bw * i + 4;
-              return '<g class="sv-ghost"><rect x="' + bx.toFixed(1) + '" y="' + (y + 26) +
-                '" width="' + (bw - 8).toFixed(1) + '" height="22" rx="3"></rect>' +
-                '<text x="' + (bx + (bw - 8) / 2).toFixed(1) + '" y="' + (y + 40) +
-                '" text-anchor="middle">' + esc(name) + '</text></g>';
-            }).join('');
-          }
-          if (T.band) {
-            // 조율층 — 있으면 가로 띠, 없으면 그 사실을 글자로 남긴다(빈 칸이 곧 차이다).
-            var coord = (rows[1] || []);
-            if (coord.length) {
-              g += '<rect class="sv-coordbar" x="10" y="' + (y + 28) + '" width="' + (W - 20) +
-                '" height="20" rx="4"></rect>' +
-                '<text class="sv-coordtxt" x="' + (W / 2) + '" y="' + (y + 42) +
-                '" text-anchor="middle">합동방공 C2 — ' +
-                esc(coord.map(function (u) { return u.label; }).join(' · ')) + '</text>';
-            } else {
-              g += '<text class="sv-none" x="' + (W / 2) + '" y="' + (y + 42) +
-                '" text-anchor="middle">조율층 없음 — 각 C2 체계가 작전사로 직접 올라간다</text>';
-            }
-          }
-          return g + '</g>';
-        }).join('');
-
-        return { svg: '<svg class="sv-svg" viewBox="0 0 ' + W + ' ' + H + '">' +
-          bands + edges + dots + '</svg>',
-          links: shownLinks, nodes: nodes.length, units: order.length, detail: detail };
-      }
 
       // ── 항적 선택 목록 (판정이 갈린 항적을 위로) ──
       var options = '', actA = null, actB = null, span = null;
@@ -1117,7 +1157,7 @@
         }
       }
 
-      var colA = column('asis', actA), colB = column('tobe', actB);
+      var colA = c2Column(cat, 'asis', actA), colB = c2Column(cat, 'tobe', actB);
       box.innerHTML =
         '<div class="sv-controls">' +
         '<label>항적 <select id="sv-threat"><option value="">— 정적 구조만 보기 —</option>' +

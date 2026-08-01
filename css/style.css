@@ -1051,3 +1051,6 @@ li.chk-fail { background: #43140f; }
 /* 경로상 보완 노드 — 카탈로그 링크는 있으나 항적에 기록되지 않은 홉 (C2 계층 공용) */
 .sv-bridge circle { fill: none; stroke: #8a97a8; stroke-width: 1.4; stroke-dasharray: 2 2; }
 .sv-bridge text { fill: #6b7a8d; font-style: italic; }
+.an-reach { color: var(--muted); white-space: nowrap; }
+.an-narrow { color: #e0b341; }
+.an-table thead th[colspan] { text-align: center; border-bottom: 1px solid #222b38; }

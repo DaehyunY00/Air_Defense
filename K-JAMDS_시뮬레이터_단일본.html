@@ -1723,6 +1723,9 @@ li.chk-fail { background: #43140f; }
 /* 경로상 보완 노드 — 카탈로그 링크는 있으나 항적에 기록되지 않은 홉 (C2 계층 공용) */
 .sv-bridge circle { fill: none; stroke: #8a97a8; stroke-width: 1.4; stroke-dasharray: 2 2; }
 .sv-bridge text { fill: #6b7a8d; font-style: italic; }
+.an-reach { color: var(--muted); white-space: nowrap; }
+.an-narrow { color: #e0b341; }
+.an-table thead th[colspan] { text-align: center; border-bottom: 1px solid #222b38; }
 </style>
 </head>
 <body>
@@ -11459,22 +11462,28 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       var hit =
         kind === 'spawn' ? n === '생성' :
         kind === 'detect' ? n === '탐지' :
-        kind === 'c2' ? n.indexOf('책임C2:') === 0 :
+        kind === 'fuse' ? n.indexOf('항적융합:') === 0 :
         kind === 'ident' ? n.indexOf('식별확정:') === 0 :
-        kind === 'fire' ? (n.indexOf('발사:') === 0 || n.indexOf('자위권발사:') === 0) :
-        kind === 'end' ? (n.indexOf('BDA:') === 0 || n.indexOf('누수:') === 0) : false;
+        kind === 'assign' ? n.indexOf('사수선정·표적할당:') === 0 :
+        kind === 'fire' ? (n.indexOf('발사:') === 0 || n.indexOf('자위권발사:') === 0) : false;
       if (hit) return tr.stages[i].t;
     }
     return null;
   }
 
-  // 관문 사이 구간 — 9단계 파이프라인을 사람이 읽는 다섯 토막으로 접었다.
+  // 관문 사이 구간 — 9단계 파이프라인을 **실제로 시간을 소비하는** 다섯 토막으로 접었다.
+  //
+  // ⚠️ 「탐지 → 책임 C2 지정」은 관문으로 쓰지 않는다. 엔진이 `책임C2:`를 탐지와 **같은
+  //    이벤트에서** 찍기 때문에 그 구간은 구조적으로 항상 0초다(실측: 두 시각이 소수점
+  //    아래까지 동일). 값이 0인 칸은 "빠르다"가 아니라 "잴 것이 없다"는 뜻이라,
+  //    표에 두면 읽는 사람이 구간으로 오해한다 — 그래서 뺐다.
   var GATES = [
     { key: 'detect', from: 'spawn', to: 'detect', label: '① 침투 → 탐지', why: '레이더가 볼 때까지' },
-    { key: 'assign', from: 'detect', to: 'c2', label: '② 탐지 → 담당 지휘소 지정', why: '누가 맡을지 정할 때까지' },
-    { key: 'ident', from: 'c2', to: 'ident', label: '③ 지정 → 식별 확정', why: '무엇인지 확인할 때까지' },
-    { key: 'fire', from: 'ident', to: 'fire', label: '④ 식별 → 발사', why: '쏘기로 결심하고 쏠 때까지' },
-    { key: 'total', from: 'spawn', to: 'fire', label: '⑤ 침투 → 발사 (합계)', why: '들어와서 요격탄이 나갈 때까지', total: true }
+    { key: 'fuse', from: 'detect', to: 'fuse', label: '② 탐지 → 항적 융합', why: 'C2가 항적을 받아 합칠 때까지' },
+    { key: 'ident', from: 'fuse', to: 'ident', label: '③ 융합 → 식별 확정', why: '적인지 확정할 때까지' },
+    { key: 'assign', from: 'ident', to: 'assign', label: '④ 식별 → 사수 선정', why: '어느 포대가 쏠지 정할 때까지' },
+    { key: 'launch', from: 'assign', to: 'fire', label: '⑤ 선정 → 발사', why: '승인받고 실제로 쏠 때까지' },
+    { key: 'total', from: 'spawn', to: 'fire', label: '⑥ 침투 → 발사 (합계)', why: '들어와서 요격탄이 나갈 때까지', total: true }
   ];
 
   /**
@@ -11489,7 +11498,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   function gateStats(ta, tb) {
     var byB = {};
     (tb || []).forEach(function (t) { byB[t.id] = t; });
-    var KEYS = ['spawn', 'detect', 'c2', 'ident', 'fire'];
+    var KEYS = ['spawn', 'detect', 'fuse', 'ident', 'assign', 'fire'];
     var cohort = [];
     var paired = 0;
     (ta || []).forEach(function (a) {
@@ -11505,14 +11514,33 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       cohort.push({ a: ga, b: gb });
     });
     var n = cohort.length;
+    // 도달 수 — **코호트가 아니라 짝지은 전 항적** 기준. 시간표는 끝까지 간 항적만 세므로
+    // 중간 탈락이 보이지 않는다. 그 탈락이야말로 두 구조의 큰 차이라 따로 센다.
+    var reach = {};
+    ['detect', 'fuse', 'ident', 'assign', 'fire'].forEach(function (k) {
+      reach[k] = { a: 0, b: 0 };
+    });
+    (ta || []).forEach(function (a) {
+      var b = byB[a.id];
+      if (!b) return;
+      Object.keys(reach).forEach(function (k) {
+        if (gateT(a, k) != null) reach[k].a++;
+        if (gateT(b, k) != null) reach[k].b++;
+      });
+    });
     var rows = GATES.map(function (g) {
-      if (!n) return { g: g, n: 0, a: null, b: null, d: null };
-      var sa = 0, sb = 0;
+      var r = reach[g.to] || null;
+      if (!n) return { g: g, n: 0, a: null, b: null, d: null, ca: null, cb: null, cd: null, reach: r };
+      var sa = 0, sb = 0, ka = 0, kb = 0;
       cohort.forEach(function (c) {
         sa += c.a[g.to] - c.a[g.from];
         sb += c.b[g.to] - c.b[g.from];
+        ka += c.a[g.to] - c.a.spawn;     // 침투 기준 누적 도달 시각
+        kb += c.b[g.to] - c.b.spawn;
       });
-      return { g: g, n: n, a: sa / n, b: sb / n, d: sb / n - sa / n };
+      return { g: g, n: n,
+        a: sa / n, b: sb / n, d: sb / n - sa / n,
+        ca: ka / n, cb: kb / n, cd: kb / n - ka / n, reach: r };
     });
     rows.cohort = n;
     rows.paired = paired;
@@ -11526,16 +11554,6 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (Math.abs(r) < 0.05) return '<span class="an-same">변화 없음</span>';
     return r < 0 ? '<b class="an-fast">' + r.toFixed(1) + '초 (빨라짐)</b>'
                  : '<b class="an-slow">+' + r.toFixed(1) + '초 (느려짐)</b>';
-  }
-
-  /** 구간별 막대 — 두 체계를 같은 척도로 그려 길이 차이가 곧 시간 차이가 되게 한다. */
-  function gateBar(a, b, max) {
-    if (a == null || b == null || !max) return '';
-    var wa = Math.max(1, a / max * 100), wb = Math.max(1, b / max * 100);
-    return '<div class="an-bars">' +
-      '<div class="an-bar an-bar-a" style="width:' + wa.toFixed(1) + '%"><span>As-Is</span></div>' +
-      '<div class="an-bar an-bar-b" style="width:' + wb.toFixed(1) + '%"><span>To-Be</span></div>' +
-      '</div>';
   }
 
   /**
@@ -11865,28 +11883,50 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         : '<div class="bn-none">두 체계가 모두 발사까지 도달한 항적이 없어 시간 비교를 낼 수 없습니다.</div>';
 
       // ② 구간별 — 어디서 벌어졌는지 수치로.
-      var maxV = 0;
-      rows.forEach(function (r) {
-        if (r.g.total) return;
-        if (r.a != null) maxV = Math.max(maxV, r.a, r.b);
-      });
       el('analysis-gates').innerHTML =
         '<table class="an-table"><thead><tr>' +
-        '<th>구간</th><th class="num">As-Is</th><th class="num">To-Be</th><th>차이</th><th>비교</th>' +
+        '<th rowspan="2">관문</th>' +
+        '<th class="num" colspan="3">침투 후 <b>도달 시각</b></th>' +
+        '<th class="num" colspan="1">직전 구간에서</th>' +
+        '<th class="num" rowspan="2">여기까지 온 항적</th>' +
+        '</tr><tr>' +
+        '<th class="num">As-Is</th><th class="num">To-Be</th><th class="num">차이</th>' +
+        '<th class="num">격차 변화</th>' +
         '</tr></thead><tbody>' +
         rows.map(function (r) {
+          var reachTxt = r.reach
+            ? r.reach.a + ' → ' + r.reach.b +
+              (r.reach.b > r.reach.a ? ' <b class="an-fast">+' + (r.reach.b - r.reach.a) + '</b>' : '')
+            : '—';
+          // ⚠️ 구간 열은 "느려졌다"가 아니라 **격차가 벌어졌나 좁혀졌나**로 읽어야 한다.
+          //    상류 관문이 크게 앞당겨지면 하류 구간이 그 차이를 반대 방향으로 흡수하기
+          //    때문이다(실측: To-Be가 식별을 20.5초 앞당기자 식별→선정 구간이 9.3초 늘었다.
+          //    그런데도 선정 도달은 여전히 11.1초 빨랐다). 구간만 보면 부호가 뒤집혀 읽힌다.
+          // 합계 행은 구간이 아니라 전체이므로 '격차 변화'가 성립하지 않는다(도달 차이와 중복).
+          var gapTxt = (r.g.total || r.d == null) ? '—'
+            : Math.abs(Math.round(r.d * 10) / 10) < 0.05 ? '<span class="an-same">—</span>'
+            : r.d < 0 ? '<b class="an-fast">' + (Math.round(r.d * 10) / 10).toFixed(1) + '초 벌림</b>'
+            : '<span class="an-narrow">+' + (Math.round(r.d * 10) / 10).toFixed(1) + '초 좁힘</span>';
           return '<tr' + (r.g.total ? ' class="an-total"' : '') + '>' +
             '<td>' + esc(r.g.label) + '<i class="an-why">' + esc(r.g.why) + '</i></td>' +
-            '<td class="num">' + secTxt(r.a) + '</td>' +
-            '<td class="num">' + secTxt(r.b) + '</td>' +
-            '<td>' + deltaTxt(r.d) + '</td>' +
-            '<td class="an-barcell">' + (r.g.total ? '' : gateBar(r.a, r.b, maxV)) + '</td>' +
+            '<td class="num">' + secTxt(r.ca) + '</td>' +
+            '<td class="num">' + secTxt(r.cb) + '</td>' +
+            '<td class="num">' + deltaTxt(r.cd) + '</td>' +
+            '<td class="num">' + gapTxt + '</td>' +
+            '<td class="num an-reach">' + reachTxt + '</td>' +
             '</tr>';
         }).join('') +
         '</tbody></table>' +
-        '<div class="note">전 구간을 <b>같은 항적 ' + (total.n || 0) + '건</b>으로 계산했습니다 — ' +
-        '그래서 <b>구간 소요시간의 합이 합계와 정확히 일치</b>합니다. 구간마다 표본을 달리 잡으면 ' +
-        '각 줄이 서로 다른 위협을 말하게 되어 "어디서 벌어졌나"를 이 표로 읽을 수 없습니다.</div>';
+        '<div class="note"><b>도달 시각</b>이 주 지표입니다 — 침투부터 그 관문까지 걸린 시간이며, ' +
+        '단조로 늘어나 부호가 뒤집히지 않습니다. 이 표에서 <b>To-Be는 모든 관문에 더 빨리 도달</b>합니다.<br>' +
+        '<b>「격차 변화」</b>는 그 관문에서 격차가 벌어졌는지 좁혀졌는지입니다. ' +
+        '⚠️ <b>좁힘 = To-Be가 느려짐이 아닙니다.</b> 구간에는 <b>대기 시간이 섞여</b> 있어서, ' +
+        '상류에서 크게 앞당기면 하류 구간이 그만큼 길어집니다 — 위협이 교전 가능 위치로 ' +
+        '날아올 때까지 기다리기 때문입니다(실측: To-Be가 식별을 20.5초 앞당기자 식별→선정 구간이 ' +
+        '9.3초 늘었지만, 선정 도달은 여전히 11.1초 빨랐습니다).<br>' +
+        '소요시간은 <b>양 체계에서 전 관문을 통과한 항적 ' + (total.n || 0) + '건</b>으로 계산했습니다. ' +
+        '<b>「여기까지 온 항적」</b>은 반대로 <b>짝지은 전 항적</b> 기준입니다 — 시간표는 끝까지 간 ' +
+        '항적만 세므로 중간 탈락이 보이지 않는데, 그 탈락이야말로 두 구조의 큰 차이입니다.</div>';
 
       // ③ 항적 로그 병렬 비교 — 결과 모달과 **같은 렌더러**를 재사용한다.
       if (KJ.simView && KJ.simView.renderThreatCompare) {

@@ -72,7 +72,7 @@ assert(stripEcho(tOn) === stripEcho(tOff),
 // 어서션을 **신 기본값에서 실제로 발화하는 셀**로 옮긴다. 임계를 낮춘 것이 아니라
 // 현상이 일어나는 조건으로 관측 지점을 옮긴 것이며, 빈도 감소는 ADR-059의 원 결론
 // ("비용항은 거의 물지 않는다")을 오히려 강화한다.
-console.log('# 4 — 반증 (FULL · ×1.0 · 600초 · seed 777): 비용항이 실제로 무는 셀');
+console.log('# 4 — 반증 (FULL · ×1.0 · 600초 · seed 4242): 비용항이 실제로 무는 셀');
 // ADR-066 갱신: 무는 셀이 **또 이동했다**. ADR-065 판에서는 FULL·×3에서 물고 ×1.5에서 무효과였는데,
 // 링크 의미론 정합 후에는 정반대다(8셀 격자 실측: FULL ×1.5 600s·900s만 물고 ×3·LEGACY 전 셀 무효과
 // — 개입 2/8셀). **빈도(약 1/4)는 유지되고 위치만 바뀐다.**
@@ -91,12 +91,27 @@ console.log('# 4 — 반증 (FULL · ×1.0 · 600초 · seed 777): 비용항이 
 // 빈도를 증거로 남기는 구조도 그대로다.
 // 이 불안정성 자체가 ADR-059의 원 결론("비용항은 거의 물지 않는다 — 절약은 교전량·기하에서
 // 나온다")을 강화한다.
-var fOn = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true }, 1, 777);
+//
+// ADR-079 갱신: **또 이동했다 — 이번에는 seed 축 안에서 seed만 바뀌었다.** As-Is 육↔공
+// 항적 중계가 데이터링크 1초 → 문자 45초로 바뀌자 FULL As-Is의 근소 동점이 재배열되어,
+// 종전 셀(×1.0 · seed 777)이 무효과가 되고 seed 4242 쪽이 물기 시작했다.
+// FULL·SC3 24셀 재실측(강도 {1,1.5,2,3} × 지속 {600,900} × seed {777,4242,12345}):
+// 무는 셀 **6/24** = seed 4242 × 강도 {1, 1.5} 4셀 + seed 12345 × 강도 3 2셀.
+// seed 777은 전 셀 무효과(직전 어서션 셀 포함). ADR-076 격자에서 "12345는 한 셀도 물지
+// 않는다"였는데 이번 판에는 12345 ×3이 문다 — seed별 발화 여부조차 판마다 뒤집힌다는
+// 것 자체가 근소 동점 현상의 성격이다. 빈도(25%)는 낮게 유지되고 위치만 이동 — 위와 같은 처리다.
+var fOn = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true }, 1, 4242);
 var fCf = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600,
-  { nativeWtaMode: true, nativeWtaCostAsis: true }, 1, 777);
+  { nativeWtaMode: true, nativeWtaCostAsis: true }, 1, 4242);
 assert(stripEcho(fOn) !== stripEcho(fCf),
-  'FULL As-Is(×1.0 · seed 777): 반증 플래그(비용항)가 결과를 바꿈 (보존율 ' +
+  'FULL As-Is(×1.0 · seed 4242): 반증 플래그(비용항)가 결과를 바꿈 (보존율 ' +
   fOn.global.highValuePreservation.toFixed(3) + '→' + fCf.global.highValuePreservation.toFixed(3) + ')');
+// ADR-079로 비워진 직전 셀 — 이동을 지문으로 박아 둔다(아래 ADR-076 지문과 같은 패턴).
+var pOn = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true }, 1, 777);
+var pCf = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600,
+  { nativeWtaMode: true, nativeWtaCostAsis: true }, 1, 777);
+assert(stripEcho(pOn) === stripEcho(pCf),
+  '[정직 관측] 직전 어서션 셀(×1.0 · seed 777)은 ADR-079 이후 비용항 무효과');
 // 종전 어서션 셀 — ADR-076 이전에는 물었고 지금은 무효과다. 이동을 지문으로 박아 둔다.
 var lOn = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600, { nativeWtaMode: true }, 1.5);
 var lCf = run('HANBANDO_FULL_NORMAL', 'sc3', 'asis', 600,

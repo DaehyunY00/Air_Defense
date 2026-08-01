@@ -61,7 +61,7 @@ var suites = [
   ,['legacy-hires-deployment.test.mjs', 'LEGACY_HIRES 배치 (legacy 자산 배치 × iads-c2 물리·DOWN 대체·기존경로 불변)']
   ,['engagement-state-unification.test.mjs', 'ADR-056 교전상태 통합 (OFF bit-exact·ON To-Be 소비·As-Is 불변)']
   ,['link-semantics.test.mjs', 'ADR-057 링크 의미론 codex 정합 (보고주기 차등·C2 전송 1초·OFF 불변)']
-  ,['approval-chain.test.mjs', 'ADR-058 승인 계선 이식 (coord 홉·approval 서비스·위임·USFK 불변·반증)']
+  ,['approval-chain.test.mjs', 'ADR-058 승인 계선 이식 (coord 경유·approval 서비스·위임·USFK 불변·반증)']
   ,['native-wta.test.mjs', 'ADR-059 native WTA 모드 차등 (As-Is 부하선택·보존율 차등·비용항 반증)']
   ,['analysis-metric-honesty.test.mjs', 'ADR-062 지표 정직성 (死 지표 근거·승인계선 토글 배선·OFF bit-exact)']
   ,['target-dispersion.test.mjs', 'ADR-063 표적권역 산포 (OFF bit-exact·균등원판·seed 의존·스트림 분리·권역 무결성·제약 불변)']
@@ -76,6 +76,7 @@ var suites = [
   ,['decision-comparison.test.mjs', 'ADR-075 결심 비교 탭 (순수 후처리·미측정 표시·딥링크 하위호환·단일본)']
   ,['geometry-window-cache.test.mjs', 'ADR-076 교전창 캐시 키 정합 (순수함수 캐시·순서 독립·종전 키 충돌 실측·산포 OFF 불변)']
   ,['approval-authority.test.mjs', 'ADR-077 교전승인권자 해소 정합 (미등록 역할=승인 증발 방지·To-Be 조율층 경유·As-Is 불변)']
+  ,['c2-echelon-hierarchy.test.mjs', 'ADR-078 IAOC 상위 제대화 (도메인 제대 실부하·병렬 통보·교전현황 조율층 수신·As-Is 불변)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

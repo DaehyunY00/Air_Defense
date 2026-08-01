@@ -126,8 +126,26 @@ assert(inverted(on) === 0, 'v2 카탈로그: 역전 링크 0개');
 var voiceAsym = dflt.links.filter(function (l) {
   return l.comm.asis && l.comm.tobe && /voice/.test(l.comm.asis.type);
 });
-assert(voiceAsym.length === 4 && voiceAsym.every(function (l) { return l.comm.tobe.delaySec === 1; }),
-  '음성 협조·교전현황 4링크는 비대칭 유지 — 링크(전선)가 아니라 절차이므로 대칭화 대상이 아님');
+// ADR-078: 육↔공 협조 절차 비대칭의 **표현이 바뀌었다**. 종전에는 「같은 링크, 다른 속도」
+// (군단 AOC↔MCRC 음성 4링크: As-Is 음성 / To-Be 1초)였다. To-Be에서 그 협조가 MCRC 직결이
+// 아니라 조율층(IAOC) 경유로 재편되면서 이제 **모드 전용 링크 쌍**이 됐다.
+// ⚠️ 그러면 위 필터(`comm.asis && comm.tobe`)에 안 걸려 비대칭이 감사에서 **사라진다**.
+//    숫자만 0으로 고치면 "To-Be만 빠른 전선"을 막던 장치가 무력해지므로,
+//    없어진 게 아니라 옮겨갔음을 아래에서 전수 열거해 잠근다.
+assert(voiceAsym.length === 0,
+  '음성이 양 모드 공통으로 남은 링크 0건 — 협조 절차는 모드 전용 계선으로 분리됐다(ADR-078)');
+var voiceAsisOnly = dflt.links.filter(function (l) {
+  return l.comm.asis && !l.comm.tobe && /voice/.test(l.comm.asis.type);
+});
+assert(voiceAsisOnly.length === 4 &&
+  voiceAsisOnly.filter(function (l) { return l.kind === 'status'; }).length === 2 &&
+  voiceAsisOnly.filter(function (l) { return l.kind === 'coord'; }).length === 2,
+  'As-Is 전용 음성 절차는 4건 그대로 — 교전현황 2 · 승인 협조 2 (군단 AOC→MCRC 직결)');
+var iaocId = dflt.roles && dflt.roles.IAOC;
+assert(!!iaocId && dflt.links.filter(function (l) {
+  return !l.comm.asis && l.comm.tobe && l.to === iaocId && (l.kind === 'status' || l.kind === 'coord');
+}).length >= 4,
+  'To-Be 대체 계선이 조율층으로 실재 — 절차 비대칭이 없어진 게 아니라 IAOC 경유로 옮겨갔다');
 assert(dflt.links.filter(function (l) {
   return l.kind === 'coord' && l.comm.asis && l.comm.tobe &&
     !/voice/.test(l.comm.asis.type) && l.comm.asis.delaySec !== l.comm.tobe.delaySec;

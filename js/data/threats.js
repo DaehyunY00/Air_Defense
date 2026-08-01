@@ -9,7 +9,7 @@
  *   값은 **역할 이름**이며 deployment-adapter.js의 catalog.roles가 실제 노드로 해소한다
  *   (KAOC·MCRC·KAMDOC·IAOC). ⚠️ 여기에 roles에 없는 이름을 적으면 resolveRoleId가 그
  *   문자열을 그대로 돌려주고, 엔진이 "그런 노드 없음 → 승인 불필요"로 **조용히 넘어간다**.
- *   승인 홉이 통째로 사라지는데 실행은 성공하므로 눈치채기 어렵다 — 역할 이름을 새로 쓸
+ *   승인 단계가 통째로 사라지는데 실행은 성공하므로 눈치채기 어렵다 — 역할 이름을 새로 쓸
  *   때는 roles에 먼저 등록할 것(approval-authority.test.mjs가 이 대응을 잠근다).
  *   ADR-077: To-Be의 ABT 승인권자를 MCRC → IAOC(합동방공C2 조율층)로 옮겼다. To-Be
  *   구조의 요체가 기존 C2 체계 위에 얹힌 조율층인데, 승인만 옛 계선(MCRC)으로 붙어
@@ -33,9 +33,9 @@
  * ── 위협별 자동화 차등(정밀화 Phase B-3, C2-AUTO-LEVEL-01) ──
  * automation: {asis, tobe} — 결심 단계의 인간개입 수준(구 note 텍스트를 엔진 플래그로 승격).
  *   'human-in-loop' : 승인권자(approvalLevel)까지 coord 협조경로 + 승인 처리 필요 (As-Is 기본)
- *   'human-on-loop' : 감독하 자동교전 — 승인 처리(서비스)는 남되 coord 협조경로 홉 생략
- *                     (COP 공유 전제). approvalLevel이 null이면 감독만 하고 홉 없음
- *   'auto-preauth'  : 사전승인 자동교전 — 결심 홉 자체 생략 (구 approval=null 우회의 일반화)
+ *   'human-on-loop' : 감독하 자동교전 — 승인 처리(서비스)는 남되 coord 협조경로 경유 생략
+ *                     (COP 공유 전제). approvalLevel이 null이면 감독만 하고 거치지 않음
+ *   'auto-preauth'  : 사전승인 자동교전 — 결심 경유 자체 생략 (구 approval=null 우회의 일반화)
  * 엔진 _decision이 이 플래그를 참조한다. 부하 기반 동적 권한위임(B-2)과는 별개 축.
  */
 (function () {

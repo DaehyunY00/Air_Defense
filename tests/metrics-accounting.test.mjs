@@ -151,7 +151,7 @@ assert(nativeNodeRho > 0.5, '고해상도 실행에서 C2 노드가 실제로 �
 assert(nativeWithIads > 0.5,
   'iads_track 포함 시 ③④⑤ 분해값이 실제 부하를 표시 (수정 전 0.000)');
 assert(Math.abs(nativeWithIads - nativeNodeRho) < 0.2,
-  '분해값이 노드 전체 ρ와 같은 자릿수 (승인 홉이 없는 native는 항적처리가 부하의 대부분)');
+  '분해값이 노드 전체 ρ와 같은 자릿수 (승인 단계가 없는 native는 항적처리가 부하의 대부분)');
 assert(nativeRun.nodes.every(function (n) {
   return !n.rhoByKind || ('iads_track' in n.rhoByKind && 'directive_reception' in n.rhoByKind);
 }), '고해상도 결과는 native kind 키를 노출');

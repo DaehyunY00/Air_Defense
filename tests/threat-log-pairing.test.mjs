@@ -135,7 +135,7 @@ assert(/KJ\.panels\.c2Column/.test(sim) && /c2Column: c2Column/.test(panelsSrc),
 assert(/KJ\.linksInMode\(mode, cat\)/.test(panelsSrc),
   '간선이 카탈로그 링크에서만 생성됨 (시간 인접으로 선을 긋지 않음)');
 assert(/sv-bridge/.test(panelsSrc) && /경로상 노드/.test(panelsSrc),
-  '기록에 없는 경로상 홉(ECS 등)은 별도 표기로 구분');
+  '기록에 없는 경로상 경유(ECS 등)은 별도 표기로 구분');
 // 항적은 C2를 typeId로 적는다 — 노드 id로 환산하지 않으면 관여 노드가 조용히 빠진다.
 assert(/act\[n\.typeId\] != null/.test(panelsSrc),
   '관여 시각 조회가 id·typeId 두 키를 모두 봄 (지휘소 누락 방지)');

@@ -378,8 +378,8 @@ story.append(sub("서비스와 링크 분포"))
 dist_rows = [
     ["C2/legacy shooter 서비스", "Exponential(mean=serviceTimeSec x serviceMultiplier)", "완료시각마다 처리 RNG 1회"],
     ["일반 데이터링크", "대표 delaySec x delayMultiplier", "결정론적"],
-    ["음성 보고", "Triangular(30, 60, 90)s", "홉당 1회"],
-    ["음성 협조", "Triangular(90, 180, 270)s", "홉당 1회"],
+    ["음성 보고", "Triangular(30, 60, 90)s", "경유당 1회"],
+    ["음성 협조", "Triangular(90, 180, 270)s", "경유당 1회"],
     ["legacy Pk", "무기/위협별 triangular 또는 fallback triangular", "교전 시도당 1회"],
     ["native Pk", "Bernoulli(default PSSEK x pkMultiplier), 0.99 cap", "실제 발사당 1회"],
 ]

@@ -801,10 +801,11 @@
 
   // ── 계층 정의 (사용자 제공 아키텍처 반영) ──
   // 핵심: To-Be는 상위 작전사와 각 C2 체계 **사이에 「합동방공C2」 조율층이 끼어든다.**
-  // 모델에서 그 조율층에 해당하는 노드가 IAOC(통합공중작전통제소)·EOC(교전운영센터)이며,
-  // 둘 다 `modes:["tobe"]` — As-Is에는 존재하지 않는다. 그래서 As-Is 그림에서는 이 띠가
+  // 모델에서 그 조율층에 해당하는 노드가 IAOC(통합공중작전통제소) 하나이며,
+  // `modes:["tobe"]` — As-Is에는 존재하지 않는다. (ADR-078: 종전에는 EOC를 나란히 뒀는데
+  // 도착 0건의 유령 노드여서 그 기능을 IAOC로 흡수하고 노드를 지웠다.) 그래서 As-Is 그림에서는 이 띠가
   // 통째로 비고, **그 빈 칸이 곧 이 탭이 말하려는 구조 차이**다.
-  var COORD = { IAOC: 1, EOC: 1 };               // 합동방공C2 조율층
+  var COORD = { IAOC: 1 };                       // 합동방공C2 조율층 (ADR-078: EOC 흡수)
   var SYSTEM = { KAMD_OPS: 1, MCRC: 1, ARMY_LOCAL_AD: 1 };  // C2 체계층
   function tierOf(n) {
     if (n.category === 'sensor') return 4;
@@ -821,7 +822,7 @@
   var OUT_OF_SCOPE = ['공작사', '지작사', '해작사', '수방사'];
   var TIERS = [
     { label: '상위 작전사', hint: '모델 범위 밖 — 아키텍처 맥락', ghost: true },
-    { label: '합동방공 C2 (조율층)', hint: 'To-Be에서 신설 — IAOC · EOC', band: true },
+    { label: '합동방공 C2 (조율층)', hint: 'To-Be에서 신설 — IAOC 통합공중작전통제소', band: true },
     { label: 'C2 체계', hint: 'MCRC · KAMDOC · 방공C2A(군단·수방사 AOC)' },
     { label: '교전통제 (ICC · ECS)', hint: '권역·포대 단위 사격통제' },
     { label: '레이더', hint: '공군 레이더 · 그린파인 · 국지방공' },
@@ -830,7 +831,7 @@
 
   // 유형 표시명 — 카탈로그 이름은 개체명(ICC W1)이라 묶음 라벨로는 유형명이 낫다.
   var TYPE_LABEL = {
-    KAMD_OPS: 'KAMDOC', MCRC: 'MCRC', IAOC: '통합공중작전통제소', EOC: '교전운영센터',
+    KAMD_OPS: 'KAMDOC', MCRC: 'MCRC', IAOC: '통합공중작전통제소',
     ARMY_LOCAL_AD: '군단 방공상황실', ICC: 'ICC 교전통제소', ECS: 'ECS 포대지휘소',
     FPS117: 'FPS-117', GREEN_PINE_B: 'Green Pine', LSAM_MFR: 'L-SAM MFR',
     MSAM_MFR: 'M-SAM MFR', PATRIOT_RADAR: 'Patriot 레이더', TPS880K: 'TPS-880K',
@@ -847,7 +848,7 @@
    */
   function c2Column(cat, mode, act) {
     var links = KJ.linksInMode ? KJ.linksInMode(mode, cat) : cat.links;
-    // ⚠️ 노드도 **모드로 걸러야 한다.** 통합공중작전통제소(IAOC)·교전운영센터(EOC)는
+    // ⚠️ 노드도 **모드로 걸러야 한다.** 통합공중작전통제소(IAOC)는
     //    모델상 `modes:["tobe"]` — To-Be에만 존재하는 노드다. 카탈로그 전체를 그리면
     //    As-Is 그림에 없어야 할 통합 지휘소가 떠서, 이 탭이 보여주려는 구조 차이를
     //    정반대로 오도한다(실제로 그렇게 나왔다).
@@ -868,8 +869,8 @@
       : nodes;
 
     // 교전명령은 상급 C2 → **ECS** → 포대로 간다. 항적은 `사수선정·표적할당:IAOC→BATTERY_…`
-    // 처럼 양 끝만 적어 중간 ECS 홉이 빠지고, 그러면 사수가 선 없이 떠 버린다.
-    // 카탈로그에 1홉 경로가 실재할 때만 그 중간 노드를 **경로상 노드**로 보완한다 —
+    // 처럼 양 끝만 적어 중간 ECS 경유가 빠지고, 그러면 사수가 선 없이 떠 버린다.
+    // 카탈로그에 1단계 경로가 실재할 때만 그 중간 노드를 **경로상 노드**로 보완한다 —
     // 연결을 지어내는 게 아니라 모델이 가진 경로를 밝히는 것이며, 표기로 구분한다.
     if (detail) {
       var byId = {};
@@ -1141,7 +1142,7 @@
      *   상위 작전사 → **합동방공 C2(조율층)** → C2 체계 → 교전통제(ICC·ECS) → 레이더·요격부대
      * 하위 네 계층의 연결은 링크 데이터에서 나온 것이다(실측 흐름):
      *   센서 →(report) ECS·C4I / ECS →(coord) ICC →(coord) C4I / ECS →(command) 사수
-     * To-Be의 핵심 차이인 조율층은 IAOC·EOC이며 As-Is에는 그 노드 자체가 없다.
+     * To-Be의 핵심 차이인 조율층은 IAOC이며 As-Is에는 그 노드 자체가 없다.
      *
      * 항적을 고르면 탐지~요격까지 노드가 **시각 순서대로 점등**된다. 좌우가 같은 시계를
      * 공유하므로 어느 쪽이 먼저 끝나는지가 그대로 보인다.
@@ -1223,7 +1224,7 @@
           : '같은 유형은 <b>하나로 묶어</b> 그렸습니다(원 안 숫자 = 개수, 선 굵기 = 링크 수). ' +
             '개별 노드 ' + colA.nodes + '개를 다 찍으면 같은 것의 반복이 화면을 덮어 구조가 안 보입니다 — ' +
             '개별 노드는 위에서 <b>항적을 고르면</b> 관여한 것만 펼쳐집니다.') +
-        ' <b>To-Be에만 존재하는 노드</b>가 있습니다 — 통합공중작전통제소(IAOC)·교전운영센터(EOC)는 ' +
+        ' <b>To-Be에만 존재하는 노드</b>가 있습니다 — 통합공중작전통제소(IAOC)는 ' +
         '모델상 To-Be 전용이라 As-Is 그림에는 나타나지 않습니다(노드 ' + colA.nodes + ' → ' + colB.nodes + '). ' +
         '그리고 <b>To-Be에서만</b> 센서·ECS가 상급 지휘소로 <b>직접</b> 보고하는 링크가 생깁니다 — ' +
         '링크 수 차이(' + colA.links + ' → ' + colB.links + ')가 그것입니다.</div>';

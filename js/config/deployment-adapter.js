@@ -27,6 +27,18 @@
     messageServers: 1, messageCapacity: 4, freshnessSec: 300,
     paramRef: 'C2-ENG-STATUS-01', confidence: 'C'
   });
+  // ADR-079 — As-Is 육군 군단 AOC ↔ 공군 MCRC 교신 수단은 **음성과 문자(서버 채팅)**다.
+  // 종전에는 공중항적 중계를 데이터링크 1초로 두었는데(ADR-057이 근거 불명인 16초를 codex
+  // 값으로 환원하며 그리 됐다), 육↔공 사이에 실시간 항적 데이터링크가 있다는 전제가 된다.
+  // 실제로는 사람이 채팅창에 적어 넘기므로 그 전제가 성립하지 않는다.
+  // ⚠️ 대표값은 정책연구용 개념값(등급 C)이다 — 음성 협조 20초와 음성/VTC 180초 사이에
+  //    놓았다. 타이핑·확인 왕복이 있어 음성 협조보다 느리고, 비동기라 VTC보다는 빠르다.
+  //    근거 문헌이 없으므로 결과를 인용할 때 이 값이 가정임을 함께 밝혀야 한다.
+  var CHAT_TRACK = Object.freeze({
+    type: 'chat', delaySec: 45,
+    dist: Object.freeze({ kind: 'triangular', min: 20, mode: 45, max: 120 }),
+    paramRef: 'C2-CHAT-TRACK-01', confidence: 'C'
+  });
   var cache = {};
 
   function freezeAll(o) {
@@ -151,7 +163,10 @@
         c2Axis: decl.c2Axis || null, forceOwner: decl.forceOwner || 'ROK',
         architectureRole: decl.typeId === 'ARMY_LOCAL_AD' ? 'CORPS_AOC_C2A' : null,
         batteryId: decl.batteryId || null,
-        modes: decl.typeId === 'IAOC' || decl.typeId === 'EOC' ? ['tobe'] : undefined,
+        // ADR-078: 조율층은 IAOC 하나다. 종전에는 EOC(교전운영센터)를 나란히 뒀는데 실행에서
+        // 도착 0건의 유령 노드였다 — 선언·연결·표시만 되고 아무 일도 하지 않았다. 교전 운영
+        // (표적할당·우선순위·발사·격추·잔량 통합)은 IAOC의 기능으로 흡수하고 노드를 지웠다.
+        modes: decl.typeId === 'IAOC' ? ['tobe'] : undefined,
         confidence: decl.confidence, sourceNote: decl.sourceNote
       };
       nodes.push(node); nodeMap[node.id] = node;
@@ -277,16 +292,25 @@
       // As-Is 군단 AOC는 MCRC 공중항적과 자체 국지레이더 항적을 C2A에서
       // 함께 접수한다. 항적 전파는 16초 개념 데이터링크, 반대 방향의 교전현황은
       // 제한형 음성/VTC 메시지로 분리해 정보의 비대칭을 보존한다.
+      //
+      // ADR-078: 이 세 링크는 **As-Is 전용**이다(tobe 측 comm = null → linksInMode에서 제외).
+      // To-Be의 구조 변화가 바로 "MCRC↔군단 AOC 직결 음성 협조 → IAOC 중심 데이터링크"인데,
+      // 종전에는 같은 선의 tobe comm만 2초로 바꿔 두어 **경로는 그대로 두고 속도만** 빨라졌다.
+      // 그러면 조율층을 신설한 의미가 거동에 나타나지 않고, [C2 구조] 탭 To-Be 그림에는
+      // 옛 직결선과 IAOC 허브가 동시에 그려져 무엇이 달라졌는지 대비되지 않는다.
+      // To-Be 대체 경로는 아래 `if (iaoc)` 블록이 깐다(군단 AOC ↔ IAOC).
       localAds.forEach(function (aoc) {
-        addLink(links, mcrc.id, aoc.id, 'report', v2 ? C2_TRANSFER : LONG, v2 ? IFCN : DL_FAST, 'mcrc_to_corps_aoc_track');
-        addLink(links, aoc.id, mcrc.id, 'status', VOICE_STATUS, v2 ? IFCN : DL_FAST, 'corps_aoc_engagement_status');
+        // ADR-079: 공중항적 중계는 데이터링크가 아니라 **문자(서버 채팅)**다. linkSemanticsV2
+        // 여부와 무관하다 — v2는 전선(데이터링크) 지연의 codex 정합이지, 사람이 채팅으로
+        // 넘기는 절차에는 적용할 대상이 없다(음성 협조를 v2 대칭화에서 뺀 것과 같은 이유).
+        addLink(links, mcrc.id, aoc.id, 'report', CHAT_TRACK, null, 'mcrc_to_corps_aoc_track');
+        addLink(links, aoc.id, mcrc.id, 'status', VOICE_STATUS, null, 'corps_aoc_engagement_status');
         // ADR-058(approvalChain): 승인 협조 채널 — 교전현황(status) 채널과 의도적으로 분리.
         // As-Is VOICE(대표 20초·Uniform(10,30))는 링크(전선) 성능이 아니라 **음성/VTC 협조
         // 절차 지연**(교전의사 선언·책임구역 확인·중복 회피 협상)이다. 따라서 linkSemanticsV2가
         // 켜져도 As-Is 측은 codex 정합(1초) 대상이 아니다 — codex는 육↔공 협조 절차를
         // 모델링하지 않아 참고 정본이 없다(C2-VOICE-COORD-01 비고 참조).
-        // To-Be 측은 킬웹 네트워크를 따른다(v2 ON이면 IFCN 1초, OFF면 DL_FAST 2초).
-        if (appr) addLink(links, aoc.id, mcrc.id, 'coord', VOICE, v2 ? IFCN : DL_FAST, 'corps_aoc_approval');
+        if (appr) addLink(links, aoc.id, mcrc.id, 'coord', VOICE, null, 'corps_aoc_approval');
       });
     }
     sensorNodes(['TPS880K']).forEach(function (s) {
@@ -324,18 +348,36 @@
     }
 
     if (iaoc) {
-      nodes.filter(function (n) { return n.category === 'sensor' && n.forceOwner !== 'USFK'; }).forEach(function (s) {
+      // ADR-078 — IAOC는 MCRC·KAMDOC를 **대체하는** 노드가 아니라 그 **상위 제대**다.
+      //
+      // 센서는 조율층으로 **직결**한다(킬웹 IFCN 전제 — 정보 배포는 직렬 계선을 타지 않는다).
+      // 도메인 제대(MCRC·KAMDOC)는 이 배포를 **동시에** 받아 자기 도메인 항적을 처리한다 —
+      // 엔진의 `_fanoutDomainEchelon`이 그 병렬 통보를 넣는다. 직렬 중계가 아니므로
+      // 조율층의 결심 시각은 제대 큐에 걸리지 않는다("거치되 시간은 그대로").
+      nodes.filter(function (n) {
+        return n.category === 'sensor' && n.forceOwner !== 'USFK';
+      }).forEach(function (s) {
         addLink(links, s.id, iaoc.id, 'report', null, sensorReportTobe(s.typeId), 'killweb');
       });
       nodes.filter(function (n) { return n.category === 'c2' && n.id !== iaoc.id && n.forceOwner !== 'USFK'; }).forEach(function (c) {
         addLink(links, c.id, iaoc.id, 'report', null, v2 ? IFCN : DL_FAST, 'killweb');
         addLink(links, iaoc.id, c.id, 'coord', null, v2 ? IFCN : DL_FAST, 'killweb');
+        // 상행 협조(승인 요청 등)도 조율층으로 향한다. As-Is의 군단 AOC→MCRC 음성 협조를
+        // 대체하는 계선이며, 이게 없으면 To-Be에서 `_iadsApprovalGate`의 coord 경로 탐색이
+        // 상급을 찾지 못한다(현재 To-Be는 전부 human-on-loop이라 닿지 않지만, 계선을
+        // 반쪽만 두면 다음에 조용히 responsibility_gap이 난다).
+        addLink(links, c.id, iaoc.id, 'coord', null, v2 ? IFCN : DL_FAST, 'killweb');
+      });
+      // 군단 AOC 교전현황은 To-Be에서 조율층이 받는다(As-Is 음성/VTC → 데이터링크).
+      // 종전에는 도착 건수 0인 MCRC 앞으로 보내고 IAOC가 꺼내 읽는 모양이었다(ADR-056 우회).
+      localAds.forEach(function (aoc) {
+        addLink(links, aoc.id, iaoc.id, 'status', null, v2 ? IFCN : DL_FAST, 'corps_aoc_engagement_status');
       });
     }
 
     // ⚠️ resolveRoleId는 **등록되지 않은 키를 그대로 반환한다**. 그 값은 nodeId가 아니므로
     //    엔진의 `!this.nodeState[approvalId]` 가드(sim-engine.js)에 걸려 "승인 불필요"로
-    //    조용히 처리된다 — 승인 홉이 사라지는데 실행은 성공한다. 그래서 데이터(threats.js)가
+    //    조용히 처리된다 — 승인 단계가 사라지는데 실행은 성공한다. 그래서 데이터(threats.js)가
     //    쓰는 역할 이름은 **빠짐없이 여기 있어야** 한다. approval-authority.test.mjs가 잠근다.
     var roles = {
       fusionC2: iaoc ? iaoc.id : null,

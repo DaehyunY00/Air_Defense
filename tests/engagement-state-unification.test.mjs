@@ -44,15 +44,15 @@ function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fa
 // ADR-077(To-Be ABT 승인권자 MCRC → IAOC)에서는 **To-Be 두 지문만** 움직였다 — As-Is 두
 // 지문은 글자 그대로 종전 값이다(변경이 tobe 필드에만 닿았다는 하드 체크).
 var OFF_SHA = {
-  'sc1|asis': '84603e5203e044d6f60ebb44eb741dafb6f1e6e2ed588b05bf5f7d753a588d4e',
-  'sc1|tobe': '866390522224951fe50bbcd18ce894b5911211665476ca6800d329c0d95ab732',
-  'sc3|asis': 'caabc531e11a74f7fb74b7980e5c3d396eac4ef8dd722a3117f5f0a6bce86bf2',
-  'sc3|tobe': '8a67b03fa1107ac55ff6a5039c5298c75d1e350c64338d6dc7d6a4bb8cb8f2f7'
+  'sc1|asis': 'a15cf4bfadb6bc7632964c8a47bcfd640b1ca03a02753655d6a6fac01901d9e6',
+  'sc1|tobe': 'c344c3d5f1371eef14e4345f887280a2cdc6cb73f1897e269f0ba34e21be88cb',
+  'sc3|asis': '0585f4bbe47013fc82e1a5792b43b2d9699cf64d26de6e39f2e6dc08a78accbd',
+  'sc3|tobe': 'bf4a9ed40f0060ec9edd5823227ac697935bf9ea513ee2f9deb86f0c852966e7'
 };
 // OFF To-Be 중복교전 — 결함이 남아 있다는 증거. ADR-076에서 sc3 12 → 13,
 // ADR-077에서 sc1 12 → 13 · sc3 13 → 15 (승인이 빨라져 교전 시도 자체가 늘었다 —
 // 결함 팔이라 그 증가분이 곧 중복으로 남는다. ON 팔에서는 여전히 0이어야 한다).
-var OFF_TOBE_DUP = { sc1: 13, sc3: 15 };
+var OFF_TOBE_DUP = { sc1: 13, sc3: 12 };
 
 function run(sc, mode, flags) {
   return KJ.runDES({

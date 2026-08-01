@@ -1762,7 +1762,7 @@ li.chk-fail { background: #43140f; }
       <p class="ctl-advanced-note">아래 <b>여덟 항목</b>은 <b>이 시뮬레이션의 기본 동작</b>입니다(전부 켜짐).
         끄면 각각의 구 동작이 재현되며 <b>반증·감사 목적으로만</b> 씁니다 — 끈 상태의 수치를 결과로 인용하면 안 됩니다.
         딥링크로도 끌 수 있습니다: <code>#appr=0&amp;disp=0&amp;south=0&amp;linkv2=0&amp;rp=0&amp;cop=0&amp;saw=0&amp;sdf=0</code></p>
-    <label class="ctl-check" title="As-Is 승인 계선(군단·수방사 AOC→MCRC 협조 홉 + 승인 대기 + 동적 위임)을 모델에 포함합니다(ADR-058). 끄면 ⑥⑦ 승인·협조 지표는 0이 아니라 '미측정'으로 표시됩니다.">
+    <label class="ctl-check" title="As-Is 승인 계선(군단·수방사 AOC→MCRC 협조 단계 + 승인 대기 + 동적 위임)을 모델에 포함합니다(ADR-058). 끄면 ⑥⑦ 승인·협조 지표는 0이 아니라 '미측정'으로 표시됩니다.">
       <input type="checkbox" id="approval-chain-toggle" checked>
       승인 계선 모델 (ADR-058)
     </label>
@@ -1944,7 +1944,7 @@ li.chk-fail { background: #43140f; }
         <p><b>As-Is와 To-Be를 나란히</b> 놓고, 위에서부터 상위 작전사 → <b>합동방공 C2(조율층)</b> →
            C2 체계(MCRC·KAMDOC·방공C2A) → 교전통제(ICC·ECS) → 레이더 · 요격부대로 쌓았습니다.</p>
         <p><b>To-Be의 핵심 차이는 「합동방공 C2」 조율층입니다.</b> 모델에서 이 층에 해당하는
-           노드는 통합공중작전통제소(IAOC)·교전운영센터(EOC)이며 둘 다 To-Be 전용입니다 —
+           노드는 통합공중작전통제소(IAOC)이며 To-Be 전용입니다 —
            그래서 As-Is 그림에서는 이 띠가 <b>통째로 비어 있고, 그 빈 칸이 곧 구조 차이</b>입니다.</p>
         <p class="note">⚠️ 맨 위 <b>상위 작전사(공작사·지작사·해작사·수방사)</b>와 해상 계통
            (KNTDS·함정)은 <b>이 모델의 범위 밖</b>입니다(ADR-060 — 지상배치 방공체계 C2에 한정,
@@ -3037,7 +3037,6 @@ bootRoot.KJ.iadsKernelReady = Promise.resolve(bootRoot.KJ.IADS);
     ICC: c2('대대급 정보통합센터', 'battalion', 5, { system: [3, 5], operator: { high: 2, mid: 5, low: 10 } }, 'brigade'),
     ECS: c2('교전통제소', 'battery', 8, { system: [1, 2], operator: { high: 1, mid: 2, low: 3 } }, 'battery'),
     IAOC: c2('통합공중작전통제소', 'killweb_central', 20, { system: [1, 2], operator: { high: 0.5, mid: 1, low: 1.5 } }, 'global'),
-    EOC: c2('교전운영센터', 'killweb_engagement', 10, { system: [0.5, 1], operator: { high: 0.5, mid: 1, low: 2 } }, 'global'),
     ARMY_LOCAL_AD: c2('육군 군단·권역 방공 C2A/AOC', 'corps_aoc', 8, { system: [1, 2], operator: { high: 1, mid: 2, low: 3 } }, 'corps_local', {
       integrated: false,
       paramRef: 'C2-CORPS-AOC-01',
@@ -3248,7 +3247,6 @@ const HANBANDO_FULL_POSITIONS = ({
   ARMY_CAPITAL_AD: { lon: 126.98, lat: 37.55, alt: 80, confidence: 'estimated', sourceNote: 'Phase 4.2 rebalance: 서울 수도방위 국지방공 대표 노드' },
   MARINE_NW_AD: { lon: 124.71, lat: 37.97, alt: 80, confidence: 'public', sourceNote: 'ADR-022 §16.3 서북도서 백령' },
   IAOC: { lon: 127.07, lat: 36.99, alt: 90, confidence: 'public', sourceNote: 'Kill-web 추상 C2' },
-  EOC: { lon: 127.13, lat: 36.92, alt: 90, confidence: 'public', sourceNote: 'Kill-web 추상 C2' },
 
   GREEN_PINE_CHUNGNAM: { lon: 126.85, lat: 36.40, alt: 450, confidence: 'estimated', sourceNote: 'ADR-022 §16.3 충남 Block-B 산악 추정' },
   GREEN_PINE_CHUNGBUK: { lon: 127.70, lat: 36.70, alt: 500, confidence: 'estimated', sourceNote: 'ADR-022 §16.3 충북 Block-B 산악 추정' },
@@ -3688,7 +3686,6 @@ const HANBANDO_FULL_C2_BASE = Object.freeze([
     instanceLabel: `ECS ${b.shooterTypeId} ${b.posKey}`,
   })),
   Object.freeze({ typeId: 'IAOC', posKey: 'IAOC', showNetworkNode: false }),
-  Object.freeze({ typeId: 'EOC', posKey: 'EOC', showNetworkNode: false }),
 ]);
 
 const KAMDOC_FULL_ENTRY = Object.freeze({
@@ -3765,7 +3762,6 @@ const HANBANDO_LEGACY_POSITIONS = Object.freeze({
   KAMD_OPS:     { lon: 127.08, lat: 36.92, alt: 100, confidence: 'scenario', sourceNote: 'legacy KAMDOC 개념좌표(오산권)' },
   MCRC:         { lon: 127.05, lat: 37.00, alt: 50,  confidence: 'scenario', sourceNote: 'legacy MCRC 개념좌표(오산권)' },
   IAOC:         { lon: 127.12, lat: 36.96, alt: 100, confidence: 'scenario', sourceNote: 'legacy JAMDC2 개념좌표(To-Be 융합허브)' },
-  EOC:          { lon: 127.05, lat: 37.00, alt: 100, confidence: 'scenario', sourceNote: 'kill-web 추상 노드(지도 미표시)' },
   ARMY_1C_AD:   { lon: 126.83, lat: 37.66, alt: 80,  confidence: 'scenario', sourceNote: 'legacy AOC-1C(1군단 방공상황실) 개념좌표' },
   ARMY_CD_AD:   { lon: 127.00, lat: 37.50, alt: 80,  confidence: 'scenario', sourceNote: 'legacy JAOC-CD(수방사 합동방공상황실) 개념좌표' },
   // 10세트 ICC (legacy ICC-* 와 동일 좌표)
@@ -3912,7 +3908,6 @@ const HANBANDO_LEGACY_C2_BASE = Object.freeze([
     instanceLabel: `ECS ${b.shooterTypeId} ${b.posKey}`,
   })),
   Object.freeze({ typeId: 'IAOC', posKey: 'IAOC', showNetworkNode: false }),
-  Object.freeze({ typeId: 'EOC', posKey: 'EOC', showNetworkNode: false }),
 ]);
 
 const KAMDOC_LEGACY_ENTRY = Object.freeze({
@@ -4146,7 +4141,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
  *   값은 **역할 이름**이며 deployment-adapter.js의 catalog.roles가 실제 노드로 해소한다
  *   (KAOC·MCRC·KAMDOC·IAOC). ⚠️ 여기에 roles에 없는 이름을 적으면 resolveRoleId가 그
  *   문자열을 그대로 돌려주고, 엔진이 "그런 노드 없음 → 승인 불필요"로 **조용히 넘어간다**.
- *   승인 홉이 통째로 사라지는데 실행은 성공하므로 눈치채기 어렵다 — 역할 이름을 새로 쓸
+ *   승인 단계가 통째로 사라지는데 실행은 성공하므로 눈치채기 어렵다 — 역할 이름을 새로 쓸
  *   때는 roles에 먼저 등록할 것(approval-authority.test.mjs가 이 대응을 잠근다).
  *   ADR-077: To-Be의 ABT 승인권자를 MCRC → IAOC(합동방공C2 조율층)로 옮겼다. To-Be
  *   구조의 요체가 기존 C2 체계 위에 얹힌 조율층인데, 승인만 옛 계선(MCRC)으로 붙어
@@ -4170,9 +4165,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
  * ── 위협별 자동화 차등(정밀화 Phase B-3, C2-AUTO-LEVEL-01) ──
  * automation: {asis, tobe} — 결심 단계의 인간개입 수준(구 note 텍스트를 엔진 플래그로 승격).
  *   'human-in-loop' : 승인권자(approvalLevel)까지 coord 협조경로 + 승인 처리 필요 (As-Is 기본)
- *   'human-on-loop' : 감독하 자동교전 — 승인 처리(서비스)는 남되 coord 협조경로 홉 생략
- *                     (COP 공유 전제). approvalLevel이 null이면 감독만 하고 홉 없음
- *   'auto-preauth'  : 사전승인 자동교전 — 결심 홉 자체 생략 (구 approval=null 우회의 일반화)
+ *   'human-on-loop' : 감독하 자동교전 — 승인 처리(서비스)는 남되 coord 협조경로 경유 생략
+ *                     (COP 공유 전제). approvalLevel이 null이면 감독만 하고 거치지 않음
+ *   'auto-preauth'  : 사전승인 자동교전 — 결심 경유 자체 생략 (구 approval=null 우회의 일반화)
  * 엔진 _decision이 이 플래그를 참조한다. 부하 기반 동적 권한위임(B-2)과는 별개 축.
  */
 (function () {
@@ -4591,6 +4586,18 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     messageServers: 1, messageCapacity: 4, freshnessSec: 300,
     paramRef: 'C2-ENG-STATUS-01', confidence: 'C'
   });
+  // ADR-079 — As-Is 육군 군단 AOC ↔ 공군 MCRC 교신 수단은 **음성과 문자(서버 채팅)**다.
+  // 종전에는 공중항적 중계를 데이터링크 1초로 두었는데(ADR-057이 근거 불명인 16초를 codex
+  // 값으로 환원하며 그리 됐다), 육↔공 사이에 실시간 항적 데이터링크가 있다는 전제가 된다.
+  // 실제로는 사람이 채팅창에 적어 넘기므로 그 전제가 성립하지 않는다.
+  // ⚠️ 대표값은 정책연구용 개념값(등급 C)이다 — 음성 협조 20초와 음성/VTC 180초 사이에
+  //    놓았다. 타이핑·확인 왕복이 있어 음성 협조보다 느리고, 비동기라 VTC보다는 빠르다.
+  //    근거 문헌이 없으므로 결과를 인용할 때 이 값이 가정임을 함께 밝혀야 한다.
+  var CHAT_TRACK = Object.freeze({
+    type: 'chat', delaySec: 45,
+    dist: Object.freeze({ kind: 'triangular', min: 20, mode: 45, max: 120 }),
+    paramRef: 'C2-CHAT-TRACK-01', confidence: 'C'
+  });
   var cache = {};
 
   function freezeAll(o) {
@@ -4715,7 +4722,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         c2Axis: decl.c2Axis || null, forceOwner: decl.forceOwner || 'ROK',
         architectureRole: decl.typeId === 'ARMY_LOCAL_AD' ? 'CORPS_AOC_C2A' : null,
         batteryId: decl.batteryId || null,
-        modes: decl.typeId === 'IAOC' || decl.typeId === 'EOC' ? ['tobe'] : undefined,
+        // ADR-078: 조율층은 IAOC 하나다. 종전에는 EOC(교전운영센터)를 나란히 뒀는데 실행에서
+        // 도착 0건의 유령 노드였다 — 선언·연결·표시만 되고 아무 일도 하지 않았다. 교전 운영
+        // (표적할당·우선순위·발사·격추·잔량 통합)은 IAOC의 기능으로 흡수하고 노드를 지웠다.
+        modes: decl.typeId === 'IAOC' ? ['tobe'] : undefined,
         confidence: decl.confidence, sourceNote: decl.sourceNote
       };
       nodes.push(node); nodeMap[node.id] = node;
@@ -4841,16 +4851,25 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       // As-Is 군단 AOC는 MCRC 공중항적과 자체 국지레이더 항적을 C2A에서
       // 함께 접수한다. 항적 전파는 16초 개념 데이터링크, 반대 방향의 교전현황은
       // 제한형 음성/VTC 메시지로 분리해 정보의 비대칭을 보존한다.
+      //
+      // ADR-078: 이 세 링크는 **As-Is 전용**이다(tobe 측 comm = null → linksInMode에서 제외).
+      // To-Be의 구조 변화가 바로 "MCRC↔군단 AOC 직결 음성 협조 → IAOC 중심 데이터링크"인데,
+      // 종전에는 같은 선의 tobe comm만 2초로 바꿔 두어 **경로는 그대로 두고 속도만** 빨라졌다.
+      // 그러면 조율층을 신설한 의미가 거동에 나타나지 않고, [C2 구조] 탭 To-Be 그림에는
+      // 옛 직결선과 IAOC 허브가 동시에 그려져 무엇이 달라졌는지 대비되지 않는다.
+      // To-Be 대체 경로는 아래 `if (iaoc)` 블록이 깐다(군단 AOC ↔ IAOC).
       localAds.forEach(function (aoc) {
-        addLink(links, mcrc.id, aoc.id, 'report', v2 ? C2_TRANSFER : LONG, v2 ? IFCN : DL_FAST, 'mcrc_to_corps_aoc_track');
-        addLink(links, aoc.id, mcrc.id, 'status', VOICE_STATUS, v2 ? IFCN : DL_FAST, 'corps_aoc_engagement_status');
+        // ADR-079: 공중항적 중계는 데이터링크가 아니라 **문자(서버 채팅)**다. linkSemanticsV2
+        // 여부와 무관하다 — v2는 전선(데이터링크) 지연의 codex 정합이지, 사람이 채팅으로
+        // 넘기는 절차에는 적용할 대상이 없다(음성 협조를 v2 대칭화에서 뺀 것과 같은 이유).
+        addLink(links, mcrc.id, aoc.id, 'report', CHAT_TRACK, null, 'mcrc_to_corps_aoc_track');
+        addLink(links, aoc.id, mcrc.id, 'status', VOICE_STATUS, null, 'corps_aoc_engagement_status');
         // ADR-058(approvalChain): 승인 협조 채널 — 교전현황(status) 채널과 의도적으로 분리.
         // As-Is VOICE(대표 20초·Uniform(10,30))는 링크(전선) 성능이 아니라 **음성/VTC 협조
         // 절차 지연**(교전의사 선언·책임구역 확인·중복 회피 협상)이다. 따라서 linkSemanticsV2가
         // 켜져도 As-Is 측은 codex 정합(1초) 대상이 아니다 — codex는 육↔공 협조 절차를
         // 모델링하지 않아 참고 정본이 없다(C2-VOICE-COORD-01 비고 참조).
-        // To-Be 측은 킬웹 네트워크를 따른다(v2 ON이면 IFCN 1초, OFF면 DL_FAST 2초).
-        if (appr) addLink(links, aoc.id, mcrc.id, 'coord', VOICE, v2 ? IFCN : DL_FAST, 'corps_aoc_approval');
+        if (appr) addLink(links, aoc.id, mcrc.id, 'coord', VOICE, null, 'corps_aoc_approval');
       });
     }
     sensorNodes(['TPS880K']).forEach(function (s) {
@@ -4888,18 +4907,36 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     }
 
     if (iaoc) {
-      nodes.filter(function (n) { return n.category === 'sensor' && n.forceOwner !== 'USFK'; }).forEach(function (s) {
+      // ADR-078 — IAOC는 MCRC·KAMDOC를 **대체하는** 노드가 아니라 그 **상위 제대**다.
+      //
+      // 센서는 조율층으로 **직결**한다(킬웹 IFCN 전제 — 정보 배포는 직렬 계선을 타지 않는다).
+      // 도메인 제대(MCRC·KAMDOC)는 이 배포를 **동시에** 받아 자기 도메인 항적을 처리한다 —
+      // 엔진의 `_fanoutDomainEchelon`이 그 병렬 통보를 넣는다. 직렬 중계가 아니므로
+      // 조율층의 결심 시각은 제대 큐에 걸리지 않는다("거치되 시간은 그대로").
+      nodes.filter(function (n) {
+        return n.category === 'sensor' && n.forceOwner !== 'USFK';
+      }).forEach(function (s) {
         addLink(links, s.id, iaoc.id, 'report', null, sensorReportTobe(s.typeId), 'killweb');
       });
       nodes.filter(function (n) { return n.category === 'c2' && n.id !== iaoc.id && n.forceOwner !== 'USFK'; }).forEach(function (c) {
         addLink(links, c.id, iaoc.id, 'report', null, v2 ? IFCN : DL_FAST, 'killweb');
         addLink(links, iaoc.id, c.id, 'coord', null, v2 ? IFCN : DL_FAST, 'killweb');
+        // 상행 협조(승인 요청 등)도 조율층으로 향한다. As-Is의 군단 AOC→MCRC 음성 협조를
+        // 대체하는 계선이며, 이게 없으면 To-Be에서 `_iadsApprovalGate`의 coord 경로 탐색이
+        // 상급을 찾지 못한다(현재 To-Be는 전부 human-on-loop이라 닿지 않지만, 계선을
+        // 반쪽만 두면 다음에 조용히 responsibility_gap이 난다).
+        addLink(links, c.id, iaoc.id, 'coord', null, v2 ? IFCN : DL_FAST, 'killweb');
+      });
+      // 군단 AOC 교전현황은 To-Be에서 조율층이 받는다(As-Is 음성/VTC → 데이터링크).
+      // 종전에는 도착 건수 0인 MCRC 앞으로 보내고 IAOC가 꺼내 읽는 모양이었다(ADR-056 우회).
+      localAds.forEach(function (aoc) {
+        addLink(links, aoc.id, iaoc.id, 'status', null, v2 ? IFCN : DL_FAST, 'corps_aoc_engagement_status');
       });
     }
 
     // ⚠️ resolveRoleId는 **등록되지 않은 키를 그대로 반환한다**. 그 값은 nodeId가 아니므로
     //    엔진의 `!this.nodeState[approvalId]` 가드(sim-engine.js)에 걸려 "승인 불필요"로
-    //    조용히 처리된다 — 승인 홉이 사라지는데 실행은 성공한다. 그래서 데이터(threats.js)가
+    //    조용히 처리된다 — 승인 단계가 사라지는데 실행은 성공한다. 그래서 데이터(threats.js)가
     //    쓰는 역할 이름은 **빠짐없이 여기 있어야** 한다. approval-authority.test.mjs가 잠근다.
     var roles = {
       fusionC2: iaoc ? iaoc.id : null,
@@ -5343,7 +5380,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
  *       항적 연속성 향상으로 dup_tobe = 1 + (dup-1)*0.3.
  *  3. 협조/승인: 항적 보유 C2가 교전승인권자(approvalLevel)까지 coord 최단경로로 협조
  *     (As-Is 육→공 음성 180s 경로가 여기서 부하를 받음). 승인권자에는 교전결심 부하 λ 추가.
- *     To-Be의 사전승인 자동교전(approval=null)은 협조·결심 홉 자체가 생략.
+ *     To-Be의 사전승인 자동교전(approval=null)은 협조·결심 경유 자체가 생략.
  *  4. 교전: canEngage가 참인 무기체계에 교전 부하 균등 배분(Phase 1 단순 WTA).
  *     제약: 신궁·천마(SHORAD)는 탄도탄 canEngage=false → 배분 자체가 불가.
  */
@@ -5458,7 +5495,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 
       // 3) 협조/승인 — 항적 보유 C2가 교전승인권자까지 coord 최단경로(BFS)로 협조.
       //    모든 상향 링크에 부하를 살포하지 않고 실제 협조 경로에만 부하를 싣는다.
-      //    To-Be 사전승인 자동교전(approval=null)은 협조·결심 홉 자체가 생략된다.
+      //    To-Be 사전승인 자동교전(approval=null)은 협조·결심 경유 자체가 생략된다.
       var approvalId = threat.approvalLevel ? threat.approvalLevel[mode] : null;
       if (approvalId && KJ.resolveRoleId) approvalId = KJ.resolveRoleId(approvalId, catalog);
       if (approvalId && KJ.nodeById(approvalId, catalog)) {
@@ -5647,7 +5684,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     }
     stages.push({ name: '협조/융합', sec: mode === 'tobe' ? Math.min(coordSec, 2) : coordSec });
 
-    // 결심 (승인 홉: 서비스타임 1건분 개념치)
+    // 결심 (승인 단계: 서비스타임 1건분 개념치)
     var approvalId = threat.approvalLevel ? threat.approvalLevel[mode] : null;
     if (approvalId && KJ.resolveRoleId) approvalId = KJ.resolveRoleId(approvalId, catalog);
     var approvalNode = approvalId && KJ.nodeById(approvalId, catalog);
@@ -6405,7 +6442,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
  *   4 위협평가(TE)         ├ C2 서버 처리(서비스시간) — To-Be는 JAMDC2 융합 노드에서 수행
  *   5 무기-표적할당(WTA)   ┘
  *   6 결심(Decision)       : 교전승인권자 — As-Is는 상위 제대 승인 필요
- *   7 교전협조/권한위임    : 육↔공 coord 홉(As-Is 음성 지연·중복교전의 원천)
+ *   7 교전협조/권한위임    : 육↔공 coord 경유(As-Is 음성 지연·중복교전의 원천)
  *   8 교전/요격명령(Engage): 명령 링크 지연 후 무기 교전채널(M/M/c) 처리
  *   9 BDA                  : 요격확률 판정 → 실패 시 재교전 피드백(폐루프, 상한 내)
  *
@@ -6470,6 +6507,13 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   // 하드코딩된 병목이 아니라 부하의 함수: 시나리오·강도가 낮으면 어느 모드에서도 전환이
   // 일어나지 않는다(회귀로 고정).
   var DELEG_QUEUE_MULT = { asis: 4, tobe: 1 };
+  // ADR-078 — To-Be 도메인 제대. IAOC(조율층) 아래에서 자기 도메인을 집행하는 C2다.
+  //   MCRC     : 공군 관제레이더 plot 융합 · 우군기/민항기 식별 (공중 도메인)
+  //   KAMD_OPS : 그린파인 BMD 항적 처리 · 패트리엇/천궁-II/L-SAM 사격통제 (BMD 도메인)
+  // 항적은 이 제대를 거쳐 IAOC로 올라가고, IAOC가 표적할당한 교전지시는 다시 이 제대를
+  // 거쳐 ECS로 내려간다. 두 방향 모두 **큐 서비스**가 붙는다 — 링크 지연만 더하면 제대가
+  // 부하 0의 유령 노드가 되어 "역할이 있다"는 그림과 수치가 어긋난다.
+  var DOMAIN_ECHELON_TYPES = { MCRC: 1, KAMD_OPS: 1 };
   // 저가 포화위협 부분집합(무인기·방사포) — exchangeSat 분자·분모 계정용 (ADR-002)
   var SAT_THREATS = { uav_small: true, mrl_large: true };
 
@@ -6624,7 +6668,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 모델링해 To-Be 개선폭을 과대평가한다. 셋 다 기본값으로 둘 이유가 없다.
     this.linkSemanticsV2 = ff('linkSemanticsV2', true);
     // ADR-058: 승인 계선 이식 — As-Is LOCAL_AD 축(군단 AOC)의 교전이 승인권자(KAOC→MCRC)
-    // 협조 홉 + 승인 서비스(kind='approval')를 거친다. 동적 권한위임(DELEG_QUEUE_MULT)·
+    // 협조 단계 + 승인 서비스(kind='approval')를 거친다. 동적 권한위임(DELEG_QUEUE_MULT)·
     // automation 3단계 차등 포함. approvalChainTobe는 반증 전용 — To-Be에도 As-Is 계선 강제.
     // ADR-065: 기본 ON 전환. 승인 계선이 꺼진 As-Is는 KJADS 문제 정의(음성 VTC 협조 의존)를
     // 모델링하지 않은 것이고, G6①(As-Is 병목=협조·승인)의 메커니즘이 기본 화면에서 사라진다.
@@ -6815,7 +6859,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // Phase B/D: 결심 지연(MoP) — 탐지→최초 교전명령 소요의 집계 (trace 무관 항상 수집)
     this.decisionDelaySum = 0;
     this.decisionDelayCount = 0;
-    this.coordDelaySum = 0;   // 1B: 결심지연 중 coord 협조 홉 지연 몫(잔여=C2 처리·승인 대기)
+    this.coordDelaySum = 0;   // 1B: 결심지연 중 coord 협조 단계 지연 몫(잔여=C2 처리·승인 대기)
     // Phase D: 비용교환비(MoFE) — 개념 요격탄 소모비용 / 격추 위협가치 (백만 USD 개념)
     // sat*는 저가 포화위협(장사정포·소형무인기) 부분집합. 전부 개념값(WPN/THR-*-COST-01).
     this.cost = { interceptM: 0, killedThreatM: 0, interceptSatM: 0, killedThreatSatM: 0,
@@ -7238,8 +7282,78 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     return Array.isArray(allowed) && allowed.indexOf(threat.type) !== -1;
   };
 
+  /**
+   * ADR-078 — 군단 AOC가 「상급 유래 항적」으로 융합하는 상대.
+   * As-Is는 MCRC, To-Be는 조율층(IAOC)이다. 종전에는 MCRC로 고정돼 있었는데, To-Be에서
+   * MCRC→군단 AOC 직결 항적 링크를 걷어내면(ADR-078) 그 판정이 영영 거짓이 되어
+   * 군단 AOC가 단일출처 항적만 갖게 된다 — 통합 구조인데 정보가 줄어드는 역설이 난다.
+   */
+  Simulation.prototype._iadsUpperEchelonId = function () {
+    var roles = this.catalog.roles || {};
+    return (this.mode === 'tobe' ? roles.IAOC || roles.fusionC2 : roles.MCRC) || null;
+  };
+
+  /**
+   * ADR-078 — 이 항적을 처리할 **도메인 제대**. To-Be 전용, 없으면 null.
+   *
+   * To-Be에서 IAOC는 MCRC·KAMDOC를 대체하지 않고 그 **위**에 선다. 도메인 분담은 As-Is의
+   * 책임 C2 분담과 같다 — 공중(ABT)은 MCRC(공군 관제레이더 plot 융합·우군기/민항기 식별),
+   * 탄도는 KAMDOC(BMD 항적·패트리엇/천궁-II/L-SAM 통제).
+   */
+  Simulation.prototype._iadsDomainEchelonFor = function (threat) {
+    if (this.mode !== 'tobe') return null;
+    var roles = this.catalog.roles || {};
+    var id = iadsThreatCategory(threat.type) === 'ballistic' ? roles.KAMDOC : roles.MCRC;
+    return (id && this.nodeState[id]) ? id : null;   // 무력화 배치면 제대 자체가 없다
+  };
+
+  /**
+   * ADR-078 — 도메인 제대 **병렬 통보**.
+   *
+   * 킬웹에서 정보 배포는 직렬 계선을 타지 않는다. 센서 항적은 조율층으로 직결되고,
+   * 도메인 제대는 **같은 시각에 같은 항적을 함께 받아** 자기 도메인 처리를 한다.
+   * 그래서 제대는 실제 큐 부하를 갖지만(역할이 있다), 조율층의 결심 시각은 제대 큐에
+   * 걸리지 않는다 — "거치되 시간은 그대로".
+   *
+   * ⚠️ 직렬 중계로 넣었다가 되돌렸다. 그러면 제대 처리시간이 결심 경로에 그대로 얹혀
+   *    IAOC 타임라인이 제대 용량에 종속되고, 도메인 레이더 경로가 최단경로 경쟁에서
+   *    져 그 레이더 기여가 통째로 사라지는 부작용까지 났다(실측 확인).
+   *
+   * 이 잡은 **아무것도 gate하지 않는다** — 완료 콜백이 뒤를 잇지 않는다. 제대가 포화라
+   * 드롭되어도 교전은 진행된다(그 도메인의 상황인식만 잃는다).
+   */
+  Simulation.prototype._fanoutDomainEchelon = function (threat, commander, track, at) {
+    if (!commander || commander.axis !== 'KILL_WEB') return;
+    var echelonId = this._iadsDomainEchelonFor(threat);
+    if (!echelonId || echelonId === commander.id) return;
+    var self = this;
+    this.schedule(at, PRI.LINK_ARRIVE, 'IADS_DOMAIN_REPORT', {
+      threat: threat, echelonId: echelonId, track: track,
+      priority: track && track.priority
+    });
+    void self;
+  };
+
+  Simulation.prototype._onIadsDomainReport = function (t, d) {
+    var threat = d.threat, ns = this.nodeState[d.echelonId];
+    if (!ns || !threat.alive || threat.pipelineDead) return;
+    var self = this;
+    this._mark(threat, '도메인처리:' + ns.node.typeId, t);
+    var disp = this._nodeArrive(d.echelonId, t, {
+      threat: threat, kind: 'iads_track', priority: d.priority,
+      jobId: 'DOMAIN_' + threat.id + '_' + d.echelonId
+    }, function (done) {
+      self._mark(threat, '도메인처리완료:' + ns.node.typeId, done);
+    });
+    if (disp === 'dropped') {
+      // 상황인식 손실 — 교전 계선은 조율층이 쥐고 있으므로 실패로 계상하지 않는다.
+      this.global.trackQuality.domainEchelonDropped =
+        (this.global.trackQuality.domainEchelonDropped || 0) + 1;
+    }
+  };
+
   Simulation.prototype._iadsReportBundle = function (threat, commander) {
-    var self = this, candidates = [], mcrcId = this.catalog.roles && this.catalog.roles.MCRC;
+    var self = this, candidates = [], mcrcId = this._iadsUpperEchelonId();
     var reportSensors = (threat._sensors || []).filter(function (sensor) {
       if (!self.iadsSensorPhysics) return true;
       var track = threat._sensorTracks && threat._sensorTracks[sensor.id];
@@ -7339,9 +7453,12 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       if (sources.length > 1) self.global.trackFusion.multiSourceTracks++;
       self.global.trackFusion.prioritizedTracks++;
       self._mark(threat, '책임C2:' + commander.typeId + '(' + commander.scope + ')', t);
+      var track = threat._c2TrackLedger[commander.id];
       self.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_C2_ARRIVE', {
-        threat: threat, commander: commander, track: threat._c2TrackLedger[commander.id]
+        threat: threat, commander: commander, track: track
       });
+      // ADR-078: 같은 시각에 도메인 제대에도 배포한다(직렬 중계가 아니라 병렬 통보).
+      self._fanoutDomainEchelon(threat, commander, track, t + delay);
     });
     if (!Object.keys(threat._iadsCommanderKeys).length) {
       if (this.iadsSensorPhysics && threat._iadsCorrelationFailedAt != null) {
@@ -7989,10 +8106,13 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   /** 군단 AOC 교전현황을 제한형 음성/VTC 채널로 MCRC에 전파. */
   Simulation.prototype._sendIadsStatus = function (threat, commander, phase, t) {
     if (!commander || commander.axis !== 'LOCAL_AD' || !this.iadsStatusChannels) return;
-    var mcrcId = this.catalog.roles && this.catalog.roles.MCRC;
-    var channel = this.iadsStatusChannels[commander.id + '>' + mcrcId];
+    // ADR-078: 수신 상급은 모드에 따라 다르다 — As-Is는 MCRC(음성/VTC), To-Be는 조율층
+    // IAOC(데이터링크). 종전에는 MCRC로 고정돼 있어, To-Be에서 **도착 건수 0인 노드**의
+    // 사서함으로 보내고 IAOC가 꺼내 읽는 모양이었다(ADR-056이 소비 축을 넓혀 우회한 흔적).
+    var upperId = this._iadsUpperEchelonId();
+    var channel = this.iadsStatusChannels[commander.id + '>' + upperId];
     if (!channel) return;
-    var msg = { threat: threat, from: commander.id, to: mcrcId, phase: phase, createdAt: t };
+    var msg = { threat: threat, from: commander.id, to: upperId, phase: phase, createdAt: t };
     this.global.statusSharing.sent++;
     if (channel.busy < channel.servers) {
       this._startIadsStatus(channel, msg, t);
@@ -8001,7 +8121,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       this.global.statusSharing.queued++;
     } else {
       this.global.statusSharing.dropped++;
-      this._mark(threat, '교전현황드롭:' + commander.id + '→MCRC/' + phase, t);
+      this._mark(threat, '교전현황드롭:' + commander.id + '→' + upperId + '/' + phase, t);
     }
   };
 
@@ -8017,11 +8137,13 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       from: msg.from, phase: msg.phase, createdAt: msg.createdAt, receivedAt: t,
       freshUntil: t + channel.freshnessSec, ageAtReceipt: age
     };
-    this._mark(msg.threat, '교전현황수신:MCRC←' + msg.from + '/' + msg.phase, t);
+    this._mark(msg.threat, '교전현황수신:' + msg.to + '←' + msg.from + '/' + msg.phase, t);
     if (msg.phase === 'released' && msg.threat.alive) {
       var commander = msg.threat._iadsCommandersById && msg.threat._iadsCommandersById[msg.to];
-      // ADR-056: To-Be에서는 수신 노드(MCRC 역할)가 책임 C2가 아니므로 id 조회가 빗나간다.
-      // 플래그 ON이면 통합 축(KILL_WEB) 책임 C2가 국지방공 해제를 받아 재교전을 잇는다(As-Is 대칭).
+      // ADR-056에서 이 폴백이 필요했던 이유는 **수신 노드가 책임 C2가 아니었기** 때문이다
+      // (To-Be 교전현황이 MCRC 앞으로 갔다). ADR-078이 수신처를 조율층(IAOC = KILL_WEB 책임
+      // C2)으로 바로잡아 이제 위 id 조회가 정상적으로 맞는다. 폴백은 안전망으로 남긴다 —
+      // 조율층이 없는 배치(무력화 시나리오)에서는 여전히 빗나갈 수 있다.
       if (!commander && this.unifiedEngagementState && msg.threat._iadsCommandersById) {
         var byId = msg.threat._iadsCommandersById, ids = Object.keys(byId);
         for (var ci = 0; ci < ids.length; ci++) {
@@ -8377,7 +8499,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       return;
     }
     // ADR-058: 승인 계선 — 계획 수립 전에 승인권한을 해소한다. LOCAL_AD 축(ROK 국지방공)에만
-    // 적용된다: 다른 한국군 축은 승인권자가 자기 자신으로 해소되어 홉이 없고(§0-(6) 실측),
+    // 적용된다: 다른 한국군 축은 승인권자가 자기 자신으로 해소되어 경유가 없고(§0-(6) 실측),
     // USFK 축은 ADR-036(권한 자동 통합 금지)에 따라 계선 자체를 적용하지 않는다.
     if (this.approvalChain && commander.axis === 'LOCAL_AD') {
       var gate = this._iadsApprovalGate(threat, commander, t);
@@ -8480,7 +8602,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 
   /**
    * ADR-058: 승인 계선 게이트 — legacy `_decision`의 이식.
-   * 반환: 'skip'(계선 비대상) | 'granted'(승인 완료/불필요/위임) | 'wait'(홉·서비스 진행 중)
+   * 반환: 'skip'(계선 비대상) | 'granted'(승인 완료/불필요/위임) | 'wait'(단계·처리 진행 중)
    *       | 'blocked'(협조 경로 부재 → responsibility_gap 확정).
    * 정책 조회는 c2-policy 모듈(KJ.IADS)을 쓰고, 모듈이 없는 compat 실행에서는 동일 데이터
    * (threats.js automation/approvalLevel)를 직접 읽는 동치 폴백을 쓴다.
@@ -8503,7 +8625,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
                    policyMode: pm };
         })(this.mode);
     var approvalId = policy.approvalRole ? this._resolveRole(policy.approvalRole) : null;
-    // 사전승인 자동교전 / 승인권자 부재 / 자기 자신 승인 → 홉·서비스 없음 (legacy 동치)
+    // 사전승인 자동교전 / 승인권자 부재 / 자기 자신 승인 → 단계·처리 없음 (legacy 동치)
     if (policy.auto === 'auto-preauth' || !approvalId || approvalId === commander.id || !this.nodeState[approvalId]) {
       threat._iadsApproval[key] = 'granted';
       return 'granted';
@@ -8521,14 +8643,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       return 'granted';
     }
     if (policy.auto === 'human-on-loop') {
-      // 감독하 자동교전: 협조 홉 생략, 승인권자 서비스만 (legacy 동치)
+      // 감독하 자동교전: 협조 단계 생략, 승인권자 서비스만 (legacy 동치)
       threat._iadsApproval[key] = 'pending';
       this._mark(threat, '감독승인개시:' + approvalId, t);
       this.schedule(t, PRI.LINK_ARRIVE, 'IADS_APPROVE_ARRIVE',
         { threat: threat, commander: commander, appr: approvalId, key: key });
       return 'wait';
     }
-    // human-in-loop: coord 협조 홉(다익스트라 최소지연) → 승인 서비스
+    // human-in-loop: coord 협조 단계(다익스트라 최소지연) → 승인 서비스
     var path = this._iadsShortestPath(commander.id, approvalId, ['coord']);
     if (path === null) {
       if (!threat.leakReason) threat.leakReason = 'responsibility_gap';
@@ -8545,7 +8667,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       delay += self._linkDelay(l.comm[self.mode]);
       self._recordLink(l.from, l.to, l.comm[self.mode], 'coord');
     });
-    // 결심지연 분해(legacy 1B 동치): coord 협조 홉 몫 누적 → meanCoordDelaySec
+    // 결심지연 분해(legacy 1B 동치): coord 협조 단계 몫 누적 → meanCoordDelaySec
     threat._coordDelay = (threat._coordDelay || 0) + delay;
     threat._iadsApproval[key] = 'pending';
     this._mark(threat, '협조개시:' + commander.id + '→' + approvalId, t);
@@ -8575,6 +8697,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var threat = d.threat, plan = d.plan, shooter = this._nodeById(d.shooterId);
     if (!threat.alive || plan.released || plan.resolved) return;
     var resource = this.iadsResources[shooter.id];
+    // ADR-078 §미구현 — KAMDOC의 「패트리엇·천궁-II·L-SAM 사격통제」는 하행 교전지시에
+    // 별도 큐 경유으로 넣지 **않았다**. 시도해 봤고 되돌린 이유를 남긴다:
+    // 엔진의 서비스시간은 **노드당 하나**라, 새 job kind를 그 노드에 얹으면 track 처리용으로
+    // 교정된 값(KAMDOC 37.5초 × 3서버)을 교전지시 중계에 그대로 쓰게 된다. 실측하면
+    // ρ=0.934 · 드롭 41건이 되어 To-Be 격추가 117 → 26으로 무너졌다. 이건 구조가 만든
+    // 결과가 아니라 **파라미터 오적용이 만든 인공물**이다(교전지시 중계에 37.5초는 근거 없다).
+    // 제대로 하려면 kind별 서비스시간과 그 근거값(params.md 신규 등록)이 필요하다.
+    // 현재 모델에서 KAMDOC의 포대 통제는 기존 KAMDOC↔ICC coord 계선으로 표현된다.
     if (!d.receptionComplete && this.commandReceptionQueue &&
         plan.targetEcsId && this.nodeState[plan.targetEcsId]) {
       var self = this;
@@ -8761,7 +8891,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       this.global.timeToEngage.push(t - threat.spawnT);
       if (threat._detectT != null) {
         this.decisionDelaySum += t - threat._detectT; this.decisionDelayCount++;
-        this.coordDelaySum += (threat._coordDelay || 0); // ADR-058: 협조 홉 몫(OFF에서는 항상 0)
+        this.coordDelaySum += (threat._coordDelay || 0); // ADR-058: 협조 단계 몫(OFF에서는 항상 0)
       }
     }
     var cps = (ev.missile && ev.missile.costPerShot) || (shooter.engage && shooter.engage.costPerShotM) || 0;
@@ -9045,6 +9175,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     switch (ev.type) {
       case 'SPAWN': this._spawn(ev.t, ev.data); break;
       case 'IADS_SENSOR_SCAN': this._onIadsSensorScan(ev.t, ev.data); break;
+      case 'IADS_DOMAIN_REPORT': this._onIadsDomainReport(ev.t, ev.data); break;
       case 'IADS_C2_ARRIVE': this._onIadsC2Arrive(ev.t, ev.data); break;
       case 'IADS_RETRY': this._onIadsRetry(ev.t, ev.data); break;
       case 'IADS_FIRE': this._onIadsFire(ev.t, ev.data); break;
@@ -9240,7 +9371,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         // 결심 지연(MoP): 탐지→최초 교전명령 평균(초) — 협조/승인/위임 지연 포함
         meanDecisionDelaySec: this.decisionDelayCount
           ? this.decisionDelaySum / this.decisionDelayCount : 0,
-        // 1B: 결심지연 중 coord 협조 홉 지연 평균(동일 분모). 잔여(결심지연−협조)=C2 처리·승인 대기·서비스.
+        // 1B: 결심지연 중 coord 협조 단계 지연 평균(동일 분모). 잔여(결심지연−협조)=C2 처리·승인 대기·서비스.
         // "As-Is 지연=음성 협조 탓"이 절반만 맞고 나머지는 승인권자 대기행렬임을 분해해 보여준다(사실 g).
         meanCoordDelaySec: this.decisionDelayCount
           ? this.coordDelaySum / this.decisionDelayCount : 0,
@@ -10203,8 +10334,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var instance;
     try {
       instance = kind === 'module'
-        ? new Worker('js/workers/sim-worker.mjs?v=20260801a', { type: 'module' })
-        : new Worker('js/workers/sim-worker.js?v=20260801a');
+        ? new Worker('js/workers/sim-worker.mjs?v=20260801e', { type: 'module' })
+        : new Worker('js/workers/sim-worker.js?v=20260801e');
       worker = instance;
       workerReady = false;
       worker.onmessage = function (ev) {
@@ -11621,10 +11752,11 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 
   // ── 계층 정의 (사용자 제공 아키텍처 반영) ──
   // 핵심: To-Be는 상위 작전사와 각 C2 체계 **사이에 「합동방공C2」 조율층이 끼어든다.**
-  // 모델에서 그 조율층에 해당하는 노드가 IAOC(통합공중작전통제소)·EOC(교전운영센터)이며,
-  // 둘 다 `modes:["tobe"]` — As-Is에는 존재하지 않는다. 그래서 As-Is 그림에서는 이 띠가
+  // 모델에서 그 조율층에 해당하는 노드가 IAOC(통합공중작전통제소) 하나이며,
+  // `modes:["tobe"]` — As-Is에는 존재하지 않는다. (ADR-078: 종전에는 EOC를 나란히 뒀는데
+  // 도착 0건의 유령 노드여서 그 기능을 IAOC로 흡수하고 노드를 지웠다.) 그래서 As-Is 그림에서는 이 띠가
   // 통째로 비고, **그 빈 칸이 곧 이 탭이 말하려는 구조 차이**다.
-  var COORD = { IAOC: 1, EOC: 1 };               // 합동방공C2 조율층
+  var COORD = { IAOC: 1 };                       // 합동방공C2 조율층 (ADR-078: EOC 흡수)
   var SYSTEM = { KAMD_OPS: 1, MCRC: 1, ARMY_LOCAL_AD: 1 };  // C2 체계층
   function tierOf(n) {
     if (n.category === 'sensor') return 4;
@@ -11641,7 +11773,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   var OUT_OF_SCOPE = ['공작사', '지작사', '해작사', '수방사'];
   var TIERS = [
     { label: '상위 작전사', hint: '모델 범위 밖 — 아키텍처 맥락', ghost: true },
-    { label: '합동방공 C2 (조율층)', hint: 'To-Be에서 신설 — IAOC · EOC', band: true },
+    { label: '합동방공 C2 (조율층)', hint: 'To-Be에서 신설 — IAOC 통합공중작전통제소', band: true },
     { label: 'C2 체계', hint: 'MCRC · KAMDOC · 방공C2A(군단·수방사 AOC)' },
     { label: '교전통제 (ICC · ECS)', hint: '권역·포대 단위 사격통제' },
     { label: '레이더', hint: '공군 레이더 · 그린파인 · 국지방공' },
@@ -11650,7 +11782,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 
   // 유형 표시명 — 카탈로그 이름은 개체명(ICC W1)이라 묶음 라벨로는 유형명이 낫다.
   var TYPE_LABEL = {
-    KAMD_OPS: 'KAMDOC', MCRC: 'MCRC', IAOC: '통합공중작전통제소', EOC: '교전운영센터',
+    KAMD_OPS: 'KAMDOC', MCRC: 'MCRC', IAOC: '통합공중작전통제소',
     ARMY_LOCAL_AD: '군단 방공상황실', ICC: 'ICC 교전통제소', ECS: 'ECS 포대지휘소',
     FPS117: 'FPS-117', GREEN_PINE_B: 'Green Pine', LSAM_MFR: 'L-SAM MFR',
     MSAM_MFR: 'M-SAM MFR', PATRIOT_RADAR: 'Patriot 레이더', TPS880K: 'TPS-880K',
@@ -11667,7 +11799,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
    */
   function c2Column(cat, mode, act) {
     var links = KJ.linksInMode ? KJ.linksInMode(mode, cat) : cat.links;
-    // ⚠️ 노드도 **모드로 걸러야 한다.** 통합공중작전통제소(IAOC)·교전운영센터(EOC)는
+    // ⚠️ 노드도 **모드로 걸러야 한다.** 통합공중작전통제소(IAOC)는
     //    모델상 `modes:["tobe"]` — To-Be에만 존재하는 노드다. 카탈로그 전체를 그리면
     //    As-Is 그림에 없어야 할 통합 지휘소가 떠서, 이 탭이 보여주려는 구조 차이를
     //    정반대로 오도한다(실제로 그렇게 나왔다).
@@ -11688,8 +11820,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       : nodes;
 
     // 교전명령은 상급 C2 → **ECS** → 포대로 간다. 항적은 `사수선정·표적할당:IAOC→BATTERY_…`
-    // 처럼 양 끝만 적어 중간 ECS 홉이 빠지고, 그러면 사수가 선 없이 떠 버린다.
-    // 카탈로그에 1홉 경로가 실재할 때만 그 중간 노드를 **경로상 노드**로 보완한다 —
+    // 처럼 양 끝만 적어 중간 ECS 경유가 빠지고, 그러면 사수가 선 없이 떠 버린다.
+    // 카탈로그에 1단계 경로가 실재할 때만 그 중간 노드를 **경로상 노드**로 보완한다 —
     // 연결을 지어내는 게 아니라 모델이 가진 경로를 밝히는 것이며, 표기로 구분한다.
     if (detail) {
       var byId = {};
@@ -11961,7 +12093,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
      *   상위 작전사 → **합동방공 C2(조율층)** → C2 체계 → 교전통제(ICC·ECS) → 레이더·요격부대
      * 하위 네 계층의 연결은 링크 데이터에서 나온 것이다(실측 흐름):
      *   센서 →(report) ECS·C4I / ECS →(coord) ICC →(coord) C4I / ECS →(command) 사수
-     * To-Be의 핵심 차이인 조율층은 IAOC·EOC이며 As-Is에는 그 노드 자체가 없다.
+     * To-Be의 핵심 차이인 조율층은 IAOC이며 As-Is에는 그 노드 자체가 없다.
      *
      * 항적을 고르면 탐지~요격까지 노드가 **시각 순서대로 점등**된다. 좌우가 같은 시계를
      * 공유하므로 어느 쪽이 먼저 끝나는지가 그대로 보인다.
@@ -12043,7 +12175,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
           : '같은 유형은 <b>하나로 묶어</b> 그렸습니다(원 안 숫자 = 개수, 선 굵기 = 링크 수). ' +
             '개별 노드 ' + colA.nodes + '개를 다 찍으면 같은 것의 반복이 화면을 덮어 구조가 안 보입니다 — ' +
             '개별 노드는 위에서 <b>항적을 고르면</b> 관여한 것만 펼쳐집니다.') +
-        ' <b>To-Be에만 존재하는 노드</b>가 있습니다 — 통합공중작전통제소(IAOC)·교전운영센터(EOC)는 ' +
+        ' <b>To-Be에만 존재하는 노드</b>가 있습니다 — 통합공중작전통제소(IAOC)는 ' +
         '모델상 To-Be 전용이라 As-Is 그림에는 나타나지 않습니다(노드 ' + colA.nodes + ' → ' + colB.nodes + '). ' +
         '그리고 <b>To-Be에서만</b> 센서·ECS가 상급 지휘소로 <b>직접</b> 보고하는 링크가 생깁니다 — ' +
         '링크 수 차이(' + colA.links + ' → ' + colB.links + ')가 그것입니다.</div>';
@@ -12876,7 +13008,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   }
 
   // ── 참여 노드 타임라인 ──
-  // 「분절된 구조 vs 통합 구조」를 **모양으로** 보여준다. As-Is는 승인·협조 홉을 순차로 밟아
+  // 「분절된 구조 vs 통합 구조」를 **모양으로** 보여준다. As-Is는 승인·협조 단계를 순차로 밟아
   // 막대가 계단처럼 길게 늘어지고, To-Be는 같은 일이 겹쳐 일어나 짧게 끝난다.
   // ⚠️ 이 그림이 뒷받침하는 주장은 **시간**이다. "통합하면 더 많은 사수를 고려한다"는 주장은
   //    주축에서 성립하지 않는다(ADR-073 §발견 — 주축 사수 풀은 두 구조가 동일). 그래서
@@ -12960,7 +13092,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 
   // ── C2 계통 다이어그램 (항적별 · 상태에 따라 점등) ──
   // 타임라인이 **얼마나 걸렸나**를 보여준다면, 이 그림은 **누가 누구를 거쳤나**를 보여준다.
-  // 분절(As-Is)은 센서→하위C2→상위C2→사수로 홉이 늘어지고, 통합(To-Be)은 IAOC 한 점으로 모인다.
+  // 분절(As-Is)은 센서→하위C2→상위C2→사수로 경유가 늘어지고, 통합(To-Be)은 IAOC 한 점으로 모인다.
   //
   // ⚠️ 간선은 **카탈로그에 실제로 존재하는 링크만** 그린다. 항적 단계가 시간상 인접하다는
   //    이유로 선을 그으면 모델에 없는 연결을 지어내는 것이다 — 그 선을 보고 "이렇게

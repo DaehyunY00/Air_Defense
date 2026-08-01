@@ -180,8 +180,9 @@ console.log('\n== 5) UI 계약 ==');
   assert(/'상위 작전사'/.test(panels) && /'합동방공 C2 \(조율층\)'/.test(panels) &&
     /'C2 체계'/.test(panels) && /'교전통제 \(ICC · ECS\)'/.test(panels),
     '세로 계층이 작전사 → 합동방공C2 → C2 체계 → 교전통제 순으로 정의됨');
-  // To-Be의 핵심 차이 = 조율층. As-Is에는 그 노드(IAOC·EOC)가 아예 없어야 한다.
-  assert(/var COORD = \{ IAOC: 1, EOC: 1 \}/.test(panels), '조율층 노드가 IAOC·EOC로 정의됨');
+  // To-Be의 핵심 차이 = 조율층. As-Is에는 그 노드(IAOC)가 아예 없어야 한다.
+  // ADR-078: 종전에는 EOC를 나란히 뒀는데 도착 0건의 유령 노드여서 IAOC로 흡수하고 지웠다.
+  assert(/var COORD = \{ IAOC: 1 \}/.test(panels), '조율층 노드가 IAOC 하나로 정의됨');
   assert(/조율층 없음/.test(panels),
     'As-Is에서 조율층이 비었음을 글자로 남김 (빈 칸이 곧 구조 차이)');
   // 모델 범위 밖 요소는 맥락으로만 — 링크를 그으면 시뮬레이션이 계산하는 것처럼 오도한다.

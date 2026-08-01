@@ -10,15 +10,17 @@ var KJ = global.KJ;
 var fail = 0;
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
 
+// ADR-078: C2 열이 배치마다 1씩 줄었다 — 조율층의 EOC(교전운영센터)를 삭제했다.
+// 실행에서 도착 0건의 유령 노드여서 기능을 IAOC로 흡수했다(격추·누수는 전 케이스 불변).
 var expected = {
-  HANBANDO_FULL_NORMAL: [71, 84, 98, 84, 45],
-  HANBANDO_FULL_MCRC_DOWN: [71, 84, 97, 84, 45],
-  HANBANDO_FULL_KAMDOC_DOWN: [71, 84, 97, 84, 45],
+  HANBANDO_FULL_NORMAL: [71, 84, 97, 84, 45],
+  HANBANDO_FULL_MCRC_DOWN: [71, 84, 96, 84, 45],
+  HANBANDO_FULL_KAMDOC_DOWN: [71, 84, 96, 84, 45],
   // LEGACY_HIRES(ADR-054): legacy 자산 배치를 고해상도 타입으로 이식 — 10세트(천마 5·천궁-II 5)
   // + 국지방공 2 + 군단 중거리 1 + 미사일방어부대 2 = 포대 15. SHORAD 열은 BIHO 2 + CHUNMA 5 = 7.
-  HANBANDO_LEGACY_NORMAL: [19, 15, 32, 15, 7],
-  HANBANDO_LEGACY_MCRC_DOWN: [19, 15, 31, 15, 7],
-  HANBANDO_LEGACY_KAMDOC_DOWN: [19, 15, 31, 15, 7]
+  HANBANDO_LEGACY_NORMAL: [19, 15, 31, 15, 7],
+  HANBANDO_LEGACY_MCRC_DOWN: [19, 15, 30, 15, 7],
+  HANBANDO_LEGACY_KAMDOC_DOWN: [19, 15, 30, 15, 7]
 };
 
 assert(JSON.stringify(KJ.DEPLOYMENT_IDS) === JSON.stringify(Object.keys(expected)), '6개 배치 ID·순서 고정 (ADR-055: MINI 3종 폐기)');

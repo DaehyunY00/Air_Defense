@@ -1,0 +1,1126 @@
+{
+ "modes": {
+  "asis": {
+   "nodes": 64,
+   "links": 116,
+   "edges": [
+    {
+     "from": "ADC2A",
+     "to": "ECS",
+     "kind": "coord",
+     "type": "datalink",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-SHORT-01",
+     "n": 3
+    },
+    {
+     "from": "ADC2A",
+     "to": "MCRC",
+     "kind": "status",
+     "type": "voice-vtc",
+     "delaySec": 180,
+     "dist": {
+      "kind": "triangular",
+      "min": 90,
+      "mode": 180,
+      "max": 270
+     },
+     "servers": 1,
+     "capacity": 4,
+     "freshnessSec": 300,
+     "paramRef": "C2-ENG-STATUS-01",
+     "n": 2
+    },
+    {
+     "from": "ADC2A",
+     "to": "MCRC",
+     "kind": "coord",
+     "type": "voice",
+     "delaySec": 20,
+     "dist": {
+      "kind": "uniform",
+      "min": 10,
+      "max": 30
+     },
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "C2-VOICE-COORD-01",
+     "n": 2
+    },
+    {
+     "from": "ECS",
+     "to": "ADC2A",
+     "kind": "coord",
+     "type": "datalink",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-SHORT-01",
+     "n": 3
+    },
+    {
+     "from": "ECS",
+     "to": "ICC",
+     "kind": "coord",
+     "type": "datalink",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-SHORT-01",
+     "n": 12
+    },
+    {
+     "from": "ECS",
+     "to": "SHOOTER:BIHO",
+     "kind": "command",
+     "type": "internal",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-INTERNAL-01",
+     "n": 2
+    },
+    {
+     "from": "ECS",
+     "to": "SHOOTER:CHEONGUNG2",
+     "kind": "command",
+     "type": "internal",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-INTERNAL-01",
+     "n": 6
+    },
+    {
+     "from": "ECS",
+     "to": "SHOOTER:CHUNMA",
+     "kind": "command",
+     "type": "internal",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-INTERNAL-01",
+     "n": 5
+    },
+    {
+     "from": "ECS",
+     "to": "SHOOTER:LSAM",
+     "kind": "command",
+     "type": "internal",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-INTERNAL-01",
+     "n": 1
+    },
+    {
+     "from": "ECS",
+     "to": "SHOOTER:PAC3",
+     "kind": "command",
+     "type": "internal",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-INTERNAL-01",
+     "n": 1
+    },
+    {
+     "from": "ICC",
+     "to": "ECS",
+     "kind": "coord",
+     "type": "datalink",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-SHORT-01",
+     "n": 12
+    },
+    {
+     "from": "ICC",
+     "to": "KAMDOC",
+     "kind": "coord",
+     "type": "datalink",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-SHORT-01",
+     "n": 11
+    },
+    {
+     "from": "ICC",
+     "to": "MCRC",
+     "kind": "coord",
+     "type": "datalink",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-SHORT-01",
+     "n": 11
+    },
+    {
+     "from": "KAMDOC",
+     "to": "ICC",
+     "kind": "coord",
+     "type": "datalink",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-SHORT-01",
+     "n": 11
+    },
+    {
+     "from": "MCRC",
+     "to": "ADC2A",
+     "kind": "report",
+     "type": "datalink",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-SHORT-01",
+     "n": 2
+    },
+    {
+     "from": "MCRC",
+     "to": "ICC",
+     "kind": "coord",
+     "type": "datalink",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-SHORT-01",
+     "n": 11
+    },
+    {
+     "from": "SENSOR:FPS117",
+     "to": "MCRC",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 8,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 2
+    },
+    {
+     "from": "SENSOR:GREEN_PINE_B",
+     "to": "KAMDOC",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 16,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 1
+    },
+    {
+     "from": "SENSOR:LSAM_MFR",
+     "to": "ECS",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 1
+    },
+    {
+     "from": "SENSOR:MSAM_MFR",
+     "to": "ECS",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 6
+    },
+    {
+     "from": "SENSOR:PATRIOT_RADAR",
+     "to": "ECS",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 1
+    },
+    {
+     "from": "SENSOR:TPS880K",
+     "to": "ADC2A",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 4,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 2
+    },
+    {
+     "from": "SENSOR:TPS880K",
+     "to": "MCRC",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 4,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 8
+    }
+   ]
+  },
+  "tobe": {
+   "nodes": 66,
+   "links": 224,
+   "edges": [
+    {
+     "from": "ADC2A",
+     "to": "ECS",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 3
+    },
+    {
+     "from": "ADC2A",
+     "to": "IAOC",
+     "kind": "report",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 2
+    },
+    {
+     "from": "ADC2A",
+     "to": "IAOC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 2
+    },
+    {
+     "from": "ADC2A",
+     "to": "IAOC",
+     "kind": "status",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 2
+    },
+    {
+     "from": "ECS",
+     "to": "ADC2A",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 3
+    },
+    {
+     "from": "ECS",
+     "to": "IAOC",
+     "kind": "report",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 15
+    },
+    {
+     "from": "ECS",
+     "to": "IAOC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 15
+    },
+    {
+     "from": "ECS",
+     "to": "ICC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 12
+    },
+    {
+     "from": "ECS",
+     "to": "SHOOTER:BIHO",
+     "kind": "command",
+     "type": "internal",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-INTERNAL-01",
+     "n": 2
+    },
+    {
+     "from": "ECS",
+     "to": "SHOOTER:CHEONGUNG2",
+     "kind": "command",
+     "type": "internal",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-INTERNAL-01",
+     "n": 6
+    },
+    {
+     "from": "ECS",
+     "to": "SHOOTER:CHUNMA",
+     "kind": "command",
+     "type": "internal",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-INTERNAL-01",
+     "n": 5
+    },
+    {
+     "from": "ECS",
+     "to": "SHOOTER:LSAM",
+     "kind": "command",
+     "type": "internal",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-INTERNAL-01",
+     "n": 1
+    },
+    {
+     "from": "ECS",
+     "to": "SHOOTER:PAC3",
+     "kind": "command",
+     "type": "internal",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-INTERNAL-01",
+     "n": 1
+    },
+    {
+     "from": "EOC",
+     "to": "IAOC",
+     "kind": "report",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 1
+    },
+    {
+     "from": "EOC",
+     "to": "IAOC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 1
+    },
+    {
+     "from": "IAOC",
+     "to": "ADC2A",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 2
+    },
+    {
+     "from": "IAOC",
+     "to": "ECS",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 15
+    },
+    {
+     "from": "IAOC",
+     "to": "EOC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 1
+    },
+    {
+     "from": "IAOC",
+     "to": "ICC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 11
+    },
+    {
+     "from": "IAOC",
+     "to": "KAMDOC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 1
+    },
+    {
+     "from": "IAOC",
+     "to": "MCRC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 1
+    },
+    {
+     "from": "ICC",
+     "to": "ECS",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 12
+    },
+    {
+     "from": "ICC",
+     "to": "IAOC",
+     "kind": "report",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 11
+    },
+    {
+     "from": "ICC",
+     "to": "IAOC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 11
+    },
+    {
+     "from": "ICC",
+     "to": "KAMDOC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 11
+    },
+    {
+     "from": "ICC",
+     "to": "MCRC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 11
+    },
+    {
+     "from": "KAMDOC",
+     "to": "IAOC",
+     "kind": "report",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 1
+    },
+    {
+     "from": "KAMDOC",
+     "to": "IAOC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 1
+    },
+    {
+     "from": "KAMDOC",
+     "to": "ICC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 11
+    },
+    {
+     "from": "MCRC",
+     "to": "IAOC",
+     "kind": "report",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 1
+    },
+    {
+     "from": "MCRC",
+     "to": "IAOC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 1
+    },
+    {
+     "from": "MCRC",
+     "to": "ICC",
+     "kind": "coord",
+     "type": "ifcn",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-IFCN-01",
+     "n": 11
+    },
+    {
+     "from": "SENSOR:FPS117",
+     "to": "IAOC",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 8,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 2
+    },
+    {
+     "from": "SENSOR:FPS117",
+     "to": "MCRC",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 8,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 2
+    },
+    {
+     "from": "SENSOR:GREEN_PINE_B",
+     "to": "IAOC",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 16,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 1
+    },
+    {
+     "from": "SENSOR:GREEN_PINE_B",
+     "to": "KAMDOC",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 16,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 1
+    },
+    {
+     "from": "SENSOR:LSAM_MFR",
+     "to": "ECS",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 1
+    },
+    {
+     "from": "SENSOR:LSAM_MFR",
+     "to": "IAOC",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 1
+    },
+    {
+     "from": "SENSOR:MSAM_MFR",
+     "to": "ECS",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 6
+    },
+    {
+     "from": "SENSOR:MSAM_MFR",
+     "to": "IAOC",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 6
+    },
+    {
+     "from": "SENSOR:PATRIOT_RADAR",
+     "to": "ECS",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 1
+    },
+    {
+     "from": "SENSOR:PATRIOT_RADAR",
+     "to": "IAOC",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 1,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 1
+    },
+    {
+     "from": "SENSOR:TPS880K",
+     "to": "ADC2A",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 4,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 2
+    },
+    {
+     "from": "SENSOR:TPS880K",
+     "to": "IAOC",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 4,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 8
+    },
+    {
+     "from": "SENSOR:TPS880K",
+     "to": "MCRC",
+     "kind": "report",
+     "type": "report-cycle",
+     "delaySec": 4,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "IADS-LINK-RP-01",
+     "n": 8
+    }
+   ]
+  }
+ },
+ "nodes": {
+  "KAMDOC": {
+   "group": "KAMDOC",
+   "category": "c2",
+   "typeId": "KAMD_OPS",
+   "count": 1,
+   "name": "KAMDOC",
+   "modes": "both",
+   "queue": {
+    "servers": 3,
+    "svc": {
+     "asis": 37.5,
+     "tobe": 37.5
+    },
+    "cap": 30
+   }
+  },
+  "MCRC": {
+   "group": "MCRC",
+   "category": "c2",
+   "typeId": "MCRC",
+   "count": 1,
+   "name": "MCRC",
+   "modes": "both",
+   "queue": {
+    "servers": 8,
+    "svc": {
+     "asis": 37.5,
+     "tobe": 37.5
+    },
+    "cap": 80
+   }
+  },
+  "ICC": {
+   "group": "ICC",
+   "category": "c2",
+   "typeId": "ICC",
+   "count": 11,
+   "name": "ICC W1",
+   "modes": "both",
+   "queue": {
+    "servers": 5,
+    "svc": {
+     "asis": 9,
+     "tobe": 9
+    },
+    "cap": 25
+   }
+  },
+  "ADC2A": {
+   "group": "ADC2A",
+   "category": "c2",
+   "typeId": "ARMY_LOCAL_AD",
+   "count": 2,
+   "name": "1군단 방공상황실(AOC)",
+   "modes": "both",
+   "queue": {
+    "servers": 8,
+    "svc": {
+     "asis": 3.5,
+     "tobe": 3.5
+    },
+    "cap": 16
+   }
+  },
+  "ECS": {
+   "group": "ECS",
+   "category": "c2",
+   "typeId": "ECS",
+   "count": 15,
+   "name": "ECS CHUNMA BAT_W1",
+   "modes": "both",
+   "queue": {
+    "servers": 8,
+    "svc": {
+     "asis": 3.5,
+     "tobe": 3.5
+    },
+    "cap": 16
+   }
+  },
+  "IAOC": {
+   "group": "IAOC",
+   "category": "c2",
+   "typeId": "IAOC",
+   "count": 1,
+   "name": "통합공중작전통제소",
+   "modes": [
+    "tobe"
+   ],
+   "queue": {
+    "servers": 20,
+    "svc": {
+     "asis": 2.5,
+     "tobe": 2.5
+    },
+    "cap": 40
+   }
+  },
+  "EOC": {
+   "group": "EOC",
+   "category": "c2",
+   "typeId": "EOC",
+   "count": 1,
+   "name": "교전운영센터",
+   "modes": [
+    "tobe"
+   ],
+   "queue": {
+    "servers": 10,
+    "svc": {
+     "asis": 1.75,
+     "tobe": 1.75
+    },
+    "cap": 20
+   }
+  },
+  "SENSOR:GREEN_PINE_B": {
+   "group": "SENSOR:GREEN_PINE_B",
+   "category": "sensor",
+   "typeId": "GREEN_PINE_B",
+   "count": 1,
+   "name": "Green Pine Block-B (GPR)",
+   "modes": "both"
+  },
+  "SENSOR:FPS117": {
+   "group": "SENSOR:FPS117",
+   "category": "sensor",
+   "typeId": "FPS117",
+   "count": 2,
+   "name": "FPS-117 계열 장거리 감시레이더 (ACR_E)",
+   "modes": "both"
+  },
+  "SENSOR:TPS880K": {
+   "group": "SENSOR:TPS880K",
+   "category": "sensor",
+   "typeId": "TPS880K",
+   "count": 8,
+   "name": "TPS-880K 계열 국지방공레이더 (LAR_C)",
+   "modes": "both"
+  },
+  "SENSOR:MSAM_MFR": {
+   "group": "SENSOR:MSAM_MFR",
+   "category": "sensor",
+   "typeId": "MSAM_MFR",
+   "count": 6,
+   "name": "천궁-II 포대 전속 MFR (MFR_W2)",
+   "modes": "both"
+  },
+  "SENSOR:PATRIOT_RADAR": {
+   "group": "SENSOR:PATRIOT_RADAR",
+   "category": "sensor",
+   "typeId": "PATRIOT_RADAR",
+   "count": 1,
+   "name": "Patriot 포대 전속 레이더 (MFR_MDU_M)",
+   "modes": "both"
+  },
+  "SENSOR:LSAM_MFR": {
+   "group": "SENSOR:LSAM_MFR",
+   "category": "sensor",
+   "typeId": "LSAM_MFR",
+   "count": 1,
+   "name": "L-SAM 포대 전속 MFR (MFR_MDU_L)",
+   "modes": "both"
+  },
+  "SHOOTER:CHUNMA": {
+   "group": "SHOOTER:CHUNMA",
+   "category": "shooter",
+   "typeId": "CHUNMA",
+   "count": 5,
+   "name": "천마 중대 (BAT_W1)",
+   "modes": "both"
+  },
+  "SHOOTER:CHEONGUNG2": {
+   "group": "SHOOTER:CHEONGUNG2",
+   "category": "shooter",
+   "typeId": "CHEONGUNG2",
+   "count": 6,
+   "name": "천궁-II (BAT_W2)",
+   "modes": "both"
+  },
+  "SHOOTER:BIHO": {
+   "group": "SHOOTER:BIHO",
+   "category": "shooter",
+   "typeId": "BIHO",
+   "count": 2,
+   "name": "비호 중대 (SHORAD_1C)",
+   "modes": "both"
+  },
+  "SHOOTER:PAC3": {
+   "group": "SHOOTER:PAC3",
+   "category": "shooter",
+   "typeId": "PAC3",
+   "count": 1,
+   "name": "한국군 PAC-3 (MDU_M)",
+   "modes": "both"
+  },
+  "SHOOTER:LSAM": {
+   "group": "SHOOTER:LSAM",
+   "category": "shooter",
+   "typeId": "LSAM",
+   "count": 1,
+   "name": "L-SAM (MDU_L)",
+   "modes": "both"
+  }
+ },
+ "roles": {
+  "fusionC2": "C2_IAOC_IAOC",
+  "IAOC": "C2_IAOC_IAOC",
+  "KAMDOC": "C2_KAMD_OPS_KAMD_OPS",
+  "MCRC": "C2_MCRC_MCRC",
+  "KAOC": "C2_MCRC_MCRC",
+  "corpsAocs": [
+   "C2_ARMY_LOCAL_AD_ARMY_1C_AD",
+   "C2_ARMY_LOCAL_AD_ARMY_CD_AD"
+  ]
+ }
+}

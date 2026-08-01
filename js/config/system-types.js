@@ -317,7 +317,6 @@
     ICC: c2('대대급 정보통합센터', 'battalion', 5, { system: [3, 5], operator: { high: 2, mid: 5, low: 10 } }, 'brigade'),
     ECS: c2('교전통제소', 'battery', 8, { system: [1, 2], operator: { high: 1, mid: 2, low: 3 } }, 'battery'),
     IAOC: c2('통합공중작전통제소', 'killweb_central', 20, { system: [1, 2], operator: { high: 0.5, mid: 1, low: 1.5 } }, 'global'),
-    EOC: c2('교전운영센터', 'killweb_engagement', 10, { system: [0.5, 1], operator: { high: 0.5, mid: 1, low: 2 } }, 'global'),
     ARMY_LOCAL_AD: c2('육군 군단·권역 방공 C2A/AOC', 'corps_aoc', 8, { system: [1, 2], operator: { high: 1, mid: 2, low: 3 } }, 'corps_local', {
       integrated: false,
       paramRef: 'C2-CORPS-AOC-01',

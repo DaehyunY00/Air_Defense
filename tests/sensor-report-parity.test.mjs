@@ -70,20 +70,43 @@ assert(kwOff.every(function (l) { return l.comm.tobe.delaySec === 1 && l.comm.to
   'OFF에서는 킬웹 보고가 전부 IFCN 1초 — codex 해석 복원');
 
 console.log('# 3 — 대칭화하지 않는 것');
-var voice = on.links.filter(function (l) {
-  return l.comm.asis && l.comm.tobe && /voice/.test(l.comm.asis.type);
-});
-assert(voice.length === 4 && voice.every(function (l) { return l.comm.asis.delaySec > l.comm.tobe.delaySec; }),
-  '음성 협조·교전현황 4링크는 비대칭 유지 — 링크(전선)가 아니라 절차이며 G6 ① 관측 대상');
+// ADR-078로 육↔공 협조 절차 비대칭이 「같은 링크, 다른 속도」에서 **모드 전용 링크 쌍**으로
+// 바뀌었다(To-Be에서 그 협조가 MCRC 직결 → 조율층 IAOC 경유로 재편). 그래서 판정을 둘로
+// 나눈다: (1) 양 모드 공통 링크는 전선이 완전 대칭 — 이제 예외가 없다. (2) 절차 비대칭은
+// 사라진 게 아니라 옮겨갔다 — axis·kind·타입·지연까지 전수 고정해 감사를 유지한다.
+// ⚠️ 숫자만 0으로 맞추면 "To-Be만 빠른 전선"을 막던 이 절이 통째로 무력해진다.
 var allAsym = on.links.filter(function (l) {
   return l.comm.asis && l.comm.tobe && l.comm.asis.delaySec !== l.comm.tobe.delaySec;
 });
-assert(allAsym.length === 4 && allAsym.every(function (l) { return /voice/.test(l.comm.asis.type); }),
-  '카탈로그 전체에서 남은 비대칭은 음성 4링크뿐 — 전선은 모두 대칭');
+assert(allAsym.length === 0,
+  '양 모드 공통 링크는 전선 지연이 전부 대칭 — To-Be만 빠른 전선은 하나도 없다');
+function sig(list) {
+  return list.map(function (l) {
+    var c = l.comm.asis || l.comm.tobe;
+    return l.axis + '|' + l.kind + '|' + c.type + '|' + c.delaySec;
+  }).sort().join(' , ');
+}
+assert(sig(on.links.filter(function (l) { return l.comm.asis && !l.comm.tobe; })) === [
+  'corps_aoc_approval|coord|voice|20',
+  'corps_aoc_approval|coord|voice|20',
+  'corps_aoc_engagement_status|status|voice-vtc|180',
+  'corps_aoc_engagement_status|status|voice-vtc|180',
+  'mcrc_to_corps_aoc_track|report|chat|45',
+  'mcrc_to_corps_aoc_track|report|chat|45'
+].join(' , '),
+  'As-Is 전용 계선은 육↔공 직결 6건뿐 — 음성 승인협조 2 · 음성 교전현황 2 · 문자 항적중계 2');
+var iaocId = on.roles && on.roles.IAOC;
+var tobeStatus = on.links.filter(function (l) {
+  return l.kind === 'status' && !l.comm.asis && l.comm.tobe;
+});
+assert(!!iaocId && tobeStatus.length === 2 && tobeStatus.every(function (l) { return l.to === iaocId; }),
+  'To-Be 교전현황은 조율층 계선으로 대체 — 절차 비대칭은 없어진 게 아니라 IAOC로 옮겨갔다');
 var relay = on.links.filter(function (l) { return l.axis === 'mcrc_to_corps_aoc_track'; });
 assert(relay.length > 0 && relay.every(function (l) {
-  return l.comm.asis.delaySec === 1 && l.comm.tobe.delaySec === 1;
-}), 'C2 발신 항적 중계(MCRC→군단 AOC)는 C2↔C2이므로 1초 유지 — 보고 주기 대상 아님');
+  // ADR-079: 육↔공 교신 수단은 음성과 문자(서버 채팅)다 — 실시간 데이터링크가 아니다.
+  // 그래서 v2(전선 지연 codex 정합) 대상이 아니며, 음성 협조를 대칭화에서 뺀 것과 같은 이유다.
+  return l.comm.asis.type === 'chat' && l.comm.asis.delaySec === 45 && !l.comm.tobe;
+}), 'C2 발신 항적 중계(MCRC→군단 AOC)는 As-Is 문자 45초 · To-Be엔 없다(조율층이 대신 내려준다)');
 
 console.log('# 4 — 캐시 분리·기본값 배선');
 assert(on !== off, 'ON/OFF 변형 카탈로그가 캐시에서 분리됨');

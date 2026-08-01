@@ -18,7 +18,7 @@
  *       항적 연속성 향상으로 dup_tobe = 1 + (dup-1)*0.3.
  *  3. 협조/승인: 항적 보유 C2가 교전승인권자(approvalLevel)까지 coord 최단경로로 협조
  *     (As-Is 육→공 음성 180s 경로가 여기서 부하를 받음). 승인권자에는 교전결심 부하 λ 추가.
- *     To-Be의 사전승인 자동교전(approval=null)은 협조·결심 홉 자체가 생략.
+ *     To-Be의 사전승인 자동교전(approval=null)은 협조·결심 경유 자체가 생략.
  *  4. 교전: canEngage가 참인 무기체계에 교전 부하 균등 배분(Phase 1 단순 WTA).
  *     제약: 신궁·천마(SHORAD)는 탄도탄 canEngage=false → 배분 자체가 불가.
  */
@@ -133,7 +133,7 @@
 
       // 3) 협조/승인 — 항적 보유 C2가 교전승인권자까지 coord 최단경로(BFS)로 협조.
       //    모든 상향 링크에 부하를 살포하지 않고 실제 협조 경로에만 부하를 싣는다.
-      //    To-Be 사전승인 자동교전(approval=null)은 협조·결심 홉 자체가 생략된다.
+      //    To-Be 사전승인 자동교전(approval=null)은 협조·결심 경유 자체가 생략된다.
       var approvalId = threat.approvalLevel ? threat.approvalLevel[mode] : null;
       if (approvalId && KJ.resolveRoleId) approvalId = KJ.resolveRoleId(approvalId, catalog);
       if (approvalId && KJ.nodeById(approvalId, catalog)) {
@@ -322,7 +322,7 @@
     }
     stages.push({ name: '협조/융합', sec: mode === 'tobe' ? Math.min(coordSec, 2) : coordSec });
 
-    // 결심 (승인 홉: 서비스타임 1건분 개념치)
+    // 결심 (승인 단계: 서비스타임 1건분 개념치)
     var approvalId = threat.approvalLevel ? threat.approvalLevel[mode] : null;
     if (approvalId && KJ.resolveRoleId) approvalId = KJ.resolveRoleId(approvalId, catalog);
     var approvalNode = approvalId && KJ.nodeById(approvalId, catalog);

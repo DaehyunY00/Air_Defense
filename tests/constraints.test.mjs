@@ -137,8 +137,19 @@ assert(apprLinks.every(function (l) {
     l.comm.asis.dist && l.comm.asis.dist.kind === 'uniform' &&
     l.comm.asis.dist.min === 10 && l.comm.asis.dist.max === 30;
 }), 'As-Is 협조 채널 = 음성 절차 지연 대표 20초·Uniform(10,30) (C2-VOICE-COORD-01)');
-assert(apprLinks.every(function (l) { return l.comm.tobe.delaySec <= 2 && l.comm.tobe.type !== 'voice'; }),
-  'To-Be 협조 채널 = 킬웹 데이터링크 ≤2초 — As-Is(20) > To-Be 방향 성립');
+// ADR-078: To-Be 대응 채널이 **같은 선이 아니다**. 조율층(IAOC) 신설로 군단 AOC의 협조 상대가
+// MCRC에서 IAOC로 바뀌어, 위 As-Is 링크에는 tobe 측이 없다. 제약 (f)의 요지는 "As-Is 협조 20초
+// > To-Be 협조"라는 **방향**이므로 대응 채널을 조율층 쪽으로 재조준해 같은 방향을 검사한다 —
+// 정박점은 링크가 어디에 붙었는지가 아니라 협조 절차가 실제로 빨라졌는지다.
+assert(apprLinks.every(function (l) { return !l.comm.tobe; }),
+  'As-Is 협조 계선(→MCRC)은 To-Be에 없음 — 조율층 경유로 대체(ADR-078)');
+var apprTobe = apprCat.links.filter(function (l) {
+  return l.kind === 'coord' && /ARMY_LOCAL_AD/.test(l.from) &&
+    l.to === (apprCat.roles && apprCat.roles.IAOC) && l.comm.tobe;
+});
+assert(apprTobe.length > 0 &&
+  apprTobe.every(function (l) { return l.comm.tobe.delaySec <= 2 && l.comm.tobe.type !== 'voice'; }),
+  'To-Be 협조 채널 = 군단 AOC → 조율층 킬웹 데이터링크 ≤2초 — As-Is(20) > To-Be 방향 성립');
 // 교전현황(status) 채널의 정보 비대칭: As-Is 음성/VTC 180초 제한형, To-Be는 음성 계열 부재
 var baseCat = KJ.buildDeploymentCatalog('HANBANDO_LEGACY_NORMAL');
 var statusVoice = baseCat.links.filter(function (l) { return l.comm.asis && l.comm.asis.type === 'voice-vtc'; });

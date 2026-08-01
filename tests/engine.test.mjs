@@ -106,7 +106,27 @@ console.log('# To-Be 개선');
 var a = run('sc3', 'asis', 1.5, 9), b = run('sc3', 'tobe', 1.5, 9);
 assert(b.global.leakRate < a.global.leakRate, 'To-Be 누수율 < As-Is (' +
   (a.global.leakRate * 100).toFixed(0) + '% → ' + (b.global.leakRate * 100).toFixed(0) + '%)');
-assert(b.bottlenecks.length <= a.bottlenecks.length, 'To-Be 병목 ≤ As-Is');
+// ADR-078·079 이후 「병목 개수 ≤」 비교는 성격이 다른 것을 한 저울에 올린다:
+// ① To-Be KAMDOC 병목은 병렬 통보(도메인 상황인식) 부하다 — 교전을 gate하지 않는다(ADR-078).
+// ② To-Be 포대 용량차단 증가는 더 많이 쏘는 결과다(처리량이지 기능부전이 아니다).
+// 원래 재려던 것은 「C2가 늦어 교전창을 놓친 누수」이므로 그것을 직접 잠근다.
+function gapLeaks(r, id) {
+  var g = r.bottlenecks.find(function (x) { return x.id === id; });
+  var m = g && /누수 (\d+)건/.exec(g.detail);
+  return m ? +m[1] : 0;
+}
+assert(gapLeaks(b, 'window_lost_due_to_c2') < gapLeaks(a, 'window_lost_due_to_c2'),
+  'C2 지연 기인 교전창 상실 누수: To-Be < As-Is (' +
+  gapLeaks(a, 'window_lost_due_to_c2') + '건 → ' + gapLeaks(b, 'window_lost_due_to_c2') + '건)');
+// To-Be에서 새로 생기는 노드 병목은 포대(교전량 증가) 또는 도메인 제대(ADR-078 병렬 통보 부하)뿐
+// 이어야 한다 — C2 결심 계선에 새 병목이 생기면 통합이 제 일을 못 하는 것이다.
+var extraBn = b.bottlenecks.filter(function (x) {
+  return x.kind === 'node' && !a.bottlenecks.some(function (y) { return y.id === x.id; });
+});
+assert(extraBn.every(function (x) {
+  return /^BATTERY_/.test(x.id) || x.id === 'C2_KAMD_OPS_KAMD_OPS' || x.id === 'C2_MCRC_MCRC';
+}), 'To-Be 신규 병목은 포대(교전량 증가) 또는 도메인 제대(상황인식 부하)뿐 (' +
+  (extraBn.map(function (x) { return x.id; }).join(', ') || '없음') + ')');
 
 console.log('# 제약·보존');
 // 탄도탄 단독 구성(검증용 인라인 시나리오) — SHORAD 교전 불가 제약의 행위 검증

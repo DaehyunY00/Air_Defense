@@ -12,7 +12,7 @@
  *   4 위협평가(TE)         ├ C2 서버 처리(서비스시간) — To-Be는 JAMDC2 융합 노드에서 수행
  *   5 무기-표적할당(WTA)   ┘
  *   6 결심(Decision)       : 교전승인권자 — As-Is는 상위 제대 승인 필요
- *   7 교전협조/권한위임    : 육↔공 coord 홉(As-Is 음성 지연·중복교전의 원천)
+ *   7 교전협조/권한위임    : 육↔공 coord 경유(As-Is 음성 지연·중복교전의 원천)
  *   8 교전/요격명령(Engage): 명령 링크 지연 후 무기 교전채널(M/M/c) 처리
  *   9 BDA                  : 요격확률 판정 → 실패 시 재교전 피드백(폐루프, 상한 내)
  *
@@ -77,6 +77,13 @@
   // 하드코딩된 병목이 아니라 부하의 함수: 시나리오·강도가 낮으면 어느 모드에서도 전환이
   // 일어나지 않는다(회귀로 고정).
   var DELEG_QUEUE_MULT = { asis: 4, tobe: 1 };
+  // ADR-078 — To-Be 도메인 제대. IAOC(조율층) 아래에서 자기 도메인을 집행하는 C2다.
+  //   MCRC     : 공군 관제레이더 plot 융합 · 우군기/민항기 식별 (공중 도메인)
+  //   KAMD_OPS : 그린파인 BMD 항적 처리 · 패트리엇/천궁-II/L-SAM 사격통제 (BMD 도메인)
+  // 항적은 이 제대를 거쳐 IAOC로 올라가고, IAOC가 표적할당한 교전지시는 다시 이 제대를
+  // 거쳐 ECS로 내려간다. 두 방향 모두 **큐 서비스**가 붙는다 — 링크 지연만 더하면 제대가
+  // 부하 0의 유령 노드가 되어 "역할이 있다"는 그림과 수치가 어긋난다.
+  var DOMAIN_ECHELON_TYPES = { MCRC: 1, KAMD_OPS: 1 };
   // 저가 포화위협 부분집합(무인기·방사포) — exchangeSat 분자·분모 계정용 (ADR-002)
   var SAT_THREATS = { uav_small: true, mrl_large: true };
 
@@ -231,7 +238,7 @@
     // 모델링해 To-Be 개선폭을 과대평가한다. 셋 다 기본값으로 둘 이유가 없다.
     this.linkSemanticsV2 = ff('linkSemanticsV2', true);
     // ADR-058: 승인 계선 이식 — As-Is LOCAL_AD 축(군단 AOC)의 교전이 승인권자(KAOC→MCRC)
-    // 협조 홉 + 승인 서비스(kind='approval')를 거친다. 동적 권한위임(DELEG_QUEUE_MULT)·
+    // 협조 단계 + 승인 서비스(kind='approval')를 거친다. 동적 권한위임(DELEG_QUEUE_MULT)·
     // automation 3단계 차등 포함. approvalChainTobe는 반증 전용 — To-Be에도 As-Is 계선 강제.
     // ADR-065: 기본 ON 전환. 승인 계선이 꺼진 As-Is는 KJADS 문제 정의(음성 VTC 협조 의존)를
     // 모델링하지 않은 것이고, G6①(As-Is 병목=협조·승인)의 메커니즘이 기본 화면에서 사라진다.
@@ -422,7 +429,7 @@
     // Phase B/D: 결심 지연(MoP) — 탐지→최초 교전명령 소요의 집계 (trace 무관 항상 수집)
     this.decisionDelaySum = 0;
     this.decisionDelayCount = 0;
-    this.coordDelaySum = 0;   // 1B: 결심지연 중 coord 협조 홉 지연 몫(잔여=C2 처리·승인 대기)
+    this.coordDelaySum = 0;   // 1B: 결심지연 중 coord 협조 단계 지연 몫(잔여=C2 처리·승인 대기)
     // Phase D: 비용교환비(MoFE) — 개념 요격탄 소모비용 / 격추 위협가치 (백만 USD 개념)
     // sat*는 저가 포화위협(장사정포·소형무인기) 부분집합. 전부 개념값(WPN/THR-*-COST-01).
     this.cost = { interceptM: 0, killedThreatM: 0, interceptSatM: 0, killedThreatSatM: 0,
@@ -845,8 +852,78 @@
     return Array.isArray(allowed) && allowed.indexOf(threat.type) !== -1;
   };
 
+  /**
+   * ADR-078 — 군단 AOC가 「상급 유래 항적」으로 융합하는 상대.
+   * As-Is는 MCRC, To-Be는 조율층(IAOC)이다. 종전에는 MCRC로 고정돼 있었는데, To-Be에서
+   * MCRC→군단 AOC 직결 항적 링크를 걷어내면(ADR-078) 그 판정이 영영 거짓이 되어
+   * 군단 AOC가 단일출처 항적만 갖게 된다 — 통합 구조인데 정보가 줄어드는 역설이 난다.
+   */
+  Simulation.prototype._iadsUpperEchelonId = function () {
+    var roles = this.catalog.roles || {};
+    return (this.mode === 'tobe' ? roles.IAOC || roles.fusionC2 : roles.MCRC) || null;
+  };
+
+  /**
+   * ADR-078 — 이 항적을 처리할 **도메인 제대**. To-Be 전용, 없으면 null.
+   *
+   * To-Be에서 IAOC는 MCRC·KAMDOC를 대체하지 않고 그 **위**에 선다. 도메인 분담은 As-Is의
+   * 책임 C2 분담과 같다 — 공중(ABT)은 MCRC(공군 관제레이더 plot 융합·우군기/민항기 식별),
+   * 탄도는 KAMDOC(BMD 항적·패트리엇/천궁-II/L-SAM 통제).
+   */
+  Simulation.prototype._iadsDomainEchelonFor = function (threat) {
+    if (this.mode !== 'tobe') return null;
+    var roles = this.catalog.roles || {};
+    var id = iadsThreatCategory(threat.type) === 'ballistic' ? roles.KAMDOC : roles.MCRC;
+    return (id && this.nodeState[id]) ? id : null;   // 무력화 배치면 제대 자체가 없다
+  };
+
+  /**
+   * ADR-078 — 도메인 제대 **병렬 통보**.
+   *
+   * 킬웹에서 정보 배포는 직렬 계선을 타지 않는다. 센서 항적은 조율층으로 직결되고,
+   * 도메인 제대는 **같은 시각에 같은 항적을 함께 받아** 자기 도메인 처리를 한다.
+   * 그래서 제대는 실제 큐 부하를 갖지만(역할이 있다), 조율층의 결심 시각은 제대 큐에
+   * 걸리지 않는다 — "거치되 시간은 그대로".
+   *
+   * ⚠️ 직렬 중계로 넣었다가 되돌렸다. 그러면 제대 처리시간이 결심 경로에 그대로 얹혀
+   *    IAOC 타임라인이 제대 용량에 종속되고, 도메인 레이더 경로가 최단경로 경쟁에서
+   *    져 그 레이더 기여가 통째로 사라지는 부작용까지 났다(실측 확인).
+   *
+   * 이 잡은 **아무것도 gate하지 않는다** — 완료 콜백이 뒤를 잇지 않는다. 제대가 포화라
+   * 드롭되어도 교전은 진행된다(그 도메인의 상황인식만 잃는다).
+   */
+  Simulation.prototype._fanoutDomainEchelon = function (threat, commander, track, at) {
+    if (!commander || commander.axis !== 'KILL_WEB') return;
+    var echelonId = this._iadsDomainEchelonFor(threat);
+    if (!echelonId || echelonId === commander.id) return;
+    var self = this;
+    this.schedule(at, PRI.LINK_ARRIVE, 'IADS_DOMAIN_REPORT', {
+      threat: threat, echelonId: echelonId, track: track,
+      priority: track && track.priority
+    });
+    void self;
+  };
+
+  Simulation.prototype._onIadsDomainReport = function (t, d) {
+    var threat = d.threat, ns = this.nodeState[d.echelonId];
+    if (!ns || !threat.alive || threat.pipelineDead) return;
+    var self = this;
+    this._mark(threat, '도메인처리:' + ns.node.typeId, t);
+    var disp = this._nodeArrive(d.echelonId, t, {
+      threat: threat, kind: 'iads_track', priority: d.priority,
+      jobId: 'DOMAIN_' + threat.id + '_' + d.echelonId
+    }, function (done) {
+      self._mark(threat, '도메인처리완료:' + ns.node.typeId, done);
+    });
+    if (disp === 'dropped') {
+      // 상황인식 손실 — 교전 계선은 조율층이 쥐고 있으므로 실패로 계상하지 않는다.
+      this.global.trackQuality.domainEchelonDropped =
+        (this.global.trackQuality.domainEchelonDropped || 0) + 1;
+    }
+  };
+
   Simulation.prototype._iadsReportBundle = function (threat, commander) {
-    var self = this, candidates = [], mcrcId = this.catalog.roles && this.catalog.roles.MCRC;
+    var self = this, candidates = [], mcrcId = this._iadsUpperEchelonId();
     var reportSensors = (threat._sensors || []).filter(function (sensor) {
       if (!self.iadsSensorPhysics) return true;
       var track = threat._sensorTracks && threat._sensorTracks[sensor.id];
@@ -946,9 +1023,12 @@
       if (sources.length > 1) self.global.trackFusion.multiSourceTracks++;
       self.global.trackFusion.prioritizedTracks++;
       self._mark(threat, '책임C2:' + commander.typeId + '(' + commander.scope + ')', t);
+      var track = threat._c2TrackLedger[commander.id];
       self.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_C2_ARRIVE', {
-        threat: threat, commander: commander, track: threat._c2TrackLedger[commander.id]
+        threat: threat, commander: commander, track: track
       });
+      // ADR-078: 같은 시각에 도메인 제대에도 배포한다(직렬 중계가 아니라 병렬 통보).
+      self._fanoutDomainEchelon(threat, commander, track, t + delay);
     });
     if (!Object.keys(threat._iadsCommanderKeys).length) {
       if (this.iadsSensorPhysics && threat._iadsCorrelationFailedAt != null) {
@@ -1596,10 +1676,13 @@
   /** 군단 AOC 교전현황을 제한형 음성/VTC 채널로 MCRC에 전파. */
   Simulation.prototype._sendIadsStatus = function (threat, commander, phase, t) {
     if (!commander || commander.axis !== 'LOCAL_AD' || !this.iadsStatusChannels) return;
-    var mcrcId = this.catalog.roles && this.catalog.roles.MCRC;
-    var channel = this.iadsStatusChannels[commander.id + '>' + mcrcId];
+    // ADR-078: 수신 상급은 모드에 따라 다르다 — As-Is는 MCRC(음성/VTC), To-Be는 조율층
+    // IAOC(데이터링크). 종전에는 MCRC로 고정돼 있어, To-Be에서 **도착 건수 0인 노드**의
+    // 사서함으로 보내고 IAOC가 꺼내 읽는 모양이었다(ADR-056이 소비 축을 넓혀 우회한 흔적).
+    var upperId = this._iadsUpperEchelonId();
+    var channel = this.iadsStatusChannels[commander.id + '>' + upperId];
     if (!channel) return;
-    var msg = { threat: threat, from: commander.id, to: mcrcId, phase: phase, createdAt: t };
+    var msg = { threat: threat, from: commander.id, to: upperId, phase: phase, createdAt: t };
     this.global.statusSharing.sent++;
     if (channel.busy < channel.servers) {
       this._startIadsStatus(channel, msg, t);
@@ -1608,7 +1691,7 @@
       this.global.statusSharing.queued++;
     } else {
       this.global.statusSharing.dropped++;
-      this._mark(threat, '교전현황드롭:' + commander.id + '→MCRC/' + phase, t);
+      this._mark(threat, '교전현황드롭:' + commander.id + '→' + upperId + '/' + phase, t);
     }
   };
 
@@ -1624,11 +1707,13 @@
       from: msg.from, phase: msg.phase, createdAt: msg.createdAt, receivedAt: t,
       freshUntil: t + channel.freshnessSec, ageAtReceipt: age
     };
-    this._mark(msg.threat, '교전현황수신:MCRC←' + msg.from + '/' + msg.phase, t);
+    this._mark(msg.threat, '교전현황수신:' + msg.to + '←' + msg.from + '/' + msg.phase, t);
     if (msg.phase === 'released' && msg.threat.alive) {
       var commander = msg.threat._iadsCommandersById && msg.threat._iadsCommandersById[msg.to];
-      // ADR-056: To-Be에서는 수신 노드(MCRC 역할)가 책임 C2가 아니므로 id 조회가 빗나간다.
-      // 플래그 ON이면 통합 축(KILL_WEB) 책임 C2가 국지방공 해제를 받아 재교전을 잇는다(As-Is 대칭).
+      // ADR-056에서 이 폴백이 필요했던 이유는 **수신 노드가 책임 C2가 아니었기** 때문이다
+      // (To-Be 교전현황이 MCRC 앞으로 갔다). ADR-078이 수신처를 조율층(IAOC = KILL_WEB 책임
+      // C2)으로 바로잡아 이제 위 id 조회가 정상적으로 맞는다. 폴백은 안전망으로 남긴다 —
+      // 조율층이 없는 배치(무력화 시나리오)에서는 여전히 빗나갈 수 있다.
       if (!commander && this.unifiedEngagementState && msg.threat._iadsCommandersById) {
         var byId = msg.threat._iadsCommandersById, ids = Object.keys(byId);
         for (var ci = 0; ci < ids.length; ci++) {
@@ -1984,7 +2069,7 @@
       return;
     }
     // ADR-058: 승인 계선 — 계획 수립 전에 승인권한을 해소한다. LOCAL_AD 축(ROK 국지방공)에만
-    // 적용된다: 다른 한국군 축은 승인권자가 자기 자신으로 해소되어 홉이 없고(§0-(6) 실측),
+    // 적용된다: 다른 한국군 축은 승인권자가 자기 자신으로 해소되어 경유가 없고(§0-(6) 실측),
     // USFK 축은 ADR-036(권한 자동 통합 금지)에 따라 계선 자체를 적용하지 않는다.
     if (this.approvalChain && commander.axis === 'LOCAL_AD') {
       var gate = this._iadsApprovalGate(threat, commander, t);
@@ -2087,7 +2172,7 @@
 
   /**
    * ADR-058: 승인 계선 게이트 — legacy `_decision`의 이식.
-   * 반환: 'skip'(계선 비대상) | 'granted'(승인 완료/불필요/위임) | 'wait'(홉·서비스 진행 중)
+   * 반환: 'skip'(계선 비대상) | 'granted'(승인 완료/불필요/위임) | 'wait'(단계·처리 진행 중)
    *       | 'blocked'(협조 경로 부재 → responsibility_gap 확정).
    * 정책 조회는 c2-policy 모듈(KJ.IADS)을 쓰고, 모듈이 없는 compat 실행에서는 동일 데이터
    * (threats.js automation/approvalLevel)를 직접 읽는 동치 폴백을 쓴다.
@@ -2110,7 +2195,7 @@
                    policyMode: pm };
         })(this.mode);
     var approvalId = policy.approvalRole ? this._resolveRole(policy.approvalRole) : null;
-    // 사전승인 자동교전 / 승인권자 부재 / 자기 자신 승인 → 홉·서비스 없음 (legacy 동치)
+    // 사전승인 자동교전 / 승인권자 부재 / 자기 자신 승인 → 단계·처리 없음 (legacy 동치)
     if (policy.auto === 'auto-preauth' || !approvalId || approvalId === commander.id || !this.nodeState[approvalId]) {
       threat._iadsApproval[key] = 'granted';
       return 'granted';
@@ -2128,14 +2213,14 @@
       return 'granted';
     }
     if (policy.auto === 'human-on-loop') {
-      // 감독하 자동교전: 협조 홉 생략, 승인권자 서비스만 (legacy 동치)
+      // 감독하 자동교전: 협조 단계 생략, 승인권자 서비스만 (legacy 동치)
       threat._iadsApproval[key] = 'pending';
       this._mark(threat, '감독승인개시:' + approvalId, t);
       this.schedule(t, PRI.LINK_ARRIVE, 'IADS_APPROVE_ARRIVE',
         { threat: threat, commander: commander, appr: approvalId, key: key });
       return 'wait';
     }
-    // human-in-loop: coord 협조 홉(다익스트라 최소지연) → 승인 서비스
+    // human-in-loop: coord 협조 단계(다익스트라 최소지연) → 승인 서비스
     var path = this._iadsShortestPath(commander.id, approvalId, ['coord']);
     if (path === null) {
       if (!threat.leakReason) threat.leakReason = 'responsibility_gap';
@@ -2152,7 +2237,7 @@
       delay += self._linkDelay(l.comm[self.mode]);
       self._recordLink(l.from, l.to, l.comm[self.mode], 'coord');
     });
-    // 결심지연 분해(legacy 1B 동치): coord 협조 홉 몫 누적 → meanCoordDelaySec
+    // 결심지연 분해(legacy 1B 동치): coord 협조 단계 몫 누적 → meanCoordDelaySec
     threat._coordDelay = (threat._coordDelay || 0) + delay;
     threat._iadsApproval[key] = 'pending';
     this._mark(threat, '협조개시:' + commander.id + '→' + approvalId, t);
@@ -2182,6 +2267,14 @@
     var threat = d.threat, plan = d.plan, shooter = this._nodeById(d.shooterId);
     if (!threat.alive || plan.released || plan.resolved) return;
     var resource = this.iadsResources[shooter.id];
+    // ADR-078 §미구현 — KAMDOC의 「패트리엇·천궁-II·L-SAM 사격통제」는 하행 교전지시에
+    // 별도 큐 경유으로 넣지 **않았다**. 시도해 봤고 되돌린 이유를 남긴다:
+    // 엔진의 서비스시간은 **노드당 하나**라, 새 job kind를 그 노드에 얹으면 track 처리용으로
+    // 교정된 값(KAMDOC 37.5초 × 3서버)을 교전지시 중계에 그대로 쓰게 된다. 실측하면
+    // ρ=0.934 · 드롭 41건이 되어 To-Be 격추가 117 → 26으로 무너졌다. 이건 구조가 만든
+    // 결과가 아니라 **파라미터 오적용이 만든 인공물**이다(교전지시 중계에 37.5초는 근거 없다).
+    // 제대로 하려면 kind별 서비스시간과 그 근거값(params.md 신규 등록)이 필요하다.
+    // 현재 모델에서 KAMDOC의 포대 통제는 기존 KAMDOC↔ICC coord 계선으로 표현된다.
     if (!d.receptionComplete && this.commandReceptionQueue &&
         plan.targetEcsId && this.nodeState[plan.targetEcsId]) {
       var self = this;
@@ -2368,7 +2461,7 @@
       this.global.timeToEngage.push(t - threat.spawnT);
       if (threat._detectT != null) {
         this.decisionDelaySum += t - threat._detectT; this.decisionDelayCount++;
-        this.coordDelaySum += (threat._coordDelay || 0); // ADR-058: 협조 홉 몫(OFF에서는 항상 0)
+        this.coordDelaySum += (threat._coordDelay || 0); // ADR-058: 협조 단계 몫(OFF에서는 항상 0)
       }
     }
     var cps = (ev.missile && ev.missile.costPerShot) || (shooter.engage && shooter.engage.costPerShotM) || 0;
@@ -2652,6 +2745,7 @@
     switch (ev.type) {
       case 'SPAWN': this._spawn(ev.t, ev.data); break;
       case 'IADS_SENSOR_SCAN': this._onIadsSensorScan(ev.t, ev.data); break;
+      case 'IADS_DOMAIN_REPORT': this._onIadsDomainReport(ev.t, ev.data); break;
       case 'IADS_C2_ARRIVE': this._onIadsC2Arrive(ev.t, ev.data); break;
       case 'IADS_RETRY': this._onIadsRetry(ev.t, ev.data); break;
       case 'IADS_FIRE': this._onIadsFire(ev.t, ev.data); break;
@@ -2847,7 +2941,7 @@
         // 결심 지연(MoP): 탐지→최초 교전명령 평균(초) — 협조/승인/위임 지연 포함
         meanDecisionDelaySec: this.decisionDelayCount
           ? this.decisionDelaySum / this.decisionDelayCount : 0,
-        // 1B: 결심지연 중 coord 협조 홉 지연 평균(동일 분모). 잔여(결심지연−협조)=C2 처리·승인 대기·서비스.
+        // 1B: 결심지연 중 coord 협조 단계 지연 평균(동일 분모). 잔여(결심지연−협조)=C2 처리·승인 대기·서비스.
         // "As-Is 지연=음성 협조 탓"이 절반만 맞고 나머지는 승인권자 대기행렬임을 분해해 보여준다(사실 g).
         meanCoordDelaySec: this.decisionDelayCount
           ? this.coordDelaySum / this.decisionDelayCount : 0,

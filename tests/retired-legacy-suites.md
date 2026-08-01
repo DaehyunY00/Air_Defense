@@ -24,7 +24,7 @@ compat 충실도가 폐기되면서, **검증 대상 자체가 삭제된** 회�
 | `refine.test.js` | 정밀화 Phase A~D (legacy WTA·권한위임·원인분포) + `refine-snapshot.json` | legacy `_decision`·위임 플래그 경로 삭제 | 위임·승인은 `approval-chain.test.mjs`(ADR-058), WTA는 `native-wta.test.mjs`(ADR-059), 원인분포는 `failure-classification.test.mjs` |
 | `metrics-verification.test.js` | legacy 지표 감사 (Lq 시각화·분권전환 0건·exchangeSat 반전) | 감사 대상이 legacy 실행 결과 | 지표 계정은 `metrics-accounting.test.mjs`, exchangeSat 방향은 실험보고서 G6 원장 |
 | `nodekind.test.js` | legacy 작업종류 3종(track/approval/engage) 합보존·귀속 | legacy kind 스키마 폐기 — native는 iads_track·directive_reception 등 | `metrics-accounting.test.mjs` F7 (native kind 노출·분해) |
-| `coord.test.js` | ⑥⑦ `coordPath` 다익스트라 최소지연 경로 | `coordPath`·`KJ._coordPath` 삭제 | native 협조는 `approval-chain.test.mjs` (coord 홉·협조몫 계측) |
+| `coord.test.js` | ⑥⑦ `coordPath` 다익스트라 최소지연 경로 | `coordPath`·`KJ._coordPath` 삭제 | native 협조는 `approval-chain.test.mjs` (coord 경유·협조몫 계측) |
 | `coord2.test.js` | ⑥⑦ 수평 교전협조·ghost 중복교전·책임공백 부활 | `_coordCheck`·`makeGhost`·`_dupEngage` 삭제 | 실제 발사 기반 중복교전은 `iads-native-pipeline.test.mjs`, 중복 귀속은 `metrics-accounting.test.mjs` F3 |
 | `wta.test.js` | ⑧ legacy WTA (교전창·축선 필터·canEngage) | legacy `_decision`·`reserveFloorFor` 삭제 | `native-wta.test.mjs` + `iads-native-pipeline.test.mjs` (scope WTA·PIP) + `constraints.test.mjs` (a) |
 | `reengage.test.js` | ⑨ legacy BDA·재교전 + `legacy-snapshot.json` | legacy `_onEngageEnd` 삭제 | `iads-failure-realism.test.mjs` (SLS 2발 상한·무한 재교전 방지·BDA) |

@@ -466,8 +466,8 @@ function fidelityTable() {
 
 /**
  * 배치·충실도별 결심 지연 Δ — legacy 9단계와 native 경로의 구조적 차이를 드러낸다.
- * legacy는 승인 홉·음성 협조가 명시적으로 모델링되어 To-Be가 그것을 제거하지만,
- * native는 As-Is에서도 책임 C2가 자체 승인하므로 제거할 홉 자체가 적다.
+ * legacy는 승인 단계·음성 협조가 명시적으로 모델링되어 To-Be가 그것을 제거하지만,
+ * native는 As-Is에서도 책임 C2가 자체 승인하므로 제거할 경유 자체가 적다.
  */
 function decisionDelayTable() {
   const groups = new Map();
@@ -487,7 +487,7 @@ function decisionDelayTable() {
       const hit = v.find(x => x.sc === sc);
       return `<td class="num">${hit ? (hit.mean > 0 ? '+' : '') + hit.mean.toFixed(0) + 's' : '—'}</td>`;
     }).join('');
-    const pipeline = dep === 'legacy' ? '9단계(승인 홉·음성 협조 명시)' : 'native(책임 C2 자체 승인)';
+    const pipeline = dep === 'legacy' ? '9단계(승인 단계·음성 협조 명시)' : 'native(책임 C2 자체 승인)';
     return `<tr><td>${esc(DEP_NAME[dep])} <span class="small">${esc(FID_NAME[fid])}</span></td>
       <td>${esc(pipeline)}</td>${per}
       <td class="num ${avg < -60 ? 'good' : 'flat'}">${(avg > 0 ? '+' : '') + avg.toFixed(0)}s</td></tr>`;
@@ -544,7 +544,7 @@ function delegationSection() {
 ${pct(first.censoredRate)} → ${pct(last.censoredRate)}로 거의 일정한 반면 <b>격추율 자체가</b>
 ${pct(first.killRateSpawn)} → ${pct(last.killRateSpawn)}로 상승했습니다.</div>
 <p>원인은 엔진의 <b>동적 권한위임(분권 전환, C2-DELEG-THRESH-01)</b>입니다. 승인권자의 대기열이
-임계(As-Is는 서버 수 × 4)를 넘으면 결심을 하위·자동으로 위임해 <b>승인 홉을 건너뜁니다</b>.
+임계(As-Is는 서버 수 × 4)를 넘으면 결심을 하위·자동으로 위임해 <b>승인 단계를 건너뜁니다</b>.
 저부하에서는 전환이 일어나지 않아 As-Is가 승인 병목을 그대로 겪지만, 고부하에서는 전환이
 대량 발동해 결심 지연이 <b>짧아지고</b> 교전 개시율이 오릅니다.</p>
 <table><thead><tr>
@@ -572,12 +572,12 @@ ${fidelityTable()}
 전력 규모가 아니라 <b>C2 파이프라인 구현의 차이</b>에서 옵니다.</p>
 ${decisionDelayTable()}
 <div class="box"><b class="t">해석</b>
-legacy 배치는 9단계 파이프라인을 타므로 As-Is가 <b>승인권자까지 가는 협조 홉과 승인 대기</b>를
-실제로 지불하고, To-Be는 사전승인 자동교전으로 그 홉을 통째로 제거합니다 — 그래서 Δ가 −120초 안팎으로
+legacy 배치는 9단계 파이프라인을 타므로 As-Is가 <b>승인권자까지 가는 협조 단계과 승인 대기</b>를
+실제로 지불하고, To-Be는 사전승인 자동교전으로 그 경유를 통째로 제거합니다 — 그래서 Δ가 −120초 안팎으로
 전 시나리오에서 일정합니다.<br>
-반면 고해상도(native) 경로는 <b>As-Is에서도 책임 C2가 자체 승인</b>하므로 제거할 홉이 애초에 적습니다.
+반면 고해상도(native) 경로는 <b>As-Is에서도 책임 C2가 자체 승인</b>하므로 제거할 경유가 애초에 적습니다.
 그래서 저부하(SC1·SC2)에서는 Δ가 −10초 안팎에 그치고, 포화가 걸리는 SC3에서만 −88~−95초로 커집니다
-(이때의 이득은 홉 제거가 아니라 <b>처리용량·융합</b>에서 옵니다).<br>
+(이때의 이득은 경유 제거가 아니라 <b>처리용량·융합</b>에서 옵니다).<br>
 <b>"통합 C2가 결심을 얼마나 앞당기는가"의 답은 배치가 아니라 어느 C2 모델을 보느냐에 달려 있습니다.</b>
 두 계열의 값을 섞어 인용하면 개선폭을 크게 왜곡하게 됩니다.</div>
 

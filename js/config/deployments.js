@@ -53,7 +53,6 @@ const HANBANDO_FULL_POSITIONS = ({
   ARMY_CAPITAL_AD: { lon: 126.98, lat: 37.55, alt: 80, confidence: 'estimated', sourceNote: 'Phase 4.2 rebalance: 서울 수도방위 국지방공 대표 노드' },
   MARINE_NW_AD: { lon: 124.71, lat: 37.97, alt: 80, confidence: 'public', sourceNote: 'ADR-022 §16.3 서북도서 백령' },
   IAOC: { lon: 127.07, lat: 36.99, alt: 90, confidence: 'public', sourceNote: 'Kill-web 추상 C2' },
-  EOC: { lon: 127.13, lat: 36.92, alt: 90, confidence: 'public', sourceNote: 'Kill-web 추상 C2' },
 
   GREEN_PINE_CHUNGNAM: { lon: 126.85, lat: 36.40, alt: 450, confidence: 'estimated', sourceNote: 'ADR-022 §16.3 충남 Block-B 산악 추정' },
   GREEN_PINE_CHUNGBUK: { lon: 127.70, lat: 36.70, alt: 500, confidence: 'estimated', sourceNote: 'ADR-022 §16.3 충북 Block-B 산악 추정' },
@@ -493,7 +492,6 @@ const HANBANDO_FULL_C2_BASE = Object.freeze([
     instanceLabel: `ECS ${b.shooterTypeId} ${b.posKey}`,
   })),
   Object.freeze({ typeId: 'IAOC', posKey: 'IAOC', showNetworkNode: false }),
-  Object.freeze({ typeId: 'EOC', posKey: 'EOC', showNetworkNode: false }),
 ]);
 
 const KAMDOC_FULL_ENTRY = Object.freeze({
@@ -570,7 +568,6 @@ const HANBANDO_LEGACY_POSITIONS = Object.freeze({
   KAMD_OPS:     { lon: 127.08, lat: 36.92, alt: 100, confidence: 'scenario', sourceNote: 'legacy KAMDOC 개념좌표(오산권)' },
   MCRC:         { lon: 127.05, lat: 37.00, alt: 50,  confidence: 'scenario', sourceNote: 'legacy MCRC 개념좌표(오산권)' },
   IAOC:         { lon: 127.12, lat: 36.96, alt: 100, confidence: 'scenario', sourceNote: 'legacy JAMDC2 개념좌표(To-Be 융합허브)' },
-  EOC:          { lon: 127.05, lat: 37.00, alt: 100, confidence: 'scenario', sourceNote: 'kill-web 추상 노드(지도 미표시)' },
   ARMY_1C_AD:   { lon: 126.83, lat: 37.66, alt: 80,  confidence: 'scenario', sourceNote: 'legacy AOC-1C(1군단 방공상황실) 개념좌표' },
   ARMY_CD_AD:   { lon: 127.00, lat: 37.50, alt: 80,  confidence: 'scenario', sourceNote: 'legacy JAOC-CD(수방사 합동방공상황실) 개념좌표' },
   // 10세트 ICC (legacy ICC-* 와 동일 좌표)
@@ -717,7 +714,6 @@ const HANBANDO_LEGACY_C2_BASE = Object.freeze([
     instanceLabel: `ECS ${b.shooterTypeId} ${b.posKey}`,
   })),
   Object.freeze({ typeId: 'IAOC', posKey: 'IAOC', showNetworkNode: false }),
-  Object.freeze({ typeId: 'EOC', posKey: 'EOC', showNetworkNode: false }),
 ]);
 
 const KAMDOC_LEGACY_ENTRY = Object.freeze({

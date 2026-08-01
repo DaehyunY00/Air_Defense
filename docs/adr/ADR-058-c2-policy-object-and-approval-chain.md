@@ -3,13 +3,13 @@
 ## 맥락
 
 native 경로(고해상도 배치)는 책임 C2가 자체 승인한다 — legacy `_decision`이 모델링하던
-C2 이론(승인권자 해소·coord 협조 홉·`kind='approval'` 서비스·동적 권한위임·automation
+C2 이론(승인권자 해소·coord 협조 단계·`kind='approval'` 서비스·동적 권한위임·automation
 3단계 차등)이 전부 없다. SC3 ×3.0 As-Is 실측: `meanCoordDelaySec` 0.0초, approval 도착
 0건, 위임 0건 (legacy는 9.4초 / 146건 / 539건).
 
-승인 홉이 실제로 발생해야 하는 곳은 **한 군데뿐**이다: As-Is `LOCAL_AD` 축(군단 AOC,
+승인 단계가 실제로 발생해야 하는 곳은 **한 군데뿐**이다: As-Is `LOCAL_AD` 축(군단 AOC,
 self_battery)의 ABT 교전 — 승인권자 KAOC가 MCRC(다른 노드)로 해소된다. 다른 한국군 축은
-자기 자신이 승인권자라 홉이 없고, USFK 축은 ADR-036이 계선 적용을 금지한다.
+자기 자신이 승인권자라 경유가 없고, USFK 축은 ADR-036이 계선 적용을 금지한다.
 빠진 것은 링크 하나였다: 고해상도 카탈로그에 군단AOC→MCRC `coord` 링크가 없어
 `_iadsShortestPath(..., ['coord'])`가 null을 반환했다.
 
@@ -44,13 +44,13 @@ self_battery)의 ABT 교전 — 승인권자 KAOC가 MCRC(다른 노드)로 해�
 
 | automation (정책 모드 기준) | 거동 |
 |---|---|
-| `auto-preauth` / 승인권자 null·자기 자신·부재 | 홉·서비스 없음 (legacy 동치) |
+| `auto-preauth` / 승인권자 null·자기 자신·부재 | 단계·처리 없음 (legacy 동치) |
 | 위임 임계 초과(busy≥c ∧ queue≥c×배수) | 위임 계상(`delegation.*`) 후 즉시 진행 |
-| `human-on-loop` | 홉 생략, 승인권자 `kind='approval'` 서비스만 |
-| `human-in-loop` | coord 최단경로 홉(지연 `_coordDelay` 누적) → approval 서비스 → 재진입 |
+| `human-on-loop` | 경유 생략, 승인권자 `kind='approval'` 서비스만 |
+| `human-in-loop` | coord 최단경로 경유(지연 `_coordDelay` 누적) → approval 서비스 → 재진입 |
 | coord 경로 부재 | `responsibility_gap` (legacy 의미론 복원) |
 
-- 협조 홉 몫은 native 발사 계정에서 `coordDelaySum`으로 누적 → `meanCoordDelaySec` 배선.
+- 협조 단계 몫은 native 발사 계정에서 `coordDelaySum`으로 누적 → `meanCoordDelaySec` 배선.
 - **approval 드롭은 native에서 branch-local** — 한 축(LOCAL_AD)의 승인 요청 드롭이 전
   계통(pipelineDead)을 죽이지 않는다. legacy(단일 파이프라인 — 드롭=누수)와 다른 지점이며,
   native 다계통 구조("한 계통 포화가 다른 계통을 죽이지 않는다"는 기존 원칙)에 정합시켰다.
@@ -83,7 +83,7 @@ run-all 등록) · `docs/params.md`(`IADS-APPR-COORD-01`·`IADS-APPR-CHAIN-01`).
 
 `tests/approval-chain.test.mjs`: OFF wire shape 불변 / ON 카탈로그 값(음성 20초·DL 2초·
 v2 시 IFCN 1초·As-Is 음성 불변) / As-Is 관측 3종(협조몫 36.0초·approval 59건·포화 위임
-97건 — 수용 기준) / To-Be 차등(홉 0·on-loop 서비스 31건·SC2 auto-preauth ON==OFF
+97건 — 수용 기준) / To-Be 차등(경유 0·on-loop 서비스 31건·SC2 auto-preauth ON==OFF
 bit-exact) / **USFK 축 approval 0건**(FULL 실측·어서션) / 반증 플래그 동작.
 OFF bit-exact: Phase 2 종료 시점 SHA-256 4셀 일치 + legacy `baseline.test.js` 통과.
 
@@ -126,7 +126,7 @@ OFF bit-exact: Phase 2 종료 시점 SHA-256 4셀 일치 + legacy `baseline.test
 **참고 베이스(전 OFF) 위 동일 토글** — 효과가 3~4배 과장된다:
 SC1 결심지연 Δ −7.5→−26.1(주 베이스의 3.8배), 격추율 Δ +0.9→+4.3pp(주 베이스는 무이동).
 **같은 변경이 낡은 기준선 위에서는 훨씬 커 보인다** — 일률 16초 링크(ADR-057이 폐기한 해석)
-위에 승인 홉이 얹히며 As-Is 페널티가 중첩 과장되기 때문. 두 베이스의 방향은 같으나 크기가
+위에 승인 단계가 얹히며 As-Is 페널티가 중첩 과장되기 때문. 두 베이스의 방향은 같으나 크기가
 다르며, 이것이 §0 측정 기준선 규정("수정·정합 상태가 새 분석 기준선")의 실증 근거다.
 
 **반증 실험 (approvalChainTobe — To-Be에도 동일 계선 강제, SC3 30 seed)**:
@@ -168,7 +168,7 @@ G6 재산출(주 베이스 ON 기준): ① As-Is 핵심 병목(협조·승인) �
 ## 한계
 
 1. **적용 범위 한정의 대가** — legacy approval 146건에는 자기-승인 축의 서비스도 섞여
-   있었을 수 있으나 분해 근거가 없어, native는 구조적으로 홉이 실재하는 LOCAL_AD 축만
+   있었을 수 있으나 분해 근거가 없어, native는 구조적으로 경유가 실재하는 LOCAL_AD 축만
    이식했다. legacy와 approval 건수 절대치는 일치하지 않는다(의미론 이식이지 수치 복제가
    아님).
 2. **승인 드롭의 재시도 없음** — 드롭된 승인 요청은 해당 축의 교전 기회 상실로 남는다

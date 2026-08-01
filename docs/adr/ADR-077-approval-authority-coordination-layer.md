@@ -40,10 +40,10 @@ return catalog.roles && hasOwnProperty(catalog.roles, id) ? catalog.roles[id] : 
 ```js
 if (policy.auto === 'auto-preauth' || !approvalId || approvalId === commander.id
     || !this.nodeState[approvalId]) {
-  threat._iadsApproval[key] = 'granted';   // 홉 없이 즉시 승인
+  threat._iadsApproval[key] = 'granted';   // 경유 없이 즉시 승인
 ```
 
-의 `!this.nodeState['IAOC']`에 걸려 **"승인권자 부재 → 승인 불필요"로 처리한다**. 승인 홉이 통째로 사라지는데 실행은 성공하고 결과는 빨라진다. 즉 **오타 하나가 "To-Be가 개선됐다"로 위장된다**. ADR-062가 경계하는 "0과 미측정의 혼동"과 정확히 같은 함정이다.
+의 `!this.nodeState['IAOC']`에 걸려 **"승인권자 부재 → 승인 불필요"로 처리한다**. 승인 단계가 통째로 사라지는데 실행은 성공하고 결과는 빨라진다. 즉 **오타 하나가 "To-Be가 개선됐다"로 위장된다**. ADR-062가 경계하는 "0과 미측정의 혼동"과 정확히 같은 함정이다.
 
 측정해 보니 등록된 역할은 `fusionC2` · `KAMDOC` · `MCRC` · `KAOC` 넷뿐이었고, `IAOC`와 `EOC`는 미등록이었다. 그래서 별칭을 먼저 등록하고 데이터를 바꿨다.
 
@@ -51,9 +51,9 @@ if (policy.auto === 'auto-preauth' || !approvalId || approvalId === commander.id
 
 ## 무엇이 실제로 달라졌나
 
-To-Be ABT의 `automation`은 `human-on-loop`이다. 이 분기는 **coord 협조 홉을 생략하고 승인권자 큐 서비스만** 태운다(`sim-engine.js` `_iadsApprovalGate`). 따라서 이번 변경으로 붙는 것은 링크 지연이 아니라 **IAOC의 대기·서비스 시간**이다. coord 링크 유무는 이 경로에 영향이 없다.
+To-Be ABT의 `automation`은 `human-on-loop`이다. 이 분기는 **coord 협조 단계를 생략하고 승인권자 큐 서비스만** 태운다(`sim-engine.js` `_iadsApprovalGate`). 따라서 이번 변경으로 붙는 것은 링크 지연이 아니라 **IAOC의 대기·서비스 시간**이다. coord 링크 유무는 이 경로에 영향이 없다.
 
-또 `approvalId === commander.id` 가드 때문에 **IAOC 자신이 결심자인 축(KILL_WEB global)은 자기승인**이 되어 홉이 없다. 남는 승인 홉은 **군단 AOC(ARMY_LOCAL_AD) → 합동방공C2** 축뿐이다. ADR-058이 "승인 홉이 실제로 발생하는 곳은 LOCAL_AD 축 하나"라고 한 구조가 To-Be에서도 그대로 유지되며, 교리적으로도 군단 AOC가 조율층에 승인을 요청하는 그림이 맞다.
+또 `approvalId === commander.id` 가드 때문에 **IAOC 자신이 결심자인 축(KILL_WEB global)은 자기승인**이 되어 거치지 않는다. 남는 승인 단계는 **군단 AOC(ARMY_LOCAL_AD) → 합동방공C2** 축뿐이다. ADR-058이 "승인 단계가 실제로 발생하는 곳은 LOCAL_AD 축 하나"라고 한 구조가 To-Be에서도 그대로 유지되며, 교리적으로도 군단 AOC가 조율층에 승인을 요청하는 그림이 맞다.
 
 실측 (SC3 · ×1.5 · seed 12345 · 600초 · HANBANDO_LEGACY_NORMAL · iads-c2):
 
@@ -78,7 +78,7 @@ To-Be ABT의 `automation`은 `human-on-loop`이다. 이 분기는 **coord 협조
 | sc3\|asis | **불변** | 64 | 108 |
 | sc3\|tobe | 변경 | 113 → **117** | 58 → **54** |
 
-**As-Is 3케이스가 bit-exact 불변인 것이 변경 범위의 하드 체크다.** `approvalLevel.asis`를 손대지 않았으므로 그래야 하고, 실제로 그렇다. `decision-audit`·`shadow-eval`·`engagement-state-unification`의 As-Is 지문도 전부 글자 그대로 종전 값이다. SC2 To-Be가 불변인 것은 그 시나리오에 해당 승인 홉이 없기 때문이다.
+**As-Is 3케이스가 bit-exact 불변인 것이 변경 범위의 하드 체크다.** `approvalLevel.asis`를 손대지 않았으므로 그래야 하고, 실제로 그렇다. `decision-audit`·`shadow-eval`·`engagement-state-unification`의 As-Is 지문도 전부 글자 그대로 종전 값이다. SC2 To-Be가 불변인 것은 그 시나리오에 해당 승인 단계가 없기 때문이다.
 
 `native-wta`의 반증 셀(FULL·SC3·×1.0·seed 777)은 이동 없이 유지됐다.
 

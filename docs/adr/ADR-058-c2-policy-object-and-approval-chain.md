@@ -58,7 +58,7 @@ self_battery)의 ABT 교전 — 승인권자 KAOC가 MCRC(다른 노드)로 해�
 
 ### 신설 링크 (군단AOC→MCRC coord — `IADS-APPR-COORD-01`)
 
-As-Is `VOICE`(대표 20초·Uniform(10,30) — `C2-VOICE-COORD-01` 승계) / To-Be DL 2초
+As-Is `VOICE`(대표 20초·Uniform(10,30) → ADR-080에서 정규(20,σ5)로 교체 — `C2-VOICE-COORD-01` 승계) / To-Be DL 2초
 (linkSemanticsV2 ON이면 IFCN 1초). **As-Is 20초는 링크(전선) 성능이 아니라 음성/VTC 협조
 절차 지연이다** — codex는 Link-K 전선을 "1초 보수"로 판정했지만 육↔공 협조 절차는
 모델링하지 않아 참고 정본이 없다(전선 ≠ 절차 — params.md에 명기). 따라서 linkSemanticsV2가

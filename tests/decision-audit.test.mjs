@@ -62,11 +62,11 @@ const CASES = ['sc1|asis', 'sc1|tobe', 'sc3|asis', 'sc3|tobe'];
 // 이 지문이 잠그는 명제는 종전과 같다("계측 OFF면 계측 도입 전과 한 발도 다르지 않다").
 // 바뀐 것은 비교 대상 기준선이지 명제가 아니다.
 const OFF_SHA = {
-  'sc1|asis': '8380939f2f68d0bb232c1af5f40e6a10eb9cb8b90843ddb625c50ea66650e3b3',
+  'sc1|asis': '5822d00c48e1744c17b4c1c7e2fa81f68d5ebb90a08b40268a97121165d266fc',
   // ADR-077 재고정: To-Be ABT 승인권자 MCRC → IAOC. As-Is 2케이스는 손대지 않았고
   // 실제로 지문도 불변이다(이 대비가 변경 범위의 하드 체크다).
   'sc1|tobe': 'acd5797cb9f1b3c7fea96358abb1cfecda25262bc888ad0ff2b600bd4ce868e1',
-  'sc3|asis': 'b451fe64df51e83e59c4a1bba5f987c4e01b557f0d8145b0d7814d9d747427e6',
+  'sc3|asis': 'fdd42243e985d5dd4f16225d0001fe0c4e0ac6014166cbae60b3c022fbd22e5c',
   'sc3|tobe': 'b3410a39b5c4763425c214dd4a17da8b0d62a3f05d31051b3ed98d65295a1585'
 };
 

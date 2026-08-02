@@ -45,15 +45,19 @@ function delays(cat, from, to) {
 
 console.log('# 1 — OFF 카탈로그 불변');
 assert(off !== on, 'OFF/ON 변형 카탈로그가 캐시에서 분리됨');
+// ADR-080: 국지레이더(TPS880K)→MCRC 직보는 As-Is에서 제거됐다(육군 자산 — 실제 교신은
+// 방공C2A 경유 문자 전파). 그래서 LLR→MCRC의 As-Is 칸은 모든 변형에서 비어 있고(',2'),
+// TPS-880K의 As-Is 보고 주기는 관할 방공C2A로 가는 abt_local 링크에서 검증한다.
 assert(String(delays(off, 'SENSOR_GPR', 'KAMD')) === '16,2' &&
-  String(delays(off, 'SENSOR_LLR_1C', 'MCRC')) === '16,2' &&
-  String(delays(off, 'C2_MCRC', 'ICC_W1')) === '16,2', 'OFF: 종전 LONG 16/DL 2 유지');
+  String(delays(off, 'SENSOR_LLR_1C', 'MCRC')) === ',2' &&
+  String(delays(off, 'C2_MCRC', 'ICC_W1')) === '16,2', 'OFF: 종전 LONG 16/DL 2 유지 (LLR→MCRC는 To-Be 전용)');
 
 console.log('# 2 — ON 센서별 보고 주기 (codex ADR-014)');
 assert(String(delays(on, 'SENSOR_GPR', 'KAMD')) === '16,1', 'ON: 그린파인 As-Is 16초(reportingPeriod) · To-Be 1초(IFCN)');
 assert(String(delays(on, 'SENSOR_ACR_E', 'MCRC')) === '8,1', 'ON: FPS-117 As-Is 8초 · To-Be IFCN 1초');
-assert(String(delays(on, 'SENSOR_LLR_1C', 'MCRC')) === '4,1', 'ON: TPS-880K As-Is 4초 · To-Be IFCN 1초');
-var gp = delays(on, 'SENSOR_GPR', 'KAMD'), llr = delays(on, 'SENSOR_LLR_1C', 'MCRC');
+assert(String(delays(on, 'SENSOR_LLR_1C', 'MCRC')) === ',1', 'ON: TPS-880K→MCRC는 To-Be 전용 IFCN 1초 (ADR-080)');
+assert(String(delays(on, 'SENSOR_LLR_1C', 'ARMY')) === '4,1', 'ON: TPS-880K→방공C2A As-Is 4초(reportingPeriod) · To-Be IFCN 1초');
+var gp = delays(on, 'SENSOR_GPR', 'KAMD'), llr = delays(on, 'SENSOR_LLR_1C', 'ARMY');
 assert(gp[0] !== llr[0], '수용 기준: TPS-880K 4초 ≠ 그린파인 16초 (일률 지연 폐기)');
 var mfr = on.links.find(function (l) { return l.axis === 'battery_mfr'; });
 assert(mfr.comm.asis.delaySec === 1 && mfr.comm.tobe.delaySec === 1, 'ON: 포대 MFR As-Is 1초(reportingPeriod) · To-Be 1초(IFCN)');

@@ -56,7 +56,10 @@ var asym = rep.filter(function (l) {
   return l.comm.asis && l.comm.tobe && l.comm.asis.delaySec !== l.comm.tobe.delaySec;
 });
 assert(asym.length === 0, '센서 발신 report 링크 비대칭 0건 — 같은 레이더는 양 모드 같은 주기로 보고');
-assert(rep.every(function (l) { return l.comm.tobe.type === 'report-cycle'; }),
+// ADR-080: 비편제 국지레이더→방공C2A 링크는 As-Is 전용이라 tobe 측이 없다 — 대칭성
+// 판정은 양 모드에 있는 링크만 대상으로 한다(없는 쪽을 참조하면 여기서 죽는다. 실측).
+assert(rep.filter(function (l) { return l.comm.tobe; })
+  .every(function (l) { return l.comm.tobe.type === 'report-cycle'; }),
   'To-Be 측이 IFCN이 아니라 report-cycle 타입 — 보고 주기가 지배');
 
 console.log('# 2 — 킬웹 sensor→IAOC (놓치면 To-Be가 전혀 안 바뀌는 구간)');
@@ -86,15 +89,34 @@ function sig(list) {
     return l.axis + '|' + l.kind + '|' + c.type + '|' + c.delaySec;
   }).sort().join(' , ');
 }
+// ADR-080: As-Is 전용 목록이 6건 → 14건으로 늘었다. 국지레이더(TPS880K)의 MCRC 직보를
+// 걷어내면서 ① 비편제 6대가 As-Is에서만 최근접 방공C2A로 보고하고(abt_local, To-Be는
+// IAOC 직결이 이미 있어 새 링크를 깔지 않는다 — To-Be bit-exact 서명 유지), ② 방공C2A가
+// 융합 국지항적을 MCRC로 문자 전파하는 상행 계선(corps_aoc_track_share)이 생겼기 때문이다.
 assert(sig(on.links.filter(function (l) { return l.comm.asis && !l.comm.tobe; })) === [
+  'abt_local|report|report-cycle|4',
+  'abt_local|report|report-cycle|4',
+  'abt_local|report|report-cycle|4',
+  'abt_local|report|report-cycle|4',
+  'abt_local|report|report-cycle|4',
+  'abt_local|report|report-cycle|4',
   'corps_aoc_approval|coord|voice|20',
   'corps_aoc_approval|coord|voice|20',
   'corps_aoc_engagement_status|status|voice-vtc|180',
   'corps_aoc_engagement_status|status|voice-vtc|180',
+  'corps_aoc_track_share|report|chat|45',
+  'corps_aoc_track_share|report|chat|45',
   'mcrc_to_corps_aoc_track|report|chat|45',
   'mcrc_to_corps_aoc_track|report|chat|45'
 ].join(' , '),
-  'As-Is 전용 계선은 육↔공 직결 6건뿐 — 음성 승인협조 2 · 음성 교전현황 2 · 문자 항적중계 2');
+  'As-Is 전용 계선 14건 — 음성 승인 2 · 음성/VTC 현황 2 · 문자 중계 하행 2 · 문자 전파 상행 2 · 비편제 국지레이더→방공C2A 6');
+// ADR-080: 국지레이더 → MCRC 직보는 As-Is에서 사라졌다(To-Be 통합망 배포 전용).
+// 2022-12 무인기 사건의 실패 모드(육군이 본 것을 공군이 제때 못 봄)가 모델에 존재하게 하는 핵심.
+var larDirect = on.links.filter(function (l) {
+  return /SENSOR_(LAR|LLR|SR_)/.test(l.from) && /MCRC/.test(l.to);
+});
+assert(larDirect.length === 8 && larDirect.every(function (l) { return !l.comm.asis && l.comm.tobe; }),
+  '국지레이더→MCRC 직보 8건은 전부 To-Be 전용 — As-Is는 방공C2A 문자 전파를 거친다');
 var iaocId = on.roles && on.roles.IAOC;
 var tobeStatus = on.links.filter(function (l) {
   return l.kind === 'status' && !l.comm.asis && l.comm.tobe;

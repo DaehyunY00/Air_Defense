@@ -4573,9 +4573,12 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   var INTERNAL = Object.freeze({ type: 'internal', delaySec: 1, paramRef: 'IADS-LINK-INTERNAL-01' });
   var SHORT = Object.freeze({ type: 'datalink', delaySec: 4, paramRef: 'IADS-LINK-SHORT-01' });
   var LONG = Object.freeze({ type: 'datalink', delaySec: 16, paramRef: 'IADS-LINK-LONG-01' });
+  // ADR-080: 분포를 균등(10,30) → 정규(평균 20, σ5)로 교체 — ±2σ가 종전 구간과 일치한다.
+  // 절차 지연은 "10~30초 사이 아무 값이나 같은 확률"보다 대표값 부근에 몰리는 게 자연스럽다.
+  // 음수 꼬리는 엔진이 0으로 절단한다(_linkDelay의 Math.max(0, ·)).
   var VOICE = Object.freeze({
     type: 'voice', delaySec: 20,
-    dist: Object.freeze({ kind: 'uniform', min: 10, max: 30 }),
+    dist: Object.freeze({ kind: 'normal', mean: 20, stddev: 5 }),
     paramRef: 'C2-VOICE-COORD-01'
   });
   // 군단 AOC→MCRC 교전현황 공유. 음성/VTC 1개 채널이 현재 처리 중
@@ -4865,17 +4868,46 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         addLink(links, mcrc.id, aoc.id, 'report', CHAT_TRACK, null, 'mcrc_to_corps_aoc_track');
         addLink(links, aoc.id, mcrc.id, 'status', VOICE_STATUS, null, 'corps_aoc_engagement_status');
         // ADR-058(approvalChain): 승인 협조 채널 — 교전현황(status) 채널과 의도적으로 분리.
-        // As-Is VOICE(대표 20초·Uniform(10,30))는 링크(전선) 성능이 아니라 **음성/VTC 협조
+        // As-Is VOICE(대표 20초·정규 20,σ5 — ADR-080)는 링크(전선) 성능이 아니라 **음성/VTC 협조
         // 절차 지연**(교전의사 선언·책임구역 확인·중복 회피 협상)이다. 따라서 linkSemanticsV2가
         // 켜져도 As-Is 측은 codex 정합(1초) 대상이 아니다 — codex는 육↔공 협조 절차를
         // 모델링하지 않아 참고 정본이 없다(C2-VOICE-COORD-01 비고 참조).
         if (appr) addLink(links, aoc.id, mcrc.id, 'coord', VOICE, null, 'corps_aoc_approval');
+        // ADR-080: 방공C2A가 융합한 국지항적의 **상행 전파**도 문자다 — 하행(mcrc_to_corps_
+        // aoc_track)과 같은 매체·같은 지연. 종전에는 국지레이더가 MCRC로 직보(4초)해서 이
+        // 계선이 필요 없어 보였는데, 그 직보 자체가 실제보다 후한 가정이었다(아래 참조).
+        addLink(links, aoc.id, mcrc.id, 'report', CHAT_TRACK, null, 'corps_aoc_track_share');
       });
     }
+    // ADR-080: 국지방공레이더(TPS880K)는 육군 자산이다. As-Is에서 공군 MCRC로의 직접
+    // 데이터링크 보고(종전 4초)는 공개근거가 없고, 2022-12 무인기 사건의 공식 교훈
+    // (1군단 레이더가 최초 포착했으나 전파 지연 — 육군이 본 것을 공군이 제때 못 봄)과
+    // 정면으로 어긋난다. 그 직보가 있으면 이 실패 모드가 모델에서 구조적으로 불가능해져
+    // As-Is에 유리한 숨은 가정이 된다. As-Is 국지항적은 관할 방공C2A로만 자동 보고되고,
+    // MCRC는 위의 문자 전파(corps_aoc_track_share, 45초)로 늦게 본다.
+    // To-Be 측은 통합망 배포이므로 종전 직결을 유지한다 — 이 변경의 서명은
+    // 「As-Is만 이동·To-Be bit-exact」다(ADR-079와 같은 방향의 하드 체크).
+    function nearestLocalAd(s) {
+      var best = null, bd = Infinity;
+      localAds.forEach(function (a) {
+        var dLat = a.coord[0] - s.coord[0];
+        var dLon = (a.coord[1] - s.coord[1]) * Math.cos(s.coord[0] * Math.PI / 180);
+        var d = dLat * dLat + dLon * dLon;
+        if (d < bd) { bd = d; best = a; }
+      });
+      return best;
+    }
     sensorNodes(['TPS880K']).forEach(function (s) {
-      var owner = c2ForPos(s.localAdPosKey);
-      if (mcrc) addLink(links, s.id, mcrc.id, 'report', v2 ? reportCycleComm(s.typeId) : LONG, sensorReportTobe(s.typeId), 'korean_mcrc');
-      if (owner) addLink(links, s.id, owner.id, 'report', v2 ? reportCycleComm(s.typeId) : INTERNAL, sensorReportTobe(s.typeId), 'abt_local');
+      var organic = c2ForPos(s.localAdPosKey);           // 편제 소속(배치 선언에 명시)
+      var owner = organic || nearestLocalAd(s);          // 비편제는 최근접 권역 관할(개념 배정)
+      if (mcrc) addLink(links, s.id, mcrc.id, 'report', null, sensorReportTobe(s.typeId), 'korean_mcrc');
+      if (owner) {
+        // 편제 2대는 양 모드 보고 유지(종전과 동일). 비편제 6대(legacy 이식 산물)는
+        // **As-Is에서만** 관할 방공C2A로 보고 — To-Be에 새 링크를 깔면 To-Be가 움직여
+        // 변경 서명(To-Be bit-exact)이 흐려지고, To-Be는 어차피 IAOC 직결로 같은 그림을 본다.
+        addLink(links, s.id, owner.id, 'report', v2 ? reportCycleComm(s.typeId) : INTERNAL,
+          organic ? sensorReportTobe(s.typeId) : null, 'abt_local');
+      }
     });
 
     deployment.batteries.forEach(function (b) {
@@ -10334,8 +10366,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var instance;
     try {
       instance = kind === 'module'
-        ? new Worker('js/workers/sim-worker.mjs?v=20260801e', { type: 'module' })
-        : new Worker('js/workers/sim-worker.js?v=20260801e');
+        ? new Worker('js/workers/sim-worker.mjs?v=20260801f', { type: 'module' })
+        : new Worker('js/workers/sim-worker.js?v=20260801f');
       worker = instance;
       workerReady = false;
       worker.onmessage = function (ev) {

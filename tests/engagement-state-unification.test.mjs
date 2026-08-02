@@ -44,9 +44,9 @@ function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fa
 // ADR-077(To-Be ABT 승인권자 MCRC → IAOC)에서는 **To-Be 두 지문만** 움직였다 — As-Is 두
 // 지문은 글자 그대로 종전 값이다(변경이 tobe 필드에만 닿았다는 하드 체크).
 var OFF_SHA = {
-  'sc1|asis': 'a15cf4bfadb6bc7632964c8a47bcfd640b1ca03a02753655d6a6fac01901d9e6',
+  'sc1|asis': '2ed71c833c6afc12f6b717d5d5ea915242a1a42a64e9bfda0bca9cfe9f4bc720',
   'sc1|tobe': 'c344c3d5f1371eef14e4345f887280a2cdc6cb73f1897e269f0ba34e21be88cb',
-  'sc3|asis': '0585f4bbe47013fc82e1a5792b43b2d9699cf64d26de6e39f2e6dc08a78accbd',
+  'sc3|asis': '805208a5d3b85fe98b59cf838cba72abb19ff0ec0cfc21344a08ca7d4c85efda',
   'sc3|tobe': 'bf4a9ed40f0060ec9edd5823227ac697935bf9ea513ee2f9deb86f0c852966e7'
 };
 // OFF To-Be 중복교전 — 결함이 남아 있다는 증거. ADR-076에서 sc3 12 → 13,

@@ -132,11 +132,13 @@ var apprLinks = apprCat.links.filter(function (l) {
   return l.kind === 'coord' && /ARMY_LOCAL_AD/.test(l.from) && /MCRC/.test(l.to);
 });
 assert(apprLinks.length > 0, '승인 계선(coord) 링크 존재: 군단/수방사 AOC → MCRC (ADR-058)');
+// ADR-080: 분포를 균등(10,30) → 정규(평균 20, σ5)로 교체 — ±2σ가 종전 구간과 일치.
+// 절차 지연은 대표값 부근에 몰리는 게 자연스럽다(음수 꼬리는 엔진이 0으로 절단).
 assert(apprLinks.every(function (l) {
   return l.comm.asis.type === 'voice' && l.comm.asis.delaySec === 20 &&
-    l.comm.asis.dist && l.comm.asis.dist.kind === 'uniform' &&
-    l.comm.asis.dist.min === 10 && l.comm.asis.dist.max === 30;
-}), 'As-Is 협조 채널 = 음성 절차 지연 대표 20초·Uniform(10,30) (C2-VOICE-COORD-01)');
+    l.comm.asis.dist && l.comm.asis.dist.kind === 'normal' &&
+    l.comm.asis.dist.mean === 20 && l.comm.asis.dist.stddev === 5;
+}), 'As-Is 협조 채널 = 음성 절차 지연 대표 20초·정규(20, σ5) (C2-VOICE-COORD-01)');
 // ADR-078: To-Be 대응 채널이 **같은 선이 아니다**. 조율층(IAOC) 신설로 군단 AOC의 협조 상대가
 // MCRC에서 IAOC로 바뀌어, 위 As-Is 링크에는 tobe 측이 없다. 제약 (f)의 요지는 "As-Is 협조 20초
 // > To-Be 협조"라는 **방향**이므로 대응 채널을 조율층 쪽으로 재조준해 같은 방향을 검사한다 —

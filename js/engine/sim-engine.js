@@ -578,11 +578,30 @@
    * Gantt 구간 합이 100%를 초과하던 결함의 근본 수정 (Phase 5 리뷰 발견).
    * 격추 마크는 exitT 설정 직전에 호출되므로 정상 기록된다.
    */
-  Simulation.prototype._mark = function (threat, name, t) {
+  /**
+   * 항적 단계 기록. **순수 관측** — 동역학·RNG에 관여하지 않는다.
+   *
+   * ADR-081: 네 번째 인자 `axis`(지휘 축 식별자)를 추가했다. 한 항적에는 지휘관이
+   * **동시에 3~4개** 붙는다(통합축 IAOC + 국지축 방공C2A ×2 + 도메인 제대 병렬 통보).
+   * 각자 자기 파이프라인을 독립적으로 돌리므로 단일 시계열로 찍으면 ②③④⑤⑥이 여러 번
+   * 엇갈려 나오고, 읽는 사람에게는 **루프처럼 보인다**(실제 오독 사례). 게다가
+   * `식별확정:ARMY_LOCAL_AD`는 1군단인지 수방사인지 구분이 없다 — typeId만 찍기 때문이다.
+   *
+   * ⚠️ 마크 **텍스트는 바꾸지 않는다.** UI·테스트 여러 곳이 접두어로 파싱한다
+   * (`책임C2:`·`식별확정:`·`도메인처리:` …). 구분은 별도 필드로만 싣는다.
+   */
+  Simulation.prototype._mark = function (threat, name, t, axis) {
     if (threat._trace && threat._trace.exitT === null) {
-      threat._trace.stages.push({ name: name, t: t });
+      var stage = { name: name, t: t };
+      if (axis) stage.axis = axis;
+      threat._trace.stages.push(stage);
     }
   };
+
+  /** ADR-081: 지휘 축 식별자 — 인스턴스 id까지 담아야 같은 typeId 두 대가 구분된다. */
+  function axisOf(commander) {
+    return commander ? (commander.axis + '|' + commander.id) : null;
+  }
 
   /** 분석 이벤트 기록은 선택적·결정론적이며 시뮬레이션 동역학/RNG에 관여하지 않는다. */
   Simulation.prototype._metricEvent = function (type, t, threat, detail) {
@@ -908,12 +927,12 @@
     var threat = d.threat, ns = this.nodeState[d.echelonId];
     if (!ns || !threat.alive || threat.pipelineDead) return;
     var self = this;
-    this._mark(threat, '도메인처리:' + ns.node.typeId, t);
+    this._mark(threat, '도메인처리:' + ns.node.typeId, t, 'DOMAIN|' + d.echelonId);
     var disp = this._nodeArrive(d.echelonId, t, {
       threat: threat, kind: 'iads_track', priority: d.priority,
       jobId: 'DOMAIN_' + threat.id + '_' + d.echelonId
     }, function (done) {
-      self._mark(threat, '도메인처리완료:' + ns.node.typeId, done);
+      self._mark(threat, '도메인처리완료:' + ns.node.typeId, done, 'DOMAIN|' + d.echelonId);
     });
     if (disp === 'dropped') {
       // 상황인식 손실 — 교전 계선은 조율층이 쥐고 있으므로 실패로 계상하지 않는다.
@@ -1022,7 +1041,7 @@
       self.global.trackFusion.fusedTracks++;
       if (sources.length > 1) self.global.trackFusion.multiSourceTracks++;
       self.global.trackFusion.prioritizedTracks++;
-      self._mark(threat, '책임C2:' + commander.typeId + '(' + commander.scope + ')', t);
+      self._mark(threat, '책임C2:' + commander.typeId + '(' + commander.scope + ')', t, axisOf(commander));
       var track = threat._c2TrackLedger[commander.id];
       self.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_C2_ARRIVE', {
         threat: threat, commander: commander, track: track
@@ -1100,7 +1119,7 @@
       else if (eventName === 'SENSOR_TRACKED') this.iadsSensorStats.tracks++;
       else if (eventName === 'SENSOR_FIRE_CONTROL') this.iadsSensorStats.fireControl++;
       else if (eventName === 'SENSOR_TRACK_LOST' || eventName === 'SENSOR_FC_DEGRADED') this.iadsSensorStats.losses++;
-      if (eventName && threat._trace) this._mark(threat, eventName + ':' + sensor.id, t);
+      if (eventName && threat._trace) this._mark(threat, eventName + ':' + sensor.id, t, 'SENSOR');
     }, this);
 
     if (!threat.detected && Object.keys(threat._sensorTracks).some(function (id) {
@@ -1282,10 +1301,10 @@
       return !Number.isFinite(source.lastUpdateAt) || t - source.lastUpdateAt > 120;
     }))) {
       this.global.trackQuality.stale++;
-      this._mark(threat, '항적폐기:STALE:' + commander.typeId, t);
+      this._mark(threat, '항적폐기:STALE:' + commander.typeId, t, axisOf(commander));
       return;
     }
-    this._mark(threat, '항적정보접수:' + commander.typeId + '(' + track.sources.length + '출처)', t);
+    this._mark(threat, '항적정보접수:' + commander.typeId + '(' + track.sources.length + '출처)', t, axisOf(commander));
     var reportUpdates = (track.sources || []).map(function (source) { return source.lastUpdateAt; })
       .filter(Number.isFinite);
     this._metricEvent('TRACK_REPORT_RECEIVED', t, threat, {
@@ -1298,8 +1317,8 @@
       trackSourceCount: (track.sources || []).length,
       trackFused: !!track.fused
     });
-    this._mark(threat, '항적융합:' + commander.typeId + (track.fused ? '(MCRC+국지)' : '(단일출처)'), t);
-    this._mark(threat, '위협우선순위:' + commander.typeId + '/' + Math.floor(track.priority), t);
+    this._mark(threat, '항적융합:' + commander.typeId + (track.fused ? '(MCRC+국지)' : '(단일출처)'), t, axisOf(commander));
+    this._mark(threat, '위협우선순위:' + commander.typeId + '/' + Math.floor(track.priority), t, axisOf(commander));
     this._nodeArrive(commander.id, t, {
       threat: threat, kind: 'iads_track', commander: commander, priority: track.priority, track: track,
       jobId: 'TRACK_' + threat.id + '_' + commander.id
@@ -1315,10 +1334,10 @@
         track.correlationType = KJ.IADS.TRACK_CORRELATION.CORRECT;
         track.identity = KJ.IADS.TRACK_IDENTITY.HOSTILE;
         self.global.trackQuality.identified++;
-        self._mark(job.threat, '식별확정:' + commander.typeId, done);
+        self._mark(job.threat, '식별확정:' + commander.typeId, done, axisOf(commander));
       }
       self.global.commanderAssignments[commander.typeId] = (self.global.commanderAssignments[commander.typeId] || 0) + 1;
-      self._mark(job.threat, '위협판단·표적할당준비:' + commander.typeId, done);
+      self._mark(job.threat, '위협판단·표적할당준비:' + commander.typeId, done, axisOf(commander));
       self._iadsDecide(job.threat, done, commander);
     });
   };
@@ -2040,7 +2059,7 @@
       this.global.coordAttempts++;
       this.global.deconflicted++;
       this.global.statusSharing.deconflicted++;
-      this._mark(threat, '교전중복해소:MCRC/' + shared.from + '/' + shared.phase, t);
+      this._mark(threat, '교전중복해소:MCRC/' + shared.from + '/' + shared.phase, t, axisOf(commander));
       this._scheduleIadsRetry(threat, commander, shared.freshUntil + 0.5);
       return;
     }
@@ -2058,7 +2077,7 @@
         this.global.coordAttempts++;
         this.global.deconflicted++;
         this.copDeconflicted = (this.copDeconflicted || 0) + 1;
-        this._mark(threat, '교전중복해소:COP/' + visiblePlan.issuedByC2Id, t);
+        this._mark(threat, '교전중복해소:COP/' + visiblePlan.issuedByC2Id, t, axisOf(commander));
         this._scheduleIadsRetry(threat, commander, t + copDelay + 0.5);
         return;
       }
@@ -2153,8 +2172,8 @@
     // ADR-073: 결심이 확정된 바로 그 시점(COMMAND_DECIDED와 동일 t)에 후보 명단을 남긴다.
     // 여기서 남기므로 감사 이벤트는 실제 결심과 1:1이고, t가 곧 "결심완료시각"이다.
     if (this.decisionAudit) this._emitDecisionAudit(threat, commander, t, candidates, chosen, reasons);
-    this._mark(threat, '사수선정·표적할당:' + commander.typeId + '→' + chosen.shooter.id, t);
-    this._mark(threat, '자체교전승인:' + commander.typeId, t);
+    this._mark(threat, '사수선정·표적할당:' + commander.typeId + '→' + chosen.shooter.id, t, axisOf(commander));
+    this._mark(threat, '자체교전승인:' + commander.typeId, t, axisOf(commander));
     this._sendIadsStatus(threat, commander, 'assigned', t);
     var delay = 0;
     path.forEach(function (l) {
@@ -2208,14 +2227,14 @@
       this.deleg.count++;
       if (this.deleg.firstT === null) this.deleg.firstT = t;
       this.deleg.byNode[approvalId] = (this.deleg.byNode[approvalId] || 0) + 1;
-      this._mark(threat, '권한위임:' + approvalId, t);
+      this._mark(threat, '권한위임:' + approvalId, t, axisOf(commander));
       threat._iadsApproval[key] = 'delegated';
       return 'granted';
     }
     if (policy.auto === 'human-on-loop') {
       // 감독하 자동교전: 협조 단계 생략, 승인권자 서비스만 (legacy 동치)
       threat._iadsApproval[key] = 'pending';
-      this._mark(threat, '감독승인개시:' + approvalId, t);
+      this._mark(threat, '감독승인개시:' + approvalId, t, axisOf(commander));
       this.schedule(t, PRI.LINK_ARRIVE, 'IADS_APPROVE_ARRIVE',
         { threat: threat, commander: commander, appr: approvalId, key: key });
       return 'wait';
@@ -2240,7 +2259,7 @@
     // 결심지연 분해(legacy 1B 동치): coord 협조 단계 몫 누적 → meanCoordDelaySec
     threat._coordDelay = (threat._coordDelay || 0) + delay;
     threat._iadsApproval[key] = 'pending';
-    this._mark(threat, '협조개시:' + commander.id + '→' + approvalId, t);
+    this._mark(threat, '협조개시:' + commander.id + '→' + approvalId, t, axisOf(commander));
     this.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_APPROVE_ARRIVE',
       { threat: threat, commander: commander, appr: approvalId, key: key });
     return 'wait';
@@ -2250,7 +2269,7 @@
     var self = this, threat = d.threat;
     if (!threat.alive || threat.pipelineDead) return;
     var disp = this._nodeArrive(d.appr, t, { threat: threat, kind: 'approval' }, function (t2, job) {
-      self._mark(job.threat, '승인완료:' + d.appr, t2);
+      self._mark(job.threat, '승인완료:' + d.appr, t2, axisOf(d.commander));
       job.threat._iadsApproval[d.key] = 'granted';
       self._iadsDecide(job.threat, t2, d.commander);
     });
@@ -2280,6 +2299,10 @@
       var self = this;
       this._iadsTransitionPlan(plan, 'received', t);
       this.global.c2Orders.received++;
+      // ADR-081: ECS는 여기서 **실제로 일한다**(directive_reception 큐 — SC3 실측 116~239건).
+      // 그런데 종전에는 마크를 남기지 않아 항적 로그·노드 다이어그램에서 ECS가 통째로
+      // 보이지 않았다(214개 항적 전부 ECS 언급 0건). 순수 계측 추가 — 결과 불변.
+      this._mark(threat, '교전명령접수:' + plan.targetEcsId, t, axisOf(d.commander));
       var disposition = this._nodeArrive(plan.targetEcsId, t, {
         threat: threat,
         kind: 'directive_reception',
@@ -2361,7 +2384,7 @@
       this.global.coordAttempts++;
       this.global.deconflicted++;
       this.global.statusSharing.deconflicted++;
-      this._mark(threat, '사격직전중복해소:MCRC/' + shared.from, t);
+      this._mark(threat, '사격직전중복해소:MCRC/' + shared.from, t, axisOf(d.commander));
       this._scheduleIadsRetry(threat, d.commander, shared.freshUntil + 0.5);
       return;
     }

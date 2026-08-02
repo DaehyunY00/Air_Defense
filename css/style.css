@@ -166,6 +166,28 @@ li.tlog-done { color: var(--muted); }
 li.tlog-current { color: #ffd27d; font-weight: 700; }
 li.tlog-future { color: #4a5666; }
 
+/* ── ADR-081: 항적 로그 축별 레인 ──
+   한 항적에 지휘관이 동시에 3~4개 붙어 한 줄로 찍으면 루프처럼 읽힌다. 축으로 갈라
+   놓고, 레인 왼쪽에 등급별 색띠를 둬서 어느 계선의 일인지 눈으로 잡히게 한다. */
+.tlog-lane, .alog-lane { list-style: none; margin: 3px 0 0; padding: 0 0 0 7px; border-left: 2px solid #2c3746; }
+.tlog-lane-main, .alog-lane-main { border-left-color: #3d8bd9; }   /* 주축 */
+.tlog-lane-local, .alog-lane-local { border-left-color: #e08a00; } /* 국지축(방공C2A) */
+.tlog-lane-domain, .alog-lane-domain { border-left-color: #a06ed2; } /* 도메인 제대(병렬 통보) */
+.tlog-lane-sensor, .alog-lane-sensor { border-left-color: #4a5666; }
+.tlog-lane-other, .alog-lane-other { border-left-color: #3d8b40; }
+.tlog-lane-common, .alog-lane-common { border-left-color: #7f93ab; }
+.tlog-lane-hdr, .alog-lane-hdr {
+  cursor: pointer; user-select: none; display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: #9fb3c8; padding: 1px 0;
+}
+.tlog-lane-hdr:hover, .alog-lane-hdr:hover { color: #d7e6f5; }
+.tlog-lane-tw { display: inline-block; width: 9px; transition: transform .12s; }
+.lane-shut > .tlog-lane-hdr .tlog-lane-tw,
+.lane-shut > .alog-lane-hdr .tlog-lane-tw { transform: rotate(-90deg); }
+.tlog-lane-n { margin-left: auto; color: #5d6b7d; font-variant-numeric: tabular-nums; }
+.tlog-lane-items, .alog-lane-items { list-style: none; margin: 0; padding: 0 0 0 9px; }
+.lane-shut > .tlog-lane-items, .lane-shut > .alog-lane-items { display: none; }
+
 /* ── [분석] 탭 위협 항적 로그 (As-Is↔To-Be 병렬 대조) ── */
 .alog-row { border-bottom: 1px solid #222b38; font-size: 12px; }
 .alog-row:last-child { border-bottom: none; }
@@ -967,6 +989,15 @@ li.chk-fail { background: #43140f; }
 .an-table { width: 100%; font-size: 12px; }
 .an-table th { text-align: left; color: var(--muted); font-weight: 400; padding: 4px 8px 4px 0; }
 .an-table td { padding: 5px 8px 5px 0; vertical-align: middle; border-top: 1px solid #222b38; }
+/* ADR-081: C2 결심시간 분해 — 주 지표(①)만 강조하고 나머지는 낮춰, 합계를 주 지표로
+   오독하지 않게 한다. */
+.an-decision tr.an-primary td { background: rgba(61, 139, 217, .08); }
+.an-decision tr.an-primary b { color: #9ad2ff; }
+.an-decision .an-tag {
+  display: inline-block; margin-left: 6px; padding: 1px 5px; border-radius: 3px;
+  background: #1a2231; color: #8fa4bb; font-size: 10px; vertical-align: 1px;
+}
+.an-decision .an-why { color: var(--muted); font-size: 11px; margin-top: 2px; }
 .an-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .an-why { display: block; color: var(--muted); font-style: normal; font-size: 10px; margin-top: 1px; }
 .an-total td { border-top: 2px solid var(--border); font-weight: 700; }
@@ -1040,6 +1071,11 @@ li.chk-fail { background: #43140f; }
 .sv-cols.sv-playing .sv-edge.sv-flow.sv-on { opacity: .95; stroke-width: 1.6; }
 .sv-legend { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--muted); margin-top: 6px; }
 .sv-legend i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin: 0 4px 0 10px; vertical-align: 3px; }
+/* ADR-081: 예비지휘 범례는 선이 아니라 노드 모양이라 원으로 그린다. */
+.sv-legend i.sv-legend-standby {
+  width: 8px; height: 8px; border-radius: 50%; background: #1a1f2b;
+  border: 1.4px dashed #a06ed2; vertical-align: -1px;
+}
 @media (max-width: 900px) { .sv-cols { grid-template-columns: 1fr; } }
 .sv-cnt { font-size: 6px; fill: #0d1117; font-weight: 700; }
 /* 조율층 띠 · 모델 범위 밖 맥락 상자 (사용자 제공 아키텍처 반영) */
@@ -1051,6 +1087,10 @@ li.chk-fail { background: #43140f; }
 /* 경로상 보완 노드 — 카탈로그 링크는 있으나 항적에 기록되지 않은 홉 (C2 계층 공용) */
 .sv-bridge circle { fill: none; stroke: #8a97a8; stroke-width: 1.4; stroke-dasharray: 2 2; }
 .sv-bridge text { fill: #6b7a8d; font-style: italic; }
+/* ADR-081: 예비 지휘 계선(ICC) — 배선은 있으나 정상 시 큐를 쓰지 않는다.
+   속을 비우고 테두리를 점선으로 둬서 "연결은 됐고, 지금은 대기"를 한눈에 구분한다. */
+.sv-standby circle { fill: #1a1f2b; stroke: #a06ed2; stroke-width: 1.4; stroke-dasharray: 3 2; }
+.sv-standby text { fill: #8e7fb0; }
 .an-reach { color: var(--muted); white-space: nowrap; }
 .an-narrow { color: #e0b341; }
 .an-table thead th[colspan] { text-align: center; border-bottom: 1px solid #222b38; }

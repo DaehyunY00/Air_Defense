@@ -72,7 +72,74 @@
     if (name.indexOf('BDA:MISS:') === 0) return '⑨ BDA: 빗나감 — ' + name.slice(9);
     if (name.indexOf('항적폐기:') === 0) return '✖ 항적 폐기: ' + name.slice(5);
     if (name.indexOf('교전현황드롭') === 0) return '⑦ 교전현황 전달 실패';
+    // ADR-081 — 지난 판에서 늘어난 마크 3종. 라벨이 없으면 원문(`도메인처리:MCRC`)이
+    // 그대로 노출돼 다른 줄과 결이 어긋난다.
+    if (name.indexOf('도메인처리완료:') === 0) return '③ 도메인 제대 처리 완료 (' + name.slice(8) + ')';
+    if (name.indexOf('도메인처리:') === 0) return '③ 도메인 제대 처리 (' + name.slice(6) + ')';
+    if (name.indexOf('교전명령접수:') === 0) return '⑧ 교전명령 접수 (' + name.slice(7) + ')';
     return name;
+  }
+
+  // ── ADR-081: 항적 로그 축별 레인 ────────────────────────────────────────────
+  // 한 항적에 지휘관이 **동시에** 3~4개 붙는다(통합축 IAOC + 국지축 방공C2A 2곳 +
+  // 도메인 제대 병렬 통보 + 센서). 종전에는 이걸 시각순 한 줄로 이어 찍어서, 같은
+  // 항적이 여러 번 도는 것처럼 읽혔다 — 실제로 「루프가 도는 것 같다」는 오독이 났다.
+  // 엔진이 실제로는 **축별 병렬 계선**이므로 화면도 축으로 갈라 놓는다.
+  //
+  // `stage.axis` 형식(엔진 `axisOf`): '<축>|<지휘관 인스턴스 id>' · 'DOMAIN|<제대 id>' ·
+  // 'SENSOR' · 없음(생성·탐지·발사·BDA·누수 = 전 계통 공용).
+  // ⚠️ 축 판정은 **axis 필드로만** 한다. 마크 텍스트 접두어는 라벨·테스트가 파싱하는
+  //    별개 계약이라 여기서 다시 파싱하면 두 벌이 되어 갈라진다.
+  var LANE_RANK = { common: 0, main: 1, local: 2, other: 3, domain: 4, sensor: 5 };
+
+  /** 축 문자열 → 레인 메타. resolveName(id)는 카탈로그 노드명 해석기(없으면 id 그대로). */
+  function laneOf(stage, resolveName) {
+    var axis = stage && stage.axis;
+    if (!axis) return { key: '_common', kind: 'common', label: '공용 — 전 계통 공통' };
+    if (axis === 'SENSOR') return { key: '_sensor', kind: 'sensor', label: '센서 (레이더 상태 변화)' };
+    var bar = axis.indexOf('|');
+    var head = bar < 0 ? axis : axis.slice(0, bar);
+    var id = bar < 0 ? '' : axis.slice(bar + 1);
+    var name = resolveName ? resolveName(id) : id;
+    if (head === 'DOMAIN') return { key: axis, kind: 'domain', label: '도메인 제대 · ' + name };
+    if (head === 'LOCAL_AD') return { key: axis, kind: 'local', label: '국지축 · ' + name };
+    if (head === 'SELF_DEFENSE') return { key: axis, kind: 'other', label: '자위권 · ' + name };
+    if (head.indexOf('USFK') === 0) return { key: axis, kind: 'other', label: '미군 독립축 · ' + name };
+    return { key: axis, kind: 'main', label: '주축 · ' + name };
+  }
+
+  /**
+   * 단계 배열 → 레인 배열. 각 항목은 `{s, i}`로 **원래 인덱스 i를 보존**한다 —
+   * 재생 진행표시(refreshLogRow)가 `stages[j]`와 li를 인덱스로 맞대기 때문이다.
+   * 레인 순서: 공용 → 주축 → 국지축 → 기타축 → 도메인 → 센서.
+   * 공용을 맨 위에 두는 이유: 생성·탐지로 시작해 발사·BDA로 끝나는 **전체의 등뼈**라
+   * 여기부터 읽어야 나머지 축이 그 사이 어디에 끼는지가 보인다.
+   * 같은 등급끼리는 **먼저 등장한 축이 위** — 시각순이라 결정론이고 읽는 순서와 맞는다.
+   */
+  function splitStageLanes(stages, resolveName) {
+    var lanes = {}, order = [];
+    (stages || []).forEach(function (s, i) {
+      var meta = laneOf(s, resolveName);
+      var lane = lanes[meta.key];
+      if (!lane) {
+        lane = lanes[meta.key] = { key: meta.key, kind: meta.kind, label: meta.label, items: [] };
+        order.push(lane);
+      }
+      lane.items.push({ s: s, i: i });
+    });
+    order.sort(function (a, b) {
+      return (LANE_RANK[a.kind] - LANE_RANK[b.kind]) || (a.items[0].i - b.items[0].i);
+    });
+    return order;
+  }
+
+  /** 카탈로그 → 노드 id를 사람이 읽는 이름으로. 못 찾으면 id를 그대로 돌려준다(지어내지 않는다). */
+  function laneNameResolver(catalog) {
+    return function (id) {
+      if (!id) return '(미상)';
+      var n = KJ.nodeById ? KJ.nodeById(id, catalog) : null;
+      return (n && n.name) ? n.name : id;
+    };
   }
 
   /** 누수 원인코드 → 사람이 읽는 라벨. 위 stageLabel(지도 위 위협 항적 로그)이 쓴다.
@@ -553,6 +620,7 @@
     var panel = el('threat-log'), body = el('tlog-body');
     if (!panel || !body) return;
     tlog.els = {};
+    var resolveLaneName = laneNameResolver(runCatalog());
     var frag = document.createDocumentFragment();
     run.threats.forEach(function (th) {
       var row = document.createElement('div');
@@ -568,12 +636,33 @@
       var list = document.createElement('ul');
       list.className = 'tlog-stages';
       list.style.display = 'none';
-      var lis = th.stages.map(function (s) {
-        var li = document.createElement('li');
-        li.textContent = fmtTime(s.t) + ' · ' + stageLabel(s.name);
-        li.className = 'tlog-future';
-        list.appendChild(li);
-        return { el: li, t: s.t };
+      // ADR-081: 축별 레인. `lis`는 **원래 단계 인덱스로 색인**해야 refreshLogRow의
+      // 진행표시가 그대로 동작한다(레인은 화면 배치일 뿐 시간 순서를 바꾸지 않는다).
+      var lis = new Array(th.stages.length);
+      splitStageLanes(th.stages, resolveLaneName).forEach(function (lane) {
+        var laneLi = document.createElement('li');
+        laneLi.className = 'tlog-lane tlog-lane-' + lane.kind;
+        var hd = document.createElement('div');
+        hd.className = 'tlog-lane-hdr';
+        hd.innerHTML = '<span class="tlog-lane-tw">▾</span>' + esc(lane.label) +
+          '<span class="tlog-lane-n">' + lane.items.length + '</span>';
+        var sub = document.createElement('ul');
+        sub.className = 'tlog-lane-items';
+        lane.items.forEach(function (it) {
+          var li = document.createElement('li');
+          li.textContent = fmtTime(it.s.t) + ' · ' + stageLabel(it.s.name);
+          li.className = 'tlog-future';
+          sub.appendChild(li);
+          lis[it.i] = { el: li, t: it.s.t };
+        });
+        // 센서 레인은 기본 접힘 — SENSOR_* 마크가 대부분이라 펼치면 나머지를 덮는다.
+        if (lane.kind === 'sensor') laneLi.classList.add('lane-shut');
+        hd.addEventListener('click', function (ev) {
+          ev.stopPropagation();                       // 행 전체 토글로 번지지 않게
+          laneLi.classList.toggle('lane-shut');
+        });
+        laneLi.appendChild(hd); laneLi.appendChild(sub);
+        list.appendChild(laneLi);
       });
       hdr.addEventListener('click', function () { toggleLogRow(th.id); });
       row.appendChild(hdr); row.appendChild(list);
@@ -732,11 +821,13 @@
     });
     return map;
   }
-  function diffStageList(tr, otherTr) {
+  function diffStageList(tr, otherTr, catalog) {
     if (!tr) return '<ul class="alog-stages"><li class="bn-none">이 모드에 대응 항적 없음</li></ul>';
     if (!tr.stages || !tr.stages.length) return '<ul class="alog-stages"><li class="bn-none">기록된 단계 없음</li></ul>';
     var otherMap = stageIndex(otherTr), seen = {};
-    return '<ul class="alog-stages">' + tr.stages.map(function (s) {
+    // ⚠️ 짝짓기는 **원래 시각 순서 그대로** 먼저 끝낸다. 레인으로 갈라 놓고 세면
+    // `seen[key]` 카운터가 축마다 따로 돌아 반대 계통의 k번째와 어긋난다.
+    var rows = tr.stages.map(function (s) {
       var key = stageKey(s.name);
       var k = (seen[key] = (seen[key] || 0) + 1) - 1;
       var mate = otherMap[key] && otherMap[key].length > k ? otherMap[key][k] : null;
@@ -759,6 +850,18 @@
       return '<li class="' + cls + '"' + (tip ? ' title="' + esc(tip) + '"' : '') + '>' +
         '<span class="alog-t">' + fmtTime(s.t) + '</span> ' +
         esc(stageLabel(s.name)) + mark + '</li>';
+    });
+    // ADR-081: 같은 레인 규칙으로 묶는다(지도 위 항적 로그와 한 벌).
+    var resolveName = laneNameResolver(catalog);
+    return '<ul class="alog-stages">' + splitStageLanes(tr.stages, resolveName).map(function (lane) {
+      return '<li class="alog-lane alog-lane-' + lane.kind +
+        (lane.kind === 'sensor' ? ' lane-shut' : '') + '">' +
+        '<div class="alog-lane-hdr" data-lane="' + esc(lane.key) + '">' +
+        '<span class="tlog-lane-tw">▾</span>' + esc(lane.label) +
+        '<span class="tlog-lane-n">' + lane.items.length + '</span></div>' +
+        '<ul class="alog-lane-items">' +
+        lane.items.map(function (it) { return rows[it.i]; }).join('') +
+        '</ul></li>';
     }).join('') + '</ul>';
   }
 
@@ -1230,8 +1333,8 @@
         '</summary>' +
         timelineHtml(r.a, r.b, r.id) +
         '<div class="alog-cols">' +
-        '<div class="alog-col"><h4>As-Is 분절형</h4>' + diffStageList(r.a, r.b) + '</div>' +
-        '<div class="alog-col"><h4>To-Be 통합형</h4>' + diffStageList(r.b, r.a) + '</div>' +
+        '<div class="alog-col"><h4>As-Is 분절형</h4>' + diffStageList(r.a, r.b, cmp.catalog) + '</div>' +
+        '<div class="alog-col"><h4>To-Be 통합형</h4>' + diffStageList(r.b, r.a, cmp.catalog) + '</div>' +
         '</div></details>';
     }).join('');
     return html;
@@ -1247,7 +1350,24 @@
         box.innerHTML = threatCompareSection();
         bindCompareFilters();
         bindTimelinePlay(box);
+        bindLaneToggles(box);
       });
+    });
+  }
+
+  /**
+   * ADR-081: 레인 접기. 항적 행이 수백 개라 개별 리스너 대신 **위임 한 개**로 받는다.
+   * `<details>` 안이라 클릭이 summary 토글로 번지지 않게 stopPropagation 한다.
+   */
+  function bindLaneToggles(box) {
+    if (!box || box._laneBound) return;
+    box._laneBound = true;
+    box.addEventListener('click', function (ev) {
+      var hd = ev.target.closest && ev.target.closest('.alog-lane-hdr');
+      if (!hd || !box.contains(hd)) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      hd.parentNode.classList.toggle('lane-shut');
     });
   }
 
@@ -1263,6 +1383,7 @@
     box.innerHTML = '<section id="sim-compare-section">' + threatCompareSection() + '</section>';
     bindCompareFilters();
     bindTimelinePlay(box);
+    bindLaneToggles(box);
   }
 
   function renderModal() {

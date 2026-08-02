@@ -151,11 +151,15 @@ console.log('\n# 6 — As-Is 기준값 고정');
   // ADR-079가 As-Is 육↔공 항적 중계를 데이터링크 1초 → 문자(서버 채팅) 45초로 바꾸면서
   // As-Is가 **의도적으로** 움직였다(격추 64→57). 그래서 이 절은 불변 주장이 아니라
   // 현행 As-Is 기준값 고정으로 역할이 바뀐다 — To-Be 불변 쪽은 #1·#3이 계속 잠근다.
-  assert(asis.global.killed === 64 && asis.global.leaked === 107,
-    'SC3 As-Is 격추 64 · 누수 107 (ADR-080 국지레이더 직보 제거·정규분포 반영)');
+  // ADR-081이 방공C2A 사이 상급 경유 계선(KVMF 30초)을 깔면서 As-Is가 다시 움직였다
+  // (격추 64→59 · MCRC 도착 139→145). ⚠️ 이 방향을 효과로 읽지 말 것 — 30 seed
+  // As-Is 자기쌍체에서 Δ격추 −0.57 [−2.57, +1.44]로 **임무 지표는 유의하지 않다**.
+  // 단일 seed 값은 항적 도착 순서 재배열의 결과이며 기준값 고정 용도로만 쓴다.
+  assert(asis.global.killed === 59 && asis.global.leaked === 112,
+    'SC3 As-Is 격추 59 · 누수 112 (ADR-081 KVMF 상급 경유 계선 반영)');
   const m = node(asis, MCRC), k = node(asis, KAMDOC);
-  assert(m.arrivals === 139 && k.arrivals === 145,
-    'As-Is MCRC 139 · KAMDOC 145 (국지레이더 직보 제거 후)');
+  assert(m.arrivals === 145 && k.arrivals === 145,
+    'As-Is MCRC 145 · KAMDOC 145 (KVMF 계선으로 방공C2A 교차 항적이 늘어난 뒤)');
   assert(!node(asis, IAOC), 'As-Is에는 IAOC 노드 자체가 없다');
 }
 

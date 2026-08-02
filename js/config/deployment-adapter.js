@@ -42,6 +42,25 @@
     dist: Object.freeze({ kind: 'triangular', min: 20, mode: 45, max: 120 }),
     paramRef: 'C2-CHAT-TRACK-01', confidence: 'C'
   });
+  // ADR-081 — 방공C2A 사이 **상급 경유** 항적 공유(KVMF 계통).
+  //
+  // 확인된 것: KVMF는 육군 지상전술데이터링크 표준(MND-STD-0016, 2012)이고 방공C2A에
+  //   실제 적용된다. 방공C2A 전력화로 작전 반응시간이 3분+ → 30초로 줄었다고 공표됐다.
+  // 확인 못 한 것: **두 방공C2A 간 직접 peer 연동**의 근거는 찾지 못했다. 방공C2A는
+  //   군단/사단 지역을 묶고, 상급 정보는 지상전술C4I(ATCIS)·위성 전군방공경보 계통에서
+  //   받는 구조다. 그래서 peer 직결이 아니라 **상급 경유 계선**으로 둔다.
+  //
+  // ⚠️ 두 가지 한계를 값 자체에 새겨 둔다(등급 C):
+  //  ① 30초는 **링크 지연이 아니라 체계 전체의 작전 반응시간**이다. 성격이 다른 값을
+  //     옮겨 쓰는 것이므로, 이 계선의 지연을 "전선 성능"으로 읽으면 안 된다.
+  //  ② 중간 상급 노드를 **두지 않고** 왕복을 한 간선으로 축약했다. 노드를 두면 그 큐
+  //     파라미터(서버 수·서비스시간)를 지어내야 하는데 근거가 없다. 엔진에서 경유 노드는
+  //     어차피 큐를 갖지 않으므로(ICC 실측 — 링크 488통과 · 큐 도착 0건) 축약해도
+  //     동역학은 같다. 그림에서 peer 직결로 **보이는** 것이 이 축약의 대가다.
+  var KVMF_LATERAL = Object.freeze({
+    type: 'kvmf-relay', delaySec: 30,
+    paramRef: 'C2-KVMF-LATERAL-01', confidence: 'C'
+  });
   var cache = {};
 
   function freezeAll(o) {
@@ -136,8 +155,10 @@
     var southern = !!(opts && opts.southernAxes); // ADR-064
     var parity = !!(opts && opts.sensorReportParity); // ADR-067
     var opLevel = (opts && opts.c2OperatorLevel) || null; // 'high'|'low' (null=mid, 종전 동일)
+    var kvmf = !!(opts && opts.kvmfLateral); // ADR-081
     var cacheKey = id + (v2 ? '|linkV2' : '') + (appr ? '|appr' : '') +
-      (southern ? '|south' : '') + (parity ? '|rp' : '') + (opLevel ? '|op:' + opLevel : '');
+      (southern ? '|south' : '') + (parity ? '|rp' : '') + (opLevel ? '|op:' + opLevel : '') +
+      (kvmf ? '|kvmf' : '');
     if (cache[cacheKey]) return cache[cacheKey];
     var deployment = KJ.deploymentById(id);
     if (!deployment) throw new Error('Unknown high-resolution deployment: ' + id);
@@ -320,6 +341,31 @@
         addLink(links, aoc.id, mcrc.id, 'report', CHAT_TRACK, null, 'corps_aoc_track_share');
       });
     }
+
+    // ── ADR-081: 방공C2A ↔ 방공C2A 상급 경유 항적 공유(KVMF 계통) ──
+    //
+    // 2022-12-26 사건의 공식 지적은 **1군단과 수도방위사령부 간 항적 정보 공유 지연**이었다.
+    // 그런데 모델에는 두 방공C2A를 잇는 계선이 **한 가닥도 없었다** — 서로의 국지 그림을
+    // 보려면 공군 MCRC를 왕복해야 해서(상행 문자 45초 + 하행 문자 45초 = 90초), 실패
+    // 자체는 우연히 재현되지만 그 경로가 **육군 계통을 거치지 않는** 이상한 모양이었다.
+    // 육군은 자기 데이터링크(KVMF)를 갖고 있고 방공C2A가 그것을 쓴다.
+    //
+    // **양 모드에 깐다.** KVMF는 육군 자체 망이라 통합 지휘소가 생겨도 사라질 이유가 없다.
+    // 다만 To-Be에서는 두 방공C2A가 조율층을 1초씩 두 번 거쳐(2초) 이미 묶여 있어
+    // 30초 계선은 최단경로 경쟁에서 **항상 진다** — 그래서 To-Be 동역학은 불변일 것으로
+    // 예측하고, 그 예측을 재기준선 서명으로 검증한다(To-Be bit-exact = 채택 조건).
+    //
+    // kind는 `report`다 — 이 계선이 나르는 것은 항적이지 지휘가 아니다. `_iadsReportBundle`이
+    // 보고 경로 탐색(['report','coord'])에서 이 간선을 쓰게 되어, 각 방공C2A가 상대 권역의
+    // 국지레이더 그림을 90초가 아니라 30초에 받는다.
+    if (kvmf) {
+      localAds.forEach(function (from) {
+        localAds.forEach(function (to) {
+          if (from.id === to.id) return;
+          addLink(links, from.id, to.id, 'report', KVMF_LATERAL, KVMF_LATERAL, 'corps_aoc_kvmf_lateral');
+        });
+      });
+    }
     // ADR-080: 국지방공레이더(TPS880K)는 육군 자산이다. As-Is에서 공군 MCRC로의 직접
     // 데이터링크 보고(종전 4초)는 공개근거가 없고, 2022-12 무인기 사건의 공식 교훈
     // (1군단 레이더가 최초 포착했으나 전파 지연 — 육군이 본 것을 공군이 제때 못 봄)과
@@ -460,6 +506,9 @@
         southernAxes: features.southernAxes !== false,
         // ADR-067: 센서→C2 보고 주기 양 모드 공통(기본 ON — 엔진 기본값과 정합)
         sensorReportParity: features.sensorReportParity !== false,
+        // ADR-081: 방공C2A 간 상급 경유 항적 공유(KVMF) — 기본 ON. 엔진 기본값과 반드시
+        // 일치해야 한다(다른 기본 ON 플래그와 같은 이유 — 명시적 false만 끈다).
+        kvmfLateral: features.kvmfLateral !== false,
         // ADR-058 동반 스윕: 운용자 처리시간 high/mid/low (기본 mid — 종전 동일)
         c2OperatorLevel: features.c2OperatorLevel === 'high' || features.c2OperatorLevel === 'low'
           ? features.c2OperatorLevel : null });

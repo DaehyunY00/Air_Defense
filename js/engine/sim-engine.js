@@ -264,6 +264,13 @@
     // 엔진이 이미 최속 센서 경로를 고르므로(_iadsReportBundle) 융합 신선도는 링크 구조에서
     // 자연 발생하고, 일괄 1초는 이중 계상이다. 분기는 어댑터가 수행한다(변형 카탈로그 |rp).
     this.sensorReportParity = ff('sensorReportParity', true);
+    // ADR-081: 방공C2A 사이 상급 경유 항적 공유(KVMF 계통, 대표 30초·등급 C). 2022-12-26의
+    // 공식 지적(1군단↔수방사 항적 공유 지연)이 걸리는 계선이 모델에 한 가닥도 없어서,
+    // 두 방공C2A가 서로의 국지 그림을 보려면 공군을 90초 왕복해야 했다. 육군 자체 망이므로
+    // 양 모드에 존속하되, To-Be에서는 조율층 2초 경로가 이겨 선택되지 않을 것으로 예측한다.
+    // 엔진은 이 플래그를 **직접 쓰지 않는다** — 분기는 전부 어댑터의 변형 카탈로그(|kvmf)가
+    // 수행한다. 여기서 읽는 이유는 결과 features에 실제 해석값을 신고하기 위해서다.
+    this.kvmfLateral = ff('kvmfLateral', true);
     // ADR-069: 보고 주기 톱니 신선도 — IADS_codex `track-pool.reportingStaleness` 정합.
     // codex는 flat 상수(LINEAR_AXIS_RELAY_DELAY 34s·KILLWEB_LINK_DELAY 1s)를 **폐기**하고
     // "탐지자산이 주기 P마다 1회 보고 → C2가 보는 정보 나이는 [0,P) 톱니"로 대체했다.
@@ -342,6 +349,7 @@
     if (this.threatTargetDispersion) this.features.targetSpreadKm = this.targetSpreadKm;
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
+    this.features.kvmfLateral = this.kvmfLateral; // ADR-081: 항상 실제 해석값 신고
     this.features.sawtoothFreshness = this.sawtoothFreshness; // ADR-072: 항상 실제 해석값 신고
     if (this.engageOnRemote) this.features.engageOnRemote = true; // ADR-070 (OFF wire shape 보존)
     this.features.selfDefenseFire = this.selfDefenseFire; // ADR-072: 항상 실제 해석값 신고

@@ -632,15 +632,10 @@
     return { key: 'other', label: '변화 (미해결 ↔ 실패)', cls: 'dv-other' };
   }
 
-  /** 한쪽 모드의 단계 타임라인 <ul> — 없으면 사유를 명시(빈칸으로 두지 않는다) */
-  function stageList(tr) {
-    if (!tr) return '<ul class="alog-stages"><li class="bn-none">이 모드에 대응 항적 없음</li></ul>';
-    if (!tr.stages || !tr.stages.length) return '<ul class="alog-stages"><li class="bn-none">기록된 단계 없음</li></ul>';
-    return '<ul class="alog-stages">' + tr.stages.map(function (s) {
-      return '<li><span class="alog-t">' + fmtTime(s.t) + '</span> ' +
-        esc(KJ.simView.stageLabel(s.name)) + '</li>';
-    }).join('') + '</ul>';
-  }
+  // ADR-081: 여기 있던 `stageList`(단계 타임라인 <ul> 2벌째)를 지웠다. 호출부가 없는
+  // 死코드였고, 실제로 쓰이는 것은 sim-view의 `diffStageList` 하나다. 축별 레인을
+  // 넣으면서 두 벌을 남기면 c2Column 때와 같은 사고가 난다 — 같은 항적이 화면마다
+  // 다르게 보인다. 렌더러는 한 벌만 둔다.
 
   // 병렬 로그 필터 상태 (탭 재렌더에도 사용자의 선택 유지)
   var logFilter = 'diff';
@@ -660,6 +655,7 @@
         kind === 'detect' ? n === '탐지' :
         kind === 'fuse' ? n.indexOf('항적융합:') === 0 :
         kind === 'ident' ? n.indexOf('식별확정:') === 0 :
+        kind === 'prep' ? n.indexOf('위협판단·표적할당준비:') === 0 :
         kind === 'assign' ? n.indexOf('사수선정·표적할당:') === 0 :
         kind === 'fire' ? (n.indexOf('발사:') === 0 || n.indexOf('자위권발사:') === 0) : false;
       if (hit) return tr.stages[i].t;
@@ -741,6 +737,62 @@
     rows.cohort = n;
     rows.paired = paired;
     return rows;
+  }
+
+  /**
+   * ADR-081: C2 결심시간 분해 — **순수 후처리**(엔진·수치 불변, 새 계측 없음).
+   *
+   * 「탐지 → 교전명령」 합계만 보면 To-Be의 C2 이득이 거의 지워진다. 분해해 보면 이유가
+   * 분명하다 — 그 합계에는 **C2가 아닌 구간**이 절반 넘게 섞여 있다.
+   *
+   *   ① 탐지 → 위협판단·표적할당준비 … **순수 C2**. 보고·상관·식별·위협평가·승인 계선.
+   *   ② 준비 → 사수선정 ............... **사격통제 성립 대기**. C2 성능이 아니다.
+   *      포대 MFR이 그 표적을 FC 상태로 물고 PIP 기하가 성립할 때까지 기다리는 물리 대기이며,
+   *      엔진은 `_iadsEvaluate`의 `no_fire_control`·`too_early`로 재시도를 예약한다.
+   *   ③ ① + ② ......................... 합계.
+   *
+   * ⚠️ To-Be가 결심을 앞당기면 **그만큼 ②가 길어져 ①을 상쇄한다**(더 일찍 준비를 마치니
+   *    사격통제가 설 때까지 더 기다린다). 그래서 ③만 보면 C2 이득이 사라진 것처럼 보인다.
+   *    ①이 주 지표이고 ③은 「사격통제 성립 대기 포함」 딱지를 달아 보조로만 병기한다.
+   *    셋 다 **격추·누수를 대체하지 않는다** — 임무 지표는 따로다.
+   *
+   * 코호트 규율은 gateStats와 같다: 세 관문을 **양 체계에서 모두** 통과한 항적만 센다.
+   */
+  function decisionSplit(ta, tb) {
+    var byB = {};
+    (tb || []).forEach(function (t) { byB[t.id] = t; });
+    var KEYS = ['detect', 'prep', 'assign'];
+    var n = 0, paired = 0, sa = [0, 0, 0], sb = [0, 0, 0];
+    (ta || []).forEach(function (a) {
+      var b = byB[a.id];
+      if (!b) return;
+      paired++;
+      var ga = {}, gb = {};
+      for (var i = 0; i < KEYS.length; i++) {
+        ga[KEYS[i]] = gateT(a, KEYS[i]);
+        gb[KEYS[i]] = gateT(b, KEYS[i]);
+        if (ga[KEYS[i]] == null || gb[KEYS[i]] == null) return;   // 한 관문이라도 빠지면 제외
+      }
+      n++;
+      sa[0] += ga.prep - ga.detect;    sb[0] += gb.prep - gb.detect;
+      sa[1] += ga.assign - ga.prep;    sb[1] += gb.assign - gb.prep;
+      sa[2] += ga.assign - ga.detect;  sb[2] += gb.assign - gb.detect;
+    });
+    var META = [
+      { key: 'c2', label: '① 탐지 → 표적할당 준비', tag: '순수 C2 구간', primary: true,
+        why: '보고·상관·식별·위협평가·승인까지 — 지휘구조가 실제로 시간을 쓰는 구간' },
+      { key: 'fc', label: '② 준비 → 사수 선정', tag: '사격통제 성립 대기', primary: false,
+        why: 'C2 성능이 아니다 — 포대 레이더가 표적을 사격통제로 물고 요격점이 설 때까지의 물리 대기' },
+      { key: 'sum', label: '③ 탐지 → 교전명령 (합계)', tag: '①+② · 사격통제 대기 포함', primary: false,
+        why: '보조 지표. ①의 이득을 ②가 상쇄하므로 이 줄만 떼어 인용하면 안 된다' }
+    ];
+    return {
+      n: n, paired: paired,
+      rows: META.map(function (m, i) {
+        return n ? Object.assign({}, m, { a: sa[i] / n, b: sb[i] / n, d: (sb[i] - sa[i]) / n })
+          : Object.assign({}, m, { a: null, b: null, d: null });
+      })
+    };
   }
 
   function secTxt(v) { return v == null ? '—' : (Math.round(v * 10) / 10).toFixed(1) + '초'; }
@@ -838,6 +890,25 @@
     BIHO: '비호', CHEONGUNG2: '천궁-II', CHUNMA: '천마', LSAM: 'L-SAM', PAC3: 'PAC-3'
   };
   function typeLabel(t) { return TYPE_LABEL[t] || t; }
+
+  /**
+   * ADR-081: 유형별 주석 — 그림만 보고 "왜 여기는 아무 일도 안 하나"를 되묻지 않게 한다.
+   *
+   * ICC는 **정상 배치에서 큐 도착이 진짜 0건**이다. 마크를 지어내면 안 되고, 그렇다고
+   * 빈칸으로 두면 배선 누락으로 읽힌다. 실측(SC3·900초·정상 배치 As-Is)이 말하는 것은
+   * 「일을 안 한다」가 아니라 「**큐를 안 쓴다**」다:
+   *   · ICC 노드 큐 도착 ......... 0건   (항적 처리·승인 서비스를 맡지 않음)
+   *   · ICC를 지나는 링크 통과 ... 488건 (명령·협조 경로의 중계 지점으로는 계속 쓰임)
+   * 엔진 규칙(`_resolveIadsCommanders`)상 ICC가 책임 C2가 되는 것은 상급(탄도=KAMDOC ·
+   * 공중=MCRC)이 **없을 때뿐**이라, 정상 배치에서는 승격 자체가 일어나지 않는다.
+   * MCRC 무력화 배치에서 0 → 345건, KAMDOC 무력화 배치에서 0 → 401건으로 뛴다.
+   * ⚠️ 그래서 「비활성」이 아니라 「예비지휘」다 — 0과 미측정을 가르는 것과 같은 규율(ADR-062).
+   */
+  var TYPE_NOTE = {
+    ICC: '예비 지휘 계선 — 정상 배치에서는 상급(KAMDOC·MCRC)이 책임 C2라 항적 처리 큐를 ' +
+      '갖지 않고, 명령·협조 경로의 중계 지점으로만 쓰인다(링크는 지난다). ' +
+      '상급이 무력화되면 책임 C2로 승격되며 그때 부하가 0에서 수백 건으로 뛴다.'
+  };
 
   /**
    * 한 모드의 세로 계층 SVG.
@@ -943,12 +1014,23 @@
     // ⚠️ 묶음 키에 이미 '|'가 들어 있다('0|KAMD_OPS'). 같은 구분자로 이어 붙여 문자열을
     //    다시 쪼개면 파싱이 깨져 **간선이 한 줄도 안 그려진다**(실제로 그랬다).
     //    그래서 키로 파싱하지 않고 객체에 양 끝을 그대로 담는다.
-    var agg = {}, shownLinks = 0;
+    // ADR-081: **묶음 내부 연결(자기 고리)을 버리지 않는다.** 집약 보기는 같은 계층·같은
+    // 유형을 한 묶음으로 접는데, 그러면 방공C2A ↔ 방공C2A(KVMF 상급 경유 계선)처럼 **같은
+    // 유형끼리의 연결이 통째로 사라진다** — 실제로 새 계선 2가닥이 그림에서 증발했고 링크
+    // 수도 118이 아니라 116으로 표시됐다. 없는 것으로 보이면 안 되므로 작은 고리로 따로
+    // 그린다. 개별 보기(detail)에서는 묶음이 노드 낱개라 자기 고리가 생기지 않는다.
+    var agg = {}, selfLoop = {}, shownLinks = 0;
     (links || []).forEach(function (l) {
       var ua = idToUnit[l.from], ub = idToUnit[l.to];
-      if (!ua || !ub || ua === ub) return;
-      shownLinks++;
+      if (!ua || !ub) return;
       var kind = l.kind || 'coord';
+      shownLinks++;
+      if (ua === ub) {
+        var sk = ua + '\u0001' + kind;
+        if (!selfLoop[sk]) selfLoop[sk] = { unit: ua, kind: kind, n: 0 };
+        selfLoop[sk].n++;
+        return;
+      }
       var k = ua + '\u0001' + ub + '\u0001' + kind;
       if (!agg[k]) agg[k] = { from: ua, to: ub, kind: kind, n: 0 };
       agg[k].n++;
@@ -972,21 +1054,44 @@
           ' · ' + kind + ' ' + cnt + '개') + '</title></line>';
     }).join('');
 
+    // ADR-081: 묶음 내부 연결 = 노드 왼쪽 위 작은 반원 고리. 선이 아니라 고리로 그리는
+    // 이유는 "이 묶음 안의 서로 다른 개체끼리 연결돼 있다"는 뜻이지 자기 자신과 이어진
+    // 것이 아니기 때문이다.
+    var loops = Object.keys(selfLoop).map(function (k) {
+      var e = selfLoop[k], p = pos[e.unit];
+      if (!p) return '';
+      var g = units[e.unit];
+      var rr = detail ? 5 : Math.min(11, 4 + Math.sqrt(g.n) * 2.0);
+      var cx = p.x - rr - 3, cy = p.y - rr - 1, lr = 4.5;
+      return '<g class="sv-loop">' +
+        '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + lr + '"' +
+        ' fill="none" stroke="' + (KIND[e.kind] || '#6b7a8d') + '" stroke-width="1.4"' +
+        (e.kind === 'coord' ? ' stroke-dasharray="3 3"' : '') + '></circle>' +
+        '<title>' + esc(g.label + ' 묶음 내부 연결 · ' + e.kind + ' ' + e.n + '개 — ' +
+          '같은 유형의 서로 다른 노드끼리 이어져 있다(집약 보기라 한 점으로 접혔다)') +
+        '</title></g>';
+    }).join('');
+
     var dots = order.map(function (u) {
       var g = units[u], p = pos[u];
       if (!p) return '';
       if (g.tier === 1) return '';             // 조율층은 가로 띠로 대신 그린다
       var r = detail ? 5 : Math.min(11, 4 + Math.sqrt(g.n) * 2.0);
+      // ADR-081: 예비 계선은 점선 테두리 + 라벨 꼬리표로 구분한다. 실선으로 두면
+      // "배선은 됐는데 왜 조용하지"를 되묻게 되고, 지우면 계선이 없는 것처럼 보인다.
+      var note = TYPE_NOTE[g.typeId] || null;
+      var tag = (note && !detail) ? ' (예비지휘)' : '';
       return '<g class="sv-node sv-' + esc(g.category) + (g.tier === 0 ? ' sv-upper' : '') +
-        (g.bridge ? ' sv-bridge' : '') +
+        (g.bridge ? ' sv-bridge' : '') + (note ? ' sv-standby' : '') +
         (g.t != null ? ' sv-act' : '') + '"' + (g.t != null ? ' data-t="' + g.t + '"' : '') + '>' +
         '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y + '" r="' + r.toFixed(1) + '"></circle>' +
         (!detail && g.n > 1 ? '<text class="sv-cnt" x="' + p.x.toFixed(1) + '" y="' + (p.y + 2.4) +
           '" text-anchor="middle">' + g.n + '</text>' : '') +
         '<text x="' + p.x.toFixed(1) + '" y="' + (p.y + r + 8 + (p.lab ? 8 : 0)) +
-        '" text-anchor="middle">' + esc(g.label) + '</text>' +
+        '" text-anchor="middle">' + esc(g.label + tag) + '</text>' +
         '<title>' + esc(g.label + ' · ' + g.n + '개' +
           (g.bridge ? ' · 경로상 노드(항적 기록에는 없음)' : '') +
+          (note ? '\n' + note : '') +
           (g.t != null ? ' · 관여 ' + fmtTime(g.t) : '')) + '</title></g>';
     }).join('');
 
@@ -1025,7 +1130,7 @@
     }).join('');
 
     return { svg: '<svg class="sv-svg" viewBox="0 0 ' + W + ' ' + H + '">' +
-      bands + edges + dots + '</svg>',
+      bands + edges + loops + dots + '</svg>',
       links: shownLinks, nodes: nodes.length, units: order.length, detail: detail };
   }
 
@@ -1051,7 +1156,7 @@
         var msg = desCache.error
           ? '<div class="bn-none">계산 실패: ' + esc(desCache.error) + '</div>'
           : '<div class="note">⏳ 두 체계 DES 계산 중…</div>';
-        ['analysis-headline', 'analysis-gates', 'analysis-threat-log']
+        ['analysis-headline', 'analysis-decision', 'analysis-gates', 'analysis-threat-log']
           .forEach(function (id) { if (el(id)) el(id).innerHTML = msg; });
         return;
       }
@@ -1078,6 +1183,34 @@
           '한쪽만 도달한 항적을 섞으면 "빨라졌다"가 아니라 "못 간 것을 뺐다"가 되어 ' +
           '수치가 거짓말을 합니다.</div>'
         : '<div class="bn-none">두 체계가 모두 발사까지 도달한 항적이 없어 시간 비교를 낼 수 없습니다.</div>';
+
+      // ①-2 C2 결심시간 분해 (ADR-081) — 합계에 섞인 비-C2 구간을 떼어 낸다.
+      var ds = decisionSplit(ta, tb);
+      if (el('analysis-decision')) {
+        el('analysis-decision').innerHTML = ds.n
+          ? '<table class="an-table an-decision"><thead><tr>' +
+            '<th>구간</th><th class="num">As-Is</th><th class="num">To-Be</th><th class="num">차이</th>' +
+            '</tr></thead><tbody>' +
+            ds.rows.map(function (r) {
+              return '<tr class="' + (r.primary ? 'an-primary' : '') + '">' +
+                '<td><b>' + esc(r.label) + '</b> <span class="an-tag">' + esc(r.tag) + '</span>' +
+                '<div class="an-why">' + esc(r.why) + '</div></td>' +
+                '<td class="num">' + secTxt(r.a) + '</td>' +
+                '<td class="num">' + secTxt(r.b) + '</td>' +
+                '<td class="num">' + deltaTxt(r.d) + '</td></tr>';
+            }).join('') +
+            '</tbody></table>' +
+            '<div class="note">⚠️ <b>합계(③)만 보면 C2 이득이 지워집니다.</b> To-Be가 결심을 앞당기면 ' +
+            '그만큼 <b>② 사격통제 성립 대기</b>가 길어져 ①을 상쇄하기 때문입니다 — 준비를 일찍 ' +
+            '마칠수록 포대 레이더가 표적을 물 때까지 더 기다립니다. ②는 지휘구조가 아니라 ' +
+            '<b>레이더·요격 기하의 물리</b>이므로 C2 성능으로 읽으면 안 됩니다. ' +
+            '<b>주 지표는 ①</b>이고 ③은 「사격통제 대기 포함」으로만 병기합니다. ' +
+            '세 줄 모두 <b>격추·누수를 대체하지 않습니다</b> — 임무 지표는 따로입니다. ' +
+            '양 체계에서 세 관문을 모두 통과한 항적 <b>' + ds.n + '건</b> 평균' +
+            (ds.paired ? ' (짝지어진 ' + ds.paired + '건 중 ' + (ds.paired - ds.n) + '건 제외)' : '') +
+            '.</div>'
+          : '<div class="bn-none">두 체계가 모두 사수 선정까지 도달한 항적이 없어 결심시간을 분해할 수 없습니다.</div>';
+      }
 
       // ② 구간별 — 어디서 벌어졌는지 수치로.
       el('analysis-gates').innerHTML =
@@ -1214,7 +1347,17 @@
         '</div>' +
         '<div class="sv-legend"><i style="background:#3d8bd9"></i>항적보고' +
         '<i style="background:#a06ed2"></i>협조<i style="background:#3d8b40"></i>교전명령' +
-        '<i style="background:#6b7a8d"></i>현황</div>' +
+        '<i style="background:#6b7a8d"></i>현황' +
+        '<i class="sv-legend-standby"></i>예비지휘(정상 시 큐 미사용)</div>' +
+        // ADR-081: ICC가 조용한 이유를 그림 옆에 적어 둔다. 이 설명이 없으면 배선 누락으로
+        // 읽힌다(실제 오독). "안 한다"가 아니라 "큐를 안 쓴다"까지 정확히 적는다.
+        '<div class="note">🟣 <b>ICC 교전통제소가 비어 보이는 것은 정상입니다.</b> ' +
+        '정상 배치에서 책임 C2는 상급(탄도=KAMDOC · 공중=MCRC)이 쥐고 있어서, ICC는 ' +
+        '<b>항적 처리 큐를 한 건도 받지 않습니다</b>(실측 0건). 그렇다고 노는 것은 아니고 ' +
+        '<b>명령·협조가 지나가는 중계 지점</b>으로는 계속 쓰입니다(같은 실행에서 ICC를 지나는 ' +
+        '링크 통과 488건). 상급이 무력화된 배치를 고르면 ICC가 책임 C2로 <b>승격</b>되어 ' +
+        '도착이 0건에서 수백 건으로 뜁니다(MCRC 무력화 345건 · KAMDOC 무력화 401건). ' +
+        '그래서 「비활성」이 아니라 <b>「예비지휘」</b>로 적었습니다.</div>' +
         '<div class="note">아래 네 계층(C2 체계·교전통제·레이더·요격부대)의 연결은 링크 데이터에서 나온 것입니다 — ' +
         '센서가 ECS·상급에 보고하고, ' +
         'ECS가 ICC를 거쳐 상급과 협조하며, 교전명령은 ECS에서 포대로 내려갑니다. ' +

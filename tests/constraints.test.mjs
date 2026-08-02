@@ -152,11 +152,16 @@ var apprTobe = apprCat.links.filter(function (l) {
 assert(apprTobe.length > 0 &&
   apprTobe.every(function (l) { return l.comm.tobe.delaySec <= 2 && l.comm.tobe.type !== 'voice'; }),
   'To-Be 협조 채널 = 군단 AOC → 조율층 킬웹 데이터링크 ≤2초 — As-Is(20) > To-Be 방향 성립');
-// 교전현황(status) 채널의 정보 비대칭: As-Is 음성/VTC 180초 제한형, To-Be는 음성 계열 부재
+// 교전현황(status) 채널의 정보 비대칭: As-Is 음성/VTC 제한형, To-Be는 음성 계열 부재.
+// ADR-082: 대표값 180 → 135초(Normal(135, σ22.5) — ±2σ가 90~180). 잠그는 명제는
+// 「제한형 음성/VTC이고 유한 용량이다」이지 특정 초값이 아니므로, 값은 카탈로그 상수와
+// 함께 움직이되 **채널의 성격**(voice-vtc · 서버 1 · 용량 4)을 어서션의 중심에 둔다.
 var baseCat = KJ.buildDeploymentCatalog('HANBANDO_LEGACY_NORMAL');
 var statusVoice = baseCat.links.filter(function (l) { return l.comm.asis && l.comm.asis.type === 'voice-vtc'; });
-assert(statusVoice.length > 0 && statusVoice.every(function (l) { return l.comm.asis.delaySec === 180; }),
-  'As-Is 교전현황 공유 = 제한형 음성/VTC 180초 (C2-ENG-STATUS-01)');
+assert(statusVoice.length > 0 && statusVoice.every(function (l) {
+  return l.comm.asis.delaySec === 135 && l.comm.asis.messageServers === 1 &&
+    l.comm.asis.messageCapacity === 4;
+}), 'As-Is 교전현황 공유 = 제한형 음성/VTC 135초 · 1채널·4건 (C2-ENG-STATUS-01)');
 assert(!baseCat.links.some(function (l) { return l.comm.tobe && /voice/.test(l.comm.tobe.type); }),
   'To-Be에는 음성 계열 링크가 없음 (킬웹 데이터링크 일원화)');
 

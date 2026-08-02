@@ -4631,9 +4631,15 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   });
   // 군단 AOC→MCRC 교전현황 공유. 음성/VTC 1개 채널이 현재 처리 중
   // 메시지를 포함해 최대 4건만 수용한다. 수치는 정책연구용 개념값(등급 C).
+  // ADR-082: Tri(90,180,270)(평균 180) → Normal(135, σ22.5)(±2σ = 90~180).
+  // 형태는 음성 협조(ADR-080)와 같은 논리 — 절차 지연은 대표값 부근에 몰린다.
+  // ⚠️ **대표값이 180 → 135로 25% 내려간다.** 이 채널만 유한 용량(1채널·4건)이라
+  // 지연이 곧 서비스율이고 드롭률로 증폭되므로, 형태 정리가 아니라 실질 변경이다.
+  // 12 seed 쌍체에서 대표값 유지안(180, σ45)과 **통계적으로 구분되지 않아**
+  // 사전 등록한 선택 규칙에 따라 이쪽을 택했다(ADR-082 §측정).
   var VOICE_STATUS = Object.freeze({
-    type: 'voice-vtc', delaySec: 180,
-    dist: Object.freeze({ kind: 'triangular', min: 90, mode: 180, max: 270 }),
+    type: 'voice-vtc', delaySec: 135,
+    dist: Object.freeze({ kind: 'normal', mean: 135, stddev: 22.5 }),
     messageServers: 1, messageCapacity: 4, freshnessSec: 300,
     paramRef: 'C2-ENG-STATUS-01', confidence: 'C'
   });
@@ -4644,9 +4650,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   // ⚠️ 대표값은 정책연구용 개념값(등급 C)이다 — 음성 협조 20초와 음성/VTC 180초 사이에
   //    놓았다. 타이핑·확인 왕복이 있어 음성 협조보다 느리고, 비동기라 VTC보다는 빠르다.
   //    근거 문헌이 없으므로 결과를 인용할 때 이 값이 가정임을 함께 밝혀야 한다.
+  // ADR-082: Tri(20,45,120) → Normal(45, σ7.5)(±2σ = 30~60).
+  // ⚠️ 최빈값은 45로 같지만 **평균이 61.7 → 45초로 27% 내려간다** — 삼각분포가
+  // 오른쪽으로 길게 치우쳐 있었기 때문이다(평균 = (20+45+120)/3). 즉 이것도
+  // 형태 정리가 아니라 실질적인 속도 향상이며, 긴 꼬리(최대 120초)를 잘라내는 것이
+  // 실제 절차를 더 잘 표현하는지에 대한 근거는 없다(등급 C 유지).
   var CHAT_TRACK = Object.freeze({
     type: 'chat', delaySec: 45,
-    dist: Object.freeze({ kind: 'triangular', min: 20, mode: 45, max: 120 }),
+    dist: Object.freeze({ kind: 'normal', mean: 45, stddev: 7.5 }),
     paramRef: 'C2-CHAT-TRACK-01', confidence: 'C'
   });
   // ADR-081 — 방공C2A 사이 **상급 경유** 항적 공유(KVMF 계통).

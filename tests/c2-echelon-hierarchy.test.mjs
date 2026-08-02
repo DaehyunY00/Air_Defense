@@ -155,11 +155,14 @@ console.log('\n# 6 — As-Is 기준값 고정');
   // (격추 64→59 · MCRC 도착 139→145). ⚠️ 이 방향을 효과로 읽지 말 것 — 30 seed
   // As-Is 자기쌍체에서 Δ격추 −0.57 [−2.57, +1.44]로 **임무 지표는 유의하지 않다**.
   // 단일 seed 값은 항적 도착 순서 재배열의 결과이며 기준값 고정 용도로만 쓴다.
-  assert(asis.global.killed === 59 && asis.global.leaked === 112,
-    'SC3 As-Is 격추 59 · 누수 112 (ADR-081 KVMF 상급 경유 계선 반영)');
+  // ADR-082가 육↔공 세 채널의 분포를 정규화하며 As-Is가 다시 움직였다
+  // (격추 59→65 · MCRC 도착 145→148). ⚠️ 방향을 효과로 읽지 말 것 — As-Is
+  // 자기쌍체 12 seed에서 Δ격추 +0.83 [−3.09, +4.75]로 **유의하지 않다.**
+  assert(asis.global.killed === 65 && asis.global.leaked === 106,
+    'SC3 As-Is 격추 65 · 누수 106 (ADR-082 육↔공 분포 정규화 반영)');
   const m = node(asis, MCRC), k = node(asis, KAMDOC);
-  assert(m.arrivals === 145 && k.arrivals === 145,
-    'As-Is MCRC 145 · KAMDOC 145 (KVMF 계선으로 방공C2A 교차 항적이 늘어난 뒤)');
+  assert(m.arrivals === 148 && k.arrivals === 145,
+    'As-Is MCRC 148 · KAMDOC 145 (문자·VTC 정규분포 전환 후)');
   assert(!node(asis, IAOC), 'As-Is에는 IAOC 노드 자체가 없다');
 }
 

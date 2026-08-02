@@ -55,10 +55,10 @@ const CASES = ['sc1|asis', 'sc1|tobe', 'sc3|asis', 'sc3|tobe'];
 // `_engagementWindowOf`의 전용 빈 캐시 격리 장치도 걷어냈다(키가 순수해져 불필요해졌다).
 // 그 제거가 결과 중립임은 전 케이스 bit-exact로 실증했다 — 아래 지문은 제거 후 값이다.
 const AUDIT_ONLY_SHA = {
-  'sc1|asis': '72151d3075ba1aa1fcbd2790d9b0e39a6285c070be38e64c773cbfaa49af5882',
+  'sc1|asis': '36a05aaf162eb48b7c567d3d751c1473e20519d4f70daefefb90b93dabf1448c',
   // ADR-077 재고정: To-Be ABT 승인권자 MCRC → IAOC. As-Is 2케이스는 지문 불변.
   'sc1|tobe': '4ffadc1b4ad137369654ddbe1906b85425173a5eaa0711341ff1330807a50b92',
-  'sc3|asis': 'ebbcef1b2f76478aed90d264ba58e58a1b27140163d0cb42021a6392c58fa718',
+  'sc3|asis': '6deb4897d4cc645eb04c00aad1f55ce5469fd3c8faaba97f1cd97fe3ef94bcfb',
   'sc3|tobe': 'c38b4f2caf3bfd51b4b25e4cc83ce531aae29bb241ec643e8b22ec67b69cd69a'
 };
 

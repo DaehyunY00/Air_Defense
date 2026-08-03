@@ -645,7 +645,13 @@
   // 그래서 화면은 세 층뿐이다 — 총 소요시간 한 줄 → 단계별 차이 표 → 항적별 병렬 로그.
   // 종전 [결심 비교] 탭의 게이지·분포·후보 팝오버는 읽는 데 사전지식이 필요해 걷어냈다.
 
-  /** 항적 단계 중 관문 하나의 시각(초). 없으면 null. */
+  /** 항적 단계 중 관문 하나의 **최초** 시각(초). 없으면 null.
+   *
+   * ADR-083: `approveStart`/`approveEnd`를 추가했다. 엔진에는 손대지 않았다 —
+   * 승인 계선 시간은 이미 기존 마크(`협조개시:`·`감독승인개시:` → `승인완료:`)로
+   * 전부 찍혀 있고, 자기승인 축(KAMDOC·MCRC)·동적 위임(`권한위임:`)은 마크가 없는 것이
+   * 곧 "대기 0초"라는 사실이다. 새 계측을 넣으면 RNG·기준선이 흔들린다.
+   */
   function gateT(tr, kind) {
     if (!tr || !tr.stages) return null;
     for (var i = 0; i < tr.stages.length; i++) {
@@ -657,61 +663,119 @@
         kind === 'ident' ? n.indexOf('식별확정:') === 0 :
         kind === 'prep' ? n.indexOf('위협판단·표적할당준비:') === 0 :
         kind === 'assign' ? n.indexOf('사수선정·표적할당:') === 0 :
+        kind === 'approveStart' ? (n.indexOf('협조개시:') === 0 || n.indexOf('감독승인개시:') === 0) :
+        kind === 'approveEnd' ? n.indexOf('승인완료:') === 0 :
+        kind === 'deleg' ? n.indexOf('권한위임:') === 0 :
+        kind === 'dedup' ? n.indexOf('교전중복해소:') === 0 :
+        kind === 'selfdef' ? n.indexOf('자위권발사:') === 0 :
         kind === 'fire' ? (n.indexOf('발사:') === 0 || n.indexOf('자위권발사:') === 0) : false;
       if (hit) return tr.stages[i].t;
     }
     return null;
   }
 
-  // 관문 사이 구간 — 9단계 파이프라인을 **실제로 시간을 소비하는** 다섯 토막으로 접었다.
+  // ══ ADR-083: 「탐지 → 발사 파이프라인 시간표」 — 시간표를 **한 장으로 합쳤다** ══
   //
-  // ⚠️ 「탐지 → 책임 C2 지정」은 관문으로 쓰지 않는다. 엔진이 `책임C2:`를 탐지와 **같은
-  //    이벤트에서** 찍기 때문에 그 구간은 구조적으로 항상 0초다(실측: 두 시각이 소수점
-  //    아래까지 동일). 값이 0인 칸은 "빠르다"가 아니라 "잴 것이 없다"는 뜻이라,
-  //    표에 두면 읽는 사람이 구간으로 오해한다 — 그래서 뺐다.
-  var GATES = [
-    { key: 'detect', from: 'spawn', to: 'detect', label: '① 침투 → 탐지', why: '레이더가 볼 때까지' },
-    { key: 'fuse', from: 'detect', to: 'fuse', label: '② 탐지 → 항적 융합', why: 'C2가 항적을 받아 합칠 때까지' },
-    { key: 'ident', from: 'fuse', to: 'ident', label: '③ 융합 → 식별 확정', why: '적인지 확정할 때까지' },
-    { key: 'assign', from: 'ident', to: 'assign', label: '④ 식별 → 사수 선정', why: '어느 포대가 쏠지 정할 때까지' },
-    { key: 'launch', from: 'assign', to: 'fire', label: '⑤ 선정 → 발사', why: '승인받고 실제로 쏠 때까지' },
-    { key: 'total', from: 'spawn', to: 'fire', label: '⑥ 침투 → 발사 (합계)', why: '들어와서 요격탄이 나갈 때까지', total: true }
+  // 종전에는 시간표가 둘이었다: ①-2「결심시간 분해」(decisionSplit)와 ②「구간별 소요시간」
+  // (gateStats). 둘은 관문 정의·기준점·코호트가 달라 같은 실행에서도 숫자가 서로 맞지
+  // 않았고(실측 SC3: 정의가 같은 구간조차 115.5초 vs 128.2초), 읽는 사람이 "어디서
+  // 벌어졌고 어디서 개선됐나"를 한 화면에서 판단할 수 없었다. 그래서 하나로 접었다.
+  //
+  // 합치면서 고친 사실 오류가 하나 있다 — 구 ①-2의 ①은 라벨이 「…승인까지」였지만,
+  // 엔진에서 `_iadsApprovalGate`는 `위협판단·표적할당준비:` 마크 **이후**에 돌므로 승인·협조
+  // 대기는 실제로 ②(「C2 성능이 아님」이라 설명하던 구간)에 들어가 있었다. 이제 승인은
+  // ③으로 **떼어 내** 제 성격([C2 구조])으로 표시한다.
+  //
+  // ⚠️ 관문으로 쓰지 않는 것들:
+  //  - 「탐지 → 책임 C2 지정」: 엔진이 `책임C2:`를 센서 보고 이벤트에서 찍는데, 그것이 대개
+  //    탐지와 **같은 이벤트**다(실측 SC3: 302건 중 290건이 소수점 아래까지 동일). 어긋나는
+  //    12건도 센서 보고 틱 한 칸(0.2~5초)일 뿐 C2가 일한 시간이 아니다. 관문으로 두면
+  //    0인 칸을 "빠르다"로 읽게 된다 — 실제로는 "잴 것이 없다"는 뜻이다.
+  //  - 「융합 → 식별확정」: `식별확정:`과 `위협판단·표적할당준비:`는 같은 `_nodeArrive` 완료
+  //    콜백에서 연속으로 찍혀 **항상 같은 시각**이다. 게다가 `식별확정:`은 센서물리 계측이
+  //    켜졌을 때만 찍힌다 — 관문으로 쓰면 표본만 좁아지고 재는 것은 없다.
+  //
+  // 기준점(0초)은 **탐지**다. 침투→탐지는 센서 물리이며 CRN 설계상 양 모드가 동일하다.
+  // 그 사실 자체가 짝맞춤의 공정성 증거이므로 표 맨 위에 회색 참고행으로만 남긴다.
+  var PIPE = [
+    { key: 'sensor', from: 'spawn', to: 'detect', reach: 'detect', ref: true,
+      label: '참고 · 침투 → 탐지', tag: '센서 물리', badge: 'bd-phys',
+      why: '레이더가 볼 때까지 — CRN 설계상 양 모드 동일. 비교 대상이 아니라 기준점이다' },
+    { key: 'in', from: 'detect', to: 'fuse', reach: 'fuse',
+      label: '① 탐지 → 항적 융합', tag: 'C2 입력', badge: 'bd-c2',
+      why: '보고주기·보고선 전파 — 센서가 본 것이 책임 C2의 항적이 될 때까지' },
+    { key: 'proc', from: 'fuse', to: 'prep', reach: 'prep',
+      label: '② 융합 → 식별·할당준비', tag: 'C2 처리', badge: 'bd-c2',
+      why: 'C2 노드 큐 대기 + 서비스(M/M/c/K) — 식별확정·위협판단이 여기서 끝난다' },
+    { key: 'appr', approval: true, reach: null,
+      label: '③ 승인 · 협조', tag: 'C2 구조', badge: 'bd-struct', primary: true,
+      why: 'As-Is에서 사람 채널(음성 협조·상급 승인)이 개입하는 유일 구간. 자기승인 축·권한위임은 0초' },
+    { key: 'fc', residual: true, from: 'prep', to: 'assign', reach: 'assign',
+      label: '④ 사격통제 성립 대기', tag: '물리 · 조율', badge: 'bd-phys',
+      why: 'C2 성능이 아니다 — 포대 MFR이 표적을 사격통제로 물고 PIP 기하가 설 때까지. 교전중복해소 대기도 여기 섞인다' },
+    { key: 'out', from: 'assign', to: 'fire', reach: 'fire',
+      label: '⑤ 선정 → 발사', tag: 'C2 출력', badge: 'bd-c2',
+      why: '교전명령 링크 전파 + ECS 명령접수 큐 → 발사대 사격' },
+    { key: 'total', from: 'detect', to: 'fire', reach: 'fire', total: true,
+      label: '⑥ 합계 · 탐지 → 발사', tag: '①+②+③+④+⑤', badge: null,
+      why: '탐지된 순간부터 요격탄이 나갈 때까지' }
   ];
 
   /**
-   * 두 모드의 항적을 ID로 짝지어 구간별 평균 소요시간과 차이를 낸다.
+   * ADR-083: 한 코호트·한 기준점으로 낸 「탐지 → 발사」 단일 시간표. **순수 후처리**다
+   * (엔진·RNG·마크 불변 — 기존 `stages` 마크만 읽는다).
    *
-   * ⚠️ **전 구간을 같은 항적 집합(코호트)으로 계산한다.** 구간마다 "그 구간을 통과한
-   * 항적"만 따로 세면 표본이 달라져 **부분의 합이 합계와 어긋난다**(실측: 구간 합 −9.8초
-   * vs 합계 −21.9초). 그러면 "어디서 벌어졌나"를 이 표로 읽을 수 없다 — 각 줄이 서로 다른
-   * 위협들을 말하기 때문이다. 그래서 **양 체계에서 전 관문을 통과한 항적만** 코호트로 잡고,
-   * 그 집합 하나로 모든 줄을 낸다. 대가는 표본 축소이며, 제외 건수를 화면에 공시한다.
+   * ── 코호트 (하나뿐이다) ──
+   * 탐지→발사 전 관문(spawn·detect·fuse·prep·assign·fire)을 **양 모드 모두** 통과한 항적.
+   * ⚠️ 구간마다 "그 구간을 통과한 항적"으로 따로 평균 내면 표본이 달라져 **부분의 합이
+   * 합계와 어긋난다**(실측: 구간합 −9.8초 vs 합계 −21.9초). 그러면 각 줄이 서로 다른
+   * 위협을 말하게 되어 "어디서 벌어졌나"를 이 표로 읽을 수 없다. 대가는 표본 축소이며,
+   * 제외 건수를 화면에 공시한다.
+   * ③의 승인 마크는 **코호트 조건이 아니다** — 마크가 없는 것은 제외가 아니라 0초다
+   * (자기승인 축 KAMDOC·MCRC, 동적 `권한위임:`).
+   *
+   * ── ③/④ 분리 규칙 ──
+   * ③은 시각이 아니라 **구간 길이**다: first(`협조개시:`|`감독승인개시:`) → first(`승인완료:`).
+   * 다만 그 구간을 [prep, assign] 창에 **겹치는 몫만** 계상한다. 한 항적을 두 축(LOCAL_AD·
+   * KILL_WEB)이 동시에 다룰 수 있어, 승인을 기다리던 축이 아닌 쪽이 먼저 사수를 선정하면
+   * 승인 구간이 창 밖으로 삐져나가기 때문이다. 클램프하지 않으면 ④가 음수가 된다.
+   * ④는 **잔여**로 정의한다 — (prep→assign) − ③. 그래서 ①+②+③+④+⑤ ≡ ⑥이 항등으로 성립한다.
    */
-  function gateStats(ta, tb) {
+  function pipelineStats(ta, tb) {
     var byB = {};
     (tb || []).forEach(function (t) { byB[t.id] = t; });
-    var KEYS = ['spawn', 'detect', 'fuse', 'ident', 'assign', 'fire'];
-    var cohort = [];
-    var paired = 0;
+    var KEYS = ['spawn', 'detect', 'fuse', 'prep', 'assign', 'fire'];
+    var cohort = [], paired = 0;
+    // 승인 경유 항적 수·교전중복해소 항적 수 — ③/④의 각주 공시용(코호트 기준).
+    // 자위권발사(ADR-071)는 **짝지은 전 항적** 기준으로 센다 — 사수선정 마크 없이 쏘므로
+    // 코호트에서 빠지는데, 그 때문에 「여기까지 온 항적」 열에서 발사 수가 선정 수보다
+    // 커지는 역전이 생긴다. 숫자를 공시하지 않으면 표가 고장난 것처럼 읽힌다.
+    var approvedN = { a: 0, b: 0 }, dedupN = { a: 0, b: 0 }, selfDefN = { a: 0, b: 0 };
     (ta || []).forEach(function (a) {
       var b = byB[a.id];
       if (!b) return;
       paired++;
+      if (gateT(a, 'selfdef') != null && gateT(a, 'assign') == null) selfDefN.a++;
+      if (gateT(b, 'selfdef') != null && gateT(b, 'assign') == null) selfDefN.b++;
       var ga = {}, gb = {};
       for (var i = 0; i < KEYS.length; i++) {
         ga[KEYS[i]] = gateT(a, KEYS[i]);
         gb[KEYS[i]] = gateT(b, KEYS[i]);
         if (ga[KEYS[i]] == null || gb[KEYS[i]] == null) return;   // 한 관문이라도 빠지면 제외
       }
-      cohort.push({ a: ga, b: gb });
+      ga.appr = approvalSpan(a, ga.prep, ga.assign);
+      gb.appr = approvalSpan(b, gb.prep, gb.assign);
+      if (ga.appr > 0) approvedN.a++;
+      if (gb.appr > 0) approvedN.b++;
+      if (gateT(a, 'dedup') != null) dedupN.a++;
+      if (gateT(b, 'dedup') != null) dedupN.b++;
+      cohort.push({ id: a.id, a: ga, b: gb });
     });
     var n = cohort.length;
     // 도달 수 — **코호트가 아니라 짝지은 전 항적** 기준. 시간표는 끝까지 간 항적만 세므로
     // 중간 탈락이 보이지 않는다. 그 탈락이야말로 두 구조의 큰 차이라 따로 센다.
     var reach = {};
-    ['detect', 'fuse', 'ident', 'assign', 'fire'].forEach(function (k) {
-      reach[k] = { a: 0, b: 0 };
-    });
+    ['detect', 'fuse', 'prep', 'assign', 'fire'].forEach(function (k) { reach[k] = { a: 0, b: 0 }; });
     (ta || []).forEach(function (a) {
       var b = byB[a.id];
       if (!b) return;
@@ -720,79 +784,49 @@
         if (gateT(b, k) != null) reach[k].b++;
       });
     });
-    var rows = GATES.map(function (g) {
-      var r = reach[g.to] || null;
-      if (!n) return { g: g, n: 0, a: null, b: null, d: null, ca: null, cb: null, cd: null, reach: r };
-      var sa = 0, sb = 0, ka = 0, kb = 0;
-      cohort.forEach(function (c) {
-        sa += c.a[g.to] - c.a[g.from];
-        sb += c.b[g.to] - c.b[g.from];
-        ka += c.a[g.to] - c.a.spawn;     // 침투 기준 누적 도달 시각
-        kb += c.b[g.to] - c.b.spawn;
-      });
-      return { g: g, n: n,
-        a: sa / n, b: sb / n, d: sb / n - sa / n,
-        ca: ka / n, cb: kb / n, cd: kb / n - ka / n, reach: r };
+    // 항적 하나의 구간 소요(초). 여기 한 곳에서만 정의한다 — 표와 회귀가 같은 식을 본다.
+    function span(g, p) {
+      return p.approval ? g.appr
+        : p.residual ? (g.assign - g.prep) - g.appr
+        : g[p.to] - g[p.from];
+    }
+    // 탐지 기준 누적 도달 시각. 평균의 합 = 합의 평균이므로 구간 평균을 그대로 누적하면 된다
+    // (참고행은 기준점 **앞**이라 누적에 넣지 않고, 합계행은 누적 그 자체다).
+    var ca = 0, cb = 0;
+    var rows = PIPE.map(function (p) {
+      if (!n) return { p: p, n: 0, a: null, b: null, d: null, ca: null, cb: null, cd: null,
+        reach: p.reach ? reach[p.reach] : null };
+      var sa = 0, sb = 0;
+      cohort.forEach(function (c) { sa += span(c.a, p); sb += span(c.b, p); });
+      var a = sa / n, b = sb / n;
+      var r = { p: p, n: n, a: a, b: b, d: b - a, reach: p.reach ? reach[p.reach] : null };
+      if (p.ref) { r.ca = r.cb = r.cd = null; return r; }
+      if (!p.total) { ca += a; cb += b; }
+      r.ca = p.total ? a : ca;
+      r.cb = p.total ? b : cb;
+      r.cd = r.cb - r.ca;
+      return r;
     });
     rows.cohort = n;
     rows.paired = paired;
+    rows.approvedN = approvedN;
+    rows.dedupN = dedupN;
+    rows.selfDefN = selfDefN;
+    rows.cohortRows = cohort;   // 회귀 검증(①+②+③+④+⑤ = ⑥)이 항적 단위로 확인한다
+    rows.span = span;
     return rows;
   }
 
   /**
-   * ADR-081: C2 결심시간 분해 — **순수 후처리**(엔진·수치 불변, 새 계측 없음).
-   *
-   * 「탐지 → 교전명령」 합계만 보면 To-Be의 C2 이득이 거의 지워진다. 분해해 보면 이유가
-   * 분명하다 — 그 합계에는 **C2가 아닌 구간**이 절반 넘게 섞여 있다.
-   *
-   *   ① 탐지 → 위협판단·표적할당준비 … **순수 C2**. 보고·상관·식별·위협평가·승인 계선.
-   *   ② 준비 → 사수선정 ............... **사격통제 성립 대기**. C2 성능이 아니다.
-   *      포대 MFR이 그 표적을 FC 상태로 물고 PIP 기하가 성립할 때까지 기다리는 물리 대기이며,
-   *      엔진은 `_iadsEvaluate`의 `no_fire_control`·`too_early`로 재시도를 예약한다.
-   *   ③ ① + ② ......................... 합계.
-   *
-   * ⚠️ To-Be가 결심을 앞당기면 **그만큼 ②가 길어져 ①을 상쇄한다**(더 일찍 준비를 마치니
-   *    사격통제가 설 때까지 더 기다린다). 그래서 ③만 보면 C2 이득이 사라진 것처럼 보인다.
-   *    ①이 주 지표이고 ③은 「사격통제 성립 대기 포함」 딱지를 달아 보조로만 병기한다.
-   *    셋 다 **격추·누수를 대체하지 않는다** — 임무 지표는 따로다.
-   *
-   * 코호트 규율은 gateStats와 같다: 세 관문을 **양 체계에서 모두** 통과한 항적만 센다.
+   * ADR-083 ③ — 한 항적의 승인·협조 대기(초). 마크가 없으면 **0초**(제외가 아니다).
+   * [prep, assign] 창에 겹치는 몫만 센다 — 이유는 pipelineStats 주석 참조.
    */
-  function decisionSplit(ta, tb) {
-    var byB = {};
-    (tb || []).forEach(function (t) { byB[t.id] = t; });
-    var KEYS = ['detect', 'prep', 'assign'];
-    var n = 0, paired = 0, sa = [0, 0, 0], sb = [0, 0, 0];
-    (ta || []).forEach(function (a) {
-      var b = byB[a.id];
-      if (!b) return;
-      paired++;
-      var ga = {}, gb = {};
-      for (var i = 0; i < KEYS.length; i++) {
-        ga[KEYS[i]] = gateT(a, KEYS[i]);
-        gb[KEYS[i]] = gateT(b, KEYS[i]);
-        if (ga[KEYS[i]] == null || gb[KEYS[i]] == null) return;   // 한 관문이라도 빠지면 제외
-      }
-      n++;
-      sa[0] += ga.prep - ga.detect;    sb[0] += gb.prep - gb.detect;
-      sa[1] += ga.assign - ga.prep;    sb[1] += gb.assign - gb.prep;
-      sa[2] += ga.assign - ga.detect;  sb[2] += gb.assign - gb.detect;
-    });
-    var META = [
-      { key: 'c2', label: '① 탐지 → 표적할당 준비', tag: '순수 C2 구간', primary: true,
-        why: '보고·상관·식별·위협평가·승인까지 — 지휘구조가 실제로 시간을 쓰는 구간' },
-      { key: 'fc', label: '② 준비 → 사수 선정', tag: '사격통제 성립 대기', primary: false,
-        why: 'C2 성능이 아니다 — 포대 레이더가 표적을 사격통제로 물고 요격점이 설 때까지의 물리 대기' },
-      { key: 'sum', label: '③ 탐지 → 교전명령 (합계)', tag: '①+② · 사격통제 대기 포함', primary: false,
-        why: '보조 지표. ①의 이득을 ②가 상쇄하므로 이 줄만 떼어 인용하면 안 된다' }
-    ];
-    return {
-      n: n, paired: paired,
-      rows: META.map(function (m, i) {
-        return n ? Object.assign({}, m, { a: sa[i] / n, b: sb[i] / n, d: (sb[i] - sa[i]) / n })
-          : Object.assign({}, m, { a: null, b: null, d: null });
-      })
-    };
+  function approvalSpan(tr, prep, assign) {
+    var s = gateT(tr, 'approveStart');
+    var e = gateT(tr, 'approveEnd');
+    if (s == null || e == null) return 0;   // 자기승인·권한위임·미완결 → 0초
+    var lo = Math.max(s, prep), hi = Math.min(e, assign);
+    return hi > lo ? hi - lo : 0;
   }
 
   function secTxt(v) { return v == null ? '—' : (Math.round(v * 10) / 10).toFixed(1) + '초'; }
@@ -1139,9 +1173,16 @@
     /** [분석] 탭의 항적별 다이어그램이 같은 레이아웃을 쓴다(중복 구현 금지). */
     c2Column: c2Column,
 
+    /** ADR-083: 시간표 후처리기 — 회귀 스위트가 화면 없이 산술 정합을 검증한다.
+     *  ⚠️ 이 화면과 회귀가 **같은 함수**를 봐야 한다. 테스트용으로 식을 다시 쓰면
+     *  화면과 검증이 갈라져 정합이 깨져도 초록불이 뜬다. */
+    pipelineStats: pipelineStats,
+    gateT: gateT,
+
     /**
      * [분석] 탭 — 같은 항적이 두 체계에서 얼마나 걸렸고, 어디서 벌어졌나.
-     * ① 합계 한 줄 → ② 단계별 차이 표 → ③ 항적 로그 병렬 비교(결과 모달과 같은 렌더러).
+     * ① 합계 한 줄 → ② 탐지→발사 파이프라인 시간표(ADR-083: 종전 두 표를 하나로) →
+     * ③ 항적 로그 병렬 비교(결과 모달과 같은 렌더러).
      */
     renderAnalysis: function (state) {
       var ctx = el('analysis-context');
@@ -1156,107 +1197,103 @@
         var msg = desCache.error
           ? '<div class="bn-none">계산 실패: ' + esc(desCache.error) + '</div>'
           : '<div class="note">⏳ 두 체계 DES 계산 중…</div>';
-        ['analysis-headline', 'analysis-decision', 'analysis-gates', 'analysis-threat-log']
+        ['analysis-headline', 'analysis-pipeline', 'analysis-threat-log']
           .forEach(function (id) { if (el(id)) el(id).innerHTML = msg; });
         return;
       }
       // pipelineData는 mode:'asis'로 요청하므로 a=As-Is, b=To-Be로 고정된다.
       var ta = data.a.threatTraces || [], tb = data.b.threatTraces || [];
-      var rows = gateStats(ta, tb);
-      var total = rows[rows.length - 1];
+      var rows = pipelineStats(ta, tb);
+      var ref = rows[0];                      // 참고행 — 침투 → 탐지 (센서 물리)
+      var total = rows[rows.length - 1];      // ⑥ 합계 — 탐지 → 발사
 
       // ① 합계 — 이 화면에서 제일 먼저 읽혀야 하는 한 줄.
+      // ADR-083: 시간표와 **같은 코호트·같은 후처리기**에서 뽑는다. 종전에는 이 줄과
+      // 아래 두 표가 서로 다른 코호트를 써서 같은 화면의 숫자가 서로 맞지 않았다.
+      var whA = total.n ? ref.a + total.a : null;   // 침투 → 발사 = (침투→탐지) + (탐지→발사)
+      var whB = total.n ? ref.b + total.b : null;
       el('analysis-headline').innerHTML = total.n
         ? '<div class="an-head">' +
-          '<div class="an-head-cell"><div class="an-head-val">' + secTxt(total.a) + '</div>' +
+          '<div class="an-head-cell"><div class="an-head-val">' + secTxt(whA) + '</div>' +
           '<div class="an-head-lab">As-Is 분절형</div></div>' +
           '<div class="an-head-op">→</div>' +
-          '<div class="an-head-cell"><div class="an-head-val">' + secTxt(total.b) + '</div>' +
+          '<div class="an-head-cell"><div class="an-head-val">' + secTxt(whB) + '</div>' +
           '<div class="an-head-lab">To-Be 통합형</div></div>' +
           '<div class="an-head-cell an-head-delta"><div class="an-head-val">' +
-          deltaTxt(total.d) + '</div><div class="an-head-lab">차이 (항적 ' + total.n + '건 평균)</div></div>' +
+          deltaTxt(whB - whA) + '</div><div class="an-head-lab">차이 (항적 ' + total.n + '건 평균)</div></div>' +
           '</div>' +
           '<div class="note">침투부터 요격탄이 나갈 때까지의 평균 시간입니다. ' +
           '<b>양 체계에서 전 단계를 모두 통과한 항적 ' + total.n + '건</b>만 셉니다' +
           (rows.paired ? ' (짝지어진 항적 ' + rows.paired + '건 중 ' + (rows.paired - total.n) +
             '건은 한쪽이라도 발사까지 가지 못해 제외)' : '') + '. ' +
           '한쪽만 도달한 항적을 섞으면 "빨라졌다"가 아니라 "못 간 것을 뺐다"가 되어 ' +
-          '수치가 거짓말을 합니다.</div>'
+          '수치가 거짓말을 합니다. 이 중 <b>침투→탐지 ' + secTxt(ref.a) + '</b>는 센서 물리라 ' +
+          '양 체계가 같습니다 — 아래 시간표는 그래서 <b>탐지를 0초</b>로 놓고 나눕니다.</div>'
         : '<div class="bn-none">두 체계가 모두 발사까지 도달한 항적이 없어 시간 비교를 낼 수 없습니다.</div>';
 
-      // ①-2 C2 결심시간 분해 (ADR-081) — 합계에 섞인 비-C2 구간을 떼어 낸다.
-      var ds = decisionSplit(ta, tb);
-      if (el('analysis-decision')) {
-        el('analysis-decision').innerHTML = ds.n
-          ? '<table class="an-table an-decision"><thead><tr>' +
-            '<th>구간</th><th class="num">As-Is</th><th class="num">To-Be</th><th class="num">차이</th>' +
-            '</tr></thead><tbody>' +
-            ds.rows.map(function (r) {
-              return '<tr class="' + (r.primary ? 'an-primary' : '') + '">' +
-                '<td><b>' + esc(r.label) + '</b> <span class="an-tag">' + esc(r.tag) + '</span>' +
-                '<div class="an-why">' + esc(r.why) + '</div></td>' +
-                '<td class="num">' + secTxt(r.a) + '</td>' +
-                '<td class="num">' + secTxt(r.b) + '</td>' +
-                '<td class="num">' + deltaTxt(r.d) + '</td></tr>';
-            }).join('') +
-            '</tbody></table>' +
-            '<div class="note">⚠️ <b>합계(③)만 보면 C2 이득이 지워집니다.</b> To-Be가 결심을 앞당기면 ' +
-            '그만큼 <b>② 사격통제 성립 대기</b>가 길어져 ①을 상쇄하기 때문입니다 — 준비를 일찍 ' +
-            '마칠수록 포대 레이더가 표적을 물 때까지 더 기다립니다. ②는 지휘구조가 아니라 ' +
-            '<b>레이더·요격 기하의 물리</b>이므로 C2 성능으로 읽으면 안 됩니다. ' +
-            '<b>주 지표는 ①</b>이고 ③은 「사격통제 대기 포함」으로만 병기합니다. ' +
-            '세 줄 모두 <b>격추·누수를 대체하지 않습니다</b> — 임무 지표는 따로입니다. ' +
-            '양 체계에서 세 관문을 모두 통과한 항적 <b>' + ds.n + '건</b> 평균' +
-            (ds.paired ? ' (짝지어진 ' + ds.paired + '건 중 ' + (ds.paired - ds.n) + '건 제외)' : '') +
-            '.</div>'
-          : '<div class="bn-none">두 체계가 모두 사수 선정까지 도달한 항적이 없어 결심시간을 분해할 수 없습니다.</div>';
-      }
-
-      // ② 구간별 — 어디서 벌어졌는지 수치로.
-      el('analysis-gates').innerHTML =
-        '<table class="an-table"><thead><tr>' +
-        '<th rowspan="2">관문</th>' +
-        '<th class="num" colspan="3">침투 후 <b>도달 시각</b></th>' +
-        '<th class="num" colspan="1">직전 구간에서</th>' +
+      // ② 탐지 → 발사 파이프라인 시간표 (ADR-083) — 종전 ①-2·② 두 표를 하나로 합쳤다.
+      el('analysis-pipeline').innerHTML = !total.n
+        ? '<div class="bn-none">두 체계가 모두 발사까지 도달한 항적이 없어 시간표를 낼 수 없습니다.</div>'
+        : '<table class="an-table an-pipe"><thead><tr>' +
+        '<th rowspan="2">구간</th>' +
+        '<th class="num" colspan="3">구간 소요</th>' +
+        '<th class="num" colspan="3"><b>탐지 후 누적 도달 시각</b></th>' +
         '<th class="num" rowspan="2">여기까지 온 항적</th>' +
         '</tr><tr>' +
         '<th class="num">As-Is</th><th class="num">To-Be</th><th class="num">차이</th>' +
-        '<th class="num">격차 변화</th>' +
+        '<th class="num">As-Is</th><th class="num">To-Be</th><th class="num">차이</th>' +
         '</tr></thead><tbody>' +
         rows.map(function (r) {
+          var p = r.p;
           var reachTxt = r.reach
             ? r.reach.a + ' → ' + r.reach.b +
               (r.reach.b > r.reach.a ? ' <b class="an-fast">+' + (r.reach.b - r.reach.a) + '</b>' : '')
             : '—';
-          // ⚠️ 구간 열은 "느려졌다"가 아니라 **격차가 벌어졌나 좁혀졌나**로 읽어야 한다.
-          //    상류 관문이 크게 앞당겨지면 하류 구간이 그 차이를 반대 방향으로 흡수하기
-          //    때문이다(실측: To-Be가 식별을 20.5초 앞당기자 식별→선정 구간이 9.3초 늘었다.
-          //    그런데도 선정 도달은 여전히 11.1초 빨랐다). 구간만 보면 부호가 뒤집혀 읽힌다.
-          // 합계 행은 구간이 아니라 전체이므로 '격차 변화'가 성립하지 않는다(도달 차이와 중복).
-          var gapTxt = (r.g.total || r.d == null) ? '—'
-            : Math.abs(Math.round(r.d * 10) / 10) < 0.05 ? '<span class="an-same">—</span>'
-            : r.d < 0 ? '<b class="an-fast">' + (Math.round(r.d * 10) / 10).toFixed(1) + '초 벌림</b>'
-            : '<span class="an-narrow">+' + (Math.round(r.d * 10) / 10).toFixed(1) + '초 좁힘</span>';
-          return '<tr' + (r.g.total ? ' class="an-total"' : '') + '>' +
-            '<td>' + esc(r.g.label) + '<i class="an-why">' + esc(r.g.why) + '</i></td>' +
-            '<td class="num">' + secTxt(r.ca) + '</td>' +
-            '<td class="num">' + secTxt(r.cb) + '</td>' +
-            '<td class="num">' + deltaTxt(r.cd) + '</td>' +
-            '<td class="num">' + gapTxt + '</td>' +
+          var cls = p.ref ? ' class="an-ref"' : p.total ? ' class="an-total"'
+            : p.primary ? ' class="an-primary"' : '';
+          return '<tr' + cls + '>' +
+            '<td><b>' + esc(p.label) + '</b>' +
+            (p.tag ? ' <span class="an-tag ' + (p.badge || '') + '">' + esc(p.tag) + '</span>' : '') +
+            '<i class="an-why">' + esc(p.why) + '</i></td>' +
+            '<td class="num">' + secTxt(r.a) + '</td>' +
+            '<td class="num">' + secTxt(r.b) + '</td>' +
+            '<td class="num">' + deltaTxt(r.d) + '</td>' +
+            '<td class="num">' + (p.ref ? '<span class="an-same">기준점</span>' : secTxt(r.ca)) + '</td>' +
+            '<td class="num">' + (p.ref ? '<span class="an-same">0.0초</span>' : secTxt(r.cb)) + '</td>' +
+            '<td class="num">' + (p.ref ? '—' : deltaTxt(r.cd)) + '</td>' +
             '<td class="num an-reach">' + reachTxt + '</td>' +
             '</tr>';
         }).join('') +
         '</tbody></table>' +
-        '<div class="note"><b>도달 시각</b>이 주 지표입니다 — 침투부터 그 관문까지 걸린 시간이며, ' +
-        '단조로 늘어나 부호가 뒤집히지 않습니다. 이 표에서 <b>To-Be는 모든 관문에 더 빨리 도달</b>합니다.<br>' +
-        '<b>「격차 변화」</b>는 그 관문에서 격차가 벌어졌는지 좁혀졌는지입니다. ' +
-        '⚠️ <b>좁힘 = To-Be가 느려짐이 아닙니다.</b> 구간에는 <b>대기 시간이 섞여</b> 있어서, ' +
-        '상류에서 크게 앞당기면 하류 구간이 그만큼 길어집니다 — 위협이 교전 가능 위치로 ' +
-        '날아올 때까지 기다리기 때문입니다(실측: To-Be가 식별을 20.5초 앞당기자 식별→선정 구간이 ' +
-        '9.3초 늘었지만, 선정 도달은 여전히 11.1초 빨랐습니다).<br>' +
-        '소요시간은 <b>양 체계에서 전 관문을 통과한 항적 ' + (total.n || 0) + '건</b>으로 계산했습니다. ' +
-        '<b>「여기까지 온 항적」</b>은 반대로 <b>짝지은 전 항적</b> 기준입니다 — 시간표는 끝까지 간 ' +
-        '항적만 세므로 중간 탈락이 보이지 않는데, 그 탈락이야말로 두 구조의 큰 차이입니다.</div>';
+        '<div class="note"><b>기준점(0초)은 탐지</b>입니다. 맨 위 회색 줄(침투→탐지)은 센서 물리라 ' +
+        '<b>양 체계가 같아야 정상</b>이며 — 같다는 것이 곧 CRN 짝맞춤이 공정하다는 증거입니다 — ' +
+        '비교 대상이 아니라 시각 감각을 위한 참고입니다.<br>' +
+        '<b>「누적 도달 시각」이 주 지표입니다.</b> 단조로 늘어나 부호가 뒤집히지 않습니다. ' +
+        '「구간 소요」는 <b>상쇄</b>가 일어납니다 — 상류(①②③)를 앞당기면 그만큼 ④가 길어져 ' +
+        '합계에서 이득이 지워집니다. 위협이 교전 가능 위치로 날아올 때까지 기다리기 때문입니다. ' +
+        '<b>④는 C2 성능이 아닙니다</b>(포대 MFR의 사격통제 성립·PIP 기하). ' +
+        '그래서 ④가 늘어난 것을 "To-Be가 느려졌다"로 읽으면 안 됩니다.<br>' +
+        '<b>③ 승인·협조</b>는 <b>사람이 개입하는 유일한 구간</b>입니다 — 마크가 없는 항적(자기승인 축 ' +
+        'KAMDOC·MCRC, 동적 권한위임)은 제외가 아니라 <b>0초</b>로 셉니다. 코호트 ' + total.n +
+        '건 중 실제로 승인 계선을 경유한 항적은 <b>As-Is ' + rows.approvedN.a + '건 → To-Be ' +
+        rows.approvedN.b + '건</b>입니다.<br>' +
+        '⚠️ <b>④에는 승인 외 조율 대기도 섞여 있습니다</b> — 교전중복해소(MCRC·COP) 대기가 그것이며, ' +
+        '해당 마크를 가진 항적은 코호트 안에서 <b>As-Is ' + rows.dedupN.a + '건 · To-Be ' +
+        rows.dedupN.b + '건</b>입니다. ④를 통째로 "물리"라고만 읽지 마십시오.<br>' +
+        '소요시간은 <b>양 체계에서 탐지~발사 전 관문을 통과한 항적 ' + total.n + '건</b>(단일 코호트)으로 ' +
+        '계산했습니다' +
+        (rows.paired ? ' — 짝지어진 ' + rows.paired + '건 중 ' + (rows.paired - total.n) + '건 제외' : '') +
+        '. 구간마다 다른 표본을 쓰면 부분의 합이 합계와 어긋나 각 줄이 서로 다른 위협을 말하게 됩니다. ' +
+        '대신 <b>사수 선정까지는 갔지만 발사에 못 간 항적</b>은 이 표에서 빠집니다 — 그 탈락은 ' +
+        '「여기까지 온 항적」 열과 아래 ③ 항적 로그가 담당합니다.<br>' +
+        '<b>「여기까지 온 항적」</b>은 시간과 달리 <b>짝지은 전 항적</b> 기준입니다. 시간표는 끝까지 간 ' +
+        '항적만 세므로 중간 탈락이 보이지 않는데, 그 탈락이야말로 두 구조의 큰 차이입니다.' +
+        (rows.selfDefN.a || rows.selfDefN.b
+          ? ' ⚠️ 이 열에서 <b>발사 수가 선정 수보다 클 수 있습니다</b> — 자위권 발사(ADR-071)는 ' +
+            '사수 선정을 거치지 않고 포대가 직접 쏘기 때문입니다(As-Is ' + rows.selfDefN.a +
+            '건 · To-Be ' + rows.selfDefN.b + '건). 이 항적들은 선정 관문이 없어 코호트에서도 빠집니다.'
+          : '') +
+        '<br>이 표는 <b>격추·누수를 대체하지 않습니다</b> — 임무 지표는 따로입니다.</div>';
 
       // ③ 항적 로그 병렬 비교 — 결과 모달과 **같은 렌더러**를 재사용한다.
       if (KJ.simView && KJ.simView.renderThreatCompare) {

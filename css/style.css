@@ -989,15 +989,21 @@ li.chk-fail { background: #43140f; }
 .an-table { width: 100%; font-size: 12px; }
 .an-table th { text-align: left; color: var(--muted); font-weight: 400; padding: 4px 8px 4px 0; }
 .an-table td { padding: 5px 8px 5px 0; vertical-align: middle; border-top: 1px solid #222b38; }
-/* ADR-081: C2 결심시간 분해 — 주 지표(①)만 강조하고 나머지는 낮춰, 합계를 주 지표로
-   오독하지 않게 한다. */
-.an-decision tr.an-primary td { background: rgba(61, 139, 217, .08); }
-.an-decision tr.an-primary b { color: #9ad2ff; }
-.an-decision .an-tag {
+/* ADR-083: 탐지→발사 단일 시간표 — 성격 배지로 "어느 성격의 구간에서 차이가 났나"를
+   한눈에 보이게 한다. 참고행(센서 물리)은 비교 대상이 아니므로 회색으로 낮추고,
+   사람 채널이 개입하는 ③(승인·협조)만 강조한다. */
+.an-pipe tr.an-primary td { background: rgba(61, 139, 217, .08); }
+.an-pipe tr.an-primary b { color: #9ad2ff; }
+.an-pipe tr.an-ref td { color: var(--muted); background: rgba(255, 255, 255, .02); }
+.an-pipe tr.an-ref b { font-weight: 400; }
+.an-table .an-tag {
   display: inline-block; margin-left: 6px; padding: 1px 5px; border-radius: 3px;
   background: #1a2231; color: #8fa4bb; font-size: 10px; vertical-align: 1px;
+  white-space: nowrap;
 }
-.an-decision .an-why { color: var(--muted); font-size: 11px; margin-top: 2px; }
+.an-table .an-tag.bd-c2 { background: #14283f; color: #7fb6ea; }        /* 지휘구조의 몫 */
+.an-table .an-tag.bd-struct { background: #2b1f38; color: #c79aea; }    /* C2 구조 — 사람 채널 */
+.an-table .an-tag.bd-phys { background: #242a20; color: #9fb08a; }      /* 물리 — C2 성능 아님 */
 .an-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .an-why { display: block; color: var(--muted); font-style: normal; font-size: 10px; margin-top: 1px; }
 .an-total td { border-top: 2px solid var(--border); font-weight: 700; }

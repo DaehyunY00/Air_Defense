@@ -77,6 +77,7 @@ var suites = [
   ,['geometry-window-cache.test.mjs', 'ADR-076 교전창 캐시 키 정합 (순수함수 캐시·순서 독립·종전 키 충돌 실측·산포 OFF 불변)']
   ,['approval-authority.test.mjs', 'ADR-077 교전승인권자 해소 정합 (미등록 역할=승인 증발 방지·To-Be 조율층 경유·As-Is 불변)']
   ,['c2-echelon-hierarchy.test.mjs', 'ADR-078 IAOC 상위 제대화 (도메인 제대 실부하·병렬 통보·교전현황 조율층 수신·As-Is 불변)']
+  ,['analysis-pipeline-table.test.mjs', 'ADR-083 탐지→발사 시간표 단일화 (산술 정합·승인 0초 규칙·단일 코호트·구표 검산)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

@@ -145,7 +145,10 @@ console.log('\n== 5) UI 계약 ==');
   assert(html.indexOf('id="panel-analysis"') !== -1, '[분석] 패널 존재 (main.js의 panel-<tab> 규약)');
   assert(html.indexOf('data-tab="structure"') !== -1, '[C2 구조] 탭 버튼 존재');
   assert(html.indexOf('id="panel-structure"') !== -1, '[C2 구조] 패널 존재');
-  ['analysis-context', 'analysis-headline', 'analysis-gates', 'analysis-threat-log',
+  // ADR-083: 시간표 두 장(analysis-decision·analysis-gates)을 한 장(analysis-pipeline)으로
+  // 합쳤다. 정합·오분류 교정은 analysis-pipeline-table 스위트가 맡고, 여기서는 컨테이너
+  // 계약만 본다.
+  ['analysis-context', 'analysis-headline', 'analysis-pipeline', 'analysis-threat-log',
     'structure-diagram'].forEach(function (id) {
     assert(html.indexOf('id="' + id + '"') !== -1, '컨테이너 ' + id + ' 존재');
     assert(panels.indexOf("'" + id + "'") !== -1, '렌더러가 ' + id + '를 채움');

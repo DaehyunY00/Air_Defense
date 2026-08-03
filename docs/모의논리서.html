@@ -419,6 +419,40 @@ C2 모델</b>(M/M/c/K 처리·링크 지연·승인 계선)과 결합한 것, �
 코드 위치는 <code>js/engine/sim-engine.js</code> 결과 조립부와
 <code>js/ui/panels.js</code>(표시 계산)다.</p>
 
+<div class="box"><span class="bt">[분석] 탭 시간표 — 「탐지→발사 파이프라인」 (ADR-083)</span>
+아래 9단계는 <b>엔진의 계산 순서</b>다. [분석] 탭이 그리는 <b>시간표</b>는 그것을 후처리해
+<b>실제로 시간을 쓰는 다섯 토막</b>으로 접은 것이며, 관문은 전부 항적 단계 마크(<code>stages</code>)에서
+나온다 — <b>엔진에 별도 계측을 넣지 않았다.</b>
+<table>
+<thead><tr><th style="width:26%">구간</th><th style="width:38%">관문 (from → to)</th><th>성격</th></tr></thead>
+<tbody>
+<tr><td>참고 · 침투 → 탐지</td><td><code>생성</code> → <code>탐지</code></td>
+<td>센서 물리. CRN 설계상 양 모드 동일 — <b>비교 대상이 아니라 기준점</b>이며 회색 참고행으로만 둔다</td></tr>
+<tr><td>① 탐지 → 항적 융합</td><td><code>탐지</code> → <code>항적융합:</code></td><td>C2 입력 — 보고주기·보고선 전파</td></tr>
+<tr><td>② 융합 → 식별·할당준비</td><td><code>항적융합:</code> → <code>위협판단·표적할당준비:</code></td>
+<td>C2 처리 — 큐 대기 + 서비스(M/M/c/K)</td></tr>
+<tr><td>③ 승인 · 협조</td><td>first(<code>협조개시:</code>|<code>감독승인개시:</code>) → first(<code>승인완료:</code>)<br>
+마크 없으면(자기승인 축·<code>권한위임:</code>) <b>0초</b></td>
+<td><b>C2 구조</b> — 사람 채널이 개입하는 유일 구간</td></tr>
+<tr><td>④ 사격통제 성립 대기</td><td><b>잔여</b> = (<code>위협판단·표적할당준비:</code> → <code>사수선정·표적할당:</code>) − ③</td>
+<td>물리·조율 — MFR FC 성립·PIP 기하 (+교전중복해소 대기 포함, 각주 공시)</td></tr>
+<tr><td>⑤ 선정 → 발사</td><td><code>사수선정·표적할당:</code> → <code>발사:</code>|<code>자위권발사:</code></td>
+<td>C2 출력 — 명령 링크 + ECS 명령접수 → 발사대</td></tr>
+<tr><td>⑥ 합계</td><td><code>탐지</code> → <code>발사</code></td><td>①+②+③+④+⑤ ≡ ⑥ (④가 잔여이므로 항등)</td></tr>
+</tbody>
+</table>
+<b>③의 창 클램프</b>: 한 항적에 지휘 축이 동시에 여럿 붙으므로(통합축 + 국지축), 승인을
+기다리던 축이 아닌 쪽이 먼저 사수를 선정하면 승인 구간이 <code>[준비, 선정]</code> 창 밖으로
+나간다. 그래서 겹치는 몫만 계상한다 — <code>③ = max(0, min(승인완료, 선정) − max(협조개시, 준비))</code>.
+클램프하지 않으면 ④가 음수가 된다(실측 SC3: 114건 중 9건).<br>
+<b>코호트는 하나</b>: 탐지→발사 전 관문을 <b>양 모드 모두</b> 통과한 항적. 구간마다 표본을
+가르면 부분의 합이 합계와 어긋나 각 줄이 서로 다른 위협을 말하게 된다. 제외 건수는 화면에 공시한다.<br>
+<b>관문으로 쓰지 않는 것</b>: <code>책임C2:</code>(센서 보고 이벤트에서 찍혀 대개 탐지와 동일 —
+302건 중 290건), <code>식별확정:</code>(<code>위협판단·표적할당준비:</code>와 <b>항상 같은 시각</b>
+— 같은 완료 콜백에서 연속으로 찍힌다). 둘 다 잴 것이 없다.<br>
+계산: <code>js/ui/panels.js</code> <code>pipelineStats</code>·<code>approvalSpan</code>.
+회귀: <code>tests/analysis-pipeline-table.test.mjs</code>.</div>
+
 <div class="box"><span class="bt">MoM 계층 표기</span>
 <b>MoP</b>(Measure of Performance — 체계 내부 과정 성능) · <b>MoCE</b>(Measure of C2
 Effectiveness — 지휘통제 효과성) · <b>MoFE</b>(Measure of Force Effectiveness — 전력 임무 효과).

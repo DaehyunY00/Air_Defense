@@ -2,8 +2,21 @@
  "modes": {
   "asis": {
    "nodes": 64,
-   "links": 116,
+   "links": 118,
    "edges": [
+    {
+     "from": "ADC2A",
+     "to": "ADC2A",
+     "kind": "report",
+     "type": "kvmf-relay",
+     "delaySec": 30,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "C2-KVMF-LATERAL-01",
+     "n": 2
+    },
     {
      "from": "ADC2A",
      "to": "ECS",
@@ -22,12 +35,11 @@
      "to": "MCRC",
      "kind": "status",
      "type": "voice-vtc",
-     "delaySec": 180,
+     "delaySec": 135,
      "dist": {
-      "kind": "triangular",
-      "min": 90,
-      "mode": 180,
-      "max": 270
+      "kind": "normal",
+      "mean": 135,
+      "stddev": 22.5
      },
      "servers": 1,
      "capacity": 4,
@@ -42,14 +54,31 @@
      "type": "voice",
      "delaySec": 20,
      "dist": {
-      "kind": "uniform",
-      "min": 10,
-      "max": 30
+      "kind": "normal",
+      "mean": 20,
+      "stddev": 5
      },
      "servers": null,
      "capacity": null,
      "freshnessSec": null,
      "paramRef": "C2-VOICE-COORD-01",
+     "n": 2
+    },
+    {
+     "from": "ADC2A",
+     "to": "MCRC",
+     "kind": "report",
+     "type": "chat",
+     "delaySec": 45,
+     "dist": {
+      "kind": "normal",
+      "mean": 45,
+      "stddev": 7.5
+     },
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "C2-CHAT-TRACK-01",
      "n": 2
     },
     {
@@ -199,13 +228,17 @@
      "from": "MCRC",
      "to": "ADC2A",
      "kind": "report",
-     "type": "datalink",
-     "delaySec": 1,
-     "dist": null,
+     "type": "chat",
+     "delaySec": 45,
+     "dist": {
+      "kind": "normal",
+      "mean": 45,
+      "stddev": 7.5
+     },
      "servers": null,
      "capacity": null,
      "freshnessSec": null,
-     "paramRef": "IADS-LINK-SHORT-01",
+     "paramRef": "C2-CHAT-TRACK-01",
      "n": 2
     },
     {
@@ -297,27 +330,27 @@
      "capacity": null,
      "freshnessSec": null,
      "paramRef": "IADS-LINK-RP-01",
-     "n": 2
-    },
-    {
-     "from": "SENSOR:TPS880K",
-     "to": "MCRC",
-     "kind": "report",
-     "type": "report-cycle",
-     "delaySec": 4,
-     "dist": null,
-     "servers": null,
-     "capacity": null,
-     "freshnessSec": null,
-     "paramRef": "IADS-LINK-RP-01",
      "n": 8
     }
    ]
   },
   "tobe": {
-   "nodes": 66,
-   "links": 224,
+   "nodes": 65,
+   "links": 223,
    "edges": [
+    {
+     "from": "ADC2A",
+     "to": "ADC2A",
+     "kind": "report",
+     "type": "kvmf-relay",
+     "delaySec": 30,
+     "dist": null,
+     "servers": null,
+     "capacity": null,
+     "freshnessSec": null,
+     "paramRef": "C2-KVMF-LATERAL-01",
+     "n": 2
+    },
     {
      "from": "ADC2A",
      "to": "ECS",
@@ -488,32 +521,6 @@
      "n": 1
     },
     {
-     "from": "EOC",
-     "to": "IAOC",
-     "kind": "report",
-     "type": "ifcn",
-     "delaySec": 1,
-     "dist": null,
-     "servers": null,
-     "capacity": null,
-     "freshnessSec": null,
-     "paramRef": "IADS-LINK-IFCN-01",
-     "n": 1
-    },
-    {
-     "from": "EOC",
-     "to": "IAOC",
-     "kind": "coord",
-     "type": "ifcn",
-     "delaySec": 1,
-     "dist": null,
-     "servers": null,
-     "capacity": null,
-     "freshnessSec": null,
-     "paramRef": "IADS-LINK-IFCN-01",
-     "n": 1
-    },
-    {
      "from": "IAOC",
      "to": "ADC2A",
      "kind": "coord",
@@ -538,19 +545,6 @@
      "freshnessSec": null,
      "paramRef": "IADS-LINK-IFCN-01",
      "n": 15
-    },
-    {
-     "from": "IAOC",
-     "to": "EOC",
-     "kind": "coord",
-     "type": "ifcn",
-     "delaySec": 1,
-     "dist": null,
-     "servers": null,
-     "capacity": null,
-     "freshnessSec": null,
-     "paramRef": "IADS-LINK-IFCN-01",
-     "n": 1
     },
     {
      "from": "IAOC",
@@ -1003,24 +997,6 @@
      "tobe": 2.5
     },
     "cap": 40
-   }
-  },
-  "EOC": {
-   "group": "EOC",
-   "category": "c2",
-   "typeId": "EOC",
-   "count": 1,
-   "name": "교전운영센터",
-   "modes": [
-    "tobe"
-   ],
-   "queue": {
-    "servers": 10,
-    "svc": {
-     "asis": 1.75,
-     "tobe": 1.75
-    },
-    "cap": 20
    }
   },
   "SENSOR:GREEN_PINE_B": {

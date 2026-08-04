@@ -1,0 +1,10 @@
+# macOS 파인더 부산물 — 저장소에 들어갈 이유가 없다
+.DS_Store
+**/.DS_Store
+
+# Office 임시·잠금 파일 (PowerPoint가 문서를 열면 만든다)
+~$*
+
+# 에디터·OS 부산물
+*.swp
+Thumbs.db

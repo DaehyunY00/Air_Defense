@@ -1973,10 +1973,10 @@ li.chk-fail { background: #43140f; }
       <div class="card">
         <h2>② 탐지→발사 — 어디서 벌어지고, 어디서 개선됐나</h2>
         <p><b>탐지를 0초로 놓고</b> 발사까지를 다섯 토막으로 나눕니다(ADR-083 — 종전 두 표를
-           하나로 합쳤습니다). 각 줄에 붙은 <b>성격 배지</b>가 그 구간이 <b>지휘구조의 몫인지
-           물리의 몫인지</b>를 말합니다 — 차이(Δ)가 어느 배지의 줄에서 났는지가 곧
-           "C2 구조가 무엇을 바꿨나"의 답입니다. 침투→탐지는 센서 물리라 양 체계가 같으며,
-           비교 대상이 아니라 <b>참고행</b>으로만 둡니다.</p>
+           하나로 합쳤습니다). 각 줄에 붙은 <b>성격 배지</b>가 그 구간이 <b>지휘구조의 몫인지,
+           지휘구조가 단축할 수 없는 대기인지</b>를 말합니다 — 차이(Δ)가 어느 배지의 줄에서
+           났는지가 곧 "C2 구조가 무엇을 바꿨나"의 답입니다. 침투→탐지는 센서 물리라 양 체계가
+           같으며, 비교 대상이 아니라 <b>참고행</b>으로만 둡니다.</p>
         <div id="analysis-pipeline"></div>
       </div>
 
@@ -10508,8 +10508,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var instance;
     try {
       instance = kind === 'module'
-        ? new Worker('js/workers/sim-worker.mjs?v=20260803a', { type: 'module' })
-        : new Worker('js/workers/sim-worker.js?v=20260803a');
+        ? new Worker('js/workers/sim-worker.mjs?v=20260803b', { type: 'module' })
+        : new Worker('js/workers/sim-worker.js?v=20260803b');
       worker = instance;
       workerReady = false;
       worker.onmessage = function (ev) {
@@ -11836,8 +11836,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       label: '③ 승인 · 협조', tag: 'C2 구조', badge: 'bd-struct', primary: true,
       why: 'As-Is에서 사람 채널(음성 협조·상급 승인)이 개입하는 유일 구간. 자기승인 축·권한위임은 0초' },
     { key: 'fc', residual: true, from: 'prep', to: 'assign', reach: 'assign',
-      label: '④ 사격통제 성립 대기', tag: '물리 · 조율', badge: 'bd-phys',
-      why: 'C2 성능이 아니다 — 포대 MFR이 표적을 사격통제로 물고 PIP 기하가 설 때까지. 교전중복해소 대기도 여기 섞인다' },
+      label: '④ 교전 가능 상태 대기', tag: '대기 요인', badge: 'bd-phys',
+      why: '쏠 수 있는 포대가 생길 때까지 — 이 동안에도 WTA는 후보를 계속 평가한다. 요격점 미성립·MFR 사격통제가 대부분이고, 탄약·동시교전 한도와 교전중복해소 대기가 섞인다' },
     { key: 'out', from: 'assign', to: 'fire', reach: 'fire',
       label: '⑤ 선정 → 발사', tag: 'C2 출력', badge: 'bd-c2',
       why: '교전명령 링크 전파 + ECS 명령접수 큐 → 발사대 사격' },
@@ -12396,7 +12396,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         '<b>「누적 도달 시각」이 주 지표입니다.</b> 단조로 늘어나 부호가 뒤집히지 않습니다. ' +
         '「구간 소요」는 <b>상쇄</b>가 일어납니다 — 상류(①②③)를 앞당기면 그만큼 ④가 길어져 ' +
         '합계에서 이득이 지워집니다. 위협이 교전 가능 위치로 날아올 때까지 기다리기 때문입니다. ' +
-        '<b>④는 C2 성능이 아닙니다</b>(포대 MFR의 사격통제 성립·PIP 기하). ' +
+        '<b>④는 지휘구조가 단축할 수 있는 구간이 아닙니다</b> — 이 동안에도 C2(WTA)는 후보 포대를 ' +
+        '계속 평가하지만, 대기의 대부분(실측 89~95%)은 요격점 미성립·MFR 사격통제라는 비행 기하·센서 ' +
+        '물리이고 나머지는 탄약·동시교전 한도(무기체계 자원)입니다. ' +
         '그래서 ④가 늘어난 것을 "To-Be가 느려졌다"로 읽으면 안 됩니다.<br>' +
         '<b>③ 승인·협조</b>는 <b>사람이 개입하는 유일한 구간</b>입니다 — 마크가 없는 항적(자기승인 축 ' +
         'KAMDOC·MCRC, 동적 권한위임)은 제외가 아니라 <b>0초</b>로 셉니다. 코호트 ' + total.n +
@@ -12410,7 +12412,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         (rows.paired ? ' — 짝지어진 ' + rows.paired + '건 중 ' + (rows.paired - total.n) + '건 제외' : '') +
         '. 구간마다 다른 표본을 쓰면 부분의 합이 합계와 어긋나 각 줄이 서로 다른 위협을 말하게 됩니다. ' +
         '대신 <b>사수 선정까지는 갔지만 발사에 못 간 항적</b>은 이 표에서 빠집니다 — 그 탈락은 ' +
-        '「여기까지 온 항적」 열과 아래 ③ 항적 로그가 담당합니다.<br>' +
+        '「여기까지 온 항적」 열과 아래 ③ 항적 로그가 담당합니다. ' +
+        '시간표는 각 관문의 <b>최초 시각</b>만 쓰므로 <b>첫 발사까지</b>만 잽니다 — BDA 후 재교전은 ' +
+        '승인 재취득 없이 ④로 복귀하며(승인 상태는 항적·지휘관별로 유지됨), 2발째 이후는 시간표가 ' +
+        '아니라 격추·요격탄 소모 등 임무 지표가 담당합니다.<br>' +
         '<b>「여기까지 온 항적」</b>은 시간과 달리 <b>짝지은 전 항적</b> 기준입니다. 시간표는 끝까지 간 ' +
         '항적만 세므로 중간 탈락이 보이지 않는데, 그 탈락이야말로 두 구조의 큰 차이입니다.' +
         (rows.selfDefN.a || rows.selfDefN.b

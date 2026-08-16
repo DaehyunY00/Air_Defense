@@ -312,7 +312,14 @@
     });
   }
   var C2_TYPES = {
-    KAMD_OPS: c2('KAMD 작전통제소', 'command', 3, { system: [5, 10], operator: { high: 15, mid: 30, low: 50 } }, 'ballistic_global'),
+    // ADR-088: 동시 결심 자리 3 → 6.
+    // 종전 3은 `IADS-C2-COMPAT-01`을 근거로 달고 있었는데 **params.md에 그 항목의 정의가 없다**
+    // (다른 항목이 참조만 한다). 코드에 남은 근거는 "codex C2 유형을 M/M/c/K에 맞게 각색"뿐이고
+    // 왜 3인지는 없다. 그런데 이 값이 SC3 As-Is의 지배적 병목이었다 —
+    // 도착 7.6건/분 vs 처리능력 4.8건/분(c=3 × 37.5초) → ρ=0.90, 포화가 산술적 필연이었다.
+    // ⚠️ 대기실 K는 `c × 10`(c2Capacity)으로 **파생**되므로 30 → 60으로 함께 움직인다.
+    //    서버만 늘린 것이 아니라 대기실도 배가 된 복합 변경이다.
+    KAMD_OPS: c2('KAMD 작전통제소', 'command', 6, { system: [5, 10], operator: { high: 15, mid: 30, low: 50 } }, 'ballistic_global'),
     MCRC: c2('중앙방공통제소', 'command', 8, { system: [5, 10], operator: { high: 15, mid: 30, low: 50 } }, 'air_global'),
     ICC: c2('대대급 정보통합센터', 'battalion', 5, { system: [3, 5], operator: { high: 2, mid: 5, low: 10 } }, 'brigade'),
     ECS: c2('교전통제소', 'battery', 8, { system: [1, 2], operator: { high: 1, mid: 2, low: 3 } }, 'battery'),

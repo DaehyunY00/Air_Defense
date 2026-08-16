@@ -1,0 +1,2756 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>지휘 흐름 — 케파·병목과 항적별 전문 이동 (프로토타입)</title>
+<!--
+  무엇을 보는 화면인가
+  ────────────────────
+  지도가 아니라 **계선(간선)** 위에서 전문이 움직이는 것을 본다. 두 보기가 있다.
+
+  · [전체 흐름] — 배치 전체(251노드)를 세우고 전 항적을 겹친다. 노드 테두리 링이
+    처리중/서버수만큼 차오르고(가득=노랑, 가득+대기=빨강), 큐 대기는 점 꼬리로 쌓이고,
+    대기실 초과 즉시 드롭은 붉은 섬광으로 튄다. 좌측에 부하 순위·병목 사건 로그.
+    느린 매체(≥10초)만 개별 점으로 그리고 빠른 매체는 선 맥동으로 집약한다.
+  · [항적 개별] — 항적 하나의 전문 이동을 따라간다. 점 하나가 전문 한 건이고,
+    점이 선을 건너는 데 걸리는 시간이 곧 그 계선의 실제 지연이다. 그래서 **빠르면
+    데이터링크, 기어가면 음성·문자·VTC**로 눈에 바로 들어온다.
+  전체 보기의 느린 점을 클릭하면 그 항적의 개별 보기로 내려간다.
+
+  좌→우를 읽는 장치 (두 보기 공통)
+  ──────────────────────────────
+  · **작업 맥동** — 지금 일하는 노드가 깜빡이고, **그 주기가 곧 처리 중인 작업의 실제
+    서비스 시간**이다. ECS(평균 3.5초)는 빠르게 깜빡이고 MCRC·KAMDOC(37.5초)·사수
+    (40~60초)는 느리게 고동친다. 속도를 읽는 자리가 흐름이 벌어지는 자리와 같아야
+    하므로 **별도의 속도계를 화면 위쪽에 따로 세우지 않는다**(사용자 결정).
+    실린더 왼쪽 숫자는 **「지금 몇 초째」를 센다** — 재생하면 올라간다. 총 소요는 그 일이
+    끝나 봐야 아는 값이라 못박아 두면 시간이 흐르는 자리가 정지한 숫자로 보인다.
+    즉 **맥동 = 이 자리가 얼마나 빠른가 · 숫자 = 지금 얼마나 오래 잡혀 있나**로 갈라 둔다.
+  · **화살촉** — 점이 지나가지 않는 동안에도 계선의 방향이 보인다. 붉은 화살촉은
+    역방향(승인 협조·교전명령 하달)이다.
+  · **밝아진 열 · 킬체인 프론티어** — 지금 일이 벌어지는 단계가 밝아지고, 항적 개별
+    보기에서는 계선이 도달한 가장 오른쪽 열에 파란 점선이 선다. 시간이 흐르면 밝은
+    띠와 점선이 왼쪽에서 오른쪽으로 옮겨 간다 — 그것이 「항적이 움직이니 C2가
+    차례로 반응한다」의 그림이다.
+
+  ⚠️ 좌표·시각을 지어내지 않는다. 모든 점의 출발·도착 시각은 `KJ.runDES({flowTrace:true})`가
+     기록한 실제 실행값이다(엔진 `_recordLink`/`_flowEvent` — 순수 관측, RNG·동역학 불변).
+     지연 분포가 뽑은 값 그대로이므로 같은 매체라도 건마다 시간이 다르다.
+
+  이 파일은 **프로토타입**이다. 본 앱(index.html)에는 아직 붙이지 않았다.
+  실행: 저장소 루트에서 정적 서버를 띄우고 /prototype/command-flow.html 을 연다.
+        (file:// 로는 안 된다 — ES 모듈 import가 막힌다)
+-->
+<style>
+  :root {
+    --bg: #0b1017; --panel: #111823; --panel2: #0d1117; --line: #1e2937;
+    --fg: #dbe4f0; --dim: #7d8ba0; --accent: #4da3ff;
+    --ok: #34d399; --bad: #f87171; --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--fg); font: 13px/1.5 -apple-system, BlinkMacSystemFont,
+      "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  button, select, input { font: inherit; color: var(--fg); background: #16202e;
+    border: 1px solid var(--line); border-radius: 5px; padding: 4px 8px; }
+  button { cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.on { background: var(--accent); border-color: var(--accent); color: #04121f; font-weight: 700; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  /* ── 상단 실행 바 ── */
+  header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 14px; margin: 0 8px 0 0; font-weight: 700; letter-spacing: -.01em; }
+  header label { color: var(--dim); font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+  #status { margin-left: auto; color: var(--dim); font-size: 12px; }
+  .modesw { display: inline-flex; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+  .modesw button { border: 0; border-radius: 0; padding: 4px 12px; }
+
+  /* 조작 손잡이 줄은 걷어냈다(URL 파라미터로만 조작). 남은 것은 재실행 알림뿐. */
+  .dim { color: var(--dim); }
+  /* 고정 배치 표기 — 조작은 못 하되 어떤 배치인지는 늘 보여야 한다 */
+  #dep-fixed { color: var(--dim); font-size: 12px; }
+  #dep-fixed b { color: var(--fg); font-weight: 600; }
+  #dirty { margin-left: auto; color: #04121f; background: var(--warn); font-weight: 700;
+    padding: 2px 9px; border-radius: 10px; font-size: 11px; white-space: nowrap; }
+  header #status { margin-left: 10px; }
+
+  /* 계선 매체 교체 팝오버 */
+  #pop { position: fixed; z-index: 40; width: 300px; padding: 10px;
+    background: var(--panel); border: 1px solid #33456b; border-radius: 8px;
+    box-shadow: 0 12px 34px rgba(0,0,0,.6); font-size: 12px; }
+  #pop-title { font-weight: 700; margin-bottom: 2px; }
+  #pop-body { display: flex; flex-direction: column; gap: 3px; margin: 8px 0; }
+  #pop-body button { text-align: left; display: flex; justify-content: space-between; gap: 8px; }
+  #pop-body button .h { color: var(--dim); font-size: 11px; }
+  #pop-warn { color: var(--warn); font-size: 11px; line-height: 1.45; margin-bottom: 8px; }
+  .edge.hot { opacity: .95 !important; }
+  .edge { cursor: pointer; }
+  .edge-hit { stroke: transparent; stroke-width: 14; fill: none; cursor: pointer; }
+  .edge.overridden { stroke-dasharray: 1 5 !important; }
+  .ovrmark { fill: var(--warn); font-size: 11px; }
+
+  /* ── 본문 3분할 ── */
+  main { flex: 1; display: flex; min-height: 0; }
+  #side { width: 340px; flex: none; display: flex; flex-direction: column;
+    background: var(--panel2); border-right: 1px solid var(--line); min-height: 0; }
+  #stage { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+
+  .sec { display: flex; flex-direction: column; min-height: 0; }
+  /* ⚠️ `.sec{display:flex}`는 브라우저 기본 `[hidden]{display:none}`을 **이긴다**(작성자 규칙이
+     UA 규칙보다 우선). 이 한 줄이 없으면 hidden을 걸어도 그대로 보인다 — 실제로 전체 흐름
+     보기에서 「어디서 막혔나」 빈 제목이 남았다. */
+  .sec[hidden] { display: none; }
+  .sec > h2 { font-size: 11px; margin: 0; padding: 7px 10px; color: var(--dim);
+    background: var(--panel); border-bottom: 1px solid var(--line);
+    text-transform: none; letter-spacing: .02em; font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .scroll { overflow-y: auto; overflow-x: hidden; }
+
+  /* 항적 목록 */
+  #tracks { flex: 0 0 34%; }
+  #track-list { padding: 2px 0; }
+  .trk { display: flex; align-items: center; gap: 6px; padding: 4px 10px; cursor: pointer;
+    border-left: 3px solid transparent; }
+  .trk:hover { background: #16202e; }
+  .trk.sel { background: #17293f; border-left-color: var(--accent); }
+  .trk .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trk .sub { color: var(--dim); font-size: 11px; }
+  .pill { font-size: 10px; padding: 0 5px; border-radius: 8px; border: 1px solid; white-space: nowrap; }
+  .pill.ok { color: var(--ok); border-color: #1c6448; }
+  .pill.bad { color: var(--bad); border-color: #6b2b2b; }
+  .pill.idle { color: var(--dim); border-color: var(--line); }
+  .pill.dup { color: #f0a060; border-color: #6b4a20; }
+
+  /* 「어디서 막혔나」 — 항적 하나의 시간이 어디로 갔는지 오래 걸린 순 */
+  #stalls { flex: 0 0 auto; max-height: 32%; }
+  #tracks { flex: 0 0 34%; }
+  .st-row { display: flex; align-items: center; gap: 6px; padding: 3px 10px; cursor: pointer;
+    border-left: 3px solid transparent; font-size: 12px; }
+  .st-row:hover { background: #16202e; }
+  .st-row.focus { background: #17293f; border-left-color: var(--accent); }
+  .st-row .d { flex: none; width: 54px; text-align: right; font-weight: 700;
+    font-family: ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  .st-row .tag { flex: none; font-size: 10px; padding: 0 5px; border-radius: 3px; border: 1px solid; }
+  .st-row .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); }
+  .st-row .pct { flex: none; width: 34px; text-align: right; color: var(--dim); font-size: 11px; }
+  /* 막힌 것(대기·막힘·공백)과 일한 것(처리·이동)을 색으로 가른다 */
+  .st-row.qwait .d, .st-row.qwait .tag { color: var(--warn); border-color: #6b5220; }
+  .st-row.block .d, .st-row.block .tag { color: var(--bad); border-color: #6b2b2b; }
+  .st-row.gap .d, .st-row.gap .tag { color: var(--dim); border-color: var(--line); }
+  .st-row.work .d, .st-row.work .tag { color: var(--accent); border-color: #24466b; }
+  .st-row.move .d, .st-row.move .tag { color: var(--ok); border-color: #1c6448; }
+  #stall-note { padding: 5px 10px 8px; color: var(--dim); font-size: 10.5px; line-height: 1.5; }
+  .st-bar { height: 4px; background: #1a2534; border-radius: 2px; overflow: hidden; margin: 0 10px 4px; display: flex; }
+  .st-bar i { display: block; height: 100%; }
+
+  /* 이벤트 로그 */
+  #log { flex: 1; }
+  #log-body { padding: 2px 0 40px; }
+  .ev { display: flex; gap: 7px; padding: 2px 10px; border-left: 3px solid transparent; align-items: baseline; }
+  .ev .t { color: var(--dim); flex: none; width: 52px; text-align: right; font-size: 11px; }
+  .ev .x { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ev.future { opacity: .32; }
+  .ev.now { background: #17293f; border-left-color: var(--accent); }
+  .ev.past { opacity: .72; }
+  .ev.link .x::before { content: '↦ '; color: var(--dim); }
+  .ev.mark .x::before { content: '· '; color: var(--dim); }
+  .ev .med { font-size: 10px; padding: 0 4px; border-radius: 3px; margin-left: 4px; }
+  /* 지휘 축 꼬리표 — 같은 문구의 마크(승인완료 등)가 어느 계통 것인지 가른다 */
+  .ev .lane { color: var(--dim); border: 1px solid var(--line); }
+  /* 요격탄 단가 대 위협 가치 — 고가 유도탄(≥5 M$)은 붉게 */
+  .ev .cost { color: var(--dim); border: 1px solid var(--line); }
+  .ev .cost.hi { color: var(--bad); border-color: #6b2b2b; font-weight: 700; }
+
+  /* 신호등 — 그래프 **하단 빈 공간**에 띄운다. 노드는 위쪽에 몰리고 아래가 비므로
+     그림을 가리지 않고, 바로 밑 재생 컨트롤과 붙어 스크럽하며 읽기 좋다. */
+  #signal { position: absolute; left: 10px; right: 10px; bottom: 8px; z-index: 5;
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; pointer-events: none; }
+  /* ⚠️ `.sec`와 **똑같은 함정**이다(위 주석 참조) — 작성자의 `display:flex`가 UA 기본
+     `[hidden]{display:none}`을 이긴다. 이 한 줄이 없으면 setView('all')이 hidden을 걸어도
+     신호등이 그대로 남아, 전체 흐름 보기에 **직전에 보던 항적의** 「격추 완료」가 떠 있다
+     (실측). 전 항적을 겹쳐 보는 화면에 항적 하나의 상태를 띄우는 것이라 그냥 오답이다. */
+  #signal[hidden] { display: none; }
+  .sig { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px;
+    border-radius: 13px; font-size: 12px; font-weight: 600;
+    background: rgba(11,16,23,.92); border: 1px solid; backdrop-filter: blur(2px); }
+  .sig .lamp { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .sig .sub { font-weight: 400; opacity: .75; font-size: 11px; }
+  .sig.go    { border-color: #1c6448; color: var(--ok); }
+  .sig.go    .lamp { background: var(--ok); }
+  .sig.wait  { border-color: #6b5220; color: var(--warn); }
+  .sig.wait  .lamp { background: var(--warn); animation: blink 1.1s infinite; }
+  .sig.stop  { border-color: #6b2b2b; color: var(--bad); }
+  .sig.stop  .lamp { background: var(--bad); animation: blink .7s infinite; }
+  .sig.idle  { border-color: var(--line); color: var(--dim); }
+  .sig.idle  .lamp { background: #44506a; }
+  @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
+
+  /* 막힌 지점 강조 — 신호등이 가리키는 곳을 그래프에서도 짚는다 */
+  .blockmark { fill: none; stroke: var(--bad); stroke-width: 2.5; animation: blink 1.1s infinite; }
+  .blockmark.wait { stroke: var(--warn); }
+  .wantpath { fill: none; stroke: var(--bad); stroke-width: 5; opacity: .3;
+    stroke-dasharray: 9 6; animation: crawl 1.4s linear infinite; }
+  @keyframes crawl { to { stroke-dashoffset: -15; } }
+
+  /* 그래프 */
+  #graph-wrap { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+  svg#graph { width: 100%; height: 100%; display: block; }
+  .colhdr { fill: #55637a; font-size: 10px; }
+  .colband { fill: #0e1520; }
+  .colband.alt { fill: #0b1017; }
+  .nlabel { fill: #b7c4d6; font-size: 10px; }
+  .nsub { fill: #61708a; font-size: 9px; }
+  .ncirc { fill: #16202e; stroke: #34435a; stroke-width: 1.5; }
+  .ncirc.sensor { stroke: #22d3ee; }
+  .ncirc.c2 { stroke: #4da3ff; }
+  .ncirc.shooter { stroke: #34d399; }
+  .ncirc.busy { fill: #1d3a52; stroke-width: 2.5; }
+  .ncirc.queued { stroke-dasharray: 3 2; }
+  .edge { fill: none; stroke-linecap: round; }
+  .dot { stroke: #04121f; stroke-width: .8; }
+  .dotlab { font-size: 9px; fill: #cfe0f5; paint-order: stroke; stroke: #04121f; stroke-width: 2.5; }
+  .qbadge { font-size: 9px; fill: #fbbf24; }
+
+  /* ── 좌→우 방향 표기 (ADR-088) ────────────────────────────────────────────
+     간선이 어느 쪽으로 흐르는지 **정지 상태에서도** 보여야 한다. 종전에는 점이
+     지나갈 때만 방향을 알 수 있었고, 점이 없는 동안(대부분의 시간)에는 선이
+     양방향처럼 보였다. 화살촉을 선 위 62% 지점에 접선 방향으로 박는다. */
+  .earrow { opacity: .55; }
+  .earrow.back { opacity: .8; }
+  /* 열 활성 — 지금 무슨 일이 벌어지는 열을 밝힌다. 시간이 흐르면 밝은 띠가
+     좌에서 우로 옮겨 가고, 그것이 곧 「항적의 움직임에 C2가 반응하는」 그림이다. */
+  .colband { transition: fill .18s linear; }
+  .colband.live { fill: #15212f; }
+  .colband.alt.live { fill: #111c28; }
+  /* 킬체인 진행 프론티어 — 이 항적의 계선이 지금까지 도달한 가장 오른쪽 열 */
+  .frontier { stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 5 5; opacity: .7; }
+  .frontier-lab { font-size: 10px; fill: var(--accent); font-weight: 700;
+    paint-order: stroke; stroke: #0b1017; stroke-width: 3; }
+
+  /* 「지금 몇 초째 붙잡혀 있나」 카운터 — 맥동은 빠르기의 순서만 보여주므로 실제로 흐르는
+     시간은 숫자로 센다. 매 프레임 올라가는 값이라 **자릿수가 흔들리면 안 된다**(tabular-nums).
+     20초를 넘기면 호박색 — 「아직도?」가 눈에 걸리는 지점이다. */
+  .worklab { font-size: 8.5px; font-weight: 700; fill: #7fd0f5;
+    font-variant-numeric: tabular-nums; paint-order: stroke; stroke: #0b1017;
+    stroke-width: 2.4; pointer-events: none; }
+  .worklab.slow { fill: var(--warn); }
+
+  /* ── 전체 흐름 보기 ── */
+  /* (케파 링은 DB 실린더로 대체됐다 — ADR-088 이전 표기) */
+
+  /* DB 실린더 케파 — 처리 슬롯이 아래에서 차오르고 대기는 위로 쌓인다 */
+  .cyl-bg { fill: #131c28; }
+  .cyl-edge { fill: none; stroke: #34435a; stroke-width: 1.4; }
+  .cyl-cap { fill: #1b2637; stroke: #34435a; stroke-width: 1.4; }
+  .cyl-fill { fill: var(--accent); opacity: .85; transition: none; }
+  .cyl.full .cyl-fill { fill: var(--warn); }
+  .cyl.jam  .cyl-fill { fill: var(--bad); }
+  /* ── 작업 맥동 — 「빠르면 빨리, 느리면 천천히 깜빡인다」 (ADR-088) ─────────
+     작업중인 노드가 깜빡이고, **그 주기가 곧 지금 처리 중인 작업의 서비스 시간**이다.
+     ECS(평균 3.5초)는 빠르게 깜빡이고 MCRC·KAMDOC(평균 37.5초)는 느리게 고동친다 —
+     화면 어디가 빠르고 어디가 굼뜬지를 숫자 이전에 눈이 잡는다.
+
+     ⚠️ 주기는 **인라인 style로만** 준다(applyPulse). 여기 duration을 적으면 인라인을
+        덮거나 덮여서 「같은 속도로 깜빡이는 화면」으로 조용히 되돌아간다.
+     ⚠️ 높이·색은 건드리지 않는다 — 처리중/서버수와 포화 단계는 계속 읽혀야 한다.
+        흔드는 것은 투명도뿐이고, .25까지 떨구면 눈금이 사라지므로 .42에서 멈춘다. */
+  .cyl.working .cyl-fill { animation: cylwork ease-in-out infinite; }
+  .cyl.working .cyl-edge { animation: cylrim ease-in-out infinite; }
+  @keyframes cylwork { 0%, 100% { opacity: .88 } 50% { opacity: .42 } }
+  @keyframes cylrim  { 0%, 100% { stroke: #34435a } 50% { stroke: #7fb6ff } }
+  .cyl.full.working .cyl-edge { animation-name: cylrim-full; }
+  .cyl.jam.working  .cyl-edge { animation-name: cylrim-jam; }
+  @keyframes cylrim-full { 0%, 100% { stroke: #34435a } 50% { stroke: var(--warn) } }
+  @keyframes cylrim-jam  { 0%, 100% { stroke: var(--bad) } 50% { stroke: #ffd0d0 } }
+  /* 실린더를 못 그린 자리(밀집 열·센서·사수)의 동그라미도 **같은 규칙으로** 깜빡인다.
+     사수의 발사 처리는 40~60초라 눈에 띄게 느리게 고동친다 — 그것이 사실이다. */
+  .ncirc.busy { animation: circwork ease-in-out infinite; }
+  @keyframes circwork { 0%, 100% { fill: #3b6f9c; stroke: #7fb6ff } 50% { fill: #16202e; stroke: #34435a } }
+  .cyl.jam  .cyl-edge { stroke: var(--bad); stroke-width: 2; }
+  .cyl-tick { stroke: #0b1017; stroke-width: 1; opacity: .8; }
+  .cyl-num { font-size: 9.5px; font-weight: 700; fill: #dbe4f0;
+    paint-order: stroke; stroke: #0b1017; stroke-width: 2.4; pointer-events: none; }
+  /* 대기 디스크 — 쌓일수록 위로 자란다 */
+  .cyl-qd { fill: var(--warn); opacity: .9; }
+  .cyl.jam .cyl-qd { fill: var(--bad); }
+  .cyl-qn { font-size: 9px; font-weight: 700; fill: var(--bad);
+    paint-order: stroke; stroke: #0b1017; stroke-width: 2.4; }
+  /* 이 항적의 작업 — 남의 줄 속에서 내 것이 어디인지 */
+  .cyl-qd.mine { fill: #fff; stroke: var(--accent); stroke-width: 1.4; }
+  .cyl.mine-service .cyl-edge { stroke: #fff; stroke-width: 2.2; }
+  .cyl-mine { font-size: 9px; font-weight: 700; fill: #fff;
+    paint-order: stroke; stroke: #0b1017; stroke-width: 2.6; pointer-events: none; }
+  .nodeg.idle { opacity: .28; }
+  .nodeg { cursor: pointer; }
+  .nodeg.focus .ncirc { stroke: #fff; stroke-width: 2.2; }
+  .qtail { font-size: 9px; fill: var(--warn); paint-order: stroke; stroke: #0b1017; stroke-width: 2; }
+  .flash { fill: none; stroke: var(--bad); stroke-width: 2; opacity: .9; pointer-events: none; }
+  /* 「못 가는」 전문 — 움직이는 점(채운 원)과 반드시 달라 보여야 한다: 점선 테두리 빈 원 */
+  .wait-dot { fill: rgba(251,191,36,.12); stroke: var(--warn); stroke-width: 1.8; stroke-dasharray: 3 2; }
+  .wait-dot.forever { stroke: var(--bad); fill: rgba(248,113,113,.14); }
+  .blocklab { font-size: 9.5px; fill: var(--warn); font-weight: 700;
+    paint-order: stroke; stroke: #0b1017; stroke-width: 2.6; }
+  .drop-x line { stroke: var(--bad); stroke-width: 2.4; stroke-linecap: round; }
+  /* 「어디서 막혔나」에서 고른 구간의 장소 표시 */
+  .stall-mark { fill: none; stroke: var(--warn); stroke-width: 2.5; stroke-dasharray: 5 3; pointer-events: none; }
+  .stall-edge { fill: none; stroke: var(--warn); stroke-width: 6; opacity: .32; pointer-events: none; }
+  .stall-lab { font-size: 11px; fill: var(--warn); font-weight: 700;
+    paint-order: stroke; stroke: #0b1017; stroke-width: 3; pointer-events: none; }
+  /* 종결 배너 — 격추/누수를 그래프 위에 못박는다 */
+  .endbanner { pointer-events: none; }
+  .endbanner rect { fill: rgba(11,16,23,.9); stroke-width: 1.5; }
+  .endbanner text { font-size: 12px; font-weight: 700; }
+  .endbanner .sub { font-size: 10px; font-weight: 400; }
+  .endbanner.leak rect { stroke: var(--bad); }
+  .endbanner.leak text { fill: var(--bad); }
+  .endbanner.leak .sub { fill: #c9899a; }
+  .endbanner.kill rect { stroke: #1c6448; }
+  .endbanner.kill text { fill: var(--ok); }
+  .edge.hot { opacity: .95 !important; }
+  svg.hide-sensor .sensor-edge { display: none; }
+  .dot[data-th] { cursor: pointer; }
+
+  /* 부하 순위 */
+  .rk { display: flex; align-items: center; gap: 7px; padding: 3px 10px; cursor: pointer;
+    border-left: 3px solid transparent; font-size: 12px; }
+  .rk:hover { background: #16202e; }
+  .rk.focus { background: #17293f; border-left-color: var(--accent); }
+  .rk .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rk .bar { flex: none; width: 64px; height: 7px; background: #1a2534; border-radius: 3px; overflow: hidden; }
+  .rk .bar i { display: block; height: 100%; background: var(--accent); }
+  .rk.full .bar i { background: var(--warn); }
+  .rk.jam .bar i { background: var(--bad); }
+  .rk .st { flex: none; width: 86px; text-align: right; color: var(--dim); font-size: 11px; }
+  .rk .st b { color: var(--fg); font-weight: 600; }
+  .rk .st .dr { color: var(--bad); }
+
+  /* 병목 로그 색 — 넘침·기한 만료(둘 다 실제 드롭)는 붉게, 큐 정리(항적 종결)는 흐리게 */
+  .ev.overflow .x { color: var(--bad); }
+  .ev.ttl .x { color: #f0a060; }
+  .ev.dead .x { color: var(--dim); }
+  .ev.sat .x { color: var(--warn); }
+  .ev.chdrop .x { color: var(--bad); font-weight: 600; }
+  .ev.leak .x { color: var(--bad); font-weight: 700; }
+  .ev.leak .t { color: var(--bad); }
+  .ev.dup .x { color: #f0a060; font-weight: 600; }
+  .ev.chwait .x { color: var(--warn); }
+  .ev.block .x { color: var(--warn); }
+  #ticks i.bad { background: var(--bad); height: 9px; }
+
+  /* 하단 재생 바 */
+  #transport { flex: none; display: flex; align-items: center; gap: 10px; padding: 7px 12px;
+    background: var(--panel); border-top: 1px solid var(--line); flex-wrap: wrap; }
+  /* 스크럽 막대 위에 사건 눈금을 겹쳐 둔다 — 눈금이 없는 넓은 구간이 곧 「아무 일도
+     일어나지 않는 시간」이고, 그것을 안 보이게 두면 재생이 멈춘 것으로 오해된다. */
+  #scrub-wrap { flex: 1; min-width: 180px; position: relative; display: block; }
+  #ticks { position: absolute; left: 0; right: 0; top: 2px; height: 7px; pointer-events: none; }
+  #ticks i { position: absolute; top: 0; width: 1px; height: 7px; background: #64809f; }
+  #scrub { width: 100%; accent-color: var(--accent); margin-top: 6px; }
+  #clock { font-size: 12px; color: var(--fg); min-width: 118px; }
+  .spd button { padding: 3px 7px; font-size: 11px; }
+  /* 접이식 범례 — 접힌 줄만 상시 보이고, 펼치면 전체가 나온다 */
+  #legend-box { flex: none; background: var(--panel2); border-top: 1px solid var(--line);
+    max-height: 46%; overflow-y: auto; }
+  #legend-box > summary { list-style: none; cursor: pointer; user-select: none;
+    padding: 5px 12px; font-size: 11px; color: var(--dim); }
+  #legend-box > summary::-webkit-details-marker { display: none; }
+  #legend-box > summary::before { content: '▸ '; color: var(--accent); }
+  #legend-box[open] > summary::before { content: '▾ '; }
+  #legend-box > summary:hover { color: var(--fg); background: #16202e; }
+  #legend { display: flex; gap: 4px 10px; flex-wrap: wrap; padding: 2px 12px 8px;
+    font-size: 11px; color: var(--dim); }
+  #legend b { color: var(--fg); font-weight: 600; }
+  .lg { display: inline-flex; align-items: center; gap: 5px; }
+  .lg i { width: 20px; height: 0; border-top-width: 3px; border-top-style: solid; display: inline-block; }
+
+  .empty { padding: 24px 14px; color: var(--dim); text-align: center; line-height: 1.7; font-size: 12px; }
+  .note { padding: 6px 10px; color: var(--dim); font-size: 11px; border-top: 1px solid var(--line); }
+  code { background: #16202e; padding: 0 3px; border-radius: 3px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🛰 지휘 흐름</h1>
+  <label>시나리오 <select id="sc"></select></label>
+  <span id="dep-fixed" title="이 화면은 배치를 고정한다 — 본 앱·기준선과 같은 legacy 정상 배치">배치 <b></b></span>
+  <span class="modesw">
+    <button id="m-asis" class="on">As-Is 분절형</button><button id="m-tobe">To-Be 통합형</button>
+  </span>
+  <label>seed <input id="seed" class="mono" type="number" value="12345" style="width:78px"></label>
+  <label>관측 <input id="dur" class="mono" type="number" value="600" step="60" style="width:64px">초</label>
+  <button id="run">▶ 실행</button>
+  <span class="modesw" id="viewsw">
+    <button id="v-all" class="on" title="전 항적을 겹쳐 노드 케파·병목을 본다">전체 흐름</button><button id="v-track" title="항적 하나의 전문 이동을 따라간다">항적 개별</button>
+  </span>
+  <span id="dirty" hidden>⟳ 조건이 바뀌었습니다 — [실행]</span>
+  <span id="status">실행을 눌러 시작합니다.</span>
+</header>
+
+<!--
+  실험 조건 손잡이는 화면에서 걷어냈다(사용자 결정). 전부 **URL 파라미터**로만 준다.
+  ⚠️ 손잡이가 안 보이면 「이 수치가 어떤 조건에서 나왔는가」를 화면만 보고 알 수 없다.
+     그래서 **기본값이 아닌 조건은 상태줄에 반드시 표기**한다(activeConfigChips) — 숨기는 것은
+     조작 수단이지 조건 자체가 아니다. 파라미터 목록은 로드 시 콘솔에도 찍는다.
+-->
+
+<!-- 계선 매체 교체 팝오버 -->
+<div id="pop" hidden>
+  <div id="pop-title"></div>
+  <div id="pop-body"></div>
+  <div id="pop-warn">⚠️ 반사실입니다. 매체를 바꾸면 난수 소비가 달라져 <b>실행 전체가 다른 표본</b>이 됩니다 —
+    기준 실행과 나란히 놓고 “차이 = 이 계선의 몫”으로 읽으면 안 됩니다.</div>
+  <div style="display:flex;gap:6px;justify-content:flex-end">
+    <button id="ovr-clear" hidden>전부 되돌리기</button><button id="pop-close">닫기</button>
+  </div>
+</div>
+
+<main>
+  <aside id="side">
+    <section class="sec" id="tracks">
+      <h2><span id="tracks-label">항적 (이벤트)</span><span id="track-count"></span></h2>
+      <div class="scroll" id="track-list"><div class="empty">아직 실행하지 않았습니다.</div></div>
+    </section>
+    <section class="sec" id="stalls" hidden>
+      <h2><span>어디서 막혔나 — 오래 걸린 순</span><span id="stall-total"></span></h2>
+      <div class="scroll" id="stall-list"></div>
+    </section>
+    <section class="sec" id="log">
+      <h2><span id="log-title">이벤트 로그</span><span id="log-hint"></span></h2>
+      <div class="scroll" id="log-body"></div>
+    </section>
+  </aside>
+
+  <section id="stage">
+    <!-- 신호등 — 「지금 이 항적이 어디서 무엇을 기다리는가」를 추론하게 두지 않고 직접 적는다. -->
+    <div id="graph-wrap"><div id="signal" hidden></div><svg id="graph"></svg></div>
+    <div id="transport">
+      <button id="play" disabled>▶</button>
+      <button id="skip" disabled title="다음 사건까지 건너뛴다 — 항적 하나에는 아무 일도 일어나지 않는 긴 구간이 있다">⏭ 다음 사건</button>
+      <span id="clock" class="mono">—</span>
+      <span id="scrub-wrap"><span id="ticks"></span><input id="scrub" type="range" min="0" max="1000" value="0" disabled></span>
+      <span class="spd">배속
+        <button data-spd="1">×1</button><button data-spd="5" class="on">×5</button><button data-spd="20">×20</button><button data-spd="60">×60</button>
+      </span>
+      <label><input type="checkbox" id="show-sensor"> 센서 보고 표시</label>
+    </div>
+    <!-- 범례는 기본 접힘. 네 줄이 화면 하단을 계속 먹던 것을 접었다.
+         ⚠️ 접되 **없애지는 않는다** — 색·모양이 뜻하는 바를 모르면 화면을 오독한다.
+            접힌 상태에서도 무엇이 들어 있는지 한 줄로 알린다. -->
+    <details id="legend-box">
+      <summary>범례 — 작업 맥동(빠른 자리·굼뜬 자리) · 매체별 이동 속도 · 케파 실린더 · 못 가는 전문</summary>
+      <div id="legend"></div>
+    </details>
+  </section>
+</main>
+
+<script type="module">
+'use strict';
+// ⚠️ 워커·Node 진입점(js/workers/sim-worker.mjs, tests/*)에 있는 `globalThis.window = globalThis`
+//    를 여기로 옮겨 오면 안 된다. 브라우저에서 `window`는 getter 전용이라 **모듈 전체가
+//    조용히 죽는다**(에러가 콘솔에 안 잡히고 화면만 빈 채로 남는다). 여기서는 이미 window가 있다.
+
+/* ══════════════════════════════════════════════════════════════════════════
+   0. 커널 로딩 — 본 앱의 모듈 워커(js/workers/sim-worker.mjs)와 같은 순서로 싣는다.
+      ⚠️ 순서를 바꾸면 조용히 다른 수치가 나온다(워커 주석 참조).
+   ══════════════════════════════════════════════════════════════════════════ */
+// ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
+//    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
+const V = '?v=20260811w';
+const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
+for (const m of [
+  '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
+  '../js/data/nodes.js', '../js/data/links.js', '../js/data/threats.js',
+  '../js/data/scenarios.js', '../js/data/axes.js', '../js/config/deployment-adapter.js',
+  '../js/core/rng.js', '../js/core/heap.js', '../js/engine/sim-engine.js'
+]) await import(m + V);
+const KJ = globalThis.KJ;
+installIadsKernel(KJ);
+
+/* ══════════════════════════════════════════════════════════════════════════
+   1. 표시 계약 — 매체와 킬체인 열
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * 통신 매체별 표시. `delaySec`은 카탈로그 **대표값**이고, 화면에서 실제로 쓰는 것은
+ * 실행이 뽑은 건별 값(`d`)이다 — 범례의 숫자는 "대략 이 정도" 이상을 뜻하지 않는다.
+ * 출처: js/config/deployment-adapter.js 상단 상수(DL_FAST·VOICE·CHAT_TRACK·VOICE_STATUS…).
+ */
+const MEDIA = {
+  'datalink':     { label: '데이터링크',      color: '#38bdf8', w: 2.4, dash: null,    hint: '1~2초' },
+  'ifcn':         { label: 'IFCN 킬웹',       color: '#5eead4', w: 2.4, dash: null,    hint: '1초 · To-Be' },
+  'internal':     { label: '체계 내부',       color: '#64748b', w: 2.0, dash: null,    hint: '1초' },
+  'report-cycle': { label: '센서 보고주기',   color: '#22d3ee', w: 1.8, dash: null,    hint: '센서별 주기' },
+  'kvmf-relay':   { label: 'KVMF 상급경유',   color: '#a78bfa', w: 2.4, dash: '6 4',   hint: '30초' },
+  'voice':        { label: '음성 협조',       color: '#fbbf24', w: 2.6, dash: '6 4',   hint: '평균 20초' },
+  'chat':         { label: '문자(서버 채팅)', color: '#fb923c', w: 2.6, dash: '6 4',   hint: '평균 45초' },
+  'voice-vtc':    { label: '음성/VTC',        color: '#ef4444', w: 3.2, dash: '6 4',   hint: '평균 135초 · 1채널 4건' },
+  'fanout':       { label: '병렬 통보',       color: '#475569', w: 1.6, dash: '2 3',   hint: '모델상 0초' }
+};
+const media = (t) => MEDIA[t] || { label: t, color: '#8892a4', w: 2, dash: null, hint: '' };
+/** 간선의 신원 = 양 끝 + **매체**. 매체를 빼면 병렬 계선이 한 가닥으로 접힌다. */
+const edgeKey = (f) => f.from + '>' + f.to + '|' + f.mt;
+
+/**
+ * 킬체인 열(좌 → 우). **지휘 계층이 아니라 킬체인 순서**로 세운다 —
+ * [C2 구조] 탭의 세로 계층(js/ui/panels.js `tierOf`)과는 축이 다른 별개의 표시 계약이다.
+ * (같은 것의 두 벌이 아니라, 다른 것을 다르게 그리는 것이다.)
+ *
+ * ⚠️ 이 배치는 **완전한 좌→우 단방향이 아니다.** 승인 협조(국지 C2 → 상급 C2)와
+ *    교전명령 하달(상급/국지 C2 → ECS)은 왼쪽으로 되돌아간다. 숨기지 않고 **아래로 휘는
+ *    역방향 호(弧)** 로 그린다 — 되돌아가는 것 자체가 As-Is 계선의 모양이기 때문이다.
+ */
+/**
+ * 열 순서는 **실측 통행량**으로 정했다(SC3 · LEGACY · 전문 700건):
+ *
+ *   센서 → ECS → ICC → 상급 → ICC → ECS → 포대
+ *         100    75    109    102    68    74
+ *
+ * **ECS와 ICC는 각각 두 번 등장한다** — 올라갈 때(보고)와 내려올 때(명령). 종전에는 한 자리에
+ * 접어 두어 명령이 왼쪽으로 되돌아갔다가 오른쪽 끝으로 튀는 지그재그가 났다. 두 자리로
+ * 나누면 지배 경로 전체가 좌→우 한 방향이 된다(역방향 잔량: As-Is 7.7% · To-Be 3.4%).
+ *
+ * ⚠️ 같은 노드를 두 번 그리는 대가가 있다. 그래서 **케파 실린더는 실제로 일이 큐에 쌓이는
+ *    자리에만** 둔다 — 실측상 ICC는 큐 도착 0건(순수 중계), ECS는 `directive_reception`(명령
+ *    하행)뿐이다. 상행 자리는 「중계」로 표시하고 용량을 그리지 않는다. 같은 부하를 두 번
+ *    그리면 노드가 두 배로 바쁜 것처럼 보인다.
+ */
+const COLS = [
+  { key: 'sensor',  label: '센서',          hint: '탐지·추적' },
+  { key: 'ecsUp',   label: '포대 교전통제',  hint: 'ECS · 보고 ↑' },
+  { key: 'iccUp',   label: '권역 교전통제',  hint: 'ICC · 보고 ↑' },
+  { key: 'coord',   label: '조율층',        hint: 'IAOC — To-Be 신설' },
+  { key: 'upper',   label: '상급 C2',       hint: 'MCRC · KAMDOC · 미군' },
+  { key: 'local',   label: '국지방공 C2',   hint: '방공C2A(군단·수방사)' },
+  { key: 'iccDn',   label: '권역 교전통제',  hint: 'ICC · 명령 ↓' },
+  { key: 'ecsDn',   label: '포대 교전통제',  hint: 'ECS · 교전명령 ↓' },
+  { key: 'shooter', label: '요격부대',      hint: '발사' }
+];
+const COL_INDEX = {}; COLS.forEach((c, i) => { COL_INDEX[c.key] = i; });
+
+/* ── 작업 맥동 (ADR-088) ────────────────────────────────────────────────────
+   「C2 흐름이 빠르면 빠르게, 느리면 천천히 움직이는 무언가」를 **작업중인 노드 자신**이
+   맡는다. 별도의 속도계를 화면 위쪽에 따로 세우지 않는다(사용자 결정) — 흐름이 벌어지는
+   자리와 그 빠르기를 읽는 자리가 어긋나면 눈이 두 곳을 오간다.
+
+   맥동 주기 = **지금 그 노드가 처리 중인 작업의 실제 서비스 시간**(초). 지어낸 값이
+   아니다 — 실행이 기록한 개시(ns)와 완료(nd)의 차이 그대로다. 카탈로그 평균으로 보면
+   ECS 3.5초 · ICC 9초 · MCRC·KAMDOC 37.5초 · 사수(발사 처리) 40~60초이고,
+   실제 값은 지수분포가 뽑은 건별 값이라 같은 노드도 건마다 다르게 깜빡인다.
+
+   ⚠️ **배속으로 나눈다.** 맥동은 CSS라 벽시계로 도는데 화면 시각은 배속만큼 빨리 간다.
+      나누지 않으면 ×60에서 3.5초짜리 일이 화면에 0.06초 스치는 동안 3.5초 주기로
+      깜빡여 — 한 번도 못 깜빡이고 사라진다.
+   ⚠️ 벽시계 [0.35초, 6초]로 자른다. 아래로는 발작적인 스트로브가 되고, 위로는 정지 화면과
+      구분이 안 된다. **자른 것은 보이는 주기뿐이고 값은 꼬리표에 그대로 적는다.** */
+const PULSE = { min: 0.35, max: 6.0 };
+
+/**
+ * 이 노드의 맥동 주기(벽시계 초). st는 stateAt()이 만든 {busy, q, svcSum, svcN}.
+ * 관측 종료까지 안 끝난 작업은 길이를 모른다 — 지어내지 않고 가장 느린 쪽으로 둔다.
+ */
+function workPulseSec(st) {
+  const svc = st && st.svcN ? st.svcSum / st.svcN : Infinity;
+  return Math.min(PULSE.max, Math.max(PULSE.min, svc / Math.max(1, speed)));
+}
+/**
+ * 맥동 주기를 인라인으로 건다.
+ * ⚠️ 값이 같으면 **건드리지 않는다** — animation-duration을 매 프레임 다시 쓰면
+ *    브라우저가 애니메이션을 되감아 영영 첫 프레임에 머문다(깜빡이지 않는 증상).
+ */
+function applyPulse(node, st) {
+  if (!node) return;
+  const v = workPulseSec(st).toFixed(2) + 's';
+  if (node.dataset.pulse !== v) { node.dataset.pulse = v; node.style.animationDuration = v; }
+}
+
+/** 두 자리에 서는 노드 유형 — [상행 열, 하행 열]. 하행 자리가 「일하는 자리」다. */
+const DUP_COL = { ECS: [COL_INDEX.ecsUp, COL_INDEX.ecsDn], ICC: [COL_INDEX.iccUp, COL_INDEX.iccDn] };
+
+/** 이 노드가 서는 자리 목록. 중복 노드는 두 개, 나머지는 하나. */
+function nodeSlots(node) {
+  if (!node) return [{ col: COL_INDEX.upper }];
+  if (node.category === 'sensor') return [{ col: COL_INDEX.sensor }];
+  if (node.category === 'shooter') return [{ col: COL_INDEX.shooter }];
+  const d = DUP_COL[node.typeId];
+  if (d) return [{ col: d[0], dup: 'up' }, { col: d[1], dup: 'dn' }];
+  switch (node.typeId) {
+    case 'IAOC': return [{ col: COL_INDEX.coord }];
+    case 'ARMY_LOCAL_AD': return [{ col: COL_INDEX.local }];
+    default: return [{ col: COL_INDEX.upper }];   // MCRC · KAMDOC · 미군 C2
+  }
+}
+/** 노드 id로 그릴 자리를 찾는다. 중복 노드는 **일하는 자리(하행)** 를 먼저 고른다 —
+ *  큐·처리 표시는 거기에 붙어야 실린더와 같은 곳을 가리킨다. */
+function slotPos(geoRef, id, dupPref) {
+  if (!geoRef || !geoRef.nodes) return null;
+  return geoRef.nodes[id] || geoRef.nodes[id + '#' + (dupPref || 'dn')] ||
+    geoRef.nodes[id + '#up'] || null;
+}
+/** 인스턴스 키 — 중복 노드만 접미사를 단다(단일 노드는 종전 id 그대로라 기존 참조가 산다). */
+const slotKey = (id, dup) => (dup ? id + '#' + dup : id);
+const slotNodeId = (key) => key.split('#')[0];
+/** 실린더(용량)를 그릴 자리인가 — 중복 노드는 **하행 자리만**(ECS의 큐가 거기 쌓인다). */
+const isWorkSlot = (dup) => dup !== 'up';
+
+/**
+ * 간선의 양 끝 인스턴스를 고른다: **앞으로 가면서 가장 짧은 조합**.
+ * 그래야 센서→ECS↑, ICC↓→ECS↓ 처럼 뜻에 맞는 자리끼리 이어진다.
+ */
+function pickSlots(fromNode, toNode) {
+  const A = nodeSlots(fromNode), B = nodeSlots(toNode);
+  let best = null;
+  A.forEach((a) => B.forEach((b) => {
+    const span = b.col - a.col;
+    const fwd = span > 0;
+    const score = (fwd ? 0 : 1000) + Math.abs(span);
+    if (!best || score < best.score) best = { a: a, b: b, score: score };
+  }));
+  return best;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2. 상태
+   ══════════════════════════════════════════════════════════════════════════ */
+const el = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = (t) => {
+  const s = Math.max(0, t);
+  return String(Math.floor(s / 60)).padStart(2, '0') + ':' + (s % 60).toFixed(1).padStart(4, '0');
+};
+
+let mode = 'asis';   // URL의 mode= 로 초기화된다(배선부 참조)
+let speed = 5;
+let playing = false;
+let run = null;        // { res, cfg, catalog, nodes, tracks, allFlows, allSpans }
+let sel = null;        // [항적 개별] 선택된 항적 뷰모델
+let gv = null;         // [전체 흐름] 전역 뷰모델 (buildGlobal)
+let view = 'all';      // 'all'(전체 흐름) | 'track'(항적 개별)
+let simT = 0;
+let lastWall = 0;
+let timerId = null;
+const SLOW = 10;       // 이 이상 걸리는 전문만 전체 보기에서 개별 점으로 그린다(음성·문자·VTC·KVMF)
+
+/** 현재 보기의 시간축. 전체 보기는 실행 전 구간, 개별 보기는 그 항적의 생존 구간이다. */
+function viewT0() { return view === 'all' ? 0 : (sel ? sel.spawnT : 0); }
+function viewT1() {
+  if (view === 'all') return run ? run.cfg.endTimeSec : 1;
+  return sel ? sel.endT : 1;
+}
+/** 현재 보기의 「다음 사건」 시각 목록(⏭·눈금 공용). */
+function viewTimes() {
+  if (view === 'all') return gv ? gv.rowTimes : [];
+  return sel && sel.logTimes ? sel.logTimes : [];
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   3. 실행 — 엔진을 직접 부른다(워커 없이 동기 실행). flowTrace를 켜는 유일한 지점.
+   ══════════════════════════════════════════════════════════════════════════ */
+/**
+ * 조작 손잡이 → 엔진 features.
+ * 화면에 없는 항목은 본 앱의 기본값(ADR-065·066·067·069·072)을 그대로 쓴다 — 여기서
+ * 임의로 끄면 이 화면의 수치가 본 앱과 갈라진다.
+ */
+function features() {
+  return {
+    highResolutionDeployment: true, threatTargetDispersion: true,
+    southernAxes: true, linkSemanticsV2: true, sensorReportParity: true,
+    sawtoothFreshness: true,
+    approvalChain: P.appr,
+    unifiedEngagementState: P.cop,
+    selfDefenseFire: P.sdf,
+    engageOnRemote: P.eor,
+    // ADR-085 반사실 — 빈 문자열이면 키를 null로 넘겨 계선이 한 가닥도 생기지 않게 한다.
+    usfkTrackSharing: P.share || null,
+    wtaSuitability: P.suit,      // ADR-086
+    uavLocalSelfEngage: P.uavsd  // ADR-087
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   3-b. 실험 조건 — URL 파라미터 (화면 손잡이 없음)
+   ══════════════════════════════════════════════════════════════════════════ */
+/**
+ * 조건은 전부 쿼리스트링으로 준다. 예:
+ *   ?x=3&appr=0&share=datalink&sc=sc2&mode=tobe
+ *
+ * ⚠️ 기본값은 **본 앱(index.html)의 기본값과 같아야 한다**(ADR-065·066·067·069·072).
+ *    여기서 임의로 다르게 두면 같은 시나리오인데 이 화면만 다른 수치를 낸다.
+ */
+const PARAMS = [
+  { k: 'sc',    d: 'sc3',   t: 'str',  h: '시나리오 (sc1|sc2|sc3)' },
+  // 배치는 **고정**이다(사용자 결정) — 아래 DEPLOYMENT 상수. 본 앱(js/core/router.js DEFAULTS)·
+  // 기준선(tests/hires-baseline.json)과 같은 배치여야 한다. 종전에는 `DEPLOYMENT_IDS[0]`
+  // (= HANBANDO_FULL_NORMAL)로 떨어져, 같은 시나리오인데 이 화면만 다른 배치의 수치를 냈다
+  // (노드 180 vs 64 · 중복교전 49 vs 2 · SC3 As-Is 누수 17 vs 33).
+  // ⚠️ 무력화 배치(MCRC_DOWN·KAMDOC_DOWN)는 이 화면에서 볼 수 없게 된다 — 필요해지면
+  //    상수를 파라미터로 되돌린다.
+  { k: 'mode',  d: 'asis',  t: 'str',  h: '체계 모드 (asis|tobe)' },
+  { k: 'seed',  d: 12345,   t: 'num',  h: '난수 seed' },
+  { k: 'dur',   d: 600,     t: 'num',  h: '관측 시간(초)' },
+  // 위협 강도는 **×1 고정**이다(사용자 결정). 배율을 바꾸면 같은 화면이 다른 부하의
+  // 결과를 같은 모양으로 보여주게 되고, 본 앱 기본값과도 어긋난다. 파라미터를 두지 않는다.
+  { k: 'appr',  d: 1,       t: 'bool', h: '승인 계선 (ADR-058·065)' },
+  { k: 'cop',   d: 1,       t: 'bool', h: '교전현황 공유 COP (ADR-068 · To-Be 전용 효과)' },
+  { k: 'sdf',   d: 1,       t: 'bool', h: '자위권 발사 (ADR-071·072)' },
+  { k: 'eor',   d: 0,       t: 'bool', h: '원격 교전 (ADR-070 · 기본 꺼짐)' },
+  { k: 'share', d: '',      t: 'str',  h: '연합 항적 공유 반사실 (datalink|kvmf-relay|voice|chat|"" , ADR-085)' },
+  { k: 'suit',  d: 0,       t: 'bool', h: '고도대역 적합도 To-Be 복원 (ADR-086 · 반사실)' },
+  { k: 'uavsd', d: 0,       t: 'bool', h: '무인기 국지방공 자체 교전 (ADR-087 · 반사실)' }
+];
+const qs = new URLSearchParams(location.search);
+const P = {};
+PARAMS.forEach((p) => {
+  const raw = qs.get(p.k);
+  if (raw == null || raw === '') { P[p.k] = p.d; return; }
+  P[p.k] = p.t === 'num' ? (Number.isFinite(+raw) ? +raw : p.d)
+    : p.t === 'bool' ? (raw !== '0' && raw !== 'false')
+    : raw;
+});
+const INTENSITY = 1;             // 고정. 위 PARAMS 주석 참조.
+const DEPLOYMENT = 'HANBANDO_LEGACY_NORMAL';   // 고정. 위 PARAMS 주석 참조.
+P.seed = Math.max(0, Math.floor(P.seed));
+P.dur = Math.min(7200, Math.max(60, Math.floor(P.dur)));
+console.info('[지휘 흐름] 실험 조건은 URL 파라미터로만 줍니다:\n' +
+  PARAMS.map((p) => `  ?${p.k}=  (기본 ${JSON.stringify(p.d)})  ${p.h}`).join('\n') +
+  '\n예) ?sc=sc2&x=5&appr=0&mode=asis');
+
+/** 기본값과 다른 조건만 골라 상태줄에 붙일 칩 문자열. 숨긴 조건이 조용히 섞이지 않게 한다. */
+function activeConfigChips() {
+  const out = [];
+  if (!P.appr) out.push('승인계선 OFF');
+  if (!P.cop) out.push('COP OFF');
+  if (!P.sdf) out.push('자위권 OFF');
+  if (P.eor) out.push('원격교전 ON');
+  if (P.suit) out.push('적합도복원 ON');
+  if (P.uavsd) out.push('무인기 자체교전 ON');
+  return out;
+}
+
+/** 계선 매체 반사실: { '<from>><to>><kind>': '<매체 키>' } */
+let overrides = {};
+
+function doRun() {
+  const cfg = {
+    scenario: KJ.scenarioById(el('sc').value), mode: mode,
+    // 본 앱 [시뮬레이션] 탭의 강도 슬라이더와 같은 의미(도착률 배율) — 엔진이 이미
+    // 지원하는 값이라 여기서 새 의미를 지어내는 것이 아니다.
+    intensity: INTENSITY,
+    seed: Math.max(0, Math.floor(+el('seed').value || 0)),
+    endTimeSec: Math.min(7200, Math.max(60, Math.floor(+el('dur').value || 600))),
+    deploymentId: DEPLOYMENT, modelFidelity: 'iads-c2',
+    trace: true, traceCap: 300, flowTrace: true, features: features()
+  };
+  if (Object.keys(overrides).length) cfg.linkMediaOverrides = Object.assign({}, overrides);
+  el('status').textContent = '실행 중…';
+  el('run').disabled = true;
+  // "실행 중" 표시가 실제로 그려진 뒤에 계산을 시작한다(동기 실행이라 그 사이 UI가 멈춘다).
+  // ⚠️ rAF로 미루면 안 된다 — 탭이 배경에 있을 때 rAF는 정지하고, 실행이 **영영 시작되지
+  //    않은 채** "실행 중…"에서 굳는다(실측). 타이머는 배경에서도 (느려질 뿐) 돈다.
+  setTimeout(() => {
+    const t0 = performance.now();
+    let res;
+    try {
+      res = KJ.runDES(cfg);
+    } catch (err) {
+      el('status').textContent = '실행 실패: ' + err.message;
+      el('run').disabled = false;
+      return;
+    }
+    const wall = performance.now() - t0;
+    const catalog = KJ.resolveModelCatalog(cfg);
+    const nodes = {};
+    KJ.nodesInMode(mode, catalog).forEach((n) => { nodes[n.id] = n; });
+    const built = buildTracks(res);
+    run = { res, cfg, catalog, nodes, tracks: built.tracks,
+      allFlows: built.allFlows, allSpans: built.allSpans, allBlocks: built.allBlocks };
+    gv = buildGlobal(run);
+    el('run').disabled = false;
+    el('dirty').hidden = true;
+    const ovr = res.linkMediaOverrides;
+    const chips = activeConfigChips();
+    const co = res.global.coordination || null;
+    const multiFire = run.tracks.filter((t) => t.fireShooters.length > 1).length;
+    el('status').innerHTML =
+      `${run.tracks.length}개 항적 · 전문 ${res.flowEvents.filter((e) => e.k === 'link').length}건` +
+      (res.flowTruncated ? ' (관측 상한 절삭)' : '') +
+      ` · 격추 ${res.global.killed} / 누수 ${res.global.leaked}` +
+      // ADR-086: 「값싼 표적을 고가 유도탄으로」가 눈에 띄게 상시 표출한다(KJADS 원칙 5-1).
+      // 고가유도탄 보존율 = 1 − (≥5 M$ 요격탄 소모액 / 전체 요격탄 소모액) — 엔진 정의 그대로.
+      ` · <span title="요격탄 총 소모액(개념값) / 고가유도탄(≥5 M$) 보존율 — 낮을수록 비싼 탄을 많이 쓴 것">` +
+      `요격비 ${res.global.cost.interceptM.toFixed(0)} M$ · 고가탄 보존 ` +
+      `<b style="color:${res.global.highValuePreservation < 0.5 ? 'var(--bad)' : 'var(--ok)'}">` +
+      `${(res.global.highValuePreservation * 100).toFixed(0)}%</b></span>` +
+      ` · 계산 ${(wall / 1000).toFixed(1)}초` +
+      (ovr && ovr.applied.length
+        ? ` · <b style="color:var(--warn)">반사실 ${ovr.applied.length}건 적용</b>` : '') +
+      (ovr && ovr.unmatched.length
+        ? ` · <b style="color:var(--bad)">못 맞춘 계선 ${ovr.unmatched.length}건</b>` : '') +
+      (res.usfkTrackSharing
+        ? ` · <b style="color:var(--warn)">연합 항적공유 ${esc(media(res.usfkTrackSharing.media).label)}` +
+          ` ${res.usfkTrackSharing.activeInMode}가닥(반사실)</b>` : '') +
+      // 손잡이를 숨겼으므로 **기본값이 아닌 조건은 반드시 화면에 남긴다** — 안 그러면
+      // 같은 화면이 다른 조건의 결과를 같은 모양으로 보여준다.
+      // 중복교전 — As-Is의 핵심 실패인데 종전 화면에는 아예 없었다(엔진은 계속 세고 있었다).
+      // ⚠️ 엔진 카운터와 화면 관측을 **나란히** 적는다. 정의가 달라 값이 다르므로 하나로
+      //    합치면 어느 쪽도 인용할 수 없게 된다.
+      (co ? ` · <b style="color:${co.duplicates ? 'var(--bad)' : 'var(--dim)'}"` +
+        ` title="엔진 계정: 협조 실패로 두 계통이 각각 교전한 건수 / COP·협조로 해소한 건수">` +
+        `중복교전 ${co.duplicates} · 해소 ${co.deconflicted}</b>` +
+        ` <span style="color:var(--dim)" title="관측: 서로 다른 사수가 같은 항적에 발사한 항적 수">` +
+        `(복수 사수 발사 ${multiFire}건)</span>` : '') +
+      (chips.length ? ` · <b style="color:var(--warn)">${esc(chips.join(' · '))}</b>` : '');
+    // 같은 항적을 계속 보게 한다 — 조건을 바꿔 가며 한 항적을 쫓는 것이 이 화면의 쓰임이다.
+    if (view === 'track') {
+      renderTrackList();
+      const keep = sel ? run.tracks.findIndex((t) => t.id === sel.id && t.flows.length) : -1;
+      selectTrack(keep >= 0 ? keep : run.tracks.findIndex((t) => t.flows.length > 0));
+    } else {
+      sel = null;
+      setView('all');
+    }
+  }, 30);
+}
+
+/** 실행 조건이 바뀌었음을 알린다 — 화면 수치는 아직 옛 실행의 것이다. */
+function markDirty() { el('dirty').hidden = false; }
+
+/**
+ * 실행 결과를 **항적 단위 뷰모델**로 접는다.
+ * flowEvents는 전 항적이 뒤섞인 한 벌이라, 여기서 한 번만 갈라 둔다.
+ *
+ * 노드 체류(대기 + 처리)는 도착(na) → 개시(ns) → 완료(nd)를 `id`로 이어 만든다.
+ * ns/nd에는 항적 id가 실리지 않으므로(같은 값을 세 번 싣지 않는다) na에서 물려받는다.
+ */
+function buildTracks(res) {
+  const byId = {};
+  const spanById = {};
+  (res.threatTraces || []).forEach((tr) => {
+    byId[tr.id] = { id: tr.id, type: tr.type, axis: tr.axis, spawnT: tr.spawnT,
+      exitT: tr.exitT, outcome: tr.outcome, stages: tr.stages || [], flows: [], spans: [],
+      // ⚠️ `failure`(ADR-050 실패 분류 v2 — 주원인·기여원인·계열·구조성)를 반드시 옮긴다.
+      //    빠뜨리면 누수 배너가 코드만 찍고 「왜」가 사라진다(실제로 그렇게 빠뜨렸다).
+      failure: tr.failure || null };
+  });
+  (res.flowEvents || []).forEach((e) => {
+    if (e.k === 'link') { const t = byId[e.th]; if (t) t.flows.push(e); return; }
+    if (e.k === 'na') {
+      const t = byId[e.th];
+      const sp = { id: e.id, at: e.at, jk: e.jk, arrive: e.t, start: null, done: null, drop: null };
+      spanById[e.id] = sp;
+      if (t) { sp.track = t; t.spans.push(sp); }
+      return;
+    }
+    const sp = spanById[e.id];
+    if (!sp) return;
+    if (e.k === 'ns') sp.start = e.t;
+    else if (e.k === 'nd') sp.done = e.t;
+    else if (e.k === 'nx') { sp.drop = e.t; sp.dropR = e.r; } // r: over(넘침)·ttl(기한)·dead(항적 종결)
+  });
+  // 발사 이력 — 「한 항적에 몇 개 계통이 각각 쐈나」(중복교전)를 세려면 필요하다.
+  // ⚠️ 이것은 **관측된 발사**이지 엔진의 중복교전 카운터(global.coordination.duplicates)와
+  //    같은 정의가 아니다. 엔진은 「협조 실패로 두 계통이 각각 교전」을 세고, 여기서는
+  //    「서로 다른 사수가 이 항적에 발사」를 센다. 둘을 섞어 적지 않는다(화면에서 구분 표기).
+  Object.keys(byId).forEach((k) => {
+    const t = byId[k];
+    t.fires = [];
+    t.stages.forEach((s) => {
+      const m = s.name.match(/^발사:([^/]+)/);
+      if (m) t.fires.push({ t: s.t, shooter: m[1] });
+    });
+    const uniq = [];
+    t.fires.forEach((f) => { if (uniq.indexOf(f.shooter) < 0) uniq.push(f.shooter); });
+    t.fireShooters = uniq;
+    // 두 번째 **다른 사수**가 쏜 시각 = 중복이 성립한 순간
+    t.dupT = null;
+    if (uniq.length > 1) {
+      const second = uniq[1];
+      const hit = t.fires.find((f) => f.shooter === second);
+      t.dupT = hit ? hit.t : null;
+    }
+  });
+
+  const list = Object.keys(byId).map((k) => byId[k]);
+  list.sort((a, b) => a.spawnT - b.spawnT);
+  list.forEach((t) => {
+    t.flows.sort((a, b) => a.t0 - b.t0 || a.t1 - b.t1);
+    t.spans.sort((a, b) => a.arrive - b.arrive);
+    t.endT = t.exitT != null ? t.exitT
+      : Math.max(t.spawnT, ...t.flows.map((f) => f.t1), ...t.stages.map((s) => s.t));
+  });
+  // ── 채널 적체 — 「가야 할 방향은 있는데 못 가는」 전문 ────────────────────────
+  // 종전 관측은 **실제로 출발한 전문만** 기록했다(_recordLink). 그래서 교전현황 채널이
+  // 1채널·4건 용량에 막혀 대기하거나 버려진 전문은 화면에 흔적조차 없었다 —
+  // As-Is 실측으로 보낸 15건 중 2건만 건너가는데 그 2건만 보였다.
+  //   · wait — 대기줄에 섰다. t1이 Infinity면 **관측 끝까지 못 갔다.**
+  //   · drop — 대기줄에도 못 서고 버려졌다. 이 전문은 영영 출발하지 않는다.
+  const departByMid = new Map();
+  (res.flowEvents || []).forEach((e) => {
+    if (e.k === 'link' && e.mid != null) departByMid.set(e.mid, e);
+  });
+  const allBlocks = [];
+  (res.flowEvents || []).forEach((e) => {
+    if (e.k === 'cq') {
+      const d = departByMid.get(e.id);
+      allBlocks.push({ kind: 'wait', from: e.from, to: e.to, th: e.th,
+        t0: e.t, t1: d ? d.t0 : Infinity, freed: !!d });
+    } else if (e.k === 'cx') {
+      allBlocks.push({ kind: 'drop', from: e.from, to: e.to, th: e.th, t0: e.t, t1: e.t });
+    }
+  });
+  allBlocks.sort((a, b) => a.t0 - b.t0);
+  allBlocks.forEach((b) => { const t = byId[b.th]; if (t) (t.blocks = t.blocks || []).push(b); });
+  list.forEach((t) => { t.blocks = t.blocks || []; });
+
+  // 전체 흐름 보기용 전역 배열 — 항적으로 갈라지기 전의 전량.
+  // ⚠️ threatTraces에 없는 항적(traceCap 초과분)의 사건도 flowEvents에는 실려 있으므로,
+  //    항적별 배열을 다시 합치면 안 되고 원본에서 다시 걸러야 한다.
+  const allFlows = (res.flowEvents || []).filter((e) => e.k === 'link')
+    .sort((a, b) => a.t0 - b.t0);
+  const allSpans = Object.keys(spanById).map((k) => spanById[k])
+    .sort((a, b) => a.arrive - b.arrive);
+  return { tracks: list, allFlows, allSpans, allBlocks };
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   4-b. 전체 흐름 뷰모델 — 노드별 케파 이력과 병목 사건
+   ══════════════════════════════════════════════════════════════════════════ */
+/**
+ * 전역 사건에서 세 가지를 뽑는다.
+ *  · nodeStats — 노드별 총 도착·이탈(정렬·놀고 있는 장비 판별용)
+ *  · rows — 병목 사건 로그: 도착 즉시 드롭(넘침) · 큐 이탈(포기·기한) · 포화 진입/해소
+ *  · c/K — 카탈로그 선언 용량. ⚠️ 지어내지 않는다 — queue 선언이 없는 노드(포대·센서)는
+ *    링을 비워 두고 포화 판정도 하지 않는다(0과 미측정을 가르는 ADR-062 규율).
+ */
+function buildGlobal(run) {
+  const stats = {};   // id -> { arr, drops(over+ttl — 엔진 ns.drops와 같은 계정), dead, peakQ }
+  const st = (id) => stats[id] || (stats[id] = { arr: 0, drops: 0, dead: 0, peakQ: 0 });
+  const points = []; // 점 사건: {t, type:'overflow'|'ttl'|'dead', node, th}
+
+  // 노드별 시간순 사건 스위프 — busy·q를 복원해 포화 구간을 찾는다.
+  const evs = [];   // {t, node, kind:'a'|'s'|'d'|'x', th}
+  run.allSpans.forEach((s) => {
+    st(s.at).arr++;
+    evs.push({ t: s.arrive, node: s.at, kind: 'a', th: s.track ? s.track.id : null });
+    if (s.start != null) evs.push({ t: s.start, node: s.at, kind: 's' });
+    if (s.done != null) evs.push({ t: s.done, node: s.at, kind: 'd' });
+    if (s.drop != null) {
+      evs.push({ t: s.drop, node: s.at, kind: 'x' });
+      // 사유는 엔진이 실어 준 r로만 가른다(재추정 금지) — 'over'·'ttl'은 엔진 드롭
+      // 계정과 같은 계정이고, 'dead'는 항적 종결에 따른 큐 정리라 드롭이 아니다.
+      const th = s.track ? s.track.id : null;
+      if (s.dropR === 'over') { st(s.at).drops++; points.push({ t: s.drop, type: 'overflow', node: s.at, th }); }
+      else if (s.dropR === 'ttl') { st(s.at).drops++; points.push({ t: s.drop, type: 'ttl', node: s.at, th }); }
+      else if (s.dropR === 'dead') { st(s.at).dead++; points.push({ t: s.drop, type: 'dead', node: s.at, th }); }
+    }
+  });
+  // 동률 순서는 엔진 실순서를 따른다: 완료(서버 비움) → 도착 → 개시(인출) → 이탈.
+  // 이 순서여야 재구성 q가 음수로 내려가지 않는다(회귀 flow-trace ③-g와 같은 규칙).
+  const ORD = { d: 0, a: 1, s: 2, x: 3 };
+  evs.sort((a, b) => a.t - b.t || ORD[a.kind] - ORD[b.kind]);
+
+  // 포화를 사건 두 개(진입/해소)가 아니라 **구간 하나**로 남긴다 — 진입·해소가 번갈아
+  // 수십 줄 찍히면 같은 병목이 여러 사건처럼 읽힌다(실제 지적: 중복으로 보임).
+  const live = {};  // id -> {busy, q, satT0, satPeakQ}
+  const sats = []; // {t, tEnd, node, c, peakQ}
+  evs.forEach((e) => {
+    const n = run.nodes[e.node];
+    const cap = nodeCap(n); const c = cap ? cap.c : null;
+    const L = live[e.node] || (live[e.node] = { busy: 0, q: 0, satT0: null, satPeakQ: 0 });
+    if (e.kind === 'a') L.q++;
+    else if (e.kind === 's') { L.q--; L.busy++; }
+    else if (e.kind === 'd') L.busy--;
+    else if (e.kind === 'x') L.q--;
+    st(e.node).peakQ = Math.max(st(e.node).peakQ, L.q);
+    if (c != null) {
+      const satNow = L.busy >= c && L.q > 0;
+      if (satNow && L.satT0 == null) { L.satT0 = e.t; L.satPeakQ = L.q; }
+      else if (L.satT0 != null && L.q > L.satPeakQ) L.satPeakQ = L.q;
+      else if (!satNow && L.satT0 != null && L.q === 0) {
+        sats.push({ t: L.satT0, tEnd: e.t, node: e.node, c, peakQ: L.satPeakQ });
+        L.satT0 = null; L.satPeakQ = 0;
+      }
+    }
+  });
+  // 관측 종료까지 안 풀린 포화도 구간으로 남긴다 — 빼면 "끝에는 괜찮았다"로 오독된다.
+  Object.keys(live).forEach((id) => {
+    const L = live[id], n = run.nodes[id];
+    const capL = nodeCap(n);
+    if (L.satT0 != null && capL) {
+      sats.push({ t: L.satT0, tEnd: run.cfg.endTimeSec, node: id, c: capL.c,
+        peakQ: L.satPeakQ, open: true });
+    }
+  });
+
+  // 점 사건은 (노드, 종류) 버스트로 묶는다 — 간격 10초 이내 연속 사건은 한 줄이다.
+  // ⚠️ 묶는 것은 표시뿐이다. 눈금(marks)·건수는 원사건 그대로 남긴다(대사와 어긋나면 안 된다).
+  // 채널 적체 — 노드 큐가 아니라 **계선 자체**가 막힌 것. 종류를 갈라 둔다:
+  // 못 가고 기다림(chwait) / 대기줄에도 못 서고 버려짐(chdrop).
+  // ⚠️ 반드시 아래 정렬·버스트 묶기 **앞에서** 넣어야 한다 — 뒤에 넣으면 이미 만들어진
+  //    버스트에 안 섞여 로그에 한 줄도 안 나온다(실제로 그렇게 실수했다).
+  (run.allBlocks || []).forEach((b) => {
+    if (b.kind === 'drop') {
+      points.push({ t: b.t0, type: 'chdrop', node: b.from, th: b.th, to: b.to });
+    } else {
+      points.push({ t: b.t0, type: 'chwait', node: b.from, th: b.th, to: b.to,
+        until: b.t1, freed: b.freed });
+    }
+  });
+
+  // 중복교전 — 두 계통이 같은 표적에 각각 쏜 순간. As-Is에서는 축 간 교전상태 비공유의
+  // 직접 결과이고 요격탄 이중 소모로 이어진다. 포화·누수와 같은 축에 놓는다.
+  run.tracks.forEach((t) => {
+    if (t.fireShooters.length < 2 || t.dupT == null) return;
+    points.push({ t: t.dupT, type: 'dup', node: null, th: t.id,
+      shooters: t.fireShooters.map((s) => nodeName(s)) });
+  });
+
+  // 누수 — 병목의 **결과**다. 포화·막힘과 같은 축에 놓아야 「무엇이 무엇을 낳았는지」가 읽힌다.
+  // 사유별로 묶는다(노드 귀속이 있는 overflow만 노드를 단다).
+  run.tracks.forEach((t) => {
+    const oc = outcomeInfo(t);
+    if (!oc.leaked) return;
+    const ov = (oc.code || '').match(/^overflow:(.+)$/);
+    points.push({ t: t.exitT, type: 'leak', node: ov ? ov[1] : null, th: t.id,
+      code: oc.code, leakText: oc.text });
+  });
+
+  points.sort((a, b) => a.t - b.t);
+  const GAP = 10;
+  const bursts = [];
+  const openBurst = {};
+  points.forEach((p) => {
+    // 누수는 노드가 아니라 **사유**로 묶는다(대부분 노드 귀속이 없다).
+    const k = p.type === 'leak' ? 'leak|' + p.code
+      : p.type === 'dup' ? 'dup'
+      : p.node + '|' + p.type + '|' + (p.to || '');
+    const b = openBurst[k];
+    if (b && p.t - b.tEnd <= GAP) {
+      b.tEnd = p.t; b.n++;
+      if (p.th && b.ths.indexOf(p.th) < 0) b.ths.push(p.th);
+      // 대기는 「언제까지 못 갔는가」가 핵심이라, 버스트의 끝을 해소 시각까지 늘린다.
+      if (p.until != null) b.until = Math.max(b.until || 0, isFinite(p.until) ? p.until : Infinity);
+    } else {
+      openBurst[k] = { t: p.t, tEnd: p.t, type: p.type, node: p.node, to: p.to, n: 1,
+        ths: p.th ? [p.th] : [], until: p.until, leakText: p.leakText, code: p.code,
+        shooters: p.shooters };
+      bursts.push(openBurst[k]);
+    }
+  });
+
+  const TYPE_TEXT = {
+    overflow: (b) => `넘침${b.n > 1 ? ' ×' + b.n : ''} — ${nodeNameOf(run, b.node)} 대기실 초과 즉시 드롭` + thTail(b),
+    chdrop: (b) => `계선 드롭${b.n > 1 ? ' ×' + b.n : ''} — ${nodeNameOf(run, b.node)} → ` +
+      `${nodeNameOf(run, b.to)} 채널 용량 초과로 **출발조차 못 함**`.replace(/\*\*/g, '') + thTail(b),
+    chwait: (b) => `계선 막힘${b.n > 1 ? ' ×' + b.n : ''} — ${nodeNameOf(run, b.node)} → ` +
+      `${nodeNameOf(run, b.to)} 채널이 비지 않아 대기` + thTail(b),
+    dup: (b) => `중복교전${b.n > 1 ? ' ×' + b.n : ''} — 두 계통이 같은 표적에 각각 발사` +
+      (b.shooters ? ` (${b.shooters.join(' + ')})` : '') + thTail(b),
+    leak: (b) => `누수${b.n > 1 ? ' ×' + b.n : ''} — ${b.leakText}` +
+      (b.code ? ` (${b.code})` : '') + thTail(b),
+    ttl: (b) => `기한 만료${b.n > 1 ? ' ×' + b.n : ''} — ${nodeNameOf(run, b.node)} 대기 중 유효시간 초과 드롭` + thTail(b),
+    dead: (b) => `큐 정리${b.n > 1 ? ' ×' + b.n : ''} — ${nodeNameOf(run, b.node)} 대기 중 항적 종결(격추·이탈)` + thTail(b)
+  };
+  function thTail(b) {
+    if (!b.ths.length) return '';
+    return ` (${b.ths[0]}${b.ths.length > 1 ? ' 외 ' + (b.ths.length - 1) : ''})`;
+  }
+  const rows = bursts.map((b) => ({
+    // 대기 버스트는 해소될 때까지가 「진행 중」이다. 미해소(Infinity)면 관측 끝까지.
+    t: b.t,
+    tEnd: b.type === 'chwait'
+      ? (isFinite(b.until) ? Math.max(b.tEnd, b.until) : run.cfg.endTimeSec)
+      : b.tEnd,
+    type: b.type, node: b.node,
+    text: TYPE_TEXT[b.type](b) +
+      (b.type === 'chwait' && !isFinite(b.until) ? ' — 관측 종료까지 미해소' : '')
+  })).concat(sats.map((s) => ({
+    t: s.t, tEnd: s.tEnd, type: 'sat', node: s.node,
+    text: `포화 ${(s.tEnd - s.t).toFixed(0)}초 — ${nodeNameOf(run, s.node)} 처리 ${s.c}/${s.c} + ` +
+      `대기 최대 ${s.peakQ}건` + (s.open ? ' (관측 종료까지 미해소)' : '')
+  })));
+  rows.sort((a, b) => a.t - b.t);
+
+  // 눈금은 원사건 전량 — 묶인 줄 수와 달리, 축 위에서는 밀도가 곧 정보다.
+  const marks = points.map((p) => ({ t: p.t,
+    bad: p.type === 'overflow' || p.type === 'chdrop' || p.type === 'leak' }))
+    .concat(sats.map((s) => ({ t: s.t, bad: false })));
+  return { stats, rows, rowTimes: rows.map((r) => r.t), marks,
+    focusNode: null, logEls: null };
+}
+
+function nodeNameOf(run, id) {
+  const n = run.nodes[id];
+  return n ? (n.name || id) : id;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   4. 항적 목록 · 이벤트 로그 (좌측)
+   ══════════════════════════════════════════════════════════════════════════ */
+/* ── 누수(실패) 표기 — ADR-050 실패 분류 v2를 화면으로 끌어올린다 ──────────────
+   ⚠️ 종전 화면은 누수를 「배지 하나 + 움직임 없음」으로만 보여줬다. 그런데 엔진은 누수마다
+      주원인·기여원인·계열·구조성을 이미 기록한다(trace.failure). 그걸 버리면 「왜 못 막았나」가
+      화면에서 사라지고, 누수가 전부 같은 실패처럼 보인다.
+   ⚠️ 원문 코드(timeout:c2 등)를 지우지 않는다 — 한글 풀이는 읽기용이고, 인용·대조는 코드로 한다. */
+const LEAK_LABEL = {
+  'timeout:c2': 'C2 지연으로 교전 시한 초과',
+  'timeout:engage': '교전 개시 후 시한 초과',
+  'window_lost_due_to_c2': 'C2 지연으로 체공창 상실',
+  'missed': '요격했으나 명중 실패',
+  'no_responsible_c2': '책임 C2 없음',
+  'responsibility_gap': '협조 경로 없음(책임 공백)',
+  'no_capable_weapon': '교전 가능 무기 없음',
+  'no_shooter': '가용 사수 없음'
+};
+const LEAK_FAMILY = { kinematic: '기하·운동', capacity: '용량', architecture: '구조', stochastic: '확률' };
+const LEAK_STRUCT = { structural: '구조적', conditional: '조건부', nonstructural: '비구조적' };
+/** 누수 사유 코드 → 읽을 수 있는 짧은 말. overflow:<노드> 처럼 인자를 문 코드도 다룬다. */
+function leakText(code) {
+  if (!code) return '사유 미기록';
+  if (LEAK_LABEL[code]) return LEAK_LABEL[code];
+  const ov = code.match(/^overflow:(.+)$/);
+  if (ov) return `${nodeName(ov[1])} 포화로 드롭`;
+  return code;
+}
+/** 항적의 종결 정보 — { leaked, code, text, family, struct, contributors } */
+function outcomeInfo(t) {
+  if (t.outcome === 'killed') return { leaked: false };
+  if (t.exitT == null) return { leaked: false, open: true };
+  const code = (String(t.outcome || '').match(/^leaked:(.+)$/) || [])[1] ||
+    (t.failure && t.failure.primaryCause) || null;
+  const f = t.failure || {};
+  return { leaked: true, code: code, text: leakText(code),
+    family: LEAK_FAMILY[f.family] || f.family || null,
+    struct: LEAK_STRUCT[f.structurality] || f.structurality || null,
+    contributors: f.contributors || [] };
+}
+
+const THREAT_LABEL = {
+  uav_small: '소형 무인기', ac_low: '저고도 항공기', heli: '헬기', fighter: '전투기',
+  cruise: '순항미사일', srbm: '탄도탄', mrl_large: '장사정 유도탄'
+};
+
+function renderTrackList() {
+  const box = el('track-list');
+  if (!run || !run.tracks.length) { box.innerHTML = '<div class="empty">추적된 항적이 없습니다.</div>'; return; }
+  el('track-count').textContent = run.tracks.length + '건';
+  box.innerHTML = run.tracks.map((t, i) => {
+    const oc = outcomeInfo(t);
+    const cls = t.outcome === 'killed' ? 'ok' : (oc.leaked ? 'bad' : 'idle');
+    // 누수는 **사유까지** 배지에 적는다 — 「누수」만 적으면 22건이 전부 같은 실패로 보인다.
+    const txt = t.outcome === 'killed' ? '격추' : (oc.leaked ? '누수 · ' + oc.text : '진행중');
+    const tip = oc.leaked
+      ? `누수 — ${oc.code || '사유 미기록'}\n${oc.text}` +
+        (oc.family ? `\n계열 ${oc.family} · ${oc.struct}` : '') +
+        (oc.contributors.length ? `\n기여원인: ${oc.contributors.join(', ')}` : '')
+      : `${t.id} · ${THREAT_LABEL[t.type] || t.type}`;
+    // 복수 사수 발사 = 두 계통이 같은 표적에 각각 쏜 것. As-Is에서는 협조 실패의 결과다.
+    const dup = t.fireShooters.length > 1
+      ? `<span class="pill dup" title="${esc('서로 다른 사수가 각각 발사\n' +
+          t.fireShooters.map((s) => nodeName(s)).join(' + '))}">중복 ${t.fireShooters.length}</span>` : '';
+    return `<div class="trk" data-i="${i}" title="${esc(tip)}">
+      <span class="nm">${esc(t.id)}<span class="sub"> · ${esc(THREAT_LABEL[t.type] || t.type)} · ${esc(t.axis)}</span></span>
+      ${dup}<span class="pill ${cls}">${esc(txt)}</span></div>`;
+  }).join('');
+  box.querySelectorAll('.trk').forEach((n) => {
+    n.addEventListener('click', () => selectTrack(+n.dataset.i));
+  });
+}
+
+/**
+ * 로그 한 벌 = 링크 통과(↦) + 항적 마크(·)를 시각순으로 합친 것.
+ * 센서 마크(SENSOR_*)는 한 항적에서 전체의 절반을 넘어(ADR-081 실측: 59단계 중 40) 기본으로
+ * 감춘다 — 켜면 나머지가 묻힌다.
+ */
+function buildLogRows(t) {
+  const rows = [];
+  t.flows.forEach((f) => {
+    const m = media(f.mt);
+    // 센서 보고 통과도 「센서」로 묶어 함께 접는다 — 그래프에서 이미 같은 기준으로
+    // 걸러내므로(drawFrame), 로그만 다른 기준을 쓰면 화면과 로그가 어긋난다.
+    rows.push({ t: f.t0, kind: 'link', mt: f.mt, ref: f, sensor: f.mt === 'report-cycle',
+      text: `${nodeName(f.from)} → ${nodeName(f.to)}`,
+      tail: `${m.label} ${f.d.toFixed(1)}초` });
+  });
+  const threatValueM = (KJ.threatType(t.type) || {}).unitCostM;
+  t.stages.forEach((s) => {
+    // ADR-086: 발사 마크에 **요격탄 단가 대 위협 가치**를 붙인다. 「값싼 표적을 고가
+    // 유도탄으로 잡는다」(KJADS 원칙 5-1)는 이 모델이 보여주려는 문제인데, 종전 화면에는
+    // 어느 포대가 쐈는지만 있고 그 대가가 없어 눈에 띄지 않았다.
+    // ⚠️ 새 수치를 만들지 않는다 — 카탈로그의 costPerShotM과 threats.js의 unitCostM을
+    //    읽어 비율만 계산한다. 「고가」 임계는 엔진과 같은 값(HIGH_VALUE_COST_M = 5 M$).
+    let cost = null;
+    const fire = s.name.match(/^발사:([^/]+)/);
+    if (fire) {
+      const n = run.nodes[fire[1]];
+      const cps = n && n.engage ? n.engage.costPerShotM : null;
+      if (cps != null && threatValueM != null) {
+        cost = { cps: cps, val: threatValueM, ratio: threatValueM > 0 ? cps / threatValueM : Infinity,
+          high: cps >= 5 };
+      }
+    }
+    rows.push({ t: s.t, kind: 'mark', sensor: /^SENSOR_/.test(s.name), text: s.name,
+      tail: '', lane: laneTag(s.axis), cost: cost });
+  });
+  // 「못 간」 전문 — 이 항적의 로그에서도 출발한 전문과 나란히 시각순으로 보여야,
+  // 어느 시점에 무엇이 막혔는지가 읽힌다.
+  (t.blocks || []).forEach((b) => {
+    if (b.kind === 'drop') {
+      rows.push({ t: b.t0, kind: 'block', cls: 'chdrop',
+        text: `${nodeName(b.from)} → ${nodeName(b.to)} 채널 용량 초과 — 출발 못 함`, tail: '' });
+    } else {
+      rows.push({ t: b.t0, kind: 'block', cls: 'chwait',
+        text: `${nodeName(b.from)} → ${nodeName(b.to)} 채널 대기 시작` +
+          (isFinite(b.t1) ? ` (${(b.t1 - b.t0).toFixed(0)}초 뒤 출발)` : ' (끝까지 못 감)'),
+        tail: '' });
+    }
+  });
+  rows.sort((a, b) => a.t - b.t);
+  return rows;
+}
+
+/**
+ * 단계 마크의 지휘 축 꼬리표 (ADR-081의 레인을 한 줄 로그용으로 접은 것).
+ * ⚠️ 이게 없으면 같은 항적에 지휘관이 3~4개 붙는 구조에서 `승인완료:C2_MCRC_MCRC`가
+ *    세 번 찍힌 것이 **중복 기록처럼** 읽힌다(실제 오독 사례) — 실은 서부·중부·동부전방
+ *    군단 AOC 세 계통이 각자 받은 승인이다. 축 판정은 axis 필드로만 한다(ADR-081 규율).
+ */
+function laneTag(axis) {
+  if (!axis) return null;
+  if (axis === 'SENSOR') return '센서';
+  const bar = axis.indexOf('|');
+  const head = bar < 0 ? axis : axis.slice(0, bar);
+  const id = bar < 0 ? '' : axis.slice(bar + 1);
+  const nm = id ? nodeName(id).replace(/ (군단 AOC\/C2A|중앙방공통제소)$/, '') : '';
+  if (head === 'DOMAIN') return '병렬통보·' + nm;
+  if (head === 'SELF_DEFENSE') return '자위권·' + nm;
+  return nm || head;
+}
+
+function renderLog() {
+  const body = el('log-body');
+  if (!sel) { body.innerHTML = '<div class="empty">왼쪽 위에서 항적을 고르면<br>그 항적의 사건이 시각순으로 표시됩니다.</div>'; return; }
+  const showSensor = el('show-sensor').checked;
+  const rows = sel.logRows.filter((r) => showSensor || !r.sensor);
+  el('log-title').textContent = `${sel.id} — 이벤트 로그`;
+  el('log-hint').textContent = rows.length + '건';
+  body.innerHTML = rows.map((r, i) => {
+    const m = r.kind === 'link' ? media(r.mt) : null;
+    const tip = r.kind === 'link'
+      ? `${r.text}\n${r.tail} — ${fmt(r.t)} 출발 → ${fmt(r.ref.t1)} 도착`
+      : `${fmt(r.t)} ${r.text}`;
+    const c = r.cost;
+    const costChip = c
+      ? `<span class="med cost${c.high ? ' hi' : ''}">${c.cps} M$ → ${c.val} M$` +
+        (isFinite(c.ratio) ? ` (${c.ratio >= 10 ? Math.round(c.ratio) + '배' : c.ratio.toFixed(1) + '배'})` : '') +
+        `</span>` : '';
+    return `<div class="ev ${r.kind}${r.cls ? ' ' + r.cls : ''}" data-t="${r.t}" data-i="${i}" title="${esc(
+      tip + (r.lane ? '\n계통: ' + r.lane : '') +
+      (c ? `\n요격탄 ${c.cps} M$ · 위협 가치 ${c.val} M$` +
+        (c.high ? '\n고가 유도탄(≥5 M$) — 보존율 지표의 분자에 들어간다' : '') : ''))}">
+      <span class="t mono">${fmt(r.t)}</span>
+      <span class="x">${esc(r.text)}${m ? `<span class="med" style="color:${m.color}">${esc(r.tail)}</span>` : ''}${costChip}${r.lane ? `<span class="med lane">${esc(r.lane)}</span>` : ''}</span>
+    </div>`;
+  }).join('');
+  sel.logEls = [...body.querySelectorAll('.ev')];
+  sel.logTimes = rows.map((r) => r.t);
+  renderTicks();
+  paintLog();
+}
+
+let lastLogIdx = -2;
+function paintLog() {
+  if (!sel || !sel.logEls) return;
+  let idx = -1;
+  for (let i = 0; i < sel.logEls.length; i++) {
+    if (+sel.logEls[i].dataset.t <= simT) idx = i; else break;
+  }
+  if (idx === lastLogIdx) return;
+  lastLogIdx = idx;
+  sel.logEls.forEach((n, i) => {
+    // ⚠️ className을 통째로 갈아엎지 않는다 — 종류 클래스(block·chdrop·chwait)가 지워져
+    //    막힘 행이 일반 마크처럼 보인다. 진행 상태 세 개만 교체한다.
+    n.classList.remove('past', 'now', 'future');
+    n.classList.add(i < idx ? 'past' : (i === idx ? 'now' : 'future'));
+  });
+  if (idx >= 0 && sel.logEls[idx]) sel.logEls[idx].scrollIntoView({ block: 'nearest' });
+}
+
+/** 스크럽 막대 위 사건 눈금. 눈금 사이의 넓은 빈 구간이 곧 「대기」다.
+ *  전체 보기에서는 병목 사건이 눈금이 되고, 넘침(즉시 드롭)은 붉게 세운다. */
+function renderTicks() {
+  const box = el('ticks');
+  const t0 = viewT0(), span = Math.max(1e-6, viewT1() - t0);
+  const marks = view === 'all'
+    ? (gv ? gv.marks : [])
+    : (sel && sel.logTimes ? sel.logTimes.map((t) => ({ t, bad: false })) : []);
+  const seen = new Set();
+  box.innerHTML = marks.map((m) => {
+    const p = Math.round((m.t - t0) / span * 1000) / 10;
+    const key = p + (m.bad ? 'b' : '');
+    if (seen.has(key)) return '';
+    seen.add(key);
+    return `<i${m.bad ? ' class="bad"' : ''} style="left:${p}%"></i>`;
+  }).join('');
+}
+
+/** 현재 시각 이후 가장 가까운 사건으로 건너뛴다(없으면 끝으로). */
+function skipToNextEvent() {
+  const times = viewTimes();
+  const next = times.find((t) => t > simT + 1e-6);
+  simT = next != null ? next : viewT1();
+  drawFrame();
+}
+
+function nodeName(id) {
+  const n = run && run.nodes[id];
+  if (!n) return id;
+  return n.name || id;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   4-c. 「어디서 막혔나」 — 항적 하나의 시간 분해
+   ══════════════════════════════════════════════════════════════════════════ */
+/**
+ * 한 항적의 생존 구간을 **구간(segment)** 으로 쪼개 오래 걸린 순으로 세운다.
+ *
+ *   노드대기 — 도착했는데 서버가 안 비어 큐에서 기다림 (병목의 본체)
+ *   계선막힘 — 계선 입구에서 채널이 안 비어 못 떠남
+ *   공백     — 어느 계통에서도 아무 사건이 없던 시간(ADR-083 ④ 「교전 가능 상태 대기」가 여기 든다)
+ *   노드처리 — 실제로 일한 시간
+ *   이동     — 선 위를 건넌 시간
+ *
+ * ⚠️ **구간 합계는 전체 시간과 다르다.** 한 항적에 지휘관이 3~4개 동시에 붙어(ADR-081)
+ *    여러 계통이 **병렬로** 도므로 구간이 서로 겹친다. 그래서 백분율은 「전체 대비 이 구간의
+ *    길이」이지 「시간 배분 비율」이 아니다 — 합이 100%를 넘는다. 화면에 그렇게 적는다.
+ * ⚠️ 항적 종료 뒤까지 이어지는 구간은 **생존 구간으로 잘라** 센다. 이미 죽은 항적의
+ *    교전현황 전문이 264초를 더 못 갔다 해도 그것이 이 항적의 교전을 늦춘 것은 아니다.
+ *    잘려서 0이 되는 구간은 버리되 몇 건인지는 각주로 남긴다(0과 미측정 구분).
+ */
+function buildStalls(t) {
+  const t0 = t.spawnT;
+  const t1 = t.exitT != null ? t.exitT : t.endT;
+  const span = Math.max(1e-6, t1 - t0);
+  const segs = [];
+  let postExit = 0;
+  const add = (kind, a, b, label, ref) => {
+    const ca = Math.max(a, t0), cb = Math.min(b, t1);
+    if (cb - ca <= 0.05) { if (a >= t1 - 1e-9) postExit++; return; }
+    segs.push({ kind, t0: ca, t1: cb, rawT0: a, rawT1: b, dur: cb - ca, label, ref,
+      truncated: b > t1 + 1e-9 });
+  };
+
+  t.flows.forEach((f) => {
+    if (f.d <= 0) return;
+    add('move', f.t0, f.t1, `${nodeName(f.from)} → ${nodeName(f.to)} · ${media(f.mt).label}`,
+      { type: 'edge', from: f.from, to: f.to, mt: f.mt });
+  });
+  t.spans.forEach((s) => {
+    const started = s.start != null ? s.start : (s.drop != null ? s.drop : t1);
+    add('qwait', s.arrive, started, `${nodeName(s.at)} · ${s.jk} 큐 대기`, { type: 'node', id: s.at });
+    if (s.start != null) {
+      add('work', s.start, s.done != null ? s.done : t1,
+        `${nodeName(s.at)} · ${s.jk} 처리`, { type: 'node', id: s.at });
+    }
+  });
+  (t.blocks || []).forEach((b) => {
+    if (b.kind !== 'wait') return;
+    add('block', b.t0, isFinite(b.t1) ? b.t1 : t1,
+      `${nodeName(b.from)} → ${nodeName(b.to)} · 채널이 안 비어 못 떠남`,
+      { type: 'edge', from: b.from, to: b.to });
+  });
+
+  // 공백 = 위 구간들의 합집합에 대한 여집합. 「아무 일도 일어나지 않은 시간」이며,
+  // 재생하면 화면이 멈춘 것처럼 보이는 구간이 바로 이것이다.
+  const iv = segs.map((s) => [s.t0, s.t1]).sort((a, b) => a[0] - b[0]);
+  const merged = [];
+  iv.forEach((x) => {
+    const last = merged[merged.length - 1];
+    if (last && x[0] <= last[1] + 1e-9) last[1] = Math.max(last[1], x[1]);
+    else merged.push([x[0], x[1]]);
+  });
+  let cur = t0;
+  merged.forEach((m) => {
+    if (m[0] > cur + 0.05) segs.push({ kind: 'gap', t0: cur, t1: m[0], dur: m[0] - cur,
+      label: '아무 사건 없음 — 교전 가능 상태 대기 등', ref: null });
+    cur = Math.max(cur, m[1]);
+  });
+  if (t1 > cur + 0.05) segs.push({ kind: 'gap', t0: cur, t1: t1, dur: t1 - cur,
+    label: '아무 사건 없음 — 교전 가능 상태 대기 등', ref: null });
+
+  segs.forEach((s) => { s.pct = s.dur / span; });
+  segs.sort((a, b) => b.dur - a.dur);
+  return { segs, total: span, t0, t1, postExit };
+}
+
+const STALL_TAG = { qwait: '큐 대기', block: '계선 막힘', gap: '공백', work: '처리', move: '이동' };
+
+function renderStalls() {
+  const box = el('stall-list');
+  if (!sel) { box.innerHTML = ''; return; }
+  const st = sel.stalls;
+  el('stall-total').textContent = `총 ${st.total.toFixed(0)}초`;
+  const shown = st.segs.slice(0, 14);
+  // 막힌 시간(대기·막힘·공백)의 합 — 겹칠 수 있으므로 합집합으로 센다(과대계상 방지).
+  const blockIv = st.segs.filter((s) => s.kind !== 'work' && s.kind !== 'move')
+    .map((s) => [s.t0, s.t1]).sort((a, b) => a[0] - b[0]);
+  const bm = [];
+  blockIv.forEach((x) => {
+    const last = bm[bm.length - 1];
+    if (last && x[0] <= last[1] + 1e-9) last[1] = Math.max(last[1], x[1]); else bm.push([x[0], x[1]]);
+  });
+  const stuck = bm.reduce((s, x) => s + (x[1] - x[0]), 0);
+
+  box.innerHTML =
+    `<div class="st-bar" title="생존 구간에서 「막혀 있던」 시간의 비율(겹침 제거)">` +
+    `<i style="width:${(stuck / st.total * 100).toFixed(1)}%;background:var(--warn)"></i>` +
+    `<i style="flex:1;background:#24466b"></i></div>` +
+    shown.map((s, i) => {
+      const cls = s.kind;
+      return `<div class="st-row ${cls}" data-i="${i}" title="${esc(
+        `${fmt(s.t0)} → ${fmt(s.t1)} · ${s.dur.toFixed(1)}초\n${s.label}` +
+        (s.truncated ? '\n(항적 종료 후까지 이어짐 — 생존 구간으로 잘라 셈)' : ''))}">` +
+        `<span class="d">${s.dur.toFixed(0)}초</span>` +
+        `<span class="tag">${STALL_TAG[s.kind]}</span>` +
+        `<span class="nm">${esc(s.label)}</span>` +
+        `<span class="pct">${(s.pct * 100).toFixed(0)}%</span></div>`;
+    }).join('') +
+    `<div id="stall-note">막힌 시간 <b style="color:var(--warn)">${stuck.toFixed(0)}초</b>` +
+    ` / 총 ${st.total.toFixed(0)}초 (겹침 제거)<br>` +
+    `⚠️ 지휘관이 3~4개 동시에 붙어 계통이 <b>병렬로</b> 돌므로 구간이 겹칩니다 — ` +
+    `각 %는 전체 대비 그 구간의 길이이며 합이 100%를 넘습니다.` +
+    (st.postExit ? `<br>항적 종료 뒤에만 걸친 구간 ${st.postExit}건은 제외했습니다.` : '') +
+    `</div>`;
+
+  box.querySelectorAll('.st-row').forEach((n) => {
+    n.addEventListener('click', () => {
+      const s = shown[+n.dataset.i];
+      sel.focusStall = sel.focusStall === s ? null : s;
+      box.querySelectorAll('.st-row').forEach((x) => x.classList.toggle('focus', x === n && sel.focusStall));
+      setPlaying(false);
+      // 구간 한가운데로 옮긴다 — 시작점은 아직 아무것도 안 보이는 순간일 수 있다.
+      simT = s.t0 + (s.t1 - s.t0) * 0.5;
+      drawFrame();
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   5. 그래프 — 선택된 항적이 실제로 지난 노드·간선만 세운다.
+      (전 배치 64+노드를 다 그리면 그 항적이 어디를 지났는지가 묻힌다)
+   ══════════════════════════════════════════════════════════════════════════ */
+function selectTrack(i) {
+  if (!run || i < 0 || i >= run.tracks.length) i = 0;
+  const t = run.tracks[i];
+  if (!t) return;
+  // 항적을 고르는 행위 자체가 개별 보기 진입이다(전체 보기의 점 클릭 경유 포함).
+  view = 'track';
+  el('v-all').classList.remove('on');
+  el('v-track').classList.add('on');
+  el('tracks-label').textContent = '항적 (이벤트)';
+  document.querySelectorAll('.trk').forEach((n) => n.classList.toggle('sel', +n.dataset.i === i));
+
+  // 참여 노드 — 간선 양 끝 + 체류가 일어난 노드
+  const ids = new Set();
+  t.flows.forEach((f) => { ids.add(f.from); ids.add(f.to); });
+  t.spans.forEach((s) => ids.add(s.at));
+  // 막힌 전문의 양 끝도 세운다 — 한 번도 건너가지 못한 계선은 flows에 없어서, 이걸
+  // 빼면 「못 간 곳」이 화면에 아예 없는 채로 "막힘"만 뜬다.
+  t.blocks.forEach((b) => { ids.add(b.from); ids.add(b.to); });
+
+  // 간선 = (from, to, **매체**) 유일 조합.
+  // ⚠️ (from,to)로만 묶으면 안 된다. 방공C2A ↔ MCRC 사이에는 성격이 다른 계선이 **세 가닥**
+  //    병렬로 있다 — 교전현황(음성/VTC 135초) · 승인협조(음성 20초) · 항적공유(문자 45초).
+  //    한 선으로 접으면 먼저 만난 매체의 색만 남아, 나머지 두 채널이 **없는 것처럼** 보인다.
+  const edges = new Map();
+  t.flows.forEach((f) => {
+    const k = edgeKey(f);
+    let e = edges.get(k);
+    if (!e) edges.set(k, e = { key: k, from: f.from, to: f.to, mt: f.mt, kind: f.kind, n: 0 });
+    e.n++;
+  });
+
+  sel = Object.assign({}, t, {
+    index: i, nodeIds: [...ids], edges: [...edges.values()],
+    logRows: buildLogRows(t), logEls: null, focusStall: null
+  });
+  sel.stalls = buildStalls(sel);
+  lastLogIdx = -2;
+  layoutGraph();
+  el('stalls').hidden = false;
+  renderStalls();
+  renderLog();
+  // 시계는 항적 생성 시각으로 맞춘다 — 전 실행 시간축에서 보면 대부분이 빈 화면이다.
+  simT = sel.spawnT;
+  el('scrub').disabled = false;
+  el('play').disabled = false;
+  el('skip').disabled = false;
+  paintClock();
+  drawFrame();
+}
+
+let geo = null;   // { nodes: {id:{x,y,col}}, edges:[{...,path,len}] , W, H }
+
+/* ── DB 실린더 케파 글리프 (전체 흐름·항적 개별 **공용**) ─────────────────────
+   ⚠️ 두 화면이 같은 함수를 써야 한다. 두 벌을 두면 같은 노드가 화면마다 다르게 차오른다
+      (이 저장소가 c2Column·stageList에서 이미 겪은 사고다).                        */
+const CYL = { w: 20, h: 26, ry: 3.2, qh: 3.2, qgap: 1.4, qmax: 7 };
+
+/**
+ * 노드의 처리 용량 — **엔진 `_initNodes`와 같은 규칙**으로 읽는다.
+ *   · 센서  → 없음 (엔진이 nodeState 자체를 만들지 않는다)
+ *   · C2    → queue.servers / queue.capacity
+ *   · 사수  → engage.channels (동시교전 채널) · K = 채널 × 2 (SHOOTER_QUEUE_MULT)
+ *
+ * ⚠️ 종전에는 `n.queue`만 보고 사수를 「용량 미선언」으로 표시했다. **거짓이었다** —
+ *    엔진은 사수에도 M/M/c/K를 돌리고 동시교전 채널 초과를 `capacityBlocks`로 계상한다.
+ *    화면이 "없다"고 적으면 그 병목이 있는 줄도 모르게 된다.
+ */
+function nodeCap(n) {
+  if (!n || n.category === 'sensor') return null;
+  if (n.queue && n.queue.servers) {
+    return { c: n.queue.servers, K: n.queue.capacity, what: '항적·승인 처리' };
+  }
+  if (n.engage && n.engage.channels) {
+    return { c: n.engage.channels, K: n.engage.channels * 2, what: '동시교전 채널' };
+  }
+  return null;
+}
+
+/** 실린더 SVG. 처리 슬롯이 아래에서 차오르고 대기는 위로 쌓인다. */
+function cylSvg(p, c) {
+  const x0 = p.x - CYL.w / 2, yTop = p.y - CYL.h / 2, yBot = p.y + CYL.h / 2;
+  const ticks = c <= 10 ? Array.from({ length: c - 1 }, (_, i) => {
+    const ty = yBot - CYL.h * ((i + 1) / c);
+    return `<line class="cyl-tick" x1="${x0}" y1="${ty.toFixed(1)}" x2="${x0 + CYL.w}" y2="${ty.toFixed(1)}"></line>`;
+  }).join('') : '';
+  return `<g class="cyl" data-c="${c}">` +
+    `<rect class="cyl-bg" x="${x0}" y="${yTop}" width="${CYL.w}" height="${CYL.h}" rx="2"></rect>` +
+    `<rect class="cyl-fill" x="${x0}" y="${yBot}" width="${CYL.w}" height="0"></rect>` + ticks +
+    `<ellipse class="cyl-cap" cx="${p.x.toFixed(1)}" cy="${yTop}" rx="${CYL.w / 2}" ry="${CYL.ry}"></ellipse>` +
+    `<rect class="cyl-edge" x="${x0}" y="${yTop}" width="${CYL.w}" height="${CYL.h}" rx="2"></rect>` +
+    `<text class="cyl-num" x="${p.x.toFixed(1)}" y="${(p.y + 3.5).toFixed(1)}" text-anchor="middle"></text>` +
+    // 맥동은 빠르기의 **순서**만 보여준다. 인용할 값은 왼쪽 꼬리표에 초로 적는다.
+    `<text class="worklab" x="${(x0 - 3).toFixed(1)}" y="${(p.y - 1).toFixed(1)}" text-anchor="end"></text>` +
+    `<g class="cyl-q"></g></g>`;
+}
+
+function cylEls(g) {
+  return { cyl: g.querySelector('.cyl'), fill: g.querySelector('.cyl-fill'),
+    // rim(테두리)도 맥동한다 — 주기를 두 요소에 각각 걸어야 서로 어긋나지 않는다.
+    rim: g.querySelector('.cyl-edge'), wlab: g.querySelector('.worklab'),
+    num: g.querySelector('.cyl-num'), qbox: g.querySelector('.cyl-q') };
+}
+
+/**
+ * 실린더 갱신.
+ * @param st   그 노드의 **전역** 상태 {busy, q} — 항적 하나의 몫이 아니라 노드 전체 부하다.
+ * @param mine 이 항적의 작업이 그 노드에 있으면 { kind:'service' } 또는 { kind:'queue', pos }.
+ *             pos는 **앞에 선 건수**(0이면 바로 다음 차례). 없으면 null.
+ */
+function paintCyl(els, p, c, st, mine) {
+  if (!els.fill || !c) return;
+  const jam = st.busy >= c && st.q > 0, full = st.busy >= c && !jam;
+  const h = CYL.h * Math.min(1, st.busy / c);
+  els.fill.setAttribute('y', (p.y + CYL.h / 2 - h).toFixed(1));
+  els.fill.setAttribute('height', h.toFixed(1));
+  els.cyl.classList.toggle('jam', jam);
+  els.cyl.classList.toggle('full', full);
+  // 작업중이면 맥동하고, **주기는 그 작업의 실제 서비스 시간**이다.
+  // 「차오름(높이)」만으로는 멈춰 선 채 차 있는 것과 지금 돌아가는 것이 구분되지 않았고,
+  // 고정 주기로 깜빡이면 3.5초짜리 ECS와 37.5초짜리 KAMDOC이 똑같아 보였다.
+  const working = st.busy > 0;
+  els.cyl.classList.toggle('working', working);
+  if (working) { applyPulse(els.fill, st); applyPulse(els.rim, st); }
+  if (els.wlab) {
+    // 「몇 초 걸리는 일인가」(총 소요)가 아니라 **「지금 몇 초째인가」를 센다**(사용자 결정).
+    // 총 소요는 그 일이 끝나 봐야 아는 값이라 화면에 못박아 두면 시간이 흐르는 자리가
+    // 정지한 숫자로 보인다. 카운트업은 시각이 갈수록 늘어나 「아직도 붙잡혀 있다」가 보인다.
+    // ⚠️ 맥동 주기는 여전히 총 소요다 — 주기가 매 프레임 바뀌면 애니메이션이 되감겨
+    //    영영 첫 프레임에 머문다. 「얼마나 빠른 자리인가」(맥동)와 「지금 몇 초째인가」
+    //    (숫자)는 다른 것을 묻는 두 눈금이고, 섞지 않는다.
+    const held = working && st.svcStart != null ? Math.max(0, simT - st.svcStart) : null;
+    const txt = held == null ? '' : held.toFixed(1) + '초째';
+    if (els.wlab.textContent !== txt) els.wlab.textContent = txt;
+    const slow = held != null && held >= 20;
+    if (els.wlab.classList.contains('slow') !== slow) els.wlab.classList.toggle('slow', slow);
+  }
+  els.cyl.classList.toggle('mine-service', !!(mine && mine.kind === 'service'));
+  els.num.textContent = `${st.busy}/${c}`;
+  const shown = Math.min(st.q, CYL.qmax);
+  let q = '';
+  for (let i = 0; i < shown; i++) {
+    const y = p.y - CYL.h / 2 - CYL.ry - CYL.qgap - (i + 1) * (CYL.qh + CYL.qgap);
+    const isMine = mine && mine.kind === 'queue' && mine.pos === i;
+    q += `<rect class="cyl-qd${isMine ? ' mine' : ''}" x="${(p.x - CYL.w / 2 + 2).toFixed(1)}"` +
+      ` y="${y.toFixed(1)}" width="${CYL.w - 4}" height="${CYL.qh}" rx="1.4"></rect>`;
+    // 「내 것이 몇 번째인가」 — 이게 없으면 남의 줄만 보고 내 차례를 알 수 없다.
+    if (isMine) q += `<text class="cyl-mine" x="${(p.x + CYL.w / 2 + 3).toFixed(1)}"` +
+      ` y="${(y + CYL.qh).toFixed(1)}">이 항적 ${mine.pos + 1}번째</text>`;
+  }
+  if (st.q > CYL.qmax) {
+    const y = p.y - CYL.h / 2 - CYL.ry - CYL.qgap - (CYL.qmax + 1) * (CYL.qh + CYL.qgap) - 1;
+    q += `<text class="cyl-qn" x="${p.x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle">+${st.q - CYL.qmax}</text>`;
+  }
+  // 대기줄이 화면 상한을 넘는 자리에 내 것이 있으면 숫자로라도 알린다.
+  if (mine && mine.kind === 'queue' && mine.pos >= CYL.qmax) {
+    const y = p.y - CYL.h / 2 - CYL.ry - CYL.qgap - (CYL.qmax + 2) * (CYL.qh + CYL.qgap) - 1;
+    q += `<text class="cyl-mine" x="${p.x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle">이 항적 ${mine.pos + 1}번째</text>`;
+  }
+  els.qbox.innerHTML = q;
+}
+
+/**
+ * 간선 화살촉 — 선 위 62% 지점에 접선 방향으로 박는다.
+ * 점이 지나가지 않는 동안에도 **어느 쪽으로 흐르는 계선인지** 보여야 한다.
+ * ⚠️ 경로가 DOM에 붙은 뒤에만 부를 수 있다(getPointAtLength).
+ */
+function arrowsSvg(edges) {
+  return edges.map((e) => {
+    if (!e.el || !e.len) return '';
+    const at = e.len * .62;
+    const p1 = e.el.getPointAtLength(Math.max(0, at - 3));
+    const p2 = e.el.getPointAtLength(Math.min(e.len, at + 3));
+    const ang = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+    const m = media(e.mt);
+    const sensor = e.mt === 'report-cycle' ? ' sensor-edge' : '';
+    return `<path class="earrow${e.back ? ' back' : ''}${sensor}" d="M-4.4,-3.3 L4.4,0 L-4.4,3.3 Z"` +
+      ` fill="${e.back ? '#f87171' : m.color}"` +
+      ` transform="translate(${((p1.x + p2.x) / 2).toFixed(1)},${((p1.y + p2.y) / 2).toFixed(1)})` +
+      ` rotate(${ang.toFixed(1)})"></path>`;
+  }).join('');
+}
+
+/** 지금 무슨 일이 벌어지는 열을 밝힌다 — 밝은 띠가 좌에서 우로 옮겨 가는 것이 흐름이다. */
+function paintLiveCols(geoRef, live) {
+  if (!geoRef || !geoRef.bandEls) return;
+  geoRef.bandEls.forEach((b, i) => b.classList.toggle('live', live.has(i)));
+}
+
+function layoutGraph() {
+  const svg = el('graph');
+  const wrap = el('graph-wrap');
+  const W = Math.max(760, wrap.clientWidth);
+  // 열별로 노드를 담는다
+  // 노드를 **자리(인스턴스)** 단위로 담는다. ECS·ICC는 상행/하행 두 자리에 선다.
+  const buckets = COLS.map(() => []);
+  const slotOf = {};   // 인스턴스키 -> {id, dup}
+  sel.nodeIds.forEach((id) => {
+    nodeSlots(run.nodes[id]).forEach((sl) => {
+      const k = slotKey(id, sl.dup);
+      buckets[sl.col].push(k); slotOf[k] = { id: id, dup: sl.dup };
+    });
+  });
+  // ⚠️ **빈 열도 지우지 않는다.** 조율층 칸이 비어 있다는 것(As-Is)이 이 화면이 보여주려는
+  //    차이 그 자체다 — 열을 접으면 "원래 없는 단계"처럼 보인다.
+  const rowMax = Math.max(1, ...buckets.map((b) => b.length));
+  // 화면 높이를 꽉 채운다. 모자라면(노드가 많으면) 늘려 스크롤 대신 축소되게 둔다.
+  const H = Math.max(wrap.clientHeight || 340, 58 + rowMax * 68 + 24);
+  const colW = W / COLS.length;
+
+  const nodes = {};
+  buckets.forEach((ids, ci) => {
+    ids.sort((x, y) => {
+      const nx = run.nodes[slotNodeId(x)], ny = run.nodes[slotNodeId(y)];
+      return ((nx && nx.name) || x).localeCompare((ny && ny.name) || y, 'ko');
+    });
+    const step = (H - 78) / Math.max(1, ids.length);
+    ids.forEach((k, ri) => {
+      nodes[k] = { id: slotNodeId(k), key: k, dup: slotOf[k].dup, col: ci,
+        x: colW * (ci + .5), y: 64 + step * (ri + .5) };
+    });
+  });
+
+  // 같은 두 노드를 잇는 병렬 계선은 서로 벌려 그린다 — 겹치면 세 채널이 한 가닥으로 보인다.
+  const par = {};
+  sel.edges.forEach((e) => {
+    const pk = pickSlots(run.nodes[e.from], run.nodes[e.to]);
+    e._ak = slotKey(e.from, pk.a.dup); e._bk = slotKey(e.to, pk.b.dup);
+    (par[e._ak + '>' + e._bk] = par[e._ak + '>' + e._bk] || []).push(e);
+  });
+
+  // 간선 경로 — 정방향은 완만한 S자, 역방향은 아래로 크게 휘는 호
+  const edges = sel.edges.map((e) => {
+    const a = nodes[e._ak], b = nodes[e._bk];
+    if (!a || !b) return null;
+    if (a.x === b.x && a.y === b.y) return null;
+    const sib = par[e._ak + '>' + e._bk];
+    const off = (sib.indexOf(e) - (sib.length - 1) / 2) * 26;   // 병렬 계선 벌림
+    const back = b.col <= a.col;
+    let d;
+    if (back) {
+      const dip = Math.max(40, Math.abs(a.x - b.x) * .22 + 34) + off;
+      d = `M${a.x},${a.y} C${a.x - 10},${a.y + dip} ${b.x + 10},${b.y + dip} ${b.x},${b.y}`;
+    } else {
+      const mx = (a.x + b.x) / 2;
+      d = `M${a.x},${a.y} C${mx},${a.y + off} ${mx},${b.y + off} ${b.x},${b.y}`;
+    }
+    // ca·cb — 이 간선이 넘는 열 구간. 흐름 롤러가 어느 경계에 이 전문을 셀지 정한다.
+    return Object.assign({}, e, { d: d, back: back, a: a, b: b, ca: a.col, cb: b.col });
+  }).filter(Boolean);
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
+
+  // 정적 레이어(열 띠 · 간선 · 노드)를 한 번만 그린다. 재생 중에는 점만 갱신한다.
+  const bands = COLS.map((c, i) => {
+    const x = colW * i;
+    return `<g><rect class="colband${i % 2 ? ' alt' : ''}" x="${x}" y="0" width="${colW}" height="${H}"></rect>` +
+      `<text class="colhdr" x="${x + colW / 2}" y="18" text-anchor="middle">${esc(c.label)}</text>` +
+      `<text class="colhdr" x="${x + colW / 2}" y="30" text-anchor="middle" opacity=".65">${esc(c.hint)}</text>` +
+      (buckets[i].length ? '' :
+        `<text class="colhdr" x="${x + colW / 2}" y="${H / 2}" text-anchor="middle" opacity=".5">없음</text>`) +
+      `</g>`;
+  }).join('');
+
+  const edgeSvg = edges.map((e, i) => {
+    const m = media(e.mt);
+    const ovr = overrides[ovrKey(e)];
+    // 클릭 판정용 투명 굵은 선을 밑에 깐다 — 2~3px 선은 정확히 집기가 어렵다.
+    return `<g class="edgeg" data-ei="${i}">` +
+      `<path class="edge-hit" d="${e.d}"></path>` +
+      `<path class="edge${ovr ? ' overridden' : ''}" d="${e.d}" stroke="${m.color}" stroke-width="${m.w}" opacity=".42"` +
+      (m.dash && !ovr ? ` stroke-dasharray="${m.dash}"` : '') + `>` +
+      `<title>${esc(nodeName(e.from) + ' → ' + nodeName(e.to) + ' · ' + m.label +
+        ' · 전문 ' + e.n + '건' + (e.back ? ' (역방향 — 계선을 되돌아간다)' : '') +
+        '\n클릭하면 이 계선의 매체를 바꿔볼 수 있습니다')}</title></path></g>`;
+  }).join('');
+
+  // 큐가 선언된 노드는 전체 흐름과 **같은 DB 실린더**를 쓴다. 종전 항적 개별 보기는
+  // 케파를 아예 안 그리고 「대기 N」만 적었는데, 그 N은 **이 항적 자기 작업만** 센 값이라
+  // 노드의 실제 부하가 아니었다 — 앞에 남의 작업이 20건 쌓여 있어도 「대기 1」로 보였다.
+  const nodeSvg = Object.keys(nodes).map((k) => {
+    const p = nodes[k], n = run.nodes[p.id] || {};
+    const cat = n.category || 'c2';
+    // ⚠️ 실린더는 **일하는 자리에만**. 중복 노드의 상행 자리는 순수 중계라 용량을 그리지 않는다
+    //    (같은 부하를 두 번 그리면 노드가 두 배로 바쁜 것처럼 보인다).
+    const cap = isWorkSlot(p.dup) ? nodeCap(n) : null;
+    const hasCap = !!cap;
+    const lines = wrapLabel((n.name || p.id) + (p.dup === 'up' ? ' ↑중계' : ''), 13, 2);
+    const labelY = hasCap ? p.y + CYL.h / 2 + 13 : p.y + 22;
+    return `<g class="nodeg${hasCap ? ' hascyl' : ''}${p.dup === 'up' ? ' relay' : ''}" data-id="${esc(p.id)}" data-slot="${esc(k)}">` +
+      (hasCap ? cylSvg(p, cap.c)
+        : `<circle class="ncirc ${cat}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="9"></circle>` +
+          `<text class="qbadge" x="${(p.x + 12).toFixed(1)}" y="${(p.y - 8).toFixed(1)}"></text>`) +
+      lines.map((ln, li) =>
+        `<text class="nlabel" x="${p.x.toFixed(1)}" y="${(labelY + li * 11).toFixed(1)}" text-anchor="middle">${esc(ln)}</text>`).join('') +
+      `<title>${esc((n.name || p.id) + '\n' + p.id +
+        (p.dup === 'up' ? '\n보고 상행 중계 자리 — 같은 노드가 오른쪽 「명령 ↓」 열에 한 번 더 선다'
+          : p.dup === 'dn' ? '\n명령 하행 자리 — 큐가 여기 쌓인다' : '') +
+        (cap ? `\n${cap.what} — 서버 ${cap.c} · 대기실 ${cap.K}`
+          : (n.category === 'sensor' ? '\n(센서 — 처리 큐 없음)' : '\n(중계 — 용량 표시 없음)')))}</title></g>`;
+  }).join('');
+
+  svg.innerHTML = bands + `<g id="lyr-edges">${edgeSvg}</g><g id="lyr-arrows"></g>` +
+    `<g id="lyr-nodes">${nodeSvg}</g><g id="lyr-dots"></g>`;
+  geo = { nodes, edges, W, H, colW };
+  // 간선 길이는 점 위치 계산에 쓴다(getPointAtLength) — DOM에 붙인 뒤에만 잴 수 있다.
+  [...svg.querySelectorAll('#lyr-edges .edgeg')].forEach((g, i) => {
+    const p = g.querySelector('.edge');
+    edges[i].el = p; edges[i].len = p.getTotalLength();
+    g.addEventListener('click', (ev) => openMediaPopover(edges[i], ev));
+  });
+  // 화살촉은 길이를 잰 **뒤에** 그린다.
+  svg.querySelector('#lyr-arrows').innerHTML = arrowsSvg(edges);
+  geo.bandEls = [...svg.querySelectorAll('.colband')];
+  geo.edgeByKey = {};
+  edges.forEach((e) => { geo.edgeByKey[e.key] = e; });
+  geo.nodeEls = {};
+  [...svg.querySelectorAll('.nodeg')].forEach((g) => {
+    // ⚠️ **인스턴스 키**로 담는다. 노드 id로 담으면 ECS 상행/하행이 서로 덮어써
+    //    한쪽만 갱신된다(실린더가 영영 안 차오르는 증상).
+    geo.nodeEls[g.dataset.slot] = Object.assign({ g, id: g.dataset.id,
+      circ: g.querySelector('.ncirc'), badge: g.querySelector('.qbadge') }, cylEls(g));
+  });
+}
+
+/* ── 계선 매체 교체 (반사실 실험) ───────────────────────────────────────────
+   ⚠️ 교체 대상 키는 **카탈로그 계선의 신원**(from>to>kind)이다. 화면에서 간선을 매체별로
+      가른 키(from>to|매체)와 다르다 — 매체는 바꾸려는 대상이지 신원이 아니다.
+   ⚠️ 값은 `KJ.LINK_MEDIA_PRESETS`에 있는 것만 고를 수 있다. 임의의 초를 넣게 두면
+      근거 없는 수치가 결과에 섞이는데, 화면에서는 그 구분이 보이지 않는다.          */
+const ovrKey = (e) => e.from + '>' + e.to + '>' + e.kind;
+
+function openMediaPopover(edge, ev) {
+  const pop = el('pop');
+  const cur = overrides[ovrKey(edge)] || edge.mt;
+  el('pop-title').innerHTML =
+    `${esc(nodeName(edge.from))} <span class="dim">→</span> ${esc(nodeName(edge.to))}` +
+    `<div class="dim" style="font-weight:400">${esc(edge.kind)} 계선 · 현재 ${esc(media(cur).label)}</div>`;
+  el('pop-body').innerHTML = Object.keys(KJ.LINK_MEDIA_PRESETS).map((k) => {
+    const m = media(k), p = KJ.LINK_MEDIA_PRESETS[k];
+    const on = k === cur;
+    return `<button data-k="${k}" class="${on ? 'on' : ''}">` +
+      `<span style="color:${on ? 'inherit' : m.color}">${esc(m.label)}</span>` +
+      `<span class="h">${esc(p.dist ? `평균 ${p.dist.mean}초` : `${p.delaySec}초`)}` +
+      `${p.confidence ? ' · 등급 ' + p.confidence : ''}</span></button>`;
+  }).join('');
+  el('pop-body').querySelectorAll('button').forEach((b) => {
+    b.addEventListener('click', () => {
+      const k = b.dataset.k;
+      // 원래 매체로 되돌리면 항목 자체를 지운다 — "바꿨다가 되돌린 것"을 반사실로 셀 이유가 없다.
+      if (k === edge.mt) delete overrides[ovrKey(edge)];
+      else overrides[ovrKey(edge)] = k;
+      renderOverrides();
+      markDirty();
+      pop.hidden = true;
+    });
+  });
+  // 손잡이 줄을 걷어냈으므로 「전부 되돌리기」는 여기가 유일한 자리다.
+  el('ovr-clear').hidden = !Object.keys(overrides).length;
+  const r = el('graph').getBoundingClientRect();
+  pop.hidden = false;
+  const pr = pop.getBoundingClientRect();
+  pop.style.left = Math.min(window.innerWidth - pr.width - 10,
+    Math.max(10, (ev.clientX || r.left + r.width / 2) - pr.width / 2)) + 'px';
+  pop.style.top = Math.min(window.innerHeight - pr.height - 10,
+    Math.max(10, (ev.clientY || r.top) + 12)) + 'px';
+}
+
+/**
+ * 계선 매체 교체는 **그래프 위 클릭**으로만 조작한다(손잡이 줄을 걷어냈으므로).
+ * 적용 내역은 실행 상태줄이 「반사실 N건 적용」으로 상시 표출한다 — 화면 어딘가에는
+ * 반드시 남아야 조건을 모르고 수치를 읽는 일이 없다.
+ */
+function renderOverrides() {
+  if (view === 'all' && geoAll) { layoutAll(); drawFrame(); }
+  else if (sel && geo) { layoutGraph(); drawFrame(); }
+}
+
+/** 노드 이름을 낱말 경계에서 최대 `max`줄로 접는다. 넘치면 마지막 줄을 …로 자른다. */
+function wrapLabel(s, per, max) {
+  const words = String(s).split(/\s+/);
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    if (!cur) { cur = w; }
+    else if ((cur + ' ' + w).length <= per) { cur += ' ' + w; }
+    else { lines.push(cur); cur = w; }
+    if (lines.length === max) break;
+  }
+  if (cur && lines.length < max) lines.push(cur);
+  if (lines.length === max) {
+    const used = lines.join(' ').length;
+    if (used < String(s).length) lines[max - 1] = lines[max - 1].slice(0, per - 1) + '…';
+  }
+  return lines;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   5-b. 전체 흐름 보기 — 배치 전체를 세우고, 전 항적을 겹쳐 케파·병목을 본다
+   ══════════════════════════════════════════════════════════════════════════ */
+let geoAll = null;
+
+function layoutAll() {
+  const svg = el('graph');
+  const wrap = el('graph-wrap');
+  const W = Math.max(760, wrap.clientWidth);
+  const H = Math.max(480, wrap.clientHeight || 480);
+  const colW = W / COLS.length;
+
+  // 배치 전체를 세운다(사용자 결정). 열 안 정렬은 **활동 많은 순** — 바쁜 장비가 위로
+  // 모여야 놀고 있는 장비 수십 개가 화면 중앙을 차지하지 않는다. 놀면 흐리게(idle).
+  const buckets = COLS.map(() => []);
+  const slotOf = {};   // 인스턴스키 -> {id, dup}
+  Object.keys(run.nodes).forEach((id) => {
+    nodeSlots(run.nodes[id]).forEach((sl) => {
+      const k = slotKey(id, sl.dup);
+      buckets[sl.col].push(k); slotOf[k] = { id: id, dup: sl.dup };
+    });
+  });
+  const actOf = (id) => (gv.stats[id] ? gv.stats[id].arr : 0);
+  // 간선 양 끝으로 등장하는 노드도 「활동」으로 친다(센서·포대는 큐가 없어 arr=0이다).
+  run.allFlows.forEach((f) => {
+    gv.stats[f.from] = gv.stats[f.from] || { arr: 0, drops: 0, reneges: 0, peakQ: 0, touched: true };
+    gv.stats[f.from].touched = true;
+    gv.stats[f.to] = gv.stats[f.to] || { arr: 0, drops: 0, reneges: 0, peakQ: 0, touched: true };
+    gv.stats[f.to].touched = true;
+  });
+  const touched = (id) => !!(gv.stats[id] && (gv.stats[id].arr || gv.stats[id].touched));
+
+  const nodes = {};
+  const DENSE = 12;
+  buckets.forEach((ids, ci) => {
+    const nid = (k) => slotNodeId(k);
+    ids.sort((a, b) => (actOf(nid(b)) - actOf(nid(a))) || (touched(nid(b)) - touched(nid(a))) ||
+      ((run.nodes[nid(a)] && run.nodes[nid(a)].name) || a)
+        .localeCompare((run.nodes[nid(b)] && run.nodes[nid(b)].name) || b, 'ko'));
+    const cx = colW * (ci + .5);
+    if (ids.length <= DENSE) {
+      const step = (H - 92) / Math.max(1, ids.length);
+      ids.forEach((k, ri) => {
+        nodes[k] = { id: slotNodeId(k), key: k, dup: slotOf[k].dup, col: ci,
+          x: cx, y: 70 + step * (ri + .5), r: 9, dense: false };
+      });
+    } else {
+      // 밀집 열(ECS 84 · 센서 71 · 사수 84) — 열 안을 소열로 갈라 작은 링으로 세운다.
+      const rowH = 21;
+      const maxRows = Math.max(8, Math.floor((H - 92) / rowH));
+      const subCols = Math.ceil(ids.length / maxRows);
+      const gap = Math.min(46, (colW - 24) / subCols);
+      ids.forEach((k, i) => {
+        const si = Math.floor(i / maxRows), ri = i % maxRows;
+        nodes[k] = { id: slotNodeId(k), key: k, dup: slotOf[k].dup, col: ci, r: 4.5, dense: true,
+          x: cx + (si - (subCols - 1) / 2) * gap,
+          y: 70 + rowH * ri + rowH / 2 };
+      });
+    }
+  });
+
+  // 간선 — 실제 통과가 있던 것만 긋는다. 카탈로그의 전 선을 그리면 노이즈가 흐름을 덮는다.
+  const em = new Map();
+  run.allFlows.forEach((f) => {
+    const k = edgeKey(f);
+    let e = em.get(k);
+    if (!e) em.set(k, e = { key: k, from: f.from, to: f.to, mt: f.mt, kind: f.kind, n: 0, flows: [] });
+    e.n++; e.flows.push(f);
+  });
+  const par = {};
+  const eList = [...em.values()];
+  eList.forEach((e) => {
+    const pk = pickSlots(run.nodes[e.from], run.nodes[e.to]);
+    e._ak = slotKey(e.from, pk.a.dup); e._bk = slotKey(e.to, pk.b.dup);
+    (par[e._ak + '>' + e._bk] = par[e._ak + '>' + e._bk] || []).push(e);
+  });
+  const edges = eList.map((e) => {
+    const a = nodes[e._ak], b = nodes[e._bk];
+    if (!a || !b || (a.x === b.x && a.y === b.y)) return null;
+    const sib = par[e._ak + '>' + e._bk];
+    const off = (sib.indexOf(e) - (sib.length - 1) / 2) * 18;
+    const back = b.col <= a.col;
+    let d;
+    if (back) {
+      const dip = Math.max(36, Math.abs(a.x - b.x) * .18 + 30) + off;
+      d = `M${a.x},${a.y} C${a.x - 10},${a.y + dip} ${b.x + 10},${b.y + dip} ${b.x},${b.y}`;
+    } else {
+      const mx = (a.x + b.x) / 2;
+      d = `M${a.x},${a.y} C${mx},${a.y + off} ${mx},${b.y + off} ${b.x},${b.y}`;
+    }
+    // ca·cb — 이 간선이 넘는 열 구간(흐름 롤러가 셀 경계).
+    return Object.assign({}, e, { d, back, ca: a.col, cb: b.col });
+  }).filter(Boolean);
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
+  svg.classList.toggle('hide-sensor', !el('show-sensor').checked);
+
+  const bands = COLS.map((c, i) => {
+    const x = colW * i;
+    return `<g><rect class="colband${i % 2 ? ' alt' : ''}" x="${x}" y="0" width="${colW}" height="${H}"></rect>` +
+      `<text class="colhdr" x="${x + colW / 2}" y="18" text-anchor="middle">${esc(c.label)}</text>` +
+      `<text class="colhdr" x="${x + colW / 2}" y="30" text-anchor="middle" opacity=".65">${esc(c.hint)} · ${buckets[i].length}개</text>` +
+      (buckets[i].length ? '' :
+        `<text class="colhdr" x="${x + colW / 2}" y="${H / 2}" text-anchor="middle" opacity=".5">없음</text>`) +
+      `</g>`;
+  }).join('');
+
+  const edgeSvg = edges.map((e, i) => {
+    const m = media(e.mt);
+    const ovr = overrides[ovrKey(e)];
+    const sensor = e.mt === 'report-cycle' ? ' sensor-edge' : '';
+    // 밀집 열(센서·ECS·사수)에 닿는 간선은 가늘게 — 수십 가닥이 정상 굵기면 면이 된다.
+    const thin = nodes[e._ak].dense || nodes[e._bk].dense;
+    return `<g class="edgeg${sensor}" data-ek="${esc(e.key)}">` +
+      `<path class="edge-hit" d="${e.d}"></path>` +
+      `<path class="edge${ovr ? ' overridden' : ''}" d="${e.d}" stroke="${m.color}" stroke-width="${thin ? 1.4 : m.w}" opacity=".3"` +
+      (m.dash && !ovr ? ` stroke-dasharray="${m.dash}"` : '') + `>` +
+      `<title>${esc(nodeName(e.from) + ' → ' + nodeName(e.to) + ' · ' + m.label + ' · 전문 ' + e.n + '건' +
+        (e.back ? ' (역방향)' : '') + '\n클릭하면 이 계선의 매체를 바꿔볼 수 있습니다')}</title></path></g>`;
+  }).join('');
+
+  // 노드 표현은 둘로 나뉜다.
+  //  · 큐가 선언되고 자리가 넉넉한 C2 노드 → **DB 실린더**. 처리 슬롯이 아래에서 위로
+  //    차오르고, 대기는 그 위에 디스크로 쌓인다. "얼마나 찼나"를 각도가 아니라 **높이**로
+  //    읽게 하려는 것이다(링은 반쯤 찬 것과 가득 찬 것이 잘 구분되지 않았다).
+  //  · 밀집 열(센서·ECS·포대) → 종전대로 작은 원. 실린더를 그릴 자리가 없다.
+  // ⚠️ queue 선언이 없는 노드(센서·포대)는 **아무 용량 표시도 하지 않는다** — 없는 용량을
+  //    지어내지 않는다(ADR-062: 0과 미측정을 가르는 규율).
+  const nodeSvg = Object.keys(nodes).map((k) => {
+    const p = nodes[k], n = run.nodes[p.id] || {};
+    const cat = n.category || 'c2';
+    // 실린더는 **일하는 자리에만** — 중복 노드의 상행 자리는 순수 중계다.
+    const cap = isWorkSlot(p.dup) ? nodeCap(n) : null;
+    const hasCap = !!cap;
+    const cyl = hasCap && !p.dense;
+    const rr = p.r + (p.dense ? 2.2 : 3.2);
+    const lines = p.dense ? [] : wrapLabel((n.name || p.id) + (p.dup === 'up' ? ' ↑중계' : ''), 13, 2);
+    const idle = touched(p.id) ? '' : ' idle';
+    const labelY = cyl ? p.y + CYL.h / 2 + 13 : p.y + rr + 12;
+    let glyph;
+    if (cyl) {
+      p.cyl = true;
+      glyph = cylSvg(p, cap.c);
+    } else {
+      glyph = `<circle class="ncirc ${cat}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.r}"></circle>` +
+        `<text class="qtail" x="${(p.x + rr + 3).toFixed(1)}" y="${(p.y - 4).toFixed(1)}"></text>`;
+    }
+    return `<g class="nodeg${idle}${cyl ? ' hascyl' : ''}${p.dup === 'up' ? ' relay' : ''}"` +
+      ` data-id="${esc(p.id)}" data-slot="${esc(k)}">` + glyph +
+      lines.map((ln, li) =>
+        `<text class="nlabel" x="${p.x.toFixed(1)}" y="${(labelY + li * 11).toFixed(1)}" text-anchor="middle">${esc(ln)}</text>`).join('') +
+      `<title>${esc((n.name || p.id) + '\n' + p.id +
+        (p.dup === 'up' ? '\n보고 상행 중계 자리 — 같은 노드가 오른쪽 「명령 ↓」 열에 한 번 더 선다'
+          : p.dup === 'dn' ? '\n명령 하행 자리 — 큐가 여기 쌓인다' : '') +
+        (cap ? `\n${cap.what} — 서버 ${cap.c} · 대기실 ${cap.K}`
+          : (n.category === 'sensor' ? '\n(센서 — 처리 큐 없음)' : '\n(중계 — 용량 표시 없음)')))}</title></g>`;
+  }).join('');
+
+  svg.innerHTML = bands + `<g id="lyr-edges">${edgeSvg}</g><g id="lyr-arrows"></g>` +
+    `<g id="lyr-nodes">${nodeSvg}</g><g id="lyr-dots"></g>`;
+  geoAll = { nodes, edges, W, H, colW, edgeByKey: {}, nodeEls: {}, prevLive: new Set() };
+  [...svg.querySelectorAll('#lyr-edges .edgeg')].forEach((g, i) => {
+    const p = g.querySelector('.edge');
+    edges[i].el = p; edges[i].len = p.getTotalLength(); edges[i].g = g;
+    geoAll.edgeByKey[edges[i].key] = edges[i];
+    g.addEventListener('click', (ev) => openMediaPopover(edges[i], ev));
+  });
+  // 화살촉은 길이를 잰 **뒤에** 그린다.
+  svg.querySelector('#lyr-arrows').innerHTML = arrowsSvg(edges);
+  geoAll.bandEls = [...svg.querySelectorAll('.colband')];
+  [...svg.querySelectorAll('.nodeg')].forEach((g) => {
+    const id = g.dataset.id;
+    // ⚠️ **인스턴스 키**로 담는다(ECS 상행/하행이 서로 덮어쓰지 않게).
+    geoAll.nodeEls[g.dataset.slot] = Object.assign({ g, id: id, circ: g.querySelector('.ncirc'),
+      tail: g.querySelector('.qtail') }, cylEls(g));
+    g.addEventListener('click', (ev) => { ev.stopPropagation(); toggleFocusNode(id); });
+  });
+}
+
+/** 노드 클릭 → 병목 로그를 그 노드로 거른다(다시 클릭하면 해제). */
+function toggleFocusNode(id) {
+  if (!gv) return;
+  gv.focusNode = gv.focusNode === id ? null : id;
+  renderBotLog();
+  renderLoadRank(lastState || {}, true);
+  if (geoAll) Object.keys(geoAll.nodeEls).forEach((k) => {
+    geoAll.nodeEls[k].g.classList.toggle('focus', geoAll.nodeEls[k].id === gv.focusNode);
+  });
+}
+
+/**
+ * 시각 t의 노드별 {busy, q, svcSum, svcN, svcStart} — 전역 체류에서 복원.
+ *
+ * · svcSum/svcN — 지금 서비스 중인 작업들의 **총 소요 시간**(완료−개시). 맥동 주기가
+ *   여기서 나온다. 관측 종료까지 안 끝난 작업은 길이를 모르므로 세지 않는다(지어내지 않는다).
+ * · svcStart — 지금 붙들려 있는 작업 중 **가장 먼저 시작한** 것의 개시 시각. 화면의
+ *   카운트업(N초째)이 여기서 나온다. 여러 서버가 물려 있으면 가장 오래 쥐고 있는 일을
+ *   고른다 — 「이 노드가 지금 무엇에 제일 오래 잡혀 있나」가 물어볼 만한 것이기 때문이다.
+ */
+function stateAt(t) {
+  const state = {};
+  run.allSpans.forEach((s) => {
+    if (s.arrive > t) return;
+    const endT = s.drop != null ? s.drop : (s.done != null ? s.done : Infinity);
+    if (t > endT) return;
+    const st = state[s.at] || (state[s.at] = { q: 0, busy: 0, svcSum: 0, svcN: 0, svcStart: null });
+    if (s.start != null && t >= s.start) {
+      st.busy++;
+      if (s.done != null) { st.svcSum += s.done - s.start; st.svcN++; }
+      if (st.svcStart == null || s.start < st.svcStart) st.svcStart = s.start;
+    } else st.q++;
+  });
+  return state;
+}
+
+let lastState = null;
+let lastRankWall = 0;
+
+function drawFrameAll() {
+  if (!run || !geoAll || !gv) return;
+  const dots = el('graph').querySelector('#lyr-dots');
+  const showSensor = el('show-sensor').checked;
+  let out = '';
+
+  // 전문: 느린 매체(음성·문자·VTC·KVMF ≥ 10초)만 개별 점 — 빠른 전문까지 다 찍으면
+  // 초당 수십 개가 지나가며 깜박임만 남는다(사용자 결정). 빠른 매체는 선 맥동으로 집약.
+  const hotEdges = new Set();
+  const liveCols = new Set();
+  let slowCount = 0;
+  run.allFlows.forEach((f) => {
+    const inFlight = f.d > 0 ? (simT >= f.t0 && simT <= f.t1) : (simT >= f.t0 && simT <= f.t0 + 1.5);
+    if (!inFlight) return;
+    const e = geoAll.edgeByKey[edgeKey(f)];
+    if (!e) return;
+    if (e.ca != null) { liveCols.add(e.ca); liveCols.add(e.cb); }
+    // ⚠️ 「센서 보고 표시」 토글은 **점의 혼잡을 줄이는 손잡이**이지 흐름을 부정하는 것이
+    //    아니다. 열 밝기는 토글과 무관하게 전량을 센다 — 센서→ECS 사이를 건너는 전문은
+    //    전부 report-cycle이라, 토글을 따르면 맨 왼쪽 두 열이 **영영 꺼진 채**로 남아
+    //    킬체인이 시작부터 죽은 것처럼 읽힌다.
+    if (!showSensor && f.mt === 'report-cycle') return;
+    if (f.d >= SLOW) {
+      if (!e.el) return;
+      const p = (simT - f.t0) / f.d;
+      const pt = e.el.getPointAtLength(e.len * Math.min(1, Math.max(0, p)));
+      const m = media(f.mt);
+      slowCount++;
+      out += `<circle class="dot" data-th="${esc(f.th || '')}" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5" fill="${m.color}">` +
+        `<title>${esc((f.th || '') + ' · ' + m.label + ' ' + f.d.toFixed(0) + '초 — 클릭하면 이 항적을 따라간다')}</title></circle>`;
+    } else {
+      hotEdges.add(e.key);
+    }
+  });
+  geoAll.edges.forEach((e) => {
+    e.el.classList.toggle('hot', hotEdges.has(e.key));
+  });
+
+  // 계선 입구에 막혀 있는 전문 — 「가야 할 방향은 있는데 못 가는」 그림.
+  out += renderBlocks(run.allBlocks, geoAll);
+
+  // 넘침 섬광 — 최근 1.2초 안의 즉시 드롭 지점에 붉은 링을 띄운다.
+  gv.rows.forEach((r) => {
+    if (r.type !== 'overflow' || r.t > simT || simT - r.t > 1.2) return;
+    const p = slotPos(geoAll, r.node);
+    if (!p) return;
+    const age = (simT - r.t) / 1.2;
+    out += `<circle class="flash" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}"` +
+      ` r="${(p.r + 4 + age * 10).toFixed(1)}" opacity="${(0.9 * (1 - age)).toFixed(2)}"></circle>`;
+  });
+  dots.innerHTML = out;
+
+  // 노드 케파 — 링 채움(처리중/서버수)·큐 꼬리·색 단계(여유→가득→가득+대기).
+  const state = stateAt(simT);
+  lastState = state;
+  const liveNow = new Set(Object.keys(state));
+  // 이번에 살아 있는 노드 + 직전 프레임에 살아 있던 노드만 만진다(전 노드 갱신은 낭비).
+  const dirty = new Set([...liveNow, ...geoAll.prevLive]);
+  const dirtySlots = new Set();
+  Object.keys(geoAll.nodeEls).forEach((k) => { if (dirty.has(geoAll.nodeEls[k].id)) dirtySlots.add(k); });
+  dirtySlots.forEach((k) => {
+    const els = geoAll.nodeEls[k];
+    if (!els) return;
+    const id = els.id, n = run.nodes[id];
+    const cap = nodeCap(n); const c = cap ? cap.c : null;
+    const st = state[id] || { busy: 0, q: 0 };
+    // 일이 있는 노드의 열도 밝힌다 — 선 위의 이동만 세면 「처리 중」인 단계가 꺼져 보인다.
+    if ((st.busy || st.q) && geoAll.nodes[k]) liveCols.add(geoAll.nodes[k].col);
+    if (els.fill && c) {
+      paintCyl(els, geoAll.nodes[k], c, st, null);   // 전체 보기엔 「내 항적」이 없다
+    } else if (els.tail) {
+      els.tail.textContent = st.q > 0
+        ? '•'.repeat(Math.min(st.q, 6)) + (st.q > 6 ? '+' + (st.q - 6) : '')
+        : '';
+      if (els.circ) {
+        // 실린더를 못 그린 자리(밀집 열의 ECS·사수)의 동그라미도 **같은 규칙으로** 맥동한다.
+        els.circ.classList.toggle('busy', !!st.busy);
+        els.circ.classList.toggle('queued', !!(st.q && !st.busy));
+        if (st.busy) applyPulse(els.circ, st);
+      }
+    }
+  });
+  geoAll.prevLive = liveNow;
+  paintLiveCols(geoAll, liveCols);
+
+  // 부하 순위는 300ms 스로틀 — 매 프레임 정렬·DOM 재생성은 낭비다.
+  const wall = performance.now();
+  if (wall - lastRankWall > 300) { lastRankWall = wall; renderLoadRank(state); }
+  paintBotLog();
+  paintClock();
+}
+
+/** 좌상단: 현재 시각의 노드 부하 순위 (대기+처리 기준, 상위만). */
+function renderLoadRank(state, force) {
+  const box = el('track-list');
+  const ranked = Object.keys(gv.stats)
+    .filter((id) => run.nodes[id] && gv.stats[id].arr > 0)
+    .map((id) => {
+      const n = run.nodes[id];
+      const cap = nodeCap(n); const c = cap ? cap.c : null;
+      const st = state[id] || { busy: 0, q: 0 };
+      const jam = c != null && st.busy >= c && st.q > 0;
+      const full = c != null && st.busy >= c && !jam;
+      return { id, n, c, st, jam, full, drops: gv.stats[id].drops, dead: gv.stats[id].dead };
+    })
+    .sort((a, b) => (b.jam - a.jam) || (b.st.q - a.st.q) ||
+      ((b.c ? b.st.busy / b.c : 0) - (a.c ? a.st.busy / a.c : 0)) ||
+      (gv.stats[b.id].arr - gv.stats[a.id].arr));
+  el('track-count').textContent = ranked.length + '개 활동';
+  box.innerHTML = ranked.slice(0, 18).map((r) => {
+    const frac = r.c ? Math.min(1, r.st.busy / r.c) : 0;
+    return `<div class="rk${r.jam ? ' jam' : (r.full ? ' full' : '')}${gv.focusNode === r.id ? ' focus' : ''}" data-id="${esc(r.id)}"` +
+      ` title="${esc((r.n.name || r.id) + (r.c ? `\n처리 ${r.st.busy}/${r.c} · 대기 ${r.st.q}` : '') +
+        `\n누적 드롭(넘침+기한) ${r.drops} · 큐 정리(항적 종결) ${r.dead} · 최대 대기 ${gv.stats[r.id].peakQ}`)}">` +
+      `<span class="nm">${esc(r.n.name || r.id)}</span>` +
+      `<span class="bar"><i style="width:${(frac * 100).toFixed(0)}%"></i></span>` +
+      `<span class="st"><b>${r.st.busy}${r.c ? '/' + r.c : ''}</b> 대기 <b>${r.st.q}</b>` +
+      (r.drops ? ` <span class="dr">✕${r.drops}</span>` : '') + `</span></div>`;
+  }).join('') || '<div class="empty">아직 어느 노드에도 작업이 도착하지 않았습니다.</div>';
+  box.querySelectorAll('.rk').forEach((d) => {
+    d.addEventListener('click', () => toggleFocusNode(d.dataset.id));
+  });
+}
+
+/** 좌하단: 병목 이벤트 로그 (넘침·큐 이탈·포화 진입/해소). */
+let lastBotIdx = -2;
+function renderBotLog() {
+  const body = el('log-body');
+  const rows = gv.rows.filter((r) => !gv.focusNode || r.node === gv.focusNode);
+  el('log-title').textContent = '병목 이벤트 로그' +
+    (gv.focusNode ? ` — ${nodeNameOf(run, gv.focusNode)} (클릭 해제)` : '');
+  el('log-hint').textContent = rows.length + '건';
+  body.innerHTML = rows.length ? rows.map((r) => {
+    const range = r.tEnd > r.t + 1e-6 ? `${fmt(r.t)} → ${fmt(r.tEnd)}` : fmt(r.t);
+    return `<div class="ev mark ${r.type}" data-t="${r.t}" data-te="${r.tEnd}" title="${esc(range + '\n' + r.text)}">` +
+      `<span class="t mono">${fmt(r.t)}</span><span class="x">${esc(r.text)}</span></div>`;
+  }).join('') : '<div class="empty">병목 사건이 없습니다 — 이 실행에서는 어떤 노드도<br>넘치거나 포화에 들지 않았습니다.</div>';
+  gv.logEls = [...body.querySelectorAll('.ev')];
+  lastBotIdx = -2;
+  renderTicks();
+  paintBotLog();
+}
+
+function paintBotLog() {
+  if (!gv || !gv.logEls) return;
+  // 구간 사건(포화·버스트)은 tEnd까지 「진행 중」이다 — 마지막 시작행 하나만 강조하면
+  // 동시에 진행 중인 다른 노드의 포화가 과거로 보인다.
+  let sig = '';
+  const states = gv.logEls.map((n) => {
+    const t = +n.dataset.t, te = +n.dataset.te;
+    const s = simT < t ? 'future' : (simT <= te + 0.5 ? 'now' : 'past');
+    sig += s[0];
+    return s;
+  });
+  if (sig === lastBotIdx) return;
+  lastBotIdx = sig;
+  let lastNow = -1;
+  gv.logEls.forEach((n, i) => {
+    n.classList.remove('past', 'now', 'future');
+    n.classList.add(states[i]);
+    if (states[i] === 'now') lastNow = i;
+  });
+  if (lastNow >= 0) gv.logEls[lastNow].scrollIntoView({ block: 'nearest' });
+}
+
+/** 보기 전환 — 전체 흐름 ↔ 항적 개별. 시계·스크럽 축이 함께 바뀐다. */
+function setView(v) {
+  view = v;
+  el('v-all').classList.toggle('on', v === 'all');
+  el('v-track').classList.toggle('on', v === 'track');
+  el('tracks-label').textContent = v === 'all' ? '노드 부하 순위 (현재 시각)' : '항적 (이벤트)';
+  if (!run) return;
+  if (v === 'all') {
+    el('stalls').hidden = true;
+    el('signal').hidden = true;   // 신호등은 항적 하나를 볼 때만 뜻이 있다
+    layoutAll();
+    renderBotLog();
+    simT = Math.min(Math.max(simT, viewT0()), viewT1());
+    el('scrub').disabled = el('play').disabled = el('skip').disabled = false;
+    renderLoadRank(stateAt(simT), true);
+    drawFrame();
+  } else {
+    renderTrackList();
+    const keep = sel ? run.tracks.findIndex((t) => t.id === sel.id) : -1;
+    selectTrack(keep >= 0 ? keep : Math.max(0, run.tracks.findIndex((t) => t.flows.length > 0)));
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6. 프레임 — 시각 t에서 "선 위에 떠 있는 전문"과 "노드에서 일어나는 일"
+   ══════════════════════════════════════════════════════════════════════════ */
+function drawFrame() {
+  if (view === 'all') { drawFrameAll(); return; }
+  drawFrameTrack();
+}
+
+/** 노드 작업 종류 → 「무엇을 하려는 중인가」. 큐에 선 작업의 **다음 할 일**을 말해 준다. */
+const JOB_LABEL = {
+  iads_track: '위협판단·표적할당 준비',
+  approval: '교전 승인',
+  directive_reception: '교전명령 접수',
+  engage: '발사 처리'
+};
+
+/**
+ * 시각 t에서 이 항적이 **어디서 무엇을 기다리는가**를 판정한다.
+ *
+ * 종전 화면은 점의 유무·꼬리 길이로 **추론하게** 했다. 같은 정보를 문장으로 말해 주는 것이
+ * 이 함수의 목적이다 — 「지금 KAMDOC 큐에서 앞에 12건 두고 48초째 대기」처럼.
+ *
+ * ⚠️ 「가야 할 방향」을 아는 경우와 모르는 경우를 **섞지 않는다**:
+ *    · 채널 막힘 — 목적지가 정해져 있다(from→to). 화살표로 그린다.
+ *    · 노드 큐 대기 — 다음 목적지는 **아직 결정 전**이다(결심이 서비스 중에 난다).
+ *      그래서 방향이 아니라 **그 노드에서 무엇을 기다리는지**만 적는다. 방향을 지어내지 않는다.
+ *    · 공백 — 어느 계통도 일하지 않는다. 교전 가능 상태(사격통제·체공창)를 기다리는 구간이며,
+ *      C2가 막은 것이 아니다. 그렇게 적는다.
+ */
+function trackSignals(t) {
+  const out = [];
+  if (!sel) return out;
+  if (t < sel.spawnT) return [{ cls: 'idle', text: '아직 생성 전' }];
+  if (sel.exitT != null && t >= sel.exitT) {
+    const oc = outcomeInfo(sel);
+    return [oc.leaked
+      ? { cls: 'stop', text: '누수 — ' + oc.text, sub: oc.code || '' }
+      : { cls: 'go', text: '격추 완료' }];
+  }
+
+  // ① 채널에 막혀 못 가는 전문 — 목적지가 정해진 유일한 경우
+  (sel.blocks || []).forEach((b) => {
+    if (b.kind !== 'wait' || t < b.t0 || t > b.t1) return;
+    out.push({ cls: 'stop', kind: 'blocked', from: b.from, to: b.to,
+      text: `${nodeName(b.from)} → ${nodeName(b.to)} 못 감`,
+      sub: `채널이 안 비어 ${(t - b.t0).toFixed(0)}초째 대기` });
+  });
+
+  // ② 노드에서 대기/처리 중 — 앞에 몇 건인지까지 센다(전역 체류에서 직접).
+  sel.spans.forEach((s) => {
+    const endT = s.drop != null ? s.drop : (s.done != null ? s.done : Infinity);
+    if (t < s.arrive || t > endT) return;
+    if (s.start != null && t >= s.start) {
+      out.push({ cls: 'go', kind: 'service', node: s.at,
+        text: `${nodeName(s.at)} 처리 중`,
+        sub: `${JOB_LABEL[s.jk] || s.jk} · ${(t - s.start).toFixed(0)}초째` });
+    } else {
+      // 같은 노드에서 나보다 먼저 도착해 아직 서비스에 못 들어간 작업 수 = 내 앞 대기줄
+      let ahead = 0;
+      run.allSpans.forEach((o) => {
+        if (o.at !== s.at || o === s) return;
+        if (o.arrive > t || o.arrive >= s.arrive) return;
+        const oe = o.drop != null ? o.drop : (o.done != null ? o.done : Infinity);
+        if (t <= oe && !(o.start != null && t >= o.start)) ahead++;
+      });
+      out.push({ cls: 'wait', kind: 'queue', node: s.at,
+        text: `${nodeName(s.at)}에서 ${JOB_LABEL[s.jk] || s.jk} 대기`,
+        sub: `앞에 ${ahead}건 · ${(t - s.arrive).toFixed(0)}초째` });
+    }
+  });
+
+  // ②-b 이미 다른 계통이 이 표적에 쐈다 — 중복교전이 성립한 뒤로는 계속 알린다.
+  if (sel.dupT != null && t >= sel.dupT) {
+    out.push({ cls: 'stop', kind: 'dup',
+      text: `중복교전 — ${sel.fireShooters.length}개 사수가 각각 발사`,
+      sub: sel.fireShooters.map((s) => nodeName(s)).join(' + ') });
+  }
+
+  // ③ 이동 중 — 선 위에 떠 있는 전문
+  let moving = 0, slowest = null;
+  sel.flows.forEach((f) => {
+    if (f.d <= 0 || t < f.t0 || t > f.t1) return;
+    moving++;
+    if (!slowest || f.d > slowest.d) slowest = f;
+  });
+  if (moving) {
+    out.push({ cls: 'go', kind: 'move',
+      text: `전문 ${moving}건 이동 중`,
+      sub: slowest ? `최장 ${media(slowest.mt).label} ${slowest.d.toFixed(0)}초` : '' });
+  }
+
+  // ④ 아무것도 없으면 — 공백. C2가 막은 게 아니라는 것을 분명히 적는다.
+  if (!out.length) {
+    out.push({ cls: 'idle',
+      text: '교전 가능 상태 대기',
+      sub: '어느 계통도 처리 중이 아님 — 사격통제·체공창을 기다리는 구간' });
+  }
+  return out;
+}
+
+function renderSignals(sigs) {
+  const box = el('signal');
+  if (view !== 'track' || !sel) { box.hidden = true; return; }
+  box.hidden = false;
+  // 붉은 것(막힘)을 앞으로 — 화면에서 먼저 읽혀야 한다.
+  const order = { stop: 0, wait: 1, go: 2, idle: 3 };
+  const shown = sigs.slice().sort((a, b) => order[a.cls] - order[b.cls]).slice(0, 4);
+  box.innerHTML = shown.map((s) =>
+    `<span class="sig ${s.cls}"><span class="lamp"></span>${esc(s.text)}` +
+    (s.sub ? `<span class="sub">${esc(s.sub)}</span>` : '') + `</span>`).join('');
+}
+
+function drawFrameTrack() {
+  if (!sel || !geo) return;
+  const dots = el('graph').querySelector('#lyr-dots');
+  const showSensor = el('show-sensor').checked;
+  let out = '';
+
+  const liveCols = new Set();
+  // 킬체인 프론티어 — 이 항적의 계선이 **지금까지 도달한** 가장 오른쪽 열.
+  // 「항적이 움직이니 C2가 왼쪽부터 차례로 반응한다」를 한 줄로 못박는 표시다.
+  let frontier = -1;
+
+  sel.flows.forEach((f) => {
+    const e = geo.edgeByKey[edgeKey(f)];
+    if (!e || !e.el) return;
+    // 도착이 끝난 전문은 프론티어를 그만큼 밀어 둔다(역방향 도착은 밀지 않는다).
+    if (simT >= f.t1 && !e.back && e.cb != null) frontier = Math.max(frontier, e.cb);
+    // 순간 전달(지연 0 — 병렬 통보)은 도착 직후 잠깐만 깜빡인다. 0초를 "이동"으로 그리면
+    // 없는 시간을 지어내는 것이고, 아예 안 그리면 통보가 없었던 것처럼 보인다.
+    const inFlight = f.d > 0 ? (simT >= f.t0 && simT <= f.t1) : (simT >= f.t0 && simT <= f.t0 + 1.5);
+    if (!inFlight) return;
+    if (e.ca != null) { liveCols.add(e.ca); liveCols.add(e.cb); }
+    // 프론티어·열 밝기는 「센서 보고 표시」 토글과 무관하다(전체 보기와 같은 규율) —
+    // 토글은 점의 혼잡을 줄이는 손잡이일 뿐이다. 점만 여기서 거른다.
+    if (!showSensor && f.mt === 'report-cycle') return;
+    const p = f.d > 0 ? (simT - f.t0) / f.d : 1;
+    const pt = e.el.getPointAtLength(e.len * Math.min(1, Math.max(0, p)));
+    const m = media(f.mt);
+    out += `<circle class="dot" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5.5" fill="${m.color}"></circle>`;
+    // 느린 매체는 이름표를 달아 준다 — 빠른 것에 달면 깜빡임만 늘어난다.
+    if (f.d >= 10) {
+      out += `<text class="dotlab" x="${(pt.x + 8).toFixed(1)}" y="${(pt.y - 7).toFixed(1)}">` +
+        `${esc(m.label)} ${f.d.toFixed(0)}초</text>`;
+    }
+  });
+  // 이 항적의 작업이 놓인 노드의 열도 밝힌다 — 대기든 처리든 「반응 중」이다.
+  // 선 위의 이동만 세면 노드에서 시간을 다 보내는 구간이 통째로 꺼져 보인다.
+  const myNodes = new Set();
+  sel.spans.forEach((s) => {
+    const endT = s.drop != null ? s.drop : (s.done != null ? s.done : Infinity);
+    if (simT >= s.arrive && simT <= endT) myNodes.add(s.at);
+  });
+  Object.keys(geo.nodes).forEach((k) => {
+    if (myNodes.has(geo.nodes[k].id)) liveCols.add(geo.nodes[k].col);
+  });
+  paintLiveCols(geo, liveCols);
+
+  // 킬체인 프론티어 — 왼쪽은 이미 지나온 단계, 오른쪽은 아직 도달 못 한 단계.
+  // ⚠️ 좌표를 지어내는 것이 아니다. 「도착이 끝난 전문의 도착 열」 중 최댓값일 뿐이고,
+  //    그 도착 시각은 실행이 기록한 t1이다.
+  if (frontier >= 0 && frontier < COLS.length) {
+    const fx = geo.colW * (frontier + 1);
+    const fy = 40;   // 열 머리글(18·30) 바로 아래에서 시작해 그래프 바닥까지
+    out += `<line class="frontier" x1="${fx.toFixed(1)}" y1="${fy.toFixed(1)}" x2="${fx.toFixed(1)}" y2="${geo.H}"></line>` +
+      `<text class="frontier-lab" x="${(fx - 5).toFixed(1)}" y="${(fy + 11).toFixed(1)}" text-anchor="end">` +
+      `킬체인 진행 ▸ ${esc(COLS[frontier].label)}</text>`;
+  }
+
+  // 이 항적의 전문 중 계선 입구에서 막힌 것 — 개별 보기에서도 같은 규칙으로 그린다.
+  out += renderBlocks(sel.blocks, geo);
+
+  // 「어디서 막혔나」에서 고른 구간의 **장소**를 그래프에 표시한다 — 목록의 한 줄이
+  // 그래프의 어느 노드·어느 선인지 이어 주지 않으면 "어디서"에 답하지 못한다.
+  const fs = sel.focusStall;
+  if (fs && fs.ref) {
+    if (fs.ref.type === 'node') {
+      const p = slotPos(geo, fs.ref.id);
+      if (p) out += `<circle class="stall-mark" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="17"></circle>` +
+        `<text class="stall-lab" x="${p.x.toFixed(1)}" y="${(p.y - 22).toFixed(1)}" text-anchor="middle">` +
+        `${esc(STALL_TAG[fs.kind])} ${fs.dur.toFixed(0)}초</text>`;
+    } else {
+      const e = geo.edges.find((x) => x.from === fs.ref.from && x.to === fs.ref.to &&
+        (!fs.ref.mt || x.mt === fs.ref.mt)) ||
+        geo.edges.find((x) => x.from === fs.ref.from && x.to === fs.ref.to);
+      if (e && e.el) {
+        out += `<path class="stall-edge" d="${e.d}"></path>`;
+        const pt = e.el.getPointAtLength(e.len * 0.5);
+        out += `<text class="stall-lab" x="${pt.x.toFixed(1)}" y="${(pt.y - 10).toFixed(1)}" text-anchor="middle">` +
+          `${esc(STALL_TAG[fs.kind])} ${fs.dur.toFixed(0)}초</text>`;
+      }
+    }
+  }
+
+  // 신호등이 가리키는 지점을 그래프에서도 짚는다 — 문장과 그림이 같은 곳을 가리켜야
+  // 「어디서」에 답이 된다. 붉은 맥동 = 막힘, 노랑 맥동 = 큐 대기.
+  const sigs = trackSignals(simT);
+  sigs.forEach((s) => {
+    if (s.kind === 'queue' || s.kind === 'service') {
+      if (s.kind !== 'queue') return;                 // 처리 중은 정상이라 표시하지 않는다
+      const p = slotPos(geo, s.node);
+      if (p) out += `<circle class="blockmark wait" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="15"></circle>`;
+    } else if (s.kind === 'blocked') {
+      const es = geo.edges.filter((e) => e.from === s.from && e.to === s.to);
+      const e = es.find((x) => x.kind === 'status') || es[0];
+      if (e) out += `<path class="wantpath" d="${e.d}"></path>`;   // 가야 할 방향을 흐르는 점선으로
+      const p = geo.nodes[s.from];
+      if (p) out += `<circle class="blockmark" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="15"></circle>`;
+    }
+  });
+  renderSignals(sigs);
+
+  // 종결 표시 — 이 항적이 어떻게 끝났는지. 종전에는 **아무것도 그리지 않아** 누수가
+  // 「그냥 움직임이 멎음」으로만 보였다. 모델은 사유·계열·구조성을 다 갖고 있다(ADR-050).
+  const oc = outcomeInfo(sel);
+  if (sel.exitT != null && simT >= sel.exitT) {
+    const W = geo.W, y = 34;
+    if (oc.leaked) {
+      out += `<g class="endbanner leak"><rect x="${(W / 2 - 230).toFixed(0)}" y="${y}" width="460" height="34" rx="6"></rect>` +
+        `<text x="${(W / 2).toFixed(0)}" y="${y + 15}" text-anchor="middle">` +
+        `누수 ${esc(fmt(sel.exitT))} — ${esc(oc.text)}</text>` +
+        `<text class="sub" x="${(W / 2).toFixed(0)}" y="${y + 28}" text-anchor="middle">` +
+        `${esc(oc.code || '')}${oc.family ? ` · ${esc(oc.family)} 계열 · ${esc(oc.struct)}` : ''}` +
+        `${oc.contributors.length ? ` · 기여 ${esc(oc.contributors.join(', '))}` : ''}</text></g>`;
+    } else {
+      out += `<g class="endbanner kill"><rect x="${(W / 2 - 110).toFixed(0)}" y="${y}" width="220" height="22" rx="6"></rect>` +
+        `<text x="${(W / 2).toFixed(0)}" y="${y + 15}" text-anchor="middle">격추 ${esc(fmt(sel.exitT))}</text></g>`;
+    }
+  }
+
+  dots.innerHTML = out;
+
+  // 노드 케파 — **전역 부하**를 그리고, 그 위에 이 항적의 작업이 몇 번째인지 표시한다.
+  // ⚠️ 종전에는 `sel.spans`(이 항적 몫)만 세어 노드 상태를 그렸다. 그러면 앞에 남의 작업이
+  //    20건 쌓여 있어도 「대기 1」로 보인다 — 왜 안 나아가는지 설명이 안 되는 화면이었다.
+  const gstate = stateAt(simT);
+  const mineAt = {};
+  sel.spans.forEach((s) => {
+    const endT = s.drop != null ? s.drop : (s.done != null ? s.done : Infinity);
+    if (simT < s.arrive || simT > endT) return;
+    if (s.start != null && simT >= s.start) { mineAt[s.at] = { kind: 'service' }; return; }
+    // 내 앞에 선 건수 = 같은 노드에서 나보다 먼저 도착했고 아직 서비스에 못 들어간 작업
+    let ahead = 0;
+    run.allSpans.forEach((o) => {
+      if (o.at !== s.at || o === s || o.arrive > simT || o.arrive >= s.arrive) return;
+      const oe = o.drop != null ? o.drop : (o.done != null ? o.done : Infinity);
+      if (simT <= oe && !(o.start != null && simT >= o.start)) ahead++;
+    });
+    if (!mineAt[s.at] || mineAt[s.at].kind !== 'service') mineAt[s.at] = { kind: 'queue', pos: ahead };
+  });
+  Object.keys(geo.nodeEls).forEach((k) => {
+    const els = geo.nodeEls[k], id = els.id, n = run.nodes[id] || {};
+    const cap = nodeCap(n); const c = cap ? cap.c : null;
+    const st = gstate[id] || { busy: 0, q: 0 };
+    if (els.fill && c) { paintCyl(els, geo.nodes[k], c, st, mineAt[id] || null); return; }
+    if (els.circ) {
+      // ⚠️ 종전에는 대기중(queue)에도 `busy`를 걸었다. 그때는 색만 바뀌어 넘어갔지만
+      //    이제 `busy`는 **맥동**한다 — 줄만 서 있는 노드가 일하는 것처럼 깜빡이면 안 된다.
+      const mn = mineAt[id];
+      const svcNow = !!(mn && mn.kind === 'service');
+      els.circ.classList.toggle('busy', svcNow);
+      els.circ.classList.toggle('queued', !!(mn && mn.kind === 'queue'));
+      // 주기는 **전역 상태**에서 잡는다 — 실린더와 같은 규칙이라야 같은 노드가 두 보기에서
+      // 다른 속도로 깜빡이지 않는다.
+      if (svcNow) applyPulse(els.circ, st);
+    }
+    if (els.badge) els.badge.textContent = st.q ? '대기 ' + st.q : '';
+  });
+
+  paintLog();
+  paintClock();
+}
+
+/**
+ * 「가야 할 방향은 있는데 못 가는」 전문을 계선 **입구에 줄 세워** 그린다.
+ *
+ * 움직이는 점(전송 중)과 반드시 달라 보여야 한다 — 채운 원이 아니라 **점선 테두리 빈 원**이고,
+ * 시각이 흘러도 제자리다. 그것이 "선은 있는데 못 건넌다"의 그림이다.
+ *
+ * ⚠️ 대기 위치는 표시 관례일 뿐 모델의 좌표가 아니다(모델에 대기 위치라는 개념은 없다).
+ *    실제인 것은 **언제부터 언제까지 못 갔는가**이며, 그것만 라벨과 툴팁에 적는다.
+ * @param geoRef layoutGraph/layoutAll이 만든 geo 객체 (edges·nodes)
+ */
+function renderBlocks(blocks, geoRef) {
+  if (!blocks || !blocks.length || !geoRef) return '';
+  let out = '';
+  const byEdge = {};
+  blocks.forEach((b) => {
+    if (b.kind === 'wait') { if (simT < b.t0 || simT > b.t1) return; }
+    else if (simT < b.t0 || simT > b.t0 + 1.8) return;   // 드롭은 순간 — 잠깐만 튄다
+    const k = b.from + '>' + b.to;
+    (byEdge[k] = byEdge[k] || []).push(b);
+  });
+  Object.keys(byEdge).forEach((k) => {
+    const items = byEdge[k];
+    const [from, to] = k.split('>');
+    // 그 쌍의 계선 중 status(교전현황)를 먼저 찾고, 없으면 아무 계선, 그것도 없으면 노드.
+    const es = geoRef.edges.filter((e) => e.from === from && e.to === to);
+    const edge = es.find((e) => e.kind === 'status') || es[0] || null;
+    const at = (frac) => {
+      if (edge && edge.el) return edge.el.getPointAtLength(edge.len * frac);
+      const n = slotPos(geoRef, from, 'up');
+      return n ? { x: n.x + 14, y: n.y } : null;
+    };
+    const waits = items.filter((b) => b.kind === 'wait');
+    const drops = items.filter((b) => b.kind === 'drop');
+    waits.slice(0, 8).forEach((b, i) => {
+      const p = at(0.10 + i * 0.05);
+      if (!p) return;
+      const forever = !isFinite(b.t1);
+      out += `<circle class="wait-dot${forever ? ' forever' : ''}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5">` +
+        `<title>${esc((b.th || '') + ' — ' + fmt(b.t0) + '부터 대기 중' +
+          (forever ? ' (관측 종료까지 못 감)' : ' → ' + fmt(b.t1) + ' 출발') +
+          '\n계선은 있으나 채널이 비지 않아 떠나지 못한다')}</title></circle>`;
+    });
+    if (waits.length) {
+      const p = at(0.10);
+      const oldest = Math.min.apply(null, waits.map((b) => b.t0));
+      if (p) out += `<text class="blocklab" x="${(p.x + 9).toFixed(1)}" y="${(p.y - 9).toFixed(1)}">` +
+        `막힘 ${waits.length}건 · ${(simT - oldest).toFixed(0)}초째</text>`;
+    }
+    drops.forEach((b) => {
+      const p = at(0.10);
+      if (!p) return;
+      const age = (simT - b.t0) / 1.8;
+      out += `<g class="drop-x" opacity="${(1 - age).toFixed(2)}" transform="translate(${p.x.toFixed(1)},${p.y.toFixed(1)})">` +
+        `<line x1="-6" y1="-6" x2="6" y2="6"></line><line x1="-6" y1="6" x2="6" y2="-6"></line>` +
+        `<title>${esc((b.th || '') + ' — ' + fmt(b.t0) + ' 채널 용량 초과로 버려짐(출발 못 함)')}</title></g>`;
+    });
+  });
+  return out;
+}
+
+function paintClock() {
+  if (!run || (view === 'track' && !sel)) { el('clock').textContent = '—'; return; }
+  el('clock').textContent = fmt(simT) + ' / ' + fmt(viewT1());
+  const t0 = viewT0(), span = Math.max(1e-6, viewT1() - t0);
+  el('scrub').value = String(Math.round((simT - t0) / span * 1000));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   7. 재생
+   ══════════════════════════════════════════════════════════════════════════ */
+/**
+ * ⚠️ 재생 시계를 `requestAnimationFrame`으로 돌리지 않는다. 탭이 배경으로 가면 rAF는
+ *    **정지**하고, 재생 버튼은 눌린 채로 시계만 멈춰 버린다(실측 — 2.5초 동안 시각 불변).
+ *    타이머는 배경에서 느려질 뿐 계속 돌고, 경과는 벽시계(performance.now)에서 재므로
+ *    화면이 끊길지언정 **시각이 어긋나지는 않는다**.
+ */
+function tick() {
+  if (!playing || !run) return;
+  const wall = performance.now();
+  const dt = Math.min(.5, (wall - lastWall) / 1000);   // 탭 복귀 시 한 번에 튀는 것을 막는다
+  lastWall = wall;
+  simT += dt * speed;
+  if (simT >= viewT1()) { simT = viewT1(); setPlaying(false); }
+  drawFrame();
+}
+
+function setPlaying(on) {
+  playing = on;
+  el('play').textContent = on ? '❚❚' : '▶';
+  el('play').classList.toggle('on', on);
+  if (timerId) { clearInterval(timerId); timerId = null; }
+  if (on) {
+    if (run && simT >= viewT1()) simT = viewT0();
+    lastWall = performance.now();
+    timerId = setInterval(tick, 33);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   8. 배선
+   ══════════════════════════════════════════════════════════════════════════ */
+el('sc').innerHTML = KJ.SCENARIOS.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+el('sc').value = KJ.SCENARIOS.some((s) => s.id === P.sc) ? P.sc : 'sc3';
+// 배치는 고정 — 어떤 배치의 수치인지는 화면에 **반드시** 남긴다(손잡이를 없앤 대가).
+el('dep-fixed').querySelector('b').textContent = KJ.deploymentById(DEPLOYMENT).name;
+el('seed').value = String(P.seed);
+el('dur').value = String(P.dur);
+if (P.mode === 'tobe') setMode('tobe');
+
+el('legend').innerHTML =
+  '<b>작업 맥동</b> — 지금 일하는 노드가 깜빡이고, <b>깜빡이는 주기가 곧 그 작업의 서비스 시간</b>이다.' +
+  ' 빠른 자리는 빠르게, 굼뜬 자리는 느리게 고동친다:' +
+  ' <span style="color:#7fd0f5">ECS 평균 3.5초</span> ·' +
+  ' <span style="color:#7fd0f5">ICC 9초</span> ·' +
+  ' <span style="color:var(--warn)">MCRC·KAMDOC 37.5초</span> ·' +
+  ' <span style="color:var(--warn)">사수(발사 처리) 40~60초</span>' +
+  ' — 실제 값은 건마다 다르다. 대기만 하는 노드는 깜빡이지 않는다(점선 테두리).' +
+  ' <b>실린더 왼쪽 숫자는 「지금 몇 초째」를 센다</b>(총 몇 초 걸리는 일인지가 아니라 —' +
+  ' 그것은 끝나 봐야 아는 값이라 못박아 두면 시간이 흐르는 자리가 정지한 숫자로 보인다).' +
+  ' 재생하면 올라가고, <span style="color:var(--warn)">20초를 넘으면 호박색</span>이 된다.' +
+  ' 서버가 여럿 물려 있으면 <b>가장 오래 쥐고 있는 일</b>을 센다.' +
+  ' <b>배속으로 나눠 화면 시각에 맞춘다</b>(벽시계 0.35~6초로 자른다 — 잘린 것은 보이는 주기뿐이고' +
+  ' 꼬리표의 값은 그대로다).' +
+  ' <span style="opacity:.85">· <b>화살촉</b> — 계선이 흐르는 방향. ' +
+  '<span style="color:var(--bad)">붉은 화살촉</span>은 <b>역방향</b>(승인 협조·교전명령 하달처럼 계선을 되돌아간다).</span>' +
+  ' <span style="opacity:.85">· <b>밝아진 열</b> — 지금 이동·처리·대기가 벌어지는 단계.' +
+  ' 시간이 흐르면 밝은 띠가 왼쪽에서 오른쪽으로 옮겨 간다' +
+  ' · 항적 개별 보기의 <span style="color:var(--accent)">파란 점선</span>은 <b>킬체인 프론티어</b>' +
+  '(왼쪽 = 이미 지나온 단계, 오른쪽 = 아직 도달 못 한 단계).</span> ' +
+  '<b>매체별 이동 속도</b> — 선을 건너는 데 걸리는 시간이 곧 그 계선의 지연이다. ' +
+  Object.keys(MEDIA).map((k) => {
+    const m = MEDIA[k];
+    return `<span class="lg"><i style="border-top-color:${m.color};${m.dash ? 'border-top-style:dashed' : ''}"></i>` +
+      `${esc(m.label)} <span style="opacity:.7">${esc(m.hint)}</span></span>`;
+  }).join('') +
+  ' <span style="opacity:.85">· <b>케파 실린더</b> — 처리 슬롯이 아래에서 차오르고 대기는 위로 쌓인다:' +
+  ' <span style="color:var(--accent)">여유</span> →' +
+  ' <span style="color:var(--warn)">가득</span> →' +
+  ' <span style="color:var(--bad)">가득+대기(병목)</span>.' +
+  ' <b>작업중(처리중 ≥1)이면 채움과 테두리가 위 「작업 맥동」 규칙으로 깜빡인다</b>' +
+  ' — 실린더를 못 그린 작은 원(밀집 열의 ECS·사수·센서)도 같은 규칙이다.' +
+  ' ⚠️ 맥동 주기는 고정이다 — <b>속도를 뜻하는 것은 흐름 롤러 하나뿐</b>이다.' +
+  ' 가운데 숫자 = 처리중/서버수 · 위 디스크 1개 = 대기 1건(7개 넘으면 +N)' +
+  ' · <b style="color:#fff">흰 디스크·흰 테두리</b> = 이 항적의 작업(항적 개별 보기)' +
+  ' · 대기실 초과 드롭 = <span style="color:var(--bad)">붉은 섬광</span>' +
+  ' · 실린더 없는 작은 원 = 자리가 좁아 접은 것(밀집 열) 또는 센서(처리 큐 없음)</span>' +
+  ' <span style="opacity:.85">· <b>못 가는 전문</b> — 계선 입구에 멈춰 선 <span style="color:var(--warn)">점선 빈 원</span>은' +
+  ' 갈 곳은 정해졌는데 채널이 안 비어 대기 중,' +
+  ' <span style="color:var(--bad)">붉은 점선</span>은 관측 종료까지 못 감,' +
+  ' <span style="color:var(--bad)">✕</span>는 용량 초과로 출발조차 못 함' +
+  ' (움직이는 점 = 채운 원과 구분)</span>';
+
+el('run').addEventListener('click', doRun);
+el('m-asis').addEventListener('click', () => setMode('asis'));
+el('m-tobe').addEventListener('click', () => setMode('tobe'));
+function setMode(m) {
+  mode = m;
+  el('m-asis').classList.toggle('on', m === 'asis');
+  el('m-tobe').classList.toggle('on', m === 'tobe');
+  // 계선 매체 교체는 모드마다 계선 자체가 다르므로 함께 비운다 — 남겨 두면 As-Is에서 고른
+  // 계선이 To-Be에는 없어 "못 맞춘 계선"으로만 뜨고 아무 일도 일어나지 않는다.
+  if (Object.keys(overrides).length) { overrides = {}; renderOverrides(); }
+  markDirty();
+}
+
+// 실행 조건이 바뀌는 컨트롤은 전부 dirty 표시를 올린다 — 화면 수치가 옛 실행의 것임을
+// 알리지 않으면, 토글만 누르고 바뀐 결과를 본 것으로 오해한다.
+// 상단 바에 남은 컨트롤만 재실행 대상이다(나머지 조건은 URL이라 새로고침으로 바뀐다).
+['sc', 'seed', 'dur'].forEach((id) => {
+  el(id).addEventListener('change', markDirty);
+});
+el('pop-close').addEventListener('click', () => { el('pop').hidden = true; });
+el('ovr-clear').addEventListener('click', () => {
+  overrides = {}; renderOverrides(); markDirty(); el('pop').hidden = true;
+});
+document.addEventListener('click', (ev) => {
+  const pop = el('pop');
+  if (!pop.hidden && !pop.contains(ev.target) && !ev.target.closest('.edgeg')) pop.hidden = true;
+}, true);
+el('play').addEventListener('click', () => setPlaying(!playing));
+el('skip').addEventListener('click', () => { setPlaying(false); skipToNextEvent(); });
+el('scrub').addEventListener('input', (e) => {
+  if (!run || (view === 'track' && !sel)) return;
+  setPlaying(false);
+  simT = viewT0() + (viewT1() - viewT0()) * (+e.target.value / 1000);
+  drawFrame();
+});
+document.querySelectorAll('.spd button').forEach((b) => {
+  b.addEventListener('click', () => {
+    speed = +b.dataset.spd;
+    document.querySelectorAll('.spd button').forEach((x) => x.classList.toggle('on', x === b));
+    // 작업 맥동 주기는 배속으로 나눈 값이다 — 배속만 바꾸고 다시 그리지 않으면 옛 배속의
+    // 주기로 계속 깜빡인다(×60에서 3.5초짜리 일이 3.5초 주기로 도는 증상).
+    if (run) drawFrame();
+  });
+});
+el('show-sensor').addEventListener('change', () => {
+  if (view === 'all') {
+    el('graph').classList.toggle('hide-sensor', !el('show-sensor').checked);
+    drawFrame();
+  } else { lastLogIdx = -2; renderLog(); drawFrame(); }
+});
+window.addEventListener('resize', () => {
+  if (view === 'all' && run) { layoutAll(); drawFrame(); }
+  else if (sel) { layoutGraph(); drawFrame(); }
+});
+
+// 보기 전환
+el('v-all').addEventListener('click', () => { if (run) setView('all'); });
+el('v-track').addEventListener('click', () => { if (run) setView('track'); });
+
+// 전체 보기의 느린 전문 점 클릭 → 그 항적의 개별 보기로 내려간다.
+// 점은 매 프레임 다시 만들어지므로 위임으로 받는다.
+el('graph').addEventListener('click', (ev) => {
+  const dot = ev.target.closest && ev.target.closest('.dot[data-th]');
+  if (!dot || view !== 'all' || !run) return;
+  const idx = run.tracks.findIndex((t) => t.id === dot.dataset.th);
+  if (idx < 0) return;
+  ev.stopPropagation();
+  const keepT = simT;
+  renderTrackList();
+  selectTrack(idx);
+  // 점을 눌렀을 때 보던 시각을 유지한다 — 개별 보기로 내려가며 처음으로 되감기면 문맥이 끊긴다.
+  simT = Math.min(Math.max(keepT, sel.spawnT), sel.endT);
+  drawFrame();
+}, true);
+
+el('status').textContent = '커널 로딩 완료 — [실행]을 누르세요.';
+</script>
+</body>
+</html>

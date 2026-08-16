@@ -167,9 +167,12 @@
     var parity = !!(opts && opts.sensorReportParity); // ADR-067
     var opLevel = (opts && opts.c2OperatorLevel) || null; // 'high'|'low' (null=mid, 종전 동일)
     var kvmf = !!(opts && opts.kvmfLateral); // ADR-081
+    // 연합 항적 공유 반사실(ADR-085). false(기본)면 계선을 한 가닥도 만들지 않는다 —
+    // 캐시 키에 들어가므로 OFF 카탈로그는 종전과 물리적으로 같은 객체다.
+    var usfkShare = (opts && opts.usfkTrackSharing) || null;
     var cacheKey = id + (v2 ? '|linkV2' : '') + (appr ? '|appr' : '') +
       (southern ? '|south' : '') + (parity ? '|rp' : '') + (opLevel ? '|op:' + opLevel : '') +
-      (kvmf ? '|kvmf' : '');
+      (kvmf ? '|kvmf' : '') + (usfkShare ? '|usfkshare:' + usfkShare : '');
     if (cache[cacheKey]) return cache[cacheKey];
     var deployment = KJ.deploymentById(id);
     if (!deployment) throw new Error('Unknown high-resolution deployment: ' + id);
@@ -464,6 +467,50 @@
       });
     }
 
+    // ── ADR-085 연합 항적 공유 반사실 (usfkTrackSharing) ─────────────────────────
+    //
+    // ⚠️ **반사실이다. 기본은 꺼져 있고, 켜면 이 실행은 기준 배치가 아니다.**
+    //
+    // 현행 모델은 미군 축(THAAD·USFK Patriot)과 한국군 계통 사이에 계선을 **한 가닥도**
+    // 두지 않는다(ADR-036 「권한 자동 통합 금지」 승계). 그 결과 지휘권 분리를 넘어
+    // **항적 공유까지 0**이 되어, 실제 연합 방공에서 통상 이뤄지는 정보 공유(Link-16 계열)
+    // 조차 없는 상태가 기준선이 되어 있다. 이 플래그는 그 가정만 국소적으로 뒤집어
+    // 「지휘는 그대로 분리하되 항적만 공유했다면」을 보게 한다.
+    //
+    // 여는 것: **상황인식(report) 계선뿐이다.**
+    //   · 미군 C2 ↔ 한국군 상급 제대(As-Is: MCRC·KAMDOC / To-Be: IAOC) 양방향 report
+    // 열지 않는 것(엔진에서 그대로 격리 유지 — sim-engine.js 해당 주석 참조):
+    //   · 지휘·표적할당 — 미군 축은 여전히 자기 포대만 지휘한다(_resolveIadsCommanders 불변)
+    //   · 승인 계선 — 미군 축은 여전히 승인 계선 미적용(ADR-058 어서션 유지)
+    //   · 교전현황(status)·중복해소 — 축이 다르면 여전히 공유 안 함(_iadsPlanBlocks 불변)
+    //   · 킬웹 원격교전 파티션 — usfk 파티션은 여전히 격리(_iadsRemoteFcGrade 불변)
+    //
+    // ⚠️ 매체는 `usfkTrackSharing` 값으로 고른다(카탈로그 선언 매체만). 기본 'datalink'(1초)는
+    //    **연합 데이터링크가 C2↔C2 전송과 같은 속도**라는 가정이며 등급 C다. 느린 매체를
+    //    골라 "협조는 되지만 사람이 매개한다"는 대안도 볼 수 있게 열어 둔다.
+    if (usfkShare) {
+      var shareComm = {
+        datalink: C2_TRANSFER, ifcn: IFCN, internal: INTERNAL,
+        voice: VOICE, chat: CHAT_TRACK, 'voice-vtc': VOICE_STATUS, 'kvmf-relay': KVMF_LATERAL
+      }[usfkShare === true ? 'datalink' : usfkShare];
+      if (!shareComm) throw new Error('알 수 없는 usfkTrackSharing 매체: ' + usfkShare);
+      var usfkC2s = nodes.filter(function (n) {
+        return n.category === 'c2' && n.forceOwner === 'USFK' && n.typeId !== 'ECS';
+      });
+      // As-Is 상대는 도메인 상급 둘(공중 MCRC·탄도 KAMDOC), To-Be 상대는 조율층 하나.
+      var asisPeers = [mcrc, kamdoc].filter(Boolean);
+      usfkC2s.forEach(function (u) {
+        asisPeers.forEach(function (p) {
+          addLink(links, u.id, p.id, 'report', shareComm, null, 'coalition_track_share');
+          addLink(links, p.id, u.id, 'report', shareComm, null, 'coalition_track_share');
+        });
+        if (iaoc) {
+          addLink(links, u.id, iaoc.id, 'report', null, shareComm, 'coalition_track_share');
+          addLink(links, iaoc.id, u.id, 'report', null, shareComm, 'coalition_track_share');
+        }
+      });
+    }
+
     // ⚠️ resolveRoleId는 **등록되지 않은 키를 그대로 반환한다**. 그 값은 nodeId가 아니므로
     //    엔진의 `!this.nodeState[approvalId]` 가드(sim-engine.js)에 걸려 "승인 불필요"로
     //    조용히 처리된다 — 승인 단계가 사라지는데 실행은 성공한다. 그래서 데이터(threats.js)가
@@ -498,6 +545,56 @@
 
   // ADR-061: KJ.LEGACY_CATALOG 폐기 — 고해상도 카탈로그만 존재한다.
   KJ.buildDeploymentCatalog = buildDeploymentCatalog;
+
+  /**
+   * 계선 매체 사전 — 「이 계선이 문자 대신 데이터링크였다면?」 반사실 실험용.
+   *
+   * ⚠️ **이 파일 위쪽에 선언된 그 상수들 자체**를 내보낸다. 값을 여기서 다시 적으면
+   *    두 벌이 되어, 위를 고쳐도 실험 쪽은 옛 값으로 조용히 남는다.
+   * ⚠️ 여기 없는 값(임의의 초)으로는 바꿀 수 없게 둔다. 근거 없는 숫자를 넣으면
+   *    그 실행의 결과는 인용할 수 없는 것이 되는데, 화면에서는 그 구분이 안 보인다.
+   */
+  KJ.LINK_MEDIA_PRESETS = Object.freeze({
+    'datalink': C2_TRANSFER, 'ifcn': IFCN, 'internal': INTERNAL,
+    'voice': VOICE, 'chat': CHAT_TRACK, 'voice-vtc': VOICE_STATUS, 'kvmf-relay': KVMF_LATERAL
+  });
+
+  /**
+   * 카탈로그의 특정 계선만 다른 매체로 갈아 끼운 **사본**을 만든다(원본 캐시는 그대로).
+   *
+   * @param overrides { '<from>><to>><kind>': '<매체 키>' }
+   * @returns 원본과 같은 모양의 새 카탈로그 + `linkMediaOverrides`(적용 내역 원장)
+   *
+   * ⚠️ 반사실이다. 매체가 바뀌면 `_linkDelay`의 난수 소비가 달라져 **실행 전체가 다른
+   *    표본**이 된다 — 기준 배치 결과와 나란히 놓고 "차이 = 그 계선의 몫"이라고 읽으면
+   *    안 된다(같은 seed라도 짝맞춤이 깨진다). 원장을 결과에 실어 두는 이유다.
+   */
+  KJ.withLinkMediaOverrides = function (catalog, overrides, mode) {
+    var keys = Object.keys(overrides || {});
+    if (!keys.length) return catalog;
+    var applied = [], unmatched = keys.slice();
+    var links = catalog.links.map(function (l) {
+      var key = l.from + '>' + l.to + '>' + l.kind;
+      var want = overrides[key];
+      if (!want || !l.comm[mode]) return l;
+      var preset = KJ.LINK_MEDIA_PRESETS[want];
+      if (!preset) throw new Error('알 수 없는 계선 매체: ' + want);
+      var at = unmatched.indexOf(key);
+      if (at >= 0) unmatched.splice(at, 1);
+      applied.push({ from: l.from, to: l.to, kind: l.kind,
+        was: l.comm[mode].type, now: preset.type });
+      var comm = {};
+      Object.keys(l.comm).forEach(function (m) { comm[m] = l.comm[m]; });
+      comm[mode] = preset;
+      return { from: l.from, to: l.to, kind: l.kind, comm: comm, axis: l.axis };
+    });
+    var out = {};
+    Object.keys(catalog).forEach(function (k) { out[k] = catalog[k]; });
+    out.links = links;
+    // 못 맞춘 키를 조용히 삼키지 않는다 — 오타 하나로 "바꿨는데 안 바뀐" 실행이 나온다.
+    out.linkMediaOverrides = { applied: applied, unmatched: unmatched, mode: mode };
+    return freezeAll(out);
+  };
   KJ.resolveModelCatalog = function (config) {
     config = config || {};
     var features = config.features || {};
@@ -520,6 +617,10 @@
         // ADR-081: 방공C2A 간 상급 경유 항적 공유(KVMF) — 기본 ON. 엔진 기본값과 반드시
         // 일치해야 한다(다른 기본 ON 플래그와 같은 이유 — 명시적 false만 끈다).
         kvmfLateral: features.kvmfLateral !== false,
+        // ADR-085: 연합 항적 공유 반사실 — **명시적으로 켤 때만** 계선이 생긴다(기본 OFF).
+        // 다른 플래그와 달리 `!== false`가 아니라 truthy 검사인 이유: 이것은 기본값 전환이
+        // 아니라 반사실이라, 키가 없는 호출에서 조용히 켜지면 안 된다.
+        usfkTrackSharing: features.usfkTrackSharing || null,
         // ADR-058 동반 스윕: 운용자 처리시간 high/mid/low (기본 mid — 종전 동일)
         c2OperatorLevel: features.c2OperatorLevel === 'high' || features.c2OperatorLevel === 'low'
           ? features.c2OperatorLevel : null });

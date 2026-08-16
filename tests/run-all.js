@@ -78,6 +78,8 @@ var suites = [
   ,['approval-authority.test.mjs', 'ADR-077 교전승인권자 해소 정합 (미등록 역할=승인 증발 방지·To-Be 조율층 경유·As-Is 불변)']
   ,['c2-echelon-hierarchy.test.mjs', 'ADR-078 IAOC 상위 제대화 (도메인 제대 실부하·병렬 통보·교전현황 조율층 수신·As-Is 불변)']
   ,['analysis-pipeline-table.test.mjs', 'ADR-083 탐지→발사 시간표 단일화 (산술 정합·승인 0초 규칙·단일 코호트·구표 검산)']
+  ,['flow-trace.test.mjs', '지휘 흐름 관측 flowTrace (ON/OFF bit-exact·간선/매체 정합·병렬 계선·체류 순서·절삭 고지)']
+  ,['usfk-track-sharing.test.mjs', 'ADR-085 연합 항적 공유 반사실 (OFF 계선 0·상황인식만 개방·지휘/승인 격리 유지·매체 검증)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

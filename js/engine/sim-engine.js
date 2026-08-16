@@ -159,6 +159,14 @@
       ? KJ.resolveModelCatalog(cfg)
       : { id: 'legacy', nodes: KJ.NODES, links: KJ.LINKS,
           roles: { fusionC2: 'JAMDC2', IAOC: 'JAMDC2', KAMDOC: 'KAMDOC', MCRC: 'MCRC', KAOC: 'KAOC' } };
+    // 계선 매체 반사실(「이 계선이 음성 대신 데이터링크였다면」) — 옵트인.
+    // ⚠️ 매체가 바뀌면 링크 지연의 난수 소비가 달라져 **실행 전체가 다른 표본**이 된다.
+    //    그래서 적용 내역을 결과에 실어, 수치를 인용할 때 반사실임이 따라붙게 한다.
+    this.linkMediaOverrides = null;
+    if (cfg.linkMediaOverrides && KJ.withLinkMediaOverrides) {
+      this.catalog = KJ.withLinkMediaOverrides(this.catalog, cfg.linkMediaOverrides, this.mode);
+      this.linkMediaOverrides = this.catalog.linkMediaOverrides || null;
+    }
     // ADR-061: legacy 배치·compat 충실도 폐기 — 고해상도 iads-c2가 유일한 정본 경로다.
     if (cfg.features && cfg.features.highResolutionDeployment === false) {
       throw new Error('legacy 배치는 폐기되었다(ADR-061) — 고해상도 배치 6종만 지원');
@@ -250,6 +258,15 @@
     // nativeWtaCostAsis는 반증 전용(As-Is에도 비용항 적용 — 선례 costAwareWtaAsis).
     this.nativeWtaMode = ff('nativeWtaMode', false);
     this.nativeWtaCostAsis = ff('nativeWtaCostAsis', false);
+    // ADR-087: 소형 무인기를 국지방공(육군)이 자체 판단·요격하고 교전현황만 공유 — 기본 OFF.
+    // 켜면 As-Is `LOCAL_AD` 축의 무인기 승인 단계가 사라져 결과가 이동한다(재기준선 대상).
+    // To-Be는 이미 `auto-preauth`라 영향 없음(설계) — 실측으로 확인한다.
+    this.uavLocalSelfEngage = ff('uavLocalSelfEngage', false);
+    // ADR-086: 고도대역 적합도(C2-WTA-SUIT-01)를 To-Be 사수 선정에 복원 — 기본 OFF(불변 규칙 1).
+    // ⚠️ `this.features` 객체에 넣지 않는다. 그 객체는 결과(global.features)로 그대로 나가므로
+    //    키를 하나만 더해도 **기준선 SHA-256이 깨진다**(OFF wire shape 불변 원칙).
+    //    최근 플래그(approvalChain·threatTargetDispersion…)와 같이 인스턴스 속성으로만 둔다.
+    this.wtaSuitability = ff('wtaSuitability', false);
     // ADR-063: 표적권역 산포 — 종전에는 같은 축선의 모든 위협이 정확히 같은 한 점으로 향해
     // seed를 바꿔도 착탄점이 불변이었다. ON이면 위협마다 표적권역(disk) 안에서 착탄점을 뽑는다.
     // 반경은 features.targetSpreadKm로 스윕 가능(기본 THREAT-TARGET-DISP-01 = 15km, 등급 C).
@@ -327,6 +344,11 @@
     // ADR-036(USFK 권한 자동 통합 금지) — 그림자 자산 범위에서 USFK를 **기본 제외**한다.
     // 포함 버전은 참고용 반사실로만 켠다(결론 문장에 쓰지 않는다).
     this.shadowEvalIncludeUsfk = ff('shadowEvalIncludeUsfk', false);
+    // ADR-085: 연합 항적 공유 반사실 — 미군↔한국군 **상황인식만** 연다(지휘·승인·교전현황
+    // 격리는 유지). 값은 매체 키(기본 'datalink')이며 카탈로그 변형과 **짝으로** 켜져야 한다:
+    // 필터만 풀면 계선이 없어 경로가 없고, 계선만 깔면 센서 소유 필터가 보고를 버린다.
+    // ⚠️ 반사실이라 기본은 null이다. 켜면 결과에 원장을 실어 기준 배치가 아님을 남긴다.
+    this.usfkTrackSharing = f.usfkTrackSharing || null;
     // ADR-074 B-2: 교전창 마감 계측 — 기존 반사실 PIP 창(_iadsGeometryWindow)의 상한을 재사용한다.
     // 새 물리 없음·난수 없음. decisionAudit이 켜져 있어야 동작한다.
     this.windowMargin = ff('windowMargin', false);
@@ -465,6 +487,23 @@
     this.c2EventCap = Math.max(1000, Number(cfg.c2EventCap) || 50000);
     this.c2Events = [];
     this.c2EventsTruncated = false;
+
+    // ── 지휘 흐름 관측(flowTrace) — 옵트인, 기본 false ──────────────────────────
+    // 무엇을 위한 것인가: 「어떤 전문이 **어느 간선을 언제 출발해 언제 도착했는가**」와
+    // 「노드에서 **얼마나 기다렸다 얼마나 처리했는가**」. 종전 관측은 이 둘을 버렸다 —
+    // `_mark`는 도착 사건의 이름·시각만 남기고, `_linkDelay()`가 뽑은 지연은 스케줄에
+    // 쓰이고 사라지며, `_recordLink`는 통과 **횟수**만 셌다(집계용). 그래서 선 위의
+    // 이동을 그리려 해도 출발시각이 없어 되살릴 수가 없었다.
+    //
+    // ⚠️ **순수 관측이다.** RNG를 뽑지 않고, 스케줄을 건드리지 않고, 어떤 분기도 바꾸지
+    //    않는다(`_mark`·`_metricEvent`와 같은 규율). OFF면 wire shape가 종전과 같다.
+    // ⚠️ 기록 지점에서 `_linkDelay()` **호출 순서를 바꾸지 않는다** — 지연값을 넘겨받기
+    //    위해 지역변수로 받는 것뿐이며, RNG 소비 순서가 바뀌면 bit-exact가 깨진다.
+    this.flowTrace = cfg.flowTrace === true;
+    this.flowTraceCap = Math.max(1000, Number(cfg.flowTraceCap) || 60000);
+    this.flowEvents = [];
+    this.flowTruncated = false;
+    this._flowSeq = 0;
 
     this._initNodes();
     if (this.nativeIads) this._initIadsResources();
@@ -653,11 +692,35 @@
     return l ? l.comm[this.mode] : null;
   };
 
-  Simulation.prototype._recordLink = function (fromId, toId, comm, kind) {
+  /**
+   * 링크 통과 집계(+ flowTrace ON이면 개별 통과 사건도 기록).
+   *
+   * @param obs {threat, t0, delay} — 선택. 있고 flowTrace가 켜져 있을 때만 개별 사건을
+   *   남긴다. `delay`는 **호출부가 이미 뽑아 둔 실제 지연값**이다(여기서 다시 뽑으면
+   *   RNG를 한 번 더 소비해 결과가 갈라진다).
+   */
+  Simulation.prototype._recordLink = function (fromId, toId, comm, kind, obs) {
     var key = fromId + '>' + toId;
     var s = this.linkStat[key];
     if (!s) s = this.linkStat[key] = { from: fromId, to: toId, count: 0, delaySec: comm.delaySec, type: comm.type, kind: kind };
     s.count++;
+    if (this.flowTrace && obs) {
+      var ev = {
+        k: 'link', from: fromId, to: toId, mt: comm.type, kind: kind,
+        t0: +obs.t0, t1: obs.t0 + obs.delay, d: +obs.delay,
+        nominal: comm.delaySec,
+        th: obs.threat && obs.threat.id ? obs.threat.id : null
+      };
+      if (obs.mid != null) ev.mid = obs.mid;   // 채널 대기(cq)와 잇는 열쇠
+      this._flowEvent(ev);
+    }
+  };
+
+  /** flowTrace 공통 적재구. 상한을 넘으면 **버렸다는 사실을 남기고** 버린다(ADR-062). */
+  Simulation.prototype._flowEvent = function (ev) {
+    if (!this.flowTrace) return;
+    if (this.flowEvents.length >= this.flowTraceCap) { this.flowTruncated = true; return; }
+    this.flowEvents.push(ev);
   };
 
   // ── 노드 서버풀(M/M/c/K) ──
@@ -685,6 +748,13 @@
       this._metricEvent('C2_ARRIVED', t, job.threat, this._c2JobMetricDetail(nsId, job));
     }
     ns.arrivals++;
+    // flowTrace: 노드 체류(대기 + 처리)를 되살리려면 도착·개시·완료가 **같은 작업**임을
+    // 이을 열쇠가 필요하다. job에 관측용 일련번호를 찍는다(RNG·분기 무관).
+    if (this.flowTrace) {
+      job._fid = ++this._flowSeq;
+      this._flowEvent({ k: 'na', id: job._fid, at: nsId, t: +t,
+        jk: job.kind, th: job.threat && job.threat.id ? job.threat.id : null });
+    }
     var bk = bucket(ns, job.kind); bk.arrivals++;
     var inSystem = ns.busy + ns.queue.length;
     if (ns.busy < ns.c) {
@@ -707,6 +777,10 @@
       disposition = 'queued';
     } else {
       ns.drops++; bk.drops++;     // M/M/c/K 포화 → 항적/교전기회 상실
+      // flowTrace의 `r`(이탈 사유)은 드롭 계정 대사에 필수다: 'over'(대기실 초과)와
+      // 'ttl'(기한 만료)만 ns.drops에 계상되고 'dead'(항적 소멸 큐 정리)는 계상되지 않는다.
+      // 사유가 없으면 관측으로 재구성한 드롭 수를 엔진 카운터와 맞춰 볼 수 없다.
+      if (this.flowTrace) this._flowEvent({ k: 'nx', id: job._fid, at: nsId, t: +t, r: 'over' });
       if (ns.node.category === 'c2') {
         this._metricEvent('C2_DROPPED', t, job.threat, this._c2JobMetricDetail(nsId, job));
       }
@@ -724,6 +798,7 @@
   };
 
   Simulation.prototype._startService = function (ns, t, job, onDone) {
+    if (this.flowTrace) this._flowEvent({ k: 'ns', id: job._fid, at: ns.node.id, t: +t });
     if (job.onServiceStart) job.onServiceStart(t, job);
     if (ns.node.category === 'c2') {
       this._metricEvent('C2_PROCESSING', t, job.threat, this._c2JobMetricDetail(ns.node.id, job));
@@ -753,6 +828,7 @@
     if (ns.node.category === 'c2') {
       this._metricEvent('C2_DONE', t, d.job.threat, this._c2JobMetricDetail(d.nsId, d.job));
     }
+    if (this.flowTrace) this._flowEvent({ k: 'nd', id: d.job._fid, at: d.nsId, t: +t });
     ns.busy--;
     if (ns.busyByKind[d.job.kind] > 0) ns.busyByKind[d.job.kind]--; // kind별 서버 점유 해제
     ns.completions++;
@@ -761,7 +837,13 @@
     // 포화 노드가 이미 떠난 항적에 유령 서비스 부하를 계상하지 않도록 한다.
     while (ns.queue.length > 0) {
       var nx = ns.queue.shift();
-      if (!nx.job.threat.alive || nx.job.threat.pipelineDead) continue; // 재고에서 폐기
+      if (!nx.job.threat.alive || nx.job.threat.pipelineDead) {
+        // flowTrace: 큐 포기(reneging)도 체류의 종결이다 — 안 남기면 화면에서 이 노드가
+        // 영원히 "대기 중"으로 굳는다(도착만 있고 이탈이 없는 체류가 된다).
+        // r='dead' — 이 이탈은 ns.drops에 계상되지 않는다(위 'over' 주석의 대사 계약).
+        if (this.flowTrace) this._flowEvent({ k: 'nx', id: nx.job._fid, at: ns.node.id, t: +t, r: 'dead' });
+        continue; // 재고에서 폐기
+      }
       if (Number.isFinite(nx.job.validUntil) && t > nx.job.validUntil) {
         ns.drops++;
         bucket(ns, nx.job.kind).drops++;
@@ -771,6 +853,8 @@
           this._metricEvent('C2_DROPPED', t, nx.job.threat, expiredDetail);
         }
         if (nx.job.onAbandon) nx.job.onAbandon(t, nx.job);
+        // r='ttl' — 기한 만료 드롭은 ns.drops에 계상된다('over'와 함께 대사 대상).
+        if (this.flowTrace) this._flowEvent({ k: 'nx', id: nx.job._fid, at: ns.node.id, t: +t, r: 'ttl' });
         continue;
       }
       ns.busy++;
@@ -924,6 +1008,16 @@
     var echelonId = this._iadsDomainEchelonFor(threat);
     if (!echelonId || echelonId === commander.id) return;
     var self = this;
+    // ADR-078: 직렬 중계가 아니라 **같은 시각의 병렬 통보**다 — 모델상 전달 지연이 0이다.
+    // flowTrace에는 0초 간선으로 남긴다. 지어낸 지연을 넣지 않고, 그렇다고 빼서 "선이 없는
+    // 것처럼" 보이게 하지도 않는다(ADR-062의 0과 미측정 구분과 같은 규율).
+    // ⚠️ `_recordLink`가 아니라 `_flowEvent`로 직접 보낸다 — 이것은 카탈로그에 실재하는
+    //    간선이 아니라서, `linkStat`에 넣으면 결과의 links 배열에 없던 항목이 생겨
+    //    flowTrace OFF일 때의 wire shape까지 달라진다.
+    this._flowEvent({
+      k: 'link', from: commander.id, to: echelonId, mt: 'fanout', kind: 'report',
+      t0: at, t1: at, d: 0, nominal: 0, th: threat.id
+    });
     this.schedule(at, PRI.LINK_ARRIVE, 'IADS_DOMAIN_REPORT', {
       threat: threat, echelonId: echelonId, track: track,
       priority: track && track.priority
@@ -957,8 +1051,15 @@
       return track && KJ.IADS.trackFreshness(track, self.now, 120).fresh;
     });
     reportSensors.forEach(function (sensor) {
-      if (commander.axis.indexOf('USFK') === 0 && sensor.forceOwner !== 'USFK') return;
-      if (commander.axis !== 'LOCAL_AD' && commander.axis.indexOf('USFK') !== 0 && sensor.forceOwner === 'USFK') return;
+      // ADR-036 승계: 미군 축과 한국군 축은 서로의 센서 보고를 보지 않는다.
+      // ADR-085(usfkTrackSharing) 반사실이 켜지면 **이 상황인식 차단만** 풀린다 —
+      // 지휘·승인·교전현황·킬웹 파티션의 격리는 아래 다른 지점에서 그대로 유지된다.
+      // ⚠️ 필터를 풀어도 계선이 없으면 아무 일도 일어나지 않는다(_iadsShortestPath가
+      //    null을 돌려준다). 계선은 카탈로그 변형이 깐다 — 둘은 반드시 함께 켜져야 한다.
+      if (!self.usfkTrackSharing) {
+        if (commander.axis.indexOf('USFK') === 0 && sensor.forceOwner !== 'USFK') return;
+        if (commander.axis !== 'LOCAL_AD' && commander.axis.indexOf('USFK') !== 0 && sensor.forceOwner === 'USFK') return;
+      }
       var path = self._iadsShortestPath(sensor.id, commander.id, ['report', 'coord']);
       if (path === null) return;
       var trackReport = null;
@@ -1027,8 +1128,10 @@
       report.reports.forEach(function (entry) {
         var pathDelay = 0;
         entry.path.forEach(function (l) {
-          pathDelay += self._linkDelay(l.comm[self.mode]);
-          self._recordLink(l.from, l.to, l.comm[self.mode], l.kind);
+          var d = self._linkDelay(l.comm[self.mode]);   // ← 순서 불변: 뽑은 값을 재사용할 뿐
+          self._recordLink(l.from, l.to, l.comm[self.mode], l.kind,
+            { threat: threat, t0: t + pathDelay, delay: d });
+          pathDelay += d;
         });
         delay = Math.max(delay, pathDelay);
         sources.push({ sensorId: entry.sensorId, sensorTypeId: entry.sensorTypeId,
@@ -1468,6 +1571,34 @@
    * regret이 "더 나쁜 사수"가 아니라 "다른 목적함수"를 재게 되므로 지표 자체가 무의미해진다.
    * 이관이 산술적으로 무손실임은 OFF bit-exact SHA-256(4/4)로 고정돼 있다.
    */
+  /**
+   * ADR-086: 고도대역 적합도(`wtaSuit`) — **To-Be 전용 복원**.
+   *
+   * `C2-WTA-SUIT-01`(params.md)은 이 가중치를 「무기별 × 위협 고도대역 개념 가중,
+   * WTA 점수 = wtaSuit[고도대역] × (0.25+0.75×잔여용량비), **To-Be 모드 전용**」으로
+   * 등록해 두었다. 그런데 native 이관(ADR-059)이 "native 점수식이 이미 pk와 pip.rangeKm을
+   * 쓰므로 중복"이라며 이식을 기각했고, 그 뒤 엔진은 `wtaSuit`를 **한 번도 읽지 않는다.**
+   *
+   * 그 기각 논거는 무인기에서 성립하지 않는다 — UAS pk가 L-SAM·천마·비호 **모두 1.0으로
+   * 동률**이라 pk는 적합도를 구분할 수단이 되지 못한다(실측). 남은 것은 `/rangeKm` 하나뿐이고,
+   * 그것만으로는 8 M$ L-SAM이 0.01 M$ 소형무인기를 잡는 배정을 막지 못한다(To-Be 8발 중 3발).
+   * 비용 인식 항(`_iadsCostTerm`)도 탄도 위협 한정이라 저고도에는 걸리지 않는다.
+   *
+   * ⚠️ **As-Is에는 적용하지 않는다.** 원장이 "As-Is는 COP 부재로 적합도 비교 불가 —
+   *    최소부하 선택 유지"라고 명시한다. As-Is가 부적합한 무기를 고르는 것은 결함이 아니라
+   *    **분절 체계의 병리 그 자체**이며, 이 모델이 보여주려는 대비다.
+   * ⚠️ 가중치이지 필터가 아니다(원장: "canEngage 제약이 어떤 경우에도 우선"). 적합도 0이어도
+   *    다른 후보가 없으면 쏜다 — 다만 점수가 0이 되어 그 경우 탄약·부하 서열이 사라진다.
+   *    legacy 정의(곱셈)를 그대로 승계한 성질이며, 정렬 2차 키(shooter.id 사전순)가 결정론을 지킨다.
+   */
+  Simulation.prototype._iadsSuitTerm = function (shooter, threat) {
+    var suit = shooter && shooter.wtaSuit;
+    if (!suit) return 1;
+    var band = (KJ.threatType(threat.type) || {}).altBand;
+    var v = band ? suit[band] : null;
+    return typeof v === 'number' ? v : 1;
+  };
+
   Simulation.prototype._iadsWtaScore = function (ev, shooter, ammoRatio, load, threat) {
     var priority = Number(shooter.shooterPriority) || 9;
     if (this.nativeWtaMode && this.mode === 'asis') {
@@ -1478,13 +1609,22 @@
       if (this.nativeWtaCostAsis) score *= this._iadsCostTerm(shooter, ev, threat); // 반증 전용
       return score;
     }
+    var out;
     if (this.nativeWtaMode) {
       // ADR-059 To-Be: 현행 물리 점수식 + 비용 인식((1−W)+W·costFit, 탄도 위협 한정 —
       // legacy Step 1의 국한 논리 승계: 고가 낭비는 탄도(하층/상층 요격탄 선택)에서만 발생).
-      return (ev.pk * ammoRatio * (1 - load) / Math.max(1, ev.pip.rangeKm) - priority * 0.000001) *
+      out = (ev.pk * ammoRatio * (1 - load) / Math.max(1, ev.pip.rangeKm) - priority * 0.000001) *
         this._iadsCostTerm(shooter, ev, threat);
+    } else {
+      out = ev.pk * ammoRatio * (1 - load) / Math.max(1, ev.pip.rangeKm) - priority * 0.000001;
     }
-    return ev.pk * ammoRatio * (1 - load) / Math.max(1, ev.pip.rangeKm) - priority * 0.000001;
+    // ADR-086: 고도대역 적합도 복원 — **To-Be 한정**(원장 C2-WTA-SUIT-01의 적용범위).
+    // ⚠️ `nativeWtaMode` 분기 안에 두면 안 된다. 그 플래그는 기본 OFF라 실제 앱은 위
+    //    else 가지를 타므로, 안에 넣으면 **켜도 아무 일이 일어나지 않는다**(실제로 그렇게
+    //    잘못 넣었다). 두 가지가 합류한 뒤에 한 번만 곱한다.
+    // ⚠️ 각 가지의 산술은 한 글자도 바꾸지 않았다 — OFF에서 bit-exact를 지키기 위함이다.
+    if (this.wtaSuitability && this.mode === 'tobe') out *= this._iadsSuitTerm(shooter, threat);
+    return out;
   };
 
   Simulation.prototype._iadsEvaluate = function (shooter, threat, t) {
@@ -1694,8 +1834,14 @@
     channel.busy++;
     msg.startedAt = t;
     this.global.statusSharing.queueWaitSec += Math.max(0, t - msg.createdAt);
-    this._recordLink(channel.link.from, channel.link.to, channel.comm, 'status');
-    this.schedule(t + this._linkDelay(channel.comm), PRI.LINK_ARRIVE, 'IADS_STATUS_ARRIVE', {
+    // ⚠️ `_recordLink`는 RNG를 쓰지 않으므로 `_linkDelay` 호출을 앞으로 당겨도 소비
+    //    순서가 바뀌지 않는다(bit-exact 유지). 지연값을 관측에 실으려면 먼저 뽑아야 한다.
+    var statusDelay = this._linkDelay(channel.comm);
+    // `mid`로 대기 사건(cq)과 출발을 잇는다 — 이게 없으면 화면이 「언제부터 못 갔는지」를
+    // 되살릴 수 없고, 대기줄에 선 전문이 그냥 늦게 나타난 것처럼 보인다.
+    this._recordLink(channel.link.from, channel.link.to, channel.comm, 'status',
+      { threat: msg.threat, t0: t, delay: statusDelay, mid: msg._fid });
+    this.schedule(t + statusDelay, PRI.LINK_ARRIVE, 'IADS_STATUS_ARRIVE', {
       channelKey: channel.key, message: msg
     });
   };
@@ -1711,14 +1857,25 @@
     if (!channel) return;
     var msg = { threat: threat, from: commander.id, to: upperId, phase: phase, createdAt: t };
     this.global.statusSharing.sent++;
+    // flowTrace: **가려다 못 간 전문**을 남기기 위한 식별자. 종전 관측은 실제로 출발한
+    // 전문만 기록해(`_recordLink`), 채널 용량에 막혀 대기하거나 버려진 전문은 흔적조차
+    // 없었다 — As-Is 실측으로 보낸 15건 중 2건만 건너가는데 화면에는 그 2건만 보였다.
+    if (this.flowTrace) msg._fid = ++this._flowSeq;
     if (channel.busy < channel.servers) {
       this._startIadsStatus(channel, msg, t);
     } else if (channel.busy + channel.queue.length < channel.capacity) {
       channel.queue.push(msg);
       this.global.statusSharing.queued++;
+      // 대기 진입 — 선은 있고 갈 곳도 정해졌는데 채널이 비지 않아 못 떠난다.
+      this._flowEvent({ k: 'cq', id: msg._fid, ch: channel.key,
+        from: msg.from, to: msg.to, t: +t, th: threat && threat.id ? threat.id : null });
     } else {
       this.global.statusSharing.dropped++;
       this._mark(threat, '교전현황드롭:' + commander.id + '→' + upperId + '/' + phase, t);
+      // 용량 초과 — 대기줄에도 못 서고 버려진다. 이 전문은 영영 출발하지 않는다.
+      this._flowEvent({ k: 'cx', id: msg._fid, ch: channel.key,
+        from: msg.from, to: msg.to, t: +t, th: threat && threat.id ? threat.id : null,
+        r: 'capacity' });
     }
   };
 
@@ -2185,8 +2342,10 @@
     this._sendIadsStatus(threat, commander, 'assigned', t);
     var delay = 0;
     path.forEach(function (l) {
-      delay += self._linkDelay(l.comm[self.mode]);
-      self._recordLink(l.from, l.to, l.comm[self.mode], l.kind);
+      var d = self._linkDelay(l.comm[self.mode]);
+      self._recordLink(l.from, l.to, l.comm[self.mode], l.kind,
+        { threat: threat, t0: t + delay, delay: d });
+      delay += d;
     });
     this._iadsTransitionPlan(plan, 'in_transit', t);
     this.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_FIRE', { threat: threat, commander: commander, shooterId: chosen.shooter.id, plan: plan });
@@ -2222,6 +2381,22 @@
                    policyMode: pm };
         })(this.mode);
     var approvalId = policy.approvalRole ? this._resolveRole(policy.approvalRole) : null;
+    // ADR-087: 소형 무인기 국지방공 자체 교전(옵트인, 기본 OFF).
+    //
+    // 현행 데이터는 `uav_small.approvalLevel.asis = 'KAOC'`(=MCRC)다. 그 결과 **육군
+    // 국지레이더가 잡고 육군 천마/비호가 쏘는 무인기**인데도 국지방공 축이 공군 MCRC의
+    // 승인을 기다린다(실측 SC2 As-Is 승인완료 83건, 육군 항적 접수 중앙값 40.5초).
+    // 「저고도 무인기는 육군이 탐지·판단·요격하고 교전현황만 상급과 공유한다」는 해석에서는
+    // 이 승인 단계가 성립하지 않는다.
+    //
+    // ⚠️ 여는 것은 **국지방공 축의 승인 면제뿐**이다. 교전현황 공유(`_sendIadsStatus` —
+    //    음성/VTC 채널)는 그대로 돌아간다. 상급이 몰라도 된다는 뜻이 아니라, **승인을
+    //    기다리지 않고 쏜 뒤 알린다**는 뜻이다.
+    // ⚠️ 주축(MCRC) 자신은 원래 자기 승인이라 이 규칙과 무관하다 — 실제로 바뀌는 축은
+    //    LOCAL_AD 하나다. 미군 축은 애초에 승인 계선 미적용(ADR-036).
+    if (this.uavLocalSelfEngage && commander.axis === 'LOCAL_AD' && threat.type === 'uav_small') {
+      approvalId = null;
+    }
     // 사전승인 자동교전 / 승인권자 부재 / 자기 자신 승인 → 단계·처리 없음 (legacy 동치)
     if (policy.auto === 'auto-preauth' || !approvalId || approvalId === commander.id || !this.nodeState[approvalId]) {
       threat._iadsApproval[key] = 'granted';
@@ -2261,8 +2436,10 @@
     }
     var self = this, delay = 0;
     path.forEach(function (l) {
-      delay += self._linkDelay(l.comm[self.mode]);
-      self._recordLink(l.from, l.to, l.comm[self.mode], 'coord');
+      var d = self._linkDelay(l.comm[self.mode]);
+      self._recordLink(l.from, l.to, l.comm[self.mode], 'coord',
+        { threat: threat, t0: t + delay, delay: d });
+      delay += d;
     });
     // 결심지연 분해(legacy 1B 동치): coord 협조 단계 몫 누적 → meanCoordDelaySec
     threat._coordDelay = (threat._coordDelay || 0) + delay;
@@ -3046,6 +3223,26 @@
       result.nodeSeries = this.nodeSeries;
       result.traceTruncated = this.traceTruncated;
       result.nodeSeriesTruncated = this.nodeSeriesTruncated;
+    }
+    // 반사실 원장 — 이 실행이 기준 배치가 아니라는 사실이 결과를 따라다니게 한다.
+    if (this.linkMediaOverrides) result.linkMediaOverrides = this.linkMediaOverrides;
+    if (this.usfkTrackSharing) {
+      // 계선이 실제로 깔렸는지까지 함께 남긴다 — 플래그만 켜고 카탈로그 변형을 안 준
+      // 호출은 "켰는데 아무 일도 안 일어난" 실행이 되는데, 원장 없이는 구분되지 않는다.
+      var shareLinks = (this.catalog.links || []).filter(function (l) {
+        return l.axis === 'coalition_track_share';
+      });
+      result.usfkTrackSharing = {
+        media: this.usfkTrackSharing === true ? 'datalink' : this.usfkTrackSharing,
+        links: shareLinks.length,
+        activeInMode: shareLinks.filter(function (l) { return !!l.comm[self.mode]; }).length
+      };
+    }
+    // 지휘 흐름 관측 — ON일 때만 실어 보낸다(OFF wire shape 불변).
+    if (this.flowTrace) {
+      result.flowEvents = this.flowEvents;
+      result.flowTruncated = this.flowTruncated;
+      result.flowCap = this.flowTraceCap;
     }
     // ADR-073: 계측 커버리지 원장 — 무엇을 얼마나 기록했고 무엇을 버렸는지. ON일 때만 노출한다
     // (OFF wire shape 불변). 후처리·UI는 이 값으로 "미측정"과 "0"을 구분한다.

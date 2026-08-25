@@ -135,6 +135,20 @@ K-JAMDS_시뮬레이터_단일본.html
 
   빌드는 **현재 소스만으로** 결정론적으로 동작합니다(`index.html` + `css/` + `js/` + `vendor/`).
 
+### 프로토타입 — [지휘 흐름] (`prototype/command-flow.html`)
+
+지도가 아니라 **계선(간선) 위에서 전문이 움직이는 것**을 보는 관측 화면입니다(ADR-084~086).
+[전체 흐름] 보기는 배치 전체를 세워 노드 케파 링·큐 꼬리·드롭 섬광으로 병목을 보여주고,
+[항적 개별] 보기는 항적 하나의 전문 이동을 따라갑니다 — 점이 선을 건너는 시간이 곧 그
+계선의 실제 지연이라, 데이터링크와 음성·문자·VTC의 차이가 눈으로 바로 갈라집니다.
+계선을 클릭하면 그 계선의 **매체를 갈아 끼우는 반사실 실험**(ADR-084 ②)을 걸 수 있습니다.
+
+- 모든 점의 출발·도착 시각은 `KJ.runDES({flowTrace:true})`가 기록한 **실제 실행값**입니다
+  (flowTrace는 순수 관측 채널 — RNG·동역학 불변, ADR-084 ①).
+- **본 앱(index.html)에는 아직 통합되지 않았고 단일본에도 포함되지 않습니다.**
+- ES module import를 쓰므로 `file://`로는 열리지 않습니다 — **방법 A** 서버를 띄운 뒤
+  `http://127.0.0.1:8000/prototype/command-flow.html`을 여십시오.
+
 > 📘 **처음 사용한다면**: [`docs/사용자_가이드.html`](docs/사용자_가이드.html) — 실행법·화면 조작·
 > 지표 읽는 법(일상어)·자주 오해되는 지표·FAQ.
 >
@@ -219,12 +233,15 @@ js/
   workers/ sim-worker.mjs · sim-worker.js
   ui/    map-view.js · panels.js · sim-view.js · mc-panel.js · geo.js · table-sort.js
   main.js                        # 부트스트랩·상태 관리 (해시 = 상태 단일원천)
+prototype/
+  command-flow.html              # [지휘 흐름] 프로토타입 — 계선 위 전문 이동 관측·매체 반사실
+                                 #   (ADR-084~086, 본 앱 미통합·서버 필요 — 위 [프로토타입] 절 참조)
 docs/
   모의논리서.html · 사용자_가이드.html · 실험보고서.html    # ★ 3대 문서 (아래 참조)
   params.md                      # 파라미터 근거표 (ID·출처·인용·신뢰도 A/B/C)
   high-resolution-iads-architecture.md  # 목표 아키텍처(§6은 ADR-061로 개정)
   compat-retirement-readiness.md # Phase 5 폐기 조건 판정 원장
-  adr/ADR-001~009, 036, 049~063  # 결정 기록
+  adr/ADR-001~009, 050~086       # 결정 기록
 scripts/
   serve.sh (macOS·Linux) · serve.bat + serve.ps1 (Windows 내장 PowerShell, 설치 불요)
   build-single.mjs · bias-ledger.mjs · experiment-lib/run/report.mjs 등

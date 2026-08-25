@@ -320,7 +320,10 @@
     // ⚠️ 대기실 K는 `c × 10`(c2Capacity)으로 **파생**되므로 30 → 60으로 함께 움직인다.
     //    서버만 늘린 것이 아니라 대기실도 배가 된 복합 변경이다.
     KAMD_OPS: c2('KAMD 작전통제소', 'command', 6, { system: [5, 10], operator: { high: 15, mid: 30, low: 50 } }, 'ballistic_global'),
-    MCRC: c2('중앙방공통제소', 'command', 8, { system: [5, 10], operator: { high: 15, mid: 30, low: 50 } }, 'air_global'),
+    // 동시 결심 자리 8 → 10 (사용자 결정 2026-08-26). 서버 수는 공개자료로 정박되지 않는
+    // 등급 C 개념값이라 절대값 주장에 쓰지 않는다 — c2OperatorLevel 스윕·±20% 민감도가 방패.
+    // ⚠️ 대기실 K는 c×10 파생이라 80 → 100으로 함께 움직인다(KAMD_OPS 3→6 때와 같은 복합 변경).
+    MCRC: c2('중앙방공통제소', 'command', 10, { system: [5, 10], operator: { high: 15, mid: 30, low: 50 } }, 'air_global'),
     ICC: c2('대대급 정보통합센터', 'battalion', 5, { system: [3, 5], operator: { high: 2, mid: 5, low: 10 } }, 'brigade'),
     ECS: c2('교전통제소', 'battery', 8, { system: [1, 2], operator: { high: 1, mid: 2, low: 3 } }, 'battery'),
     IAOC: c2('통합공중작전통제소', 'killweb_central', 20, { system: [1, 2], operator: { high: 0.5, mid: 1, low: 1.5 } }, 'global'),

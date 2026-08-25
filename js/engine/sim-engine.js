@@ -125,7 +125,22 @@
   function iadsThreatPosition(threat, at) {
     var progress = Math.max(0, Math.min(1, (at - threat.spawnT) / threat.dwellSec));
     // ADR-063: threat.target(산포 착탄점)이 있으면 그 점을 종점으로 쓴다. 없으면 축선 표적점.
-    var ll = KJ.axisPosition(threat.axis, progress, threat.target);
+    var ll;
+    if (threat._launchExtKm) {
+      // ADR-091: 발사점(축선 연장선 위 개념좌표)→표적 보간. p=0이 발사점, entry 통과 시점은
+      // p = ext/(L+ext)다. 진행률을 발사점 기준으로 당기는 재매개변수화라 표적·산포는 불변.
+      var ax = KJ.AXES[threat.axis];
+      var tgt = (threat.target && threat.target.length === 2) ? threat.target : ax.target;
+      var Lkm = haversineKm(
+        { lat: ax.entry[0], lon: ax.entry[1], altKm: 0 },
+        { lat: tgt[0], lon: tgt[1], altKm: 0 });
+      var f = (Lkm + threat._launchExtKm) / Math.max(1e-6, Lkm);
+      var p2 = progress * f - (f - 1);
+      ll = [ax.entry[0] + (tgt[0] - ax.entry[0]) * p2,
+            ax.entry[1] + (tgt[1] - ax.entry[1]) * p2];
+    } else {
+      ll = KJ.axisPosition(threat.axis, progress, threat.target);
+    }
     var cat = iadsThreatCategory(threat.type);
     var altKm;
     if (threat._iadsPhysical && KJ.IADS) {
@@ -135,7 +150,7 @@
         var endPt = threat.target || axis.target;
         distanceKm = haversineKm(
           { lat: axis.entry[0], lon: axis.entry[1], altKm: 0 },
-          { lat: endPt[0], lon: endPt[1], altKm: 0 });
+          { lat: endPt[0], lon: endPt[1], altKm: 0 }) + (threat._launchExtKm || 0);
         threat._iadsAxisDistanceKm = distanceKm;
       }
       altKm = KJ.IADS.threatPhysics(threat.type, progress, distanceKm).altitude / 1000;
@@ -267,6 +282,17 @@
     //    키를 하나만 더해도 **기준선 SHA-256이 깨진다**(OFF wire shape 불변 원칙).
     //    최근 플래그(approvalChain·threatTargetDispersion…)와 같이 인스턴스 속성으로만 둔다.
     this.wtaSuitability = ff('wtaSuitability', false);
+    // ADR-090: 조기경보 보고원 — 책임 C2가 최속 보고경로 하나만 쓰지 않고, 조기경보 레이더
+    // (role에 early_warning)의 보고경로를 **함께** 채택하며, 조기경보 센서가 최초 보고 스냅숏
+    // 이후에 획득하면 그 시점에 추가 보고를 접수한다(스냅숏 부분 해제) — 기본 OFF(불변 규칙 1).
+    // 배경: 그린파인이 탄도 항적 75/76을 추적하면서도 보고 기여 0(최속 1개 규칙 + 스냅숏 고정).
+    // 켜면 보고 링크 지연 추첨이 늘어 실행 전체가 다른 표본이 된다(재기준선 대상).
+    this.earlyWarningReport = ff('earlyWarningReport', false);
+    // ADR-091: 탄도 축선 발사점 연장 — srbm·mrl_large의 비행을 개념 발사점(대표 사거리)부터
+    // 흘린다. 체공시간은 같은 비율로 늘려 함의 속도를 유지한다(ADR-064 남부축과 같은 규율).
+    // 종전 종말 구간 모델에서는 모든 센서가 스폰 즉시 볼 수 있어 탐지 선착이 난수 추첨이었다.
+    // 켜면 탐지 시각·교전 기하가 전부 이동한다 — 기본 OFF(불변 규칙 1 · 재기준선 대상).
+    this.ballisticLaunchAxes = ff('ballisticLaunchAxes', false);
     // ADR-063: 표적권역 산포 — 종전에는 같은 축선의 모든 위협이 정확히 같은 한 점으로 향해
     // seed를 바꿔도 착탄점이 불변이었다. ON이면 위협마다 표적권역(disk) 안에서 착탄점을 뽑는다.
     // 반경은 features.targetSpreadKm로 스윕 가능(기본 THREAT-TARGET-DISP-01 = 15km, 등급 C).
@@ -1093,8 +1119,95 @@
       selected = [local, mcrc].filter(Boolean);
     } else {
       selected = [candidates[0]];
+      // ADR-090: 최속 경로가 조기경보 레이더가 아니면, 조기경보 후보 중 최속 1개를 **함께**
+      // 채택한다(군단 AOC 2소스 융합과 동형). 실제 KAMD에서 그린파인 보고는 포대 MFR 경로가
+      // 더 빠르다는 이유로 사라지지 않는다.
+      if (self.earlyWarningReport) {
+        var ew = candidates.find(function (x) {
+          var st = KJ.SENSOR_TYPES[x.sensorTypeId];
+          return st && /early_warning/.test(st.role || '') && x.sensorId !== selected[0].sensorId;
+        });
+        if (ew) selected.push(ew);
+      }
     }
     return { reports: selected, nominalDelay: selected.reduce(function (m, x) { return Math.max(m, x.delay); }, 0) };
+  };
+
+  /**
+   * ADR-090: 조기경보 레이더의 **늦은 획득**을 책임 C2 원장에 추가 보고로 접수한다(센서당 1회).
+   * 최초 보고 스냅숏(_routeIadsDetected의 commander key 가드)이 고정한 보고원 명단에,
+   * 그 시점에 아직 미획득이었던 조기경보 센서를 획득 시점에 뒤늦게 합류시키는 부분 해제다.
+   * ⚠️ earlyWarningReport OFF에서는 호출 자체가 없다 — OFF 경로 bit-exact.
+   */
+  Simulation.prototype._iadsSupplementEwReport = function (threat, commander, t) {
+    var self = this;
+    if (!this.iadsSensorPhysics) return;
+    var ledger = threat._c2TrackLedger && threat._c2TrackLedger[commander.id];
+    if (!ledger) return;
+    var mcrcId = this._iadsUpperEchelonId();
+    threat._ewReported = threat._ewReported || {};
+    (threat._sensors || []).forEach(function (sensor) {
+      var st = KJ.SENSOR_TYPES[sensor.typeId];
+      if (!st || !/early_warning/.test(st.role || '')) return;
+      var guard = commander.id + '|' + sensor.id;
+      if (threat._ewReported[guard]) return;
+      if (ledger.sources.some(function (s) { return s.sensorId === sensor.id; })) {
+        threat._ewReported[guard] = true;
+        return;
+      }
+      var track = threat._sensorTracks && threat._sensorTracks[sensor.id];
+      if (!track || !KJ.IADS.trackFreshness(track, self.now, 120).fresh) return;
+      // 미군/한국군 상황인식 격리 — _iadsReportBundle과 같은 규칙(ADR-036·085).
+      if (!self.usfkTrackSharing) {
+        if (commander.axis.indexOf('USFK') === 0 && sensor.forceOwner !== 'USFK') return;
+        if (commander.axis !== 'LOCAL_AD' && commander.axis.indexOf('USFK') !== 0 && sensor.forceOwner === 'USFK') return;
+      }
+      var path = self._iadsShortestPath(sensor.id, commander.id, ['report', 'coord']);
+      if (path === null) return;
+      var trackReport = KJ.IADS.createTrackReport({
+        physicalTrack: track, simTime: self.now, maxAgeSeconds: 120,
+        cache: self.iadsCorrelationStates, seed: self.seed, sensorId: sensor.id,
+        sensorTypeId: sensor.typeId, threatId: threat.id,
+        architecture: self.mode === 'tobe' ? 'killweb' : 'linear'
+      });
+      if (!trackReport) { self.global.trackQuality.failed++; return; }
+      self.global.trackQuality[trackReport.correlationType]++;
+      threat._ewReported[guard] = true;
+      var pathDelay = 0;
+      path.forEach(function (l) {
+        var d = self._linkDelay(l.comm[self.mode]);
+        self._recordLink(l.from, l.to, l.comm[self.mode], l.kind,
+          { threat: threat, t0: t + pathDelay, delay: d });
+        pathDelay += d;
+      });
+      var viaMcrc = !!mcrcId && path.some(function (l) { return l.from === mcrcId || l.to === mcrcId; });
+      var source = { sensorId: sensor.id, sensorTypeId: sensor.typeId,
+        sourceClass: viaMcrc ? 'mcrc' : 'local', arrivedAt: t + pathDelay,
+        state: trackReport.state, lastUpdateAt: trackReport.lastUpdateAt,
+        staleness: trackReport.staleness, confidence: trackReport.confidence,
+        correlationType: trackReport.correlationType, identity: trackReport.identity };
+      self._mark(threat, '조기경보보고:' + sensor.id, t, axisOf(commander));
+      // ⚠️ 접수는 **항적 갱신 병합**이다 — IADS_C2_ARRIVE를 다시 스케줄하면 책임 C2의 전체
+      //    처리 작업(위협판단·표적할당 서비스)이 항적마다 한 번 더 돌아, SC3 포화에서 As-Is
+      //    격추가 10건 이탈하는 것을 실측했다(46→36). 갱신 보고가 재판단 서비스를 다시 소모
+      //    하는가는 별도 결정 사안이라 여기서는 원장 병합 + 접수 마크만 남긴다(ADR-090 §한계).
+      self.schedule(t + pathDelay, PRI.LINK_ARRIVE, 'IADS_EW_UPDATE',
+        { threat: threat, commander: commander, source: source });
+    });
+  };
+
+  /** ADR-090: 조기경보 추가 보고의 도착 — 책임 C2 원장에 출처를 병합하고 접수를 마크한다. */
+  Simulation.prototype._onIadsEwUpdate = function (t, d) {
+    var threat = d.threat, commander = d.commander;
+    if (!threat.alive || threat.pipelineDead || !this.nodeState[commander.id]) return;
+    var ledger = threat._c2TrackLedger && threat._c2TrackLedger[commander.id];
+    if (!ledger) return;
+    ledger.sources.push(d.source);
+    var fused = KJ.IADS.fuseTrackReports(ledger.sources);
+    Object.assign(ledger, fused, { freshUntil: Math.max(ledger.freshUntil, t + 120) });
+    this.global.trackFusion.reportsReceived++;
+    if (ledger.sources.length > 1) this.global.trackFusion.multiSourceTracks++;
+    this._mark(threat, '조기경보접수:' + commander.typeId + '(' + ledger.sources.length + '출처)', t, axisOf(commander));
   };
 
   // 기존 내부/테스트 호환: 대표 보고경로만 반환.
@@ -1115,10 +1228,25 @@
       this._recordFailureEvidence(threat, 'no_responsible_c2', { type: threat.type, axis: threat.axis });
       return;
     }
+    // 관측 전용(trace 게이트): 이 항적의 책임 C2 명단. 보고가 끝내 닿지 못한 책임 C2를
+    // 화면이 「가야 했던 곳」으로 그릴 수 있게 한다 — RNG·스케줄 불변.
+    if (threat._trace) {
+      var traceCmd = threat._trace.commanders = threat._trace.commanders || [];
+      commanders.forEach(function (c) {
+        if (!traceCmd.some(function (x) { return x.id === c.id && x.axis === c.axis; })) {
+          traceCmd.push({ id: c.id, axis: c.axis, scope: c.scope });
+        }
+      });
+    }
     commanders.forEach(function (commander) {
       commander.batteryIds.forEach(function (id) { threat._eligibleShooterIds[id] = true; });
       var key = commander.id + '|' + commander.scope + '|' + commander.axis;
-      if (threat._iadsCommanderKeys[key]) return;
+      if (threat._iadsCommanderKeys[key]) {
+        // ADR-090: 조기경보 센서가 최초 보고 스냅숏 **이후에** 획득한 경우 — 그 시점에
+        // 추가 보고를 접수한다(센서당 1회). OFF에서는 종전과 자구 동일 경로.
+        if (self.earlyWarningReport) self._iadsSupplementEwReport(threat, commander, t);
+        return;
+      }
       var report = self._iadsReportBundle(threat, commander);
       if (!report) return;
       threat._iadsCommanderKeys[key] = true;
@@ -2290,6 +2418,11 @@
     var chosen = candidates[0], path = this._iadsShortestPath(commander.id, chosen.shooter.id, ['coord', 'command']);
     if (path === null) {
       if (!threat.leakReason) threat.leakReason = 'responsibility_gap';
+      // 관측 전용(trace 게이트): 이 지점은 evidence를 남기지 않는 유일한 책임공백이라
+      // (evidence는 contributors 회계를 움직여 기준선을 깬다), 끊긴 계선을 trace에만 적는다.
+      if (threat._trace) (threat._trace.unreached = threat._trace.unreached || []).push({
+        t: t, from: commander.id, to: chosen.shooter.id, why: 'no_command_path'
+      });
       this._metricEvent('RESPONSIBILITY_UNRESOLVED', t, threat, {
         commanderId: commander.id, shooterId: chosen.shooter.id, reason: 'no_command_path'
       });
@@ -2787,6 +2920,15 @@
       _iadsPhysical: this.iadsSensorPhysics, ecmActive: this.iadsSensorPhysics && this.ecmActive,
       _iadsAxisDistanceKm: null
     };
+    // ADR-091: 탄도 축선 발사점 연장 — 대표 사거리와 축선 개념거리의 차만큼 비행을 앞에
+    // 덧붙이고, 체공시간을 같은 비율로 늘린다(함의 속도 유지). 새 난수 소비 없음(결정론).
+    if (this.ballisticLaunchAxes && iadsThreatCategory(entry.type) === 'ballistic') {
+      var lx = KJ.ballisticLaunchExtension && KJ.ballisticLaunchExtension(entry.type, entry.axis);
+      if (lx) {
+        threat._launchExtKm = lx.extKm;
+        threat.dwellSec = threat.dwellSec * lx.scale;
+      }
+    }
     this._metricEvent('THREAT_SPAWNED', t, threat, { threatType: threat.type, axis: threat.axis });
     // ADR-074 B-2: 위협 **전수**에 대한 교전창 원장. 결심에 도달한 위협만 보면 생존 편향이
     // 생기므로(결심은 실현가능 PIP가 있어야 성립 → 여유가 음수가 될 수 없다), 놓침률의 분모를
@@ -2839,7 +2981,10 @@
       threat._trace.failure = {
         primaryCause: reason,
         contributors: Object.keys(threat._failureEvidence || {}).filter(function (code) { return code !== reason; }),
-        family: family, structurality: structurality
+        family: family, structurality: structurality,
+        // 관측 전용(trace 게이트): 증거별 횟수·최초/최종 시각·최초 detail(관련 노드 id).
+        // 화면이 「가야 했으나 못 간 노드」를 그리는 데 쓴다 — 회계(global.*)에는 불참.
+        evidence: threat._failureEvidence || null
       };
     }
   };
@@ -2956,6 +3101,7 @@
       case 'IADS_DOMAIN_REPORT': this._onIadsDomainReport(ev.t, ev.data); break;
       case 'IADS_C2_ARRIVE': this._onIadsC2Arrive(ev.t, ev.data); break;
       case 'IADS_RETRY': this._onIadsRetry(ev.t, ev.data); break;
+      case 'IADS_EW_UPDATE': this._onIadsEwUpdate(ev.t, ev.data); break;
       case 'IADS_FIRE': this._onIadsFire(ev.t, ev.data); break;
       case 'IADS_BDA': this._onIadsBda(ev.t, ev.data); break;
       case 'IADS_RELOAD': this._onIadsReload(ev.t, ev.data); break;

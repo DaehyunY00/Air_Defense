@@ -104,6 +104,24 @@
   };
 
   /**
+   * ADR-091: 탄도 축선 발사점 연장 — 위협의 대표 사거리(rangeBandKm 중앙값)가 축선
+   * 개념거리(conceptReachKm)보다 길면, 그 차만큼 entry **뒤쪽**(표적 반대 방향)으로 비행을
+   * 늘린다. 종전에는 축선이 종말 구간만 모델링해 모든 센서가 스폰 즉시 볼 수 있었고,
+   * 그린파인 900km 조기경보의 몫이 모델에 존재하지 않았다.
+   * 발사점은 축선 직선의 연장선 위 개념좌표다(실제 발사원점 아님 — 개념좌표 정책 동일).
+   * @returns {extKm, reachKm, scale} — 연장이 없으면(대표 사거리 ≤ 축선 거리) null
+   */
+  KJ.ballisticLaunchExtension = function (type, axisKey) {
+    var tt = KJ.threatType(type), a = KJ.AXES[axisKey];
+    if (!tt || !a || !tt.rangeBandKm || !a.conceptReachKm) return null;
+    var rep = (tt.rangeBandKm.min + tt.rangeBandKm.max) / 2;
+    var ext = Math.max(0, rep - a.conceptReachKm);
+    if (!ext) return null;
+    return { extKm: ext, reachKm: a.conceptReachKm,
+      scale: (a.conceptReachKm + ext) / a.conceptReachKm };
+  };
+
+  /**
    * 위협 유형 × 축선의 발사권역·사거리 정합성 검증 (ENV-AXIS-FIT-01).
    * @returns { ok:boolean, reasons:string[] } — ok=false면 reasons에 모순 사유
    */

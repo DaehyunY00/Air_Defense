@@ -6,7 +6,7 @@
   <title>K-JAMDS C2 시뮬레이터 — KJADS 3대 문제 상황</title>
   <!-- Leaflet 1.9.4 동봉본(vendor/) — CDN 의존 제거. 출처·라이선스·해시는 vendor/leaflet-1.9.4/README.md -->
   <link rel="stylesheet" href="vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="stylesheet" href="css/style.css?v=20260811w">
+  <link rel="stylesheet" href="css/style.css?v=20260825c">
 </head>
 <body>
   <!-- 제약 (c): 디스클레이머 상시 표출 -->
@@ -343,36 +343,36 @@
     // 폐쇄망/SVG fallback 재현 스모크: ?svgFallback=1 (기본 실행에는 영향 없음).
     if (new URLSearchParams(window.location.search).get('svgFallback') === '1') window.L = undefined;
   </script>
-  <script type="module" src="js/model/iads/bootstrap.js?v=20260811w"></script>
-  <script src="js/config/system-types.js?v=20260811w"></script>
+  <script type="module" src="js/model/iads/bootstrap.js?v=20260825c"></script>
+  <script src="js/config/system-types.js?v=20260825c"></script>
   <script src="js/config/geo-mdl.js"></script>
-  <script src="js/config/deployments.js?v=20260811w"></script>
-  <script src="js/data/nodes.js?v=20260811w"></script>
+  <script src="js/config/deployments.js?v=20260825c"></script>
+  <script src="js/data/nodes.js?v=20260825c"></script>
   <script src="js/data/links.js"></script>
-  <script src="js/data/threats.js?v=20260811w"></script>
+  <script src="js/data/threats.js?v=20260825c"></script>
   <script src="js/data/scenarios.js"></script>
   <!-- axes.js는 ADR-063(axisImpactPoint)·ADR-071(SELF_DEFENSE_RADIUS_KM)에서 새 export가
        늘었는데 버전 쿼리가 없어, 옛 사본을 캐시한 브라우저가 `KJ.axisImpactPoint is not a
        function`으로 즉사한다(실측 재현). 형제 파일과 같은 마커를 붙여 캐시를 끊는다. -->
-  <script src="js/data/axes.js?v=20260811w"></script>
-  <script src="js/config/deployment-adapter.js?v=20260811w"></script>
-  <script src="js/core/router.js?v=20260811w"></script>
+  <script src="js/data/axes.js?v=20260825c"></script>
+  <script src="js/config/deployment-adapter.js?v=20260825c"></script>
+  <script src="js/core/router.js?v=20260825c"></script>
   <script src="js/core/constraints.js"></script>
   <script src="js/core/rng.js"></script>
   <script src="js/core/heap.js"></script>
   <script src="js/analysis/bottleneck.js"></script>
-  <script src="js/analysis/c2-report.js?v=20260811w"></script>
-  <script src="js/engine/sim-engine.js?v=20260811w"></script>
-  <script src="js/analysis/mc-runner.js?v=20260811w"></script>
-  <script src="js/analysis/transition.js?v=20260811w"></script>
+  <script src="js/analysis/c2-report.js?v=20260825c"></script>
+  <script src="js/engine/sim-engine.js?v=20260825c"></script>
+  <script src="js/analysis/mc-runner.js?v=20260825c"></script>
+  <script src="js/analysis/transition.js?v=20260825c"></script>
   <script src="js/analysis/overlap-heatmap.js"></script>
-  <script src="js/core/sim-worker-client.js?v=20260811w"></script>
+  <script src="js/core/sim-worker-client.js?v=20260825c"></script>
   <script src="js/ui/geo.js"></script>
   <script src="js/ui/table-sort.js"></script>
-  <script src="js/ui/map-view.js?v=20260811w"></script>
-  <script src="js/ui/panels.js?v=20260811w"></script>
-  <script src="js/ui/sim-view.js?v=20260811w"></script>
-  <script src="js/ui/mc-panel.js?v=20260811w"></script>
-  <script src="js/main.js?v=20260811w"></script>
+  <script src="js/ui/map-view.js?v=20260825c"></script>
+  <script src="js/ui/panels.js?v=20260825c"></script>
+  <script src="js/ui/sim-view.js?v=20260825c"></script>
+  <script src="js/ui/mc-panel.js?v=20260825c"></script>
+  <script src="js/main.js?v=20260825c"></script>
 </body>
 </html>

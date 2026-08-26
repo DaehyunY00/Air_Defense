@@ -261,15 +261,16 @@
   .cyl.working .cyl-fill { animation: cylwork ease-in-out infinite; }
   .cyl.working .cyl-edge { animation: cylrim ease-in-out infinite; }
   @keyframes cylwork { 0%, 100% { opacity: .88 } 50% { opacity: .42 } }
-  @keyframes cylrim  { 0%, 100% { stroke: #34435a } 50% { stroke: #7fb6ff } }
+  /* 테두리는 색과 굵기를 함께 흔든다 — 색만 바꾸면 어두운 배경에서 진폭이 안 보인다. */
+  @keyframes cylrim  { 0%, 100% { stroke: #34435a; stroke-width: 1.2 } 50% { stroke: #7fb6ff; stroke-width: 2.6 } }
   .cyl.full.working .cyl-edge { animation-name: cylrim-full; }
   .cyl.jam.working  .cyl-edge { animation-name: cylrim-jam; }
-  @keyframes cylrim-full { 0%, 100% { stroke: #34435a } 50% { stroke: var(--warn) } }
-  @keyframes cylrim-jam  { 0%, 100% { stroke: var(--bad) } 50% { stroke: #ffd0d0 } }
+  @keyframes cylrim-full { 0%, 100% { stroke: #34435a; stroke-width: 1.2 } 50% { stroke: var(--warn); stroke-width: 2.6 } }
+  @keyframes cylrim-jam  { 0%, 100% { stroke: var(--bad); stroke-width: 2 } 50% { stroke: #ffd0d0; stroke-width: 3 } }
   /* 실린더를 못 그린 자리(밀집 열·센서·사수)의 동그라미도 **같은 규칙으로** 깜빡인다.
      사수의 발사 처리는 40~60초라 눈에 띄게 느리게 고동친다 — 그것이 사실이다. */
   .ncirc.busy { animation: circwork ease-in-out infinite; }
-  @keyframes circwork { 0%, 100% { fill: #3b6f9c; stroke: #7fb6ff } 50% { fill: #16202e; stroke: #34435a } }
+  @keyframes circwork { 0%, 100% { fill: #3b6f9c; stroke: #7fb6ff; stroke-width: 2.6 } 50% { fill: #16202e; stroke: #34435a; stroke-width: 1.5 } }
   .cyl.jam  .cyl-edge { stroke: var(--bad); stroke-width: 2; }
   .cyl-tick { stroke: #0b1017; stroke-width: 1; opacity: .8; }
   .cyl-num { font-size: 9.5px; font-weight: 700; fill: #dbe4f0;
@@ -573,9 +574,11 @@ const COL_INDEX = {}; COLS.forEach((c, i) => { COL_INDEX[c.key] = i; });
    ⚠️ **배속으로 나눈다.** 맥동은 CSS라 벽시계로 도는데 화면 시각은 배속만큼 빨리 간다.
       나누지 않으면 ×60에서 3.5초짜리 일이 화면에 0.06초 스치는 동안 3.5초 주기로
       깜빡여 — 한 번도 못 깜빡이고 사라진다.
-   ⚠️ 벽시계 [0.35초, 6초]로 자른다. 아래로는 발작적인 스트로브가 되고, 위로는 정지 화면과
-      구분이 안 된다. **자른 것은 보이는 주기뿐이고 값은 꼬리표에 그대로 적는다.** */
-const PULSE = { min: 0.35, max: 6.0 };
+   ⚠️ 벽시계 [0.35초, 3초]로 자른다. 아래로는 발작적인 스트로브가 되고, 위로는 정지 화면과
+      구분이 안 된다. **자른 것은 보이는 주기뿐이고 값은 꼬리표에 그대로 적는다.**
+      (상한은 6초였다가 3초로 내렸다 — 사용자 실사용 피드백: 6초 호흡은 「작업중」으로
+       안 읽힌다. 상대 순서는 불변 — 느린 노드는 여전히 빠른 노드보다 느리게 깜빡인다.) */
+const PULSE = { min: 0.35, max: 3.0 };
 
 /**
  * 이 노드의 맥동 주기(벽시계 초). st는 stateAt()이 만든 {busy, q, svcSum, svcN}.
@@ -2889,7 +2892,7 @@ el('legend').innerHTML =
   ' <span style="color:var(--warn)">MCRC·KAMDOC 37.5초</span> ·' +
   ' <span style="color:var(--warn)">사수(발사 처리) 40~60초</span>' +
   ' — 실제 값은 건마다 다르다. 대기만 하는 노드는 깜빡이지 않는다(점선 테두리).' +
-  ' <b>배속으로 나눠 화면 시각에 맞춘다</b>(벽시계 0.35~6초로 자른다 — 잘린 것은 보이는 주기뿐이고' +
+  ' <b>배속으로 나눠 화면 시각에 맞춘다</b>(벽시계 0.35~3초로 자른다 — 잘린 것은 보이는 주기뿐이고' +
   ' 꼬리표의 값은 그대로다).' +
   ' <span style="opacity:.85">· <b>화살촉</b> — 계선이 흐르는 방향. ' +
   '<span style="color:var(--bad)">붉은 화살촉</span>은 <b>역방향</b>(승인 협조·교전명령 하달처럼 계선을 되돌아간다).</span>' +

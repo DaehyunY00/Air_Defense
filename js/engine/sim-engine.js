@@ -2849,7 +2849,15 @@
         shooterId: d.shooterId, directiveId: plan.directiveId, engagementId: plan.engagementId
       });
       this._sendIadsStatus(threat, d.commander, 'resolved_hit', t);
-      if (threat._trace) { threat._trace.exitT = t; threat._trace.outcome = 'killed'; }
+      if (threat._trace) {
+        threat._trace.exitT = t; threat._trace.outcome = 'killed';
+        // 관측 전용(trace 게이트): 격추 항적에도 도중에 쌓인 거절·실패 증거를 남긴다.
+        // 종전에는 누수만 evidence를 내보내(_recordFinalFailure), 「승인까지 받고 끝내
+        // 못 쏜 축」의 사유가 격추 항적에서는 화면에서 사라졌다(전투기 로그 검토에서 발견).
+        if (threat._failureEvidence && Object.keys(threat._failureEvidence).length) {
+          threat._trace.evidence = threat._failureEvidence;
+        }
+      }
     } else {
       this._iadsTransitionPlan(plan, 'miss', t, 'miss');
       this.global.c2Orders.miss++;

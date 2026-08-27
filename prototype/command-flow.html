@@ -489,7 +489,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20260826a';
+const V = '?v=20260826b';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -875,7 +875,9 @@ function buildTracks(res) {
       exitT: tr.exitT, outcome: tr.outcome, stages: tr.stages || [], flows: [], spans: [],
       // ⚠️ `failure`(ADR-050 실패 분류 v2 — 주원인·기여원인·계열·구조성)를 반드시 옮긴다.
       //    빠뜨리면 누수 배너가 코드만 찍고 「왜」가 사라진다(실제로 그렇게 빠뜨렸다).
-      failure: tr.failure || null };
+      failure: tr.failure || null,
+      // 격추 항적의 거절·실패 증거 — 「승인까지 받고 못 쏜 축」의 사유(누수는 failure.evidence).
+      evidence: tr.evidence || null };
   });
   (res.flowEvents || []).forEach((e) => {
     if (e.k === 'link') { const t = byId[e.th]; if (t) t.flows.push(e); return; }
@@ -1293,7 +1295,19 @@ function buildLogRows(t) {
           high: cps >= 5 };
       }
     }
-    rows.push({ t: s.t, kind: 'mark', sensor: /^SENSOR_/.test(s.name), text: s.name,
+    // 위협우선순위 마크는 엔진 인코딩 원시값(유형순위×10⁶ + 절박도)이라 그대로 적으면
+    // 「4099828」 같은 읽을 수 없는 수가 찍힌다(실제 지적). 화면에는 풀어 적고 원문은
+    // 툴팁에 보존한다 — 인용·대조는 원문 코드로 한다는 규율 그대로.
+    let txt = s.name, raw = null;
+    const pr = s.name.match(/^위협우선순위:([^/]+)\/(\d+)$/);
+    if (pr) {
+      const v = +pr[2];
+      const rank = Math.floor(v / 1000000);
+      const remainSec = Math.max(0, 100000 - (v % 1000000));
+      txt = `위협우선순위:${pr[1]} — 유형순위 ${rank}/7 · 잔여체공 ${remainSec}초`;
+      raw = s.name;
+    }
+    rows.push({ t: s.t, kind: 'mark', sensor: /^SENSOR_/.test(s.name), text: txt, raw: raw,
       tail: '', lane: laneTag(s.axis), cost: cost });
   });
   // 「못 간」 전문 — 이 항적의 로그에서도 출발한 전문과 나란히 시각순으로 보여야,
@@ -1359,7 +1373,7 @@ function renderTrackLog(trk) {
     const m = r.kind === 'link' ? media(r.mt) : null;
     const tip = r.kind === 'link'
       ? `${r.text}\n${r.tail} — ${fmt(r.t)} 출발 → ${fmt(r.ref.t1)} 도착`
-      : `${fmt(r.t)} ${r.text}`;
+      : `${fmt(r.t)} ${r.text}` + (r.raw ? `\n원문: ${r.raw}` : '');
     const c = r.cost;
     const costChip = c
       ? `<span class="med cost${c.high ? ' hi' : ''}">${c.cps} M$ → ${c.val} M$` +
@@ -1576,8 +1590,8 @@ function selectTrack(i) {
   });
 
   // ── 「가야 했으나 닿지 못한」 노드 (사용자 결정: 실패한 항적은 원래 갔어야 할 곳이 보여야 한다)
-  //    엔진 실패 관측 세 벌에서 재구성한다 — failure.evidence(증거별 최초 detail의 노드 id·시각),
-  //    trace.unreached(경로 부재로 끊긴 계선), trace.commanders(책임 C2 명단).
+  //    엔진 실패 관측에서 재구성한다 — failure.evidence(누수)·trace.evidence(격추 — 승인까지
+  //    받고 못 쏜 축의 사유), trace.unreached(경로 부재로 끊긴 계선), trace.commanders(책임 C2 명단).
   //    ⚠️ 새 사실을 만들지 않는다 — 엔진이 남긴 id·시각을 그대로 옮겨 그릴 뿐이다.
   //    방문한 노드는 제외한다: 이미 계선·체류로 그려져 있고, 문제는 「한 번도 닿지 못함」이다.
   const oc0 = outcomeInfo(t);
@@ -1590,7 +1604,7 @@ function selectTrack(i) {
     if (t0 != null) g.t = Math.min(g.t, t0);
     g.items.push({ code: code, n: n || 1 });
   };
-  const evd = (t.failure && t.failure.evidence) || {};
+  const evd = (t.failure && t.failure.evidence) || t.evidence || {};
   Object.keys(evd).forEach((code) => {
     const d = evd[code].detail || {};
     addGhost(d.shooterId || d.approvalId, d.commanderId, evd[code].firstT, code, evd[code].count);

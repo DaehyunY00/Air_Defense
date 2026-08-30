@@ -28,6 +28,10 @@
     하므로 **별도의 속도계를 화면 위쪽에 따로 세우지 않는다**(사용자 결정).
     ⚠️ 노드 글리프에 초를 **글자로 적지 않는다**(사용자 결정) — 빠르기는 맥동으로만
        말한다. 시각별 수치는 왼쪽 「어디서 막혔나」·이벤트 로그가 이미 초 단위로 적는다.
+  · **교신 맥동** — 전문을 주고받는 중인 노드의 테두리가 고동친다. 주기 = 그 전문의
+    실제 전송 시간(작업 맥동과 같은 클립 규칙). 처리 중이면 작업 맥동이 우선하고,
+    센서 보고(report-cycle)는 세지 않는다. 열 띠(밝아진 열)는 히스테리시스를 두어
+    깜빡이지 않는다 — **깜빡임은 노드의 몫, 띠는 배경**이다(사용자 결정 2026-08-30).
   · **화살촉** — 점이 지나가지 않는 동안에도 계선의 방향이 보인다. 붉은 화살촉은
     역방향(승인 협조·교전명령 하달)이다.
   · **밝아진 열 · 킬체인 프론티어** — 지금 일이 벌어지는 단계가 밝아지고, 항적 개별
@@ -271,6 +275,17 @@
      사수의 발사 처리는 40~60초라 눈에 띄게 느리게 고동친다 — 그것이 사실이다. */
   .ncirc.busy { animation: circwork ease-in-out infinite; }
   @keyframes circwork { 0%, 100% { fill: #3b6f9c; stroke: #7fb6ff; stroke-width: 2.6 } 50% { fill: #16202e; stroke: #34435a; stroke-width: 1.5 } }
+  /* ── 교신 맥동 — 전문을 실제로 주고받는 중인 노드의 테두리가 고동친다 ─────────
+     처리(작업 맥동)와 별개의 신호다: 지금 이 노드를 끝점으로 전문이 계선 위에 떠 있는
+     동안 테두리만 흔든다. 주기 = 그 전문의 실제 전송 시간(배속 나눔·PULSE 클립 —
+     작업 맥동과 같은 규칙, 지어낸 주기가 아니다).
+     ⚠️ 처리 중이면 작업 맥동이 이긴다(:not 가드) — 두 애니메이션이 같은 요소를 두고
+        싸우면 어느 쪽도 읽히지 않는다.
+     ⚠️ 센서 보고(report-cycle)는 세지 않는다 — 주기 보고가 상시 흐르는 센서·ECS 열이
+        영영 깜빡여 신호가 아니라 소음이 된다(점 표시의 SLOW 집약과 같은 이유). */
+  .ncirc.talking:not(.busy) { animation: circtalk ease-in-out infinite; }
+  @keyframes circtalk { 0%, 100% { stroke-width: 1.5 } 50% { stroke: #7fb6ff; stroke-width: 3.2 } }
+  .cyl.talking:not(.working) .cyl-edge { animation: cylrim ease-in-out infinite; }
   .cyl.jam  .cyl-edge { stroke: var(--bad); stroke-width: 2; }
   .cyl-tick { stroke: #0b1017; stroke-width: 1; opacity: .8; }
   .cyl-num { font-size: 9.5px; font-weight: 700; fill: #dbe4f0;
@@ -471,7 +486,7 @@
          ⚠️ 접되 **없애지는 않는다** — 색·모양이 뜻하는 바를 모르면 화면을 오독한다.
             접힌 상태에서도 무엇이 들어 있는지 한 줄로 알린다. -->
     <details id="legend-box">
-      <summary>범례 — 작업 맥동(빠른 자리·굼뜬 자리) · 매체별 이동 속도 · 케파 실린더 · 못 가는 전문</summary>
+      <summary>범례 — 작업·교신 맥동(빠른 자리·굼뜬 자리) · 매체별 이동 속도 · 케파 실린더 · 못 가는 전문</summary>
       <div id="legend"></div>
     </details>
   </section>
@@ -596,6 +611,12 @@ function workPulseSec(st) {
 function applyPulse(node, st) {
   if (!node) return;
   const v = workPulseSec(st).toFixed(2) + 's';
+  if (node.dataset.pulse !== v) { node.dataset.pulse = v; node.style.animationDuration = v; }
+}
+/** 교신 맥동 주기 — 전송 시간 d(초)를 작업 맥동과 같은 규칙(배속 나눔·클립)으로 건다. */
+function commPulse(node, d) {
+  if (!node) return;
+  const v = Math.min(PULSE.max, Math.max(PULSE.min, d / Math.max(1, speed))).toFixed(2) + 's';
   if (node.dataset.pulse !== v) { node.dataset.pulse = v; node.style.animationDuration = v; }
 }
 
@@ -1763,10 +1784,18 @@ function arrowsSvg(edges) {
   }).join('');
 }
 
-/** 지금 무슨 일이 벌어지는 열을 밝힌다 — 밝은 띠가 좌에서 우로 옮겨 가는 것이 흐름이다. */
+/** 지금 무슨 일이 벌어지는 열을 밝힌다 — 밝은 띠가 좌에서 우로 옮겨 가는 것이 흐름이다.
+ *  ⚠️ 히스테리시스를 둔다(벽시계 0.7초). 사건 사이 짧은 틈마다 띠가 꺼졌다 켜지면
+ *     「섹션이 깜빡이는」 것으로 읽힌다(실사용 지적 2026-08-30) — 깜빡임은 노드
+ *     (작업·교신 맥동)의 몫이고, 띠는 지금 일이 벌어지는 단계를 조용히 가리키는 배경이다. */
 function paintLiveCols(geoRef, live) {
   if (!geoRef || !geoRef.bandEls) return;
-  geoRef.bandEls.forEach((b, i) => b.classList.toggle('live', live.has(i)));
+  const wall = performance.now();
+  const hold = geoRef.liveHold || (geoRef.liveHold = {});
+  geoRef.bandEls.forEach((b, i) => {
+    if (live.has(i)) hold[i] = wall;
+    b.classList.toggle('live', live.has(i) || (hold[i] != null && wall - hold[i] < 700));
+  });
 }
 
 function layoutGraph() {
@@ -2243,6 +2272,7 @@ function drawFrameAll() {
   // 초당 수십 개가 지나가며 깜박임만 남는다(사용자 결정). 빠른 매체는 선 맥동으로 집약.
   const hotEdges = new Set();
   const liveCols = new Set();
+  const talking = new Map();   // nodeId → 지금 이 노드를 끝점으로 나는 전문 중 가장 긴 전송 시간
   let slowCount = 0;
   run.allFlows.forEach((f) => {
     const inFlight = f.d > 0 ? (simT >= f.t0 && simT <= f.t1) : (simT >= f.t0 && simT <= f.t0 + 1.5);
@@ -2250,6 +2280,13 @@ function drawFrameAll() {
     const e = geoAll.edgeByKey[edgeKey(f)];
     if (!e) return;
     if (e.ca != null) { liveCols.add(e.ca); liveCols.add(e.cb); }
+    // 교신 맥동 재료 — 이 전문의 양 끝. 센서 보고(report-cycle)는 세지 않는다(CSS 주석 참조).
+    if (f.d > 0 && f.mt !== 'report-cycle') {
+      [f.from, f.to].forEach((id) => {
+        const p = talking.get(id);
+        if (p == null || f.d > p) talking.set(id, f.d);
+      });
+    }
     // ⚠️ 「센서 보고 표시」 토글은 **점의 혼잡을 줄이는 손잡이**이지 흐름을 부정하는 것이
     //    아니다. 열 밝기는 토글과 무관하게 전량을 센다 — 센서→ECS 사이를 건너는 전문은
     //    전부 report-cycle이라, 토글을 따르면 맨 왼쪽 두 열이 **영영 꺼진 채**로 남아
@@ -2316,6 +2353,25 @@ function drawFrameAll() {
     }
   });
   geoAll.prevLive = liveNow;
+
+  // 교신 맥동 — 전문 끝점 노드의 테두리를 그 전문의 전송 시간 주기로 고동시킨다.
+  // 처리 중(busy)이면 작업 맥동이 우선한다(CSS :not 가드와 같은 규칙을 JS에서도 지킨다).
+  const talkNow = new Set(talking.keys());
+  const talkDirty = new Set([...talkNow, ...(geoAll.prevTalking || [])]);
+  Object.keys(geoAll.nodeEls).forEach((k) => {
+    const els = geoAll.nodeEls[k];
+    if (!talkDirty.has(els.id)) return;
+    const busyNow = !!((state[els.id] || {}).busy);
+    const on = talkNow.has(els.id) && !busyNow;
+    if (els.cyl) {
+      els.cyl.classList.toggle('talking', on);
+      if (on) commPulse(els.rim, talking.get(els.id));
+    } else if (els.circ) {
+      els.circ.classList.toggle('talking', on);
+      if (on) commPulse(els.circ, talking.get(els.id));
+    }
+  });
+  geoAll.prevTalking = talkNow;
   paintLiveCols(geoAll, liveCols);
 
   // 부하 순위는 300ms 스로틀 — 매 프레임 정렬·DOM 재생성은 낭비다.
@@ -2638,6 +2694,7 @@ function drawFrameTrack() {
   let out = '';
 
   const liveCols = new Set();
+  const talking = new Map();   // nodeId → 지금 이 항적의 전문이 나는 계선 끝점의 전송 시간
   // 킬체인 프론티어 — 이 항적의 계선이 **지금까지 도달한** 가장 오른쪽 열.
   // 「항적이 움직이니 C2가 왼쪽부터 차례로 반응한다」를 한 줄로 못박는 표시다.
   let frontier = -1;
@@ -2655,6 +2712,13 @@ function drawFrameTrack() {
     const inFlight = f.d > 0 ? (simT >= f.t0 && simT <= f.t1) : (simT >= f.t0 && simT <= f.t0 + 1.5);
     if (!inFlight) return;
     if (e.ca != null) { liveCols.add(e.ca); liveCols.add(e.cb); }
+    // 교신 맥동 재료 — 전체 보기와 같은 규칙(센서 보고 제외).
+    if (f.d > 0 && f.mt !== 'report-cycle') {
+      [f.from, f.to].forEach((id) => {
+        const p = talking.get(id);
+        if (p == null || f.d > p) talking.set(id, f.d);
+      });
+    }
     // 프론티어·열 밝기는 「센서 보고 표시」 토글과 무관하다(전체 보기와 같은 규율) —
     // 토글은 점의 혼잡을 줄이는 손잡이일 뿐이다. 점만 여기서 거른다.
     if (!showSensor && f.mt === 'report-cycle') return;
@@ -2754,7 +2818,15 @@ function drawFrameTrack() {
     const els = geo.nodeEls[k], id = els.id, n = run.nodes[id] || {};
     const cap = nodeCap(n); const c = cap ? cap.c : null;
     const st = gstate[id] || { busy: 0, q: 0 };
-    if (els.fill && c) { paintCyl(els, geo.nodes[k], c, st, mineAt[id] || null); return; }
+    const talkD = talking.get(id);
+    if (els.fill && c) {
+      paintCyl(els, geo.nodes[k], c, st, mineAt[id] || null);
+      // 교신 맥동 — 처리 중이면 작업 맥동이 우선한다(전체 보기와 같은 규칙).
+      const talkOn = talkD != null && !(st.busy > 0);
+      els.cyl.classList.toggle('talking', talkOn);
+      if (talkOn) commPulse(els.rim, talkD);
+      return;
+    }
     if (els.circ) {
       // ⚠️ 종전에는 대기중(queue)에도 `busy`를 걸었다. 그때는 색만 바뀌어 넘어갔지만
       //    이제 `busy`는 **맥동**한다 — 줄만 서 있는 노드가 일하는 것처럼 깜빡이면 안 된다.
@@ -2765,6 +2837,9 @@ function drawFrameTrack() {
       // 주기는 **전역 상태**에서 잡는다 — 실린더와 같은 규칙이라야 같은 노드가 두 보기에서
       // 다른 속도로 깜빡이지 않는다.
       if (svcNow) applyPulse(els.circ, st);
+      const talkOn = talkD != null && !svcNow;
+      els.circ.classList.toggle('talking', talkOn);
+      if (talkOn) commPulse(els.circ, talkD);
     }
     if (els.badge) els.badge.textContent = st.q ? '대기 ' + st.q : '';
   });
@@ -2908,6 +2983,9 @@ el('legend').innerHTML =
   ' — 실제 값은 건마다 다르다. 대기만 하는 노드는 깜빡이지 않는다(점선 테두리).' +
   ' <b>배속으로 나눠 화면 시각에 맞춘다</b>(벽시계 0.35~3초로 자른다 — 잘린 것은 보이는 주기뿐이고' +
   ' 꼬리표의 값은 그대로다).' +
+  ' <span style="opacity:.85">· <b>교신 맥동</b> — 전문을 주고받는 중인 노드는 <b>테두리만</b> 고동친다.' +
+  ' 주기 = 그 전문의 전송 시간(같은 클립 규칙). 처리 중이면 작업 맥동이 우선하고,' +
+  ' 센서 보고(주기 보고)는 세지 않는다.</span>' +
   ' <span style="opacity:.85">· <b>화살촉</b> — 계선이 흐르는 방향. ' +
   '<span style="color:var(--bad)">붉은 화살촉</span>은 <b>역방향</b>(승인 협조·교전명령 하달처럼 계선을 되돌아간다).</span>' +
   ' <span style="opacity:.85">· <b>밝아진 열</b> — 지금 이동·처리·대기가 벌어지는 단계.' +

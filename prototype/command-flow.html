@@ -11,7 +11,8 @@
 
   · [전체 흐름] — 배치 전체(251노드)를 세우고 전 항적을 겹친다. 노드 테두리 링이
     처리중/서버수만큼 차오르고(가득=노랑, 가득+대기=빨강), 큐 대기는 점 꼬리로 쌓이고,
-    대기실 초과 즉시 드롭은 붉은 섬광으로 튄다. 좌측에 부하 순위·병목 사건 로그.
+    대기실 초과 즉시 드롭은 붉은 섬광으로 튄다. 좌측에 부하 순위와 「C2 처리|병목」 로그
+    (C2 처리 = 노드 하나의 도착·대기·처리·드롭 — 실린더가 차오르는 것을 줄로 읽는 자리).
     느린 매체(≥10초)만 개별 점으로 그리고 빠른 매체는 선 맥동으로 집약한다.
   · [항적 개별] — 항적 하나의 전문 이동을 따라간다. 점 하나가 전문 한 건이고,
     점이 선을 건너는 데 걸리는 시간이 곧 그 계선의 실제 지연이다. 그래서 **빠르면
@@ -460,10 +461,9 @@
       <div class="scroll" id="track-list"><div class="empty">아직 실행하지 않았습니다.</div></div>
     </section>
     <section class="sec" id="log">
-      <h2><span id="log-title">이벤트 로그</span><span class="minisw" id="log-mode" hidden><button id="lm-trk" title="항적 하나를 골라 그 항적의 이벤트 로그를 읽는다 — 전체 화면은 그대로 둔다">항적</button><button id="lm-bot" title="넘침·큐 이탈·포화 등 병목 사건만 모아 본다">병목</button></span><span id="log-hint"></span></h2>
+      <h2><span id="log-title">이벤트 로그</span><span class="minisw" id="log-mode" hidden><button id="lm-c2" title="C2 노드 하나를 골라 그 노드의 처리 로그(도착·대기·처리·드롭)를 읽는다 — 전체 화면은 그대로 둔다">C2 처리</button><button id="lm-bot" title="넘침·큐 이탈·포화 등 병목 사건만 모아 본다">병목</button></span><span id="log-hint"></span></h2>
       <div id="log-trk-bar" hidden>
-        <select id="log-trk-sel" title="로그를 볼 항적"></select>
-        <button id="log-trk-go" title="이 항적의 개별 보기로 내려간다 (현재 시각 유지)">개별 보기 ›</button>
+        <select id="log-trk-sel" title="처리 로그를 볼 C2 노드"></select>
       </div>
       <div class="scroll" id="log-body"></div>
     </section>
@@ -693,9 +693,13 @@ function viewT1() {
   if (view === 'all') return run ? run.cfg.endTimeSec : 1;
   return sel ? sel.endT : 1;
 }
-/** 현재 보기의 「다음 사건」 시각 목록(⏭·눈금 공용). */
+/** 현재 보기의 「다음 사건」 시각 목록(⏭·눈금 공용). 전체 보기는 좌하단 로그 모드를
+ *  따른다 — C2 처리 모드에서는 그 노드의 도착 시각이 곧 「다음 사건」이다. */
 function viewTimes() {
-  if (view === 'all') return gv ? gv.rowTimes : [];
+  if (view === 'all') {
+    if (allLogMode === 'c2' && c2Log) return c2Log.times;
+    return gv ? gv.rowTimes : [];
+  }
   return sel && sel.logTimes ? sel.logTimes : [];
 }
 
@@ -1372,11 +1376,11 @@ function laneTag(axis) {
   return nm || head;
 }
 
-let logTrk = null;   // 로그 패널에 실린 항적 — 개별 보기의 sel, 또는 전체 보기 「항적」 모드의 선택
+let logTrk = null;   // 로그 패널에 실린 항적 — 항적 개별 보기의 sel
 function renderLog() { renderTrackLog(sel); }
 
-/** 항적 하나의 이벤트 로그. 개별 보기(sel)와 전체 보기 「항적」 모드가 **같은 함수**를
- *  쓴다 — 두 벌을 두면 같은 항적이 화면마다 다르게 읽힌다(실린더 글리프와 같은 규율). */
+/** 항적 하나의 이벤트 로그 — 항적 개별 보기 전용. (전체 보기의 「항적」 모드는 개별
+ *  보기와 같은 로그의 중복이라 걷어내고 C2 처리 로그로 교체했다 — 사용자 결정 2026-08-31.) */
 function renderTrackLog(trk) {
   logTrk = trk || null;
   const body = el('log-body');
@@ -1429,13 +1433,6 @@ function renderTrackLog(trk) {
   }).join('');
   trk.logEls = [...body.querySelectorAll('.ev')];
   trk.logTimes = rows.map((r) => r.t);
-  // 전체 보기에서는 줄 클릭이 **전체 시계**를 그 사건 시각으로 맞춘다 — 개별 보기 진입은
-  // 위 「개별 보기 ›」의 몫으로 남겨, 읽던 전체 화면이 클릭 한 번에 사라지지 않게 한다.
-  if (view === 'all') trk.logEls.forEach((n) => n.addEventListener('click', () => {
-    setPlaying(false);
-    simT = +n.dataset.t;
-    drawFrame();
-  }));
   lastLogIdx = -2;
   renderTicks();
   paintLog();
@@ -1465,7 +1462,9 @@ function renderTicks() {
   const box = el('ticks');
   const t0 = viewT0(), span = Math.max(1e-6, viewT1() - t0);
   const marks = view === 'all'
-    ? (gv ? gv.marks : [])
+    ? (allLogMode === 'c2' && c2Log
+        ? c2Log.rows.map((r) => ({ t: r.t, bad: r.drop != null && r.dropR !== 'dead' }))
+        : (gv ? gv.marks : []))
     : (sel && sel.logTimes ? sel.logTimes.map((t) => ({ t, bad: false })) : []);
   const seen = new Set();
   box.innerHTML = marks.map((m) => {
@@ -1589,7 +1588,7 @@ function selectTrack(i) {
   el('v-all').classList.remove('on');
   el('v-track').classList.add('on');
   el('tracks-label').textContent = '항적 (이벤트)';
-  // 로그 모드 스위치·항적 선택줄은 전체 보기 전용 — 개별 보기의 로그는 늘 sel의 것이다.
+  // 로그 모드 스위치·C2 선택줄은 전체 보기 전용 — 개별 보기의 로그는 늘 sel의 것이다.
   el('log-mode').hidden = true;
   el('log-trk-bar').hidden = true;
   document.querySelectorAll('.trk').forEach((n) => n.classList.toggle('sel', +n.dataset.i === i));
@@ -2237,7 +2236,15 @@ function layoutAll() {
 function toggleFocusNode(id) {
   if (!gv) return;
   gv.focusNode = gv.focusNode === id ? null : id;
-  if (allLogMode === 'bot') renderBotLog();   // 노드 필터는 병목 로그의 것 — 항적 로그는 불변
+  if (allLogMode === 'bot') renderBotLog();   // 노드 필터는 병목 로그의 것
+  // C2 처리 모드 — 그래프에서 큐 있는 C2를 짚으면 처리 로그도 그 노드로 따라간다.
+  else if (allLogMode === 'c2' && gv.focusNode) {
+    const n = run.nodes[gv.focusNode];
+    if (n && n.queue && n.queue.servers && gv.focusNode !== allLogC2Id) {
+      allLogC2Id = gv.focusNode;
+      renderAllLog();
+    }
+  }
   renderLoadRank(lastState || {}, true);
   if (geoAll) Object.keys(geoAll.nodeEls).forEach((k) => {
     geoAll.nodeEls[k].g.classList.toggle('focus', geoAll.nodeEls[k].id === gv.focusNode);
@@ -2383,7 +2390,7 @@ function drawFrameAll() {
   // 부하 순위는 300ms 스로틀 — 매 프레임 정렬·DOM 재생성은 낭비다.
   const wall = performance.now();
   if (wall - lastRankWall > 300) { lastRankWall = wall; renderLoadRank(state); }
-  if (allLogMode === 'trk') paintLog(); else paintBotLog();
+  if (allLogMode === 'c2') paintC2Log(); else paintBotLog();
   paintClock();
 }
 
@@ -2419,38 +2426,120 @@ function renderLoadRank(state, force) {
   });
 }
 
-/* ── 좌하단 로그 — 「항적」/「병목」 두 모드 (사용자 결정) ──────────────────────
-   종전에는 병목 사건 로그뿐이라, 항적 하나의 사건열을 읽으려면 개별 보기로 내려가
-   전체 화면(케파·병목 애니메이션)을 버려야 했다. 「항적」 모드는 전체 화면을 그대로
-   둔 채 개별 보기와 **같은 로그**를 보여주고, 줄 클릭은 전체 시계를 그 시각으로 맞춘다. */
-let allLogMode = 'trk';    // 'trk' — 항적별 이벤트 로그(기본) · 'bot' — 병목 사건 로그
-let allLogTrkId = null;    // 「항적」 모드에서 고른 항적 id (실행이 바뀌어 없어지면 재선정)
+/* ── 좌하단 로그 — 「C2 처리」/「병목」 두 모드 ────────────────────────────────
+   「항적」 모드(개별 보기와 같은 로그를 전체 화면에 띄움)는 걷어냈다(사용자 결정
+   2026-08-31) — 항적 개별 보기와 중복이었다. 대신 C2 노드 하나(MCRC·KAMDOC·
+   방공C2A·IAOC…)의 **처리 로그**를 본다: 무엇이 언제 도착해 얼마나 기다렸고
+   얼마나 걸렸는가(도착·대기·처리·드롭) — 케파 실린더가 차오르는 것을 줄 단위로
+   읽는 자리다. 재료는 전역 체류(allSpans) 그대로다 — 새 사실을 만들지 않는다.
+   줄 클릭은 전체 시계를 그 사건 시각으로 맞춘다(종전 항적 모드와 같은 동선). */
+let allLogMode = 'c2';     // 'c2' — C2 처리 로그(기본) · 'bot' — 병목 사건 로그
+let allLogC2Id = null;     // 「C2 처리」 모드에서 고른 노드 id (실행이 바뀌면 재선정)
+let c2Log = null;          // { id, rows, els, times } — renderC2Log가 만든다
 
 function renderAllLog() {
   el('log-mode').hidden = false;
-  el('lm-trk').classList.toggle('on', allLogMode === 'trk');
+  el('lm-c2').classList.toggle('on', allLogMode === 'c2');
   el('lm-bot').classList.toggle('on', allLogMode === 'bot');
   if (allLogMode === 'bot') { el('log-trk-bar').hidden = true; renderBotLog(); return; }
-  // 항적 모드 — 직전에 개별 보기로 보던 항적을 우선 잇고, 없으면 전문이 있는 첫 항적.
-  if (!allLogTrkId || !run.tracks.some((t) => t.id === allLogTrkId)) {
-    const first = (sel && run.tracks.find((t) => t.id === sel.id)) ||
-      run.tracks.find((t) => t.flows.length > 0) || run.tracks[0];
-    allLogTrkId = first ? first.id : null;
-  }
-  el('log-trk-bar').hidden = !allLogTrkId;
-  if (!allLogTrkId) {
-    el('log-title').textContent = '항적 이벤트 로그';
+  // C2 처리 모드 — 처리 큐가 선언된 C2 가운데 실제 도착이 있던 노드만 목록에 올린다.
+  // (도착 0건 노드의 빈 로그는 「0건」과 「미측정」을 못 가른다 — ADR-062 규율)
+  const c2s = Object.keys(run.nodes)
+    .filter((id) => {
+      const n = run.nodes[id];
+      return n.queue && n.queue.servers && gv.stats[id] && gv.stats[id].arr > 0;
+    })
+    .sort((a, b) => gv.stats[b].arr - gv.stats[a].arr);
+  if (!allLogC2Id || c2s.indexOf(allLogC2Id) < 0) allLogC2Id = c2s[0] || null;
+  el('log-trk-bar').hidden = !allLogC2Id;
+  if (!allLogC2Id) {
+    el('log-title').textContent = 'C2 처리 로그';
     el('log-hint').textContent = '';
-    el('log-body').innerHTML = '<div class="empty">추적된 항적이 없습니다.</div>';
+    el('log-body').innerHTML = '<div class="empty">이 실행에서는 어느 C2에도<br>작업이 도착하지 않았습니다.</div>';
+    c2Log = null;
     return;
   }
-  el('log-trk-sel').innerHTML = run.tracks.map((t) => {
-    const oc = outcomeInfo(t);
-    const txt = t.outcome === 'killed' ? '격추' : (oc.leaked ? '누수 · ' + oc.text : '진행중');
-    return `<option value="${esc(t.id)}"${t.id === allLogTrkId ? ' selected' : ''}>` +
-      `${esc(`${t.id} · ${THREAT_LABEL[t.type] || t.type} · ${txt}`)}</option>`;
-  }).join('');
-  renderTrackLog(run.tracks.find((t) => t.id === allLogTrkId));
+  el('log-trk-sel').innerHTML = c2s.map((id) =>
+    `<option value="${esc(id)}"${id === allLogC2Id ? ' selected' : ''}>` +
+    `${esc(`${nodeName(id)} · 도착 ${gv.stats[id].arr}건`)}</option>`).join('');
+  renderC2Log(allLogC2Id);
+}
+
+/** C2 노드 하나의 처리 로그 줄 — 전역 체류(allSpans)에서 그 노드 몫만 접는다.
+ *  한 줄 = 작업 하나(도착 시각 기준): 무슨 일이(jk)·어느 항적 몫이(th)·얼마나 기다렸고
+ *  (wait)·얼마나 걸렸는가(svc), 드롭이면 그 사유. 관측 종료까지 안 끝난 작업은
+ *  지어내지 않고 「미완」으로 적는다. */
+function buildC2Rows(id) {
+  const end = run.cfg.endTimeSec;
+  return run.allSpans.filter((s) => s.at === id).map((s) => {
+    const started = s.start != null;
+    const wait = (started ? s.start : (s.drop != null ? s.drop : end)) - s.arrive;
+    const svc = started ? ((s.done != null ? s.done : end) - s.start) : null;
+    // 드롭 사유는 엔진이 실어 준 r 그대로(재추정 금지) — buildGlobal과 같은 계정.
+    const dropText = s.drop == null ? null
+      : s.dropR === 'over' ? '넘침 드롭(대기실 초과)'
+      : s.dropR === 'ttl' ? '기한 만료 드롭'
+      : '큐 정리(항적 종결)';
+    return { t: s.arrive, th: s.track ? s.track.id : null, jk: s.jk, wait, svc, started,
+      start: s.start, done: s.done, drop: s.drop, dropR: s.dropR, dropText,
+      openSvc: started && s.done == null, openWait: !started && s.drop == null };
+  });   // allSpans가 이미 도착순 정렬이라 재정렬하지 않는다
+}
+
+let lastC2Idx = -2;
+function renderC2Log(id) {
+  const body = el('log-body');
+  const rows = buildC2Rows(id);
+  const dropped = rows.filter((r) => r.drop != null && r.dropR !== 'dead').length;
+  const waited = rows.filter((r) => r.wait > 0.5).length;
+  el('log-title').textContent = `${nodeName(id)} — 처리 로그`;
+  el('log-hint').innerHTML = `${rows.length}건` +
+    (waited ? ` · <b style="color:var(--warn)">대기 ${waited}건</b>` : '') +
+    (dropped ? ` · <b style="color:var(--bad)">드롭 ${dropped}건</b>` : '');
+  body.innerHTML = rows.length ? rows.map((r) => {
+    const cls = r.drop != null ? (r.dropR === 'dead' ? 'dead' : 'chdrop')
+      : (r.wait > 0.5 ? 'block' : '');
+    const tail =
+      (r.wait > 0.5 ? `<span class="med" style="color:var(--warn)">대기 ${r.wait.toFixed(0)}초${r.openWait ? '+' : ''}</span>` : '') +
+      (r.svc != null ? `<span class="med" style="color:var(--accent)">처리 ${r.svc.toFixed(0)}초${r.openSvc ? '+' : ''}</span>` : '') +
+      (r.dropText ? `<span class="med" style="color:${r.dropR === 'dead' ? 'var(--dim)' : 'var(--bad)'}">${esc(r.dropText)}</span>` : '');
+    const tip = [`${fmt(r.t)} 도착 — ${JOB_LABEL[r.jk] || r.jk}${r.th ? ` · ${r.th}` : ''}`,
+      r.started
+        ? `대기 ${r.wait.toFixed(1)}초 → 처리 ${r.svc.toFixed(1)}초` +
+          (r.openSvc ? ' (관측 종료까지 미완)' : ` → ${fmt(r.done)} 완료`)
+        : r.drop != null
+          ? `대기 ${r.wait.toFixed(1)}초 → ${fmt(r.drop)} ${r.dropText}`
+          : `대기 ${r.wait.toFixed(1)}초 — 관측 종료까지 서비스에 못 들어감`,
+      '클릭 — 전체 시계를 이 도착 시각으로'].join('\n');
+    return `<div class="ev mark${cls ? ' ' + cls : ''}" data-t="${r.t}" title="${esc(tip)}">` +
+      `<span class="t mono">${fmt(r.t)}</span>` +
+      `<span class="x">${esc((JOB_LABEL[r.jk] || r.jk) + (r.th ? ' — ' + r.th : ''))}${tail}</span></div>`;
+  }).join('') : '<div class="empty">이 노드에는 도착한 작업이 없습니다.</div>';
+  c2Log = { id, rows, els: [...body.querySelectorAll('.ev')], times: rows.map((r) => r.t) };
+  c2Log.els.forEach((n) => n.addEventListener('click', () => {
+    setPlaying(false);
+    simT = +n.dataset.t;
+    drawFrame();
+  }));
+  lastC2Idx = -2;
+  renderTicks();
+  paintC2Log();
+}
+
+function paintC2Log() {
+  if (!c2Log || !c2Log.els.length) return;
+  let idx = -1;
+  for (let i = 0; i < c2Log.els.length; i++) {
+    if (+c2Log.els[i].dataset.t <= simT) idx = i; else break;
+  }
+  if (idx === lastC2Idx) return;
+  lastC2Idx = idx;
+  c2Log.els.forEach((n, i) => {
+    // ⚠️ className을 통째로 갈아엎지 않는다(paintLog와 같은 함정) — 진행 상태 세 개만 교체.
+    n.classList.remove('past', 'now', 'future');
+    n.classList.add(i < idx ? 'past' : (i === idx ? 'now' : 'future'));
+  });
+  if (idx >= 0) c2Log.els[idx].scrollIntoView({ block: 'nearest' });
 }
 
 /** 좌하단(병목 모드): 병목 이벤트 로그 (넘침·큐 이탈·포화 진입/해소). */
@@ -3077,15 +3166,13 @@ document.querySelectorAll('.spd button').forEach((b) => {
 el('show-sensor').addEventListener('change', () => {
   if (view === 'all') {
     el('graph').classList.toggle('hide-sensor', !el('show-sensor').checked);
-    if (allLogMode === 'trk') renderAllLog();   // 항적 로그도 같은 기준으로 센서 줄을 걸러야 한다
     drawFrame();
   } else { lastLogIdx = -2; renderLog(); drawFrame(); }
 });
-// 좌하단 로그 모드 전환·항적 선택 (전체 보기 전용)
-el('lm-trk').addEventListener('click', () => { if (run && view === 'all') { allLogMode = 'trk'; renderAllLog(); } });
+// 좌하단 로그 모드 전환·C2 노드 선택 (전체 보기 전용)
+el('lm-c2').addEventListener('click', () => { if (run && view === 'all') { allLogMode = 'c2'; renderAllLog(); } });
 el('lm-bot').addEventListener('click', () => { if (run && view === 'all') { allLogMode = 'bot'; renderAllLog(); } });
-el('log-trk-sel').addEventListener('change', (e) => { allLogTrkId = e.target.value; renderAllLog(); });
-el('log-trk-go').addEventListener('click', () => { if (run && allLogTrkId) drillToTrack(allLogTrkId, simT); });
+el('log-trk-sel').addEventListener('change', (e) => { allLogC2Id = e.target.value; renderAllLog(); });
 /** 그래프 칸의 크기가 바뀌면 다시 세운다 — 창 크기 변경과 패널 접기가 **같은 길**을 쓴다. */
 function relayout() {
   if (view === 'all' && run) { layoutAll(); drawFrame(); }

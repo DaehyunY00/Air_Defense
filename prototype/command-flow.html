@@ -898,7 +898,13 @@ function buildTracks(res) {
       //    빠뜨리면 누수 배너가 코드만 찍고 「왜」가 사라진다(실제로 그렇게 빠뜨렸다).
       failure: tr.failure || null,
       // 격추 항적의 거절·실패 증거 — 「승인까지 받고 못 쏜 축」의 사유(누수는 failure.evidence).
-      evidence: tr.evidence || null };
+      evidence: tr.evidence || null,
+      // ⚠️ 유령 노드 재료 셋을 **전부** 옮긴다. 종전에는 evidence 계열만 옮겨, selectTrack이
+      //    읽는 unreached(경로 부재로 끊긴 계선)·commanders(책임 C2 명단)가 항상 undefined였다
+      //    — 엔진이 103/105 항적에 commanders를 실어 보내는데 화면이 전부 버렸고,
+      //    failure.evidence가 빈 누수 항적은 아무 실패 표시 없이 끝났다(실측 2건).
+      //    바로 위 failure를 빠뜨렸던 것과 같은 실수의 재판이라, 같은 자리에 같이 적는다.
+      unreached: tr.unreached || [], commanders: tr.commanders || [] };
   });
   (res.flowEvents || []).forEach((e) => {
     if (e.k === 'link') { const t = byId[e.th]; if (t) t.flows.push(e); return; }
@@ -1856,7 +1862,7 @@ function layoutGraph() {
       const mx = (a.x + b.x) / 2;
       d = `M${a.x},${a.y} C${mx},${a.y + off} ${mx},${b.y + off} ${b.x},${b.y}`;
     }
-    // ca·cb — 이 간선이 넘는 열 구간. 흐름 롤러가 어느 경계에 이 전문을 셀지 정한다.
+    // ca·cb — 이 간선이 넘는 열 구간. 열 밝힘(liveCols)·킬체인 프론티어가 쓴다.
     return Object.assign({}, e, { d: d, back: back, a: a, b: b, ca: a.col, cb: b.col });
   }).filter(Boolean);
 
@@ -2136,7 +2142,7 @@ function layoutAll() {
       const mx = (a.x + b.x) / 2;
       d = `M${a.x},${a.y} C${mx},${a.y + off} ${mx},${b.y + off} ${b.x},${b.y}`;
     }
-    // ca·cb — 이 간선이 넘는 열 구간(흐름 롤러가 셀 경계).
+    // ca·cb — 이 간선이 넘는 열 구간(열 밝힘이 셀 경계).
     return Object.assign({}, e, { d, back, ca: a.col, cb: b.col });
   }).filter(Boolean);
 
@@ -3004,7 +3010,6 @@ el('legend').innerHTML =
   ' <span style="color:var(--bad)">가득+대기(병목)</span>.' +
   ' <b>작업중(처리중 ≥1)이면 채움과 테두리가 위 「작업 맥동」 규칙으로 깜빡인다</b>' +
   ' — 실린더를 못 그린 작은 원(밀집 열의 ECS·사수·센서)도 같은 규칙이다.' +
-  ' ⚠️ 맥동 주기는 고정이다 — <b>속도를 뜻하는 것은 흐름 롤러 하나뿐</b>이다.' +
   ' 가운데 숫자 = 처리중/용량 — <b>단위가 다르다</b>: C2 「석」=동시 결심 슬롯 ·' +
   ' 포대 「발」=동시 유도 요격탄(교전 채널). 두 숫자를 직접 견주면 안 된다' +
   ' · 위 디스크 1개 = 대기 1건(7개 넘으면 +N)' +

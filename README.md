@@ -145,9 +145,20 @@ K-JAMDS_시뮬레이터_단일본.html
 
 - 모든 점의 출발·도착 시각은 `KJ.runDES({flowTrace:true})`가 기록한 **실제 실행값**입니다
   (flowTrace는 순수 관측 채널 — RNG·동역학 불변, ADR-084 ①).
-- **본 앱(index.html)에는 아직 통합되지 않았고 단일본에도 포함되지 않습니다.**
-- ES module import를 쓰므로 `file://`로는 열리지 않습니다 — **방법 A** 서버를 띄운 뒤
-  `http://127.0.0.1:8000/prototype/command-flow.html`을 여십시오.
+- **본 앱(index.html)에는 아직 통합되지 않았고, 앱 단일본(`K-JAMDS_시뮬레이터_단일본.html`)에도
+  포함되지 않습니다** — 지휘 흐름은 아래의 **별도 단일본**으로 봅니다.
+- 소스(`prototype/command-flow.html`)는 ES module import를 쓰므로 `file://`로는 열리지 않습니다 —
+  **방법 A** 서버를 띄운 뒤 `http://127.0.0.1:8000/prototype/command-flow.html`을 여십시오.
+- **서버를 쓸 수 없다면** 저장소 루트의
+
+  ```
+  K-JAMDS_지휘흐름_단일본.html
+  ```
+
+  **한 파일을 브라우저로 바로 열면 됩니다**(더블클릭 또는 `file://` 경로). 커널·데이터·엔진을
+  인라인 `<script>`로 동봉한 **자기완결(self-contained)** 빌드라 외부 파일·CDN 의존이 없고,
+  화면·조작은 프로토타입과 동일합니다. 계산은 워커 없이 **메인 스레드**에서 실행됩니다
+  (`file://`는 외부 Worker 파일을 불러올 수 없기 때문 — 앱 단일본과 같은 제약).
 
 > 📘 **처음 사용한다면**: [`docs/사용자_가이드.html`](docs/사용자_가이드.html) — 실행법·화면 조작·
 > 지표 읽는 법(일상어)·자주 오해되는 지표·FAQ.
@@ -217,6 +228,7 @@ legacy C2 이론은 **정책 계층으로 이식**되었습니다. 여덟 가지
 ```
 index.html                       # 진입점: 탭 구조·컨트롤·디스클레이머
 K-JAMDS_시뮬레이터_단일본.html    # ★ 자기완결 단일본(서버 없이 실행, IIFE 커널 동봉) — build-single.mjs로 재생성
+K-JAMDS_지휘흐름_단일본.html      # ★ [지휘 흐름] 프로토타입의 자기완결 단일본(서버 없이 실행)
 css/style.css                    # 레이아웃·테마
 js/
   config/ system-types.js · geo-mdl.js · deployments.js · deployment-adapter.js
@@ -235,7 +247,8 @@ js/
   main.js                        # 부트스트랩·상태 관리 (해시 = 상태 단일원천)
 prototype/
   command-flow.html              # [지휘 흐름] 프로토타입 — 계선 위 전문 이동 관측·매체 반사실
-                                 #   (ADR-084~086, 본 앱 미통합·서버 필요 — 위 [프로토타입] 절 참조)
+                                 #   (ADR-084~086, 본 앱 미통합·서버 필요 — 위 [프로토타입] 절 참조.
+                                 #    서버 없이 보려면 루트의 K-JAMDS_지휘흐름_단일본.html)
 docs/
   모의논리서.html · 사용자_가이드.html · 실험보고서.html    # ★ 3대 문서 (아래 참조)
   params.md                      # 파라미터 근거표 (ID·출처·인용·신뢰도 A/B/C)

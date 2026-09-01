@@ -282,6 +282,25 @@
     //    키를 하나만 더해도 **기준선 SHA-256이 깨진다**(OFF wire shape 불변 원칙).
     //    최근 플래그(approvalChain·threatTargetDispersion…)와 같이 인스턴스 속성으로만 둔다.
     this.wtaSuitability = ff('wtaSuitability', false);
+    // ADR-092: C2 처리 시간 바닥 — 카탈로그가 갈라 적은 두 성분(체계 처리 구간 U[lo,hi] +
+    // 운용자 판단 Exp(op))을 따로 뽑는다. 평균은 종전 Exp(lo/2+hi/2+op)과 **항등**이라 ρ·Wq 등
+    // 평균 지표의 결론은 서지만, 표본마다 체계 구간 lo초의 바닥이 생겨 "MCRC 승인 0.4초" 같은
+    // 표본이 사라진다(종전 ECS 13%·MCRC 1.3%가 0.5초 미만). 서비스당 RNG 소비가 1→2회로 바뀌어
+    // 실행 전체가 다른 표본이 된다 — 기본 OFF(불변 규칙 1 · 재기준선 대상). 성분이 없는 노드
+    // (사수·legacy)는 종전 지수분포 그대로.
+    this.c2ServiceFloor = ff('c2ServiceFloor', false);
+    // ADR-093: 승인 파이프라인 현실화(국지방공 C2A ↔ 승인권자) — 세 가지를 한 플래그로 묶는다.
+    //  (a) 승인 요청은 **지금 쏠 수 있는 사수가 하나라도 있을 때만** 낸다(종전: 게이트가 사수 평가
+    //      앞에 있어 쏠 수 없는 항적에도 승인부터 요청 — SC3 As-Is 실측 승인 요청의 ~80%가 항적
+    //      전 생애 동안 실행가능 사수 0회, 수방사는 100%).
+    //  (b) 승인 회신은 협조 계선의 **역방향**으로 같은 매체(음성)를 타고 돌아온다(종전: 0초).
+    //  (c) 회신은 C2A 큐의 작업(`approval_return`)으로 처리된 뒤에야 사수 확정·명령이 나간다
+    //      (종전: 승인권자 서비스 완료 콜백 안에서 0초·큐 없이 결심 — C2A ρ가 0.02로 나오는 원인).
+    // 셋은 같은 결심 파이프라인의 연속 단계라 따로 켜면 조합 해석이 어렵다. 기본 OFF(불변 규칙 1).
+    // To-Be: auto-preauth 유형(무인기·탄도)은 게이트가 즉시 granted라 미발동. human-on-loop 유형
+    // (전투기·헬기·순항)은 IAOC 감독승인 큐를 타므로 (a)(c)가 적용되고, (b)는 요청이 계선을 타지
+    // 않았으므로(협조 단계 생략) 회신도 0초 — 「회신은 요청이 간 길을 되짚는다」는 규칙의 결과.
+    this.approvalPipelineRealism = ff('approvalPipelineRealism', false);
     // ADR-090: 조기경보 보고원 — 책임 C2가 최속 보고경로 하나만 쓰지 않고, 조기경보 레이더
     // (role에 early_warning)의 보고경로를 **함께** 채택하며, 조기경보 센서가 최초 보고 스냅숏
     // 이후에 획득하면 그 시점에 추가 보고를 접수한다(스냅숏 부분 해제) — 기본 OFF(불변 규칙 1).
@@ -561,8 +580,15 @@
         mean = n.engage.engageTimeSec;
         K = c * SHOOTER_QUEUE_MULT;
       }
+      // ADR-092: 성분 분리 서비스(c2ServiceFloor). mult.service는 두 성분에 같은 배율로 건다 —
+      // 평균이 mean*mult와 항등이어야 스윕(민감도)의 의미가 보존된다.
+      var parts = (n.category === 'c2' && n.queue.serviceParts) ? {
+        sysLo: n.queue.serviceParts.systemSec[0] * self.mult.service,
+        sysHi: n.queue.serviceParts.systemSec[1] * self.mult.service,
+        op: n.queue.serviceParts.operatorSec * self.mult.service
+      } : null;
       self.nodeState[n.id] = {
-        node: n, c: c, mean: mean * self.mult.service, K: K,
+        node: n, c: c, mean: mean * self.mult.service, K: K, parts: parts,
         busy: 0, queue: [], lastT: 0,
         busyTime: 0, qTime: 0,
         arrivals: 0, completions: 0, drops: 0,
@@ -844,7 +870,14 @@
       this._metricEvent('ENGAGEMENT_FIRED', t,
         job.threat._dup ? job.threat._real : job.threat, fireDetail);
     }
-    var svc = this.rng.exponential(ns.mean);   // ← RNG 소비: kind 분리와 무관하게 draw 1회 유지
+    var svc;
+    if (this.c2ServiceFloor && ns.parts) {
+      // ADR-092: 체계 구간(균등·바닥) + 운용자 판단(지수). 기대값 = (lo+hi)/2 + op = ns.mean.
+      // ⚠️ 추첨 순서(균등 → 지수)를 바꾸면 ON 결과가 조용히 다른 표본이 된다.
+      svc = this.rng.uniform(ns.parts.sysLo, ns.parts.sysHi) + this.rng.exponential(ns.parts.op);
+    } else {
+      svc = this.rng.exponential(ns.mean);   // ← RNG 소비: kind 분리와 무관하게 draw 1회 유지 (OFF bit-exact)
+    }
     this.schedule(t + svc, PRI.SERVICE_END, 'SERVICE_END', { nsId: ns.node.id, job: job, onDone: onDone });
   };
 
@@ -2384,9 +2417,24 @@
     // 적용된다: 다른 한국군 축은 승인권자가 자기 자신으로 해소되어 경유가 없고(§0-(6) 실측),
     // USFK 축은 ADR-036(권한 자동 통합 금지)에 따라 계선 자체를 적용하지 않는다.
     if (this.approvalChain && commander.axis === 'LOCAL_AD') {
-      var gate = this._iadsApprovalGate(threat, commander, t);
-      if (gate === 'wait' || gate === 'blocked') return;
-      // 'granted'/'skip' → 기존 경로 계속
+      // ADR-093 (a): 아직 승인 상태가 없고(첫 요청 전) 지금 쏠 수 있는 사수가 하나도 없으면
+      // 승인을 요청하지 않는다 — 아래 후보 평가로 내려가 종전과 같은 재시도·사유 계상을 탄다.
+      // `_iadsEvaluate`는 순수 함수(RNG·계정 무관)라 이 사전 점검은 표본을 바꾸지 않는다.
+      var needGate = true;
+      if (this.approvalPipelineRealism) {
+        var stKey = commander.id + '|' + commander.axis;
+        if (!threat._iadsApproval || threat._iadsApproval[stKey] === undefined) {
+          var sim = this;
+          needGate = commander.batteryIds.some(function (id) {
+            return sim._iadsEvaluate(sim._nodeById(id), threat, t).feasible;
+          });
+        }
+      }
+      if (needGate) {
+        var gate = this._iadsApprovalGate(threat, commander, t);
+        if (gate === 'wait' || gate === 'blocked') return;
+        // 'granted'/'skip' → 기존 경로 계속
+      }
     }
     var self = this, candidates = [], nextAt = Infinity, reasons = {};
     commander.batteryIds.forEach(function (id) {
@@ -2578,8 +2626,9 @@
     threat._coordDelay = (threat._coordDelay || 0) + delay;
     threat._iadsApproval[key] = 'pending';
     this._mark(threat, '협조개시:' + commander.id + '→' + approvalId, t, axisOf(commander));
+    // viaPath: 요청이 협조 계선을 탔음 — ADR-093 (b) 회신이 같은 길을 되짚을지 결정(OFF 경로에선 미사용)
     this.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_APPROVE_ARRIVE',
-      { threat: threat, commander: commander, appr: approvalId, key: key });
+      { threat: threat, commander: commander, appr: approvalId, key: key, viaPath: true });
     return 'wait';
   };
 
@@ -2588,6 +2637,7 @@
     if (!threat.alive || threat.pipelineDead) return;
     var disp = this._nodeArrive(d.appr, t, { threat: threat, kind: 'approval' }, function (t2, job) {
       self._mark(job.threat, '승인완료:' + d.appr, t2, axisOf(d.commander));
+      if (self.approvalPipelineRealism) { self._iadsApprovalReturn(job.threat, t2, d); return; }   // ADR-093 (b)(c)
       job.threat._iadsApproval[d.key] = 'granted';
       self._iadsDecide(job.threat, t2, d.commander);
     });
@@ -2597,6 +2647,53 @@
       threat._iadsApproval[d.key] = 'dropped';
       this._recordFailureEvidence(threat, 'approval_dropped',
         { commanderId: d.commander.id, approvalId: d.appr });
+    }
+  };
+
+  /**
+   * ADR-093 (b): 승인 회신 — 협조 계선(요청이 간 최단경로)을 **역방향**으로 같은 매체를 타고 온다.
+   * 카탈로그에는 승인권자→C2A coord 간선이 없다(요청 방향만 선언) — 회신이 요청과 다른 채널을
+   * 쓸 이유가 없으므로 같은 간선을 되짚는다. 지연 추첨은 `_linkDelay`(음성 = 정규 20·σ5) 그대로.
+   * 요청이 계선을 타지 않은 경우(human-on-loop 감독승인 — 협조 단계 생략)에는 회신도 0초다.
+   * 회신 지연은 요청 지연과 같이 `_coordDelay`(결심지연 분해의 협조 몫)에 누적한다.
+   * 승인 상태는 회신이 **처리될 때까지** 'pending'으로 둔다 — 그 사이 재시도(`_onIadsRetry`)는
+   * 게이트에서 'wait'로 되돌아가 명령이 새지 않는다.
+   */
+  Simulation.prototype._iadsApprovalReturn = function (threat, t, d) {
+    var fwd = d.viaPath ? (this._iadsShortestPath(d.commander.id, d.appr, ['coord']) || []) : [], delay = 0;
+    for (var i = fwd.length - 1; i >= 0; i--) {
+      var l = fwd[i], comm = l.comm[this.mode], dl = this._linkDelay(comm);
+      this._recordLink(l.to, l.from, comm, 'coord', { threat: threat, t0: t + delay, delay: dl });
+      delay += dl;
+    }
+    threat._coordDelay = (threat._coordDelay || 0) + delay;
+    this._mark(threat, '승인회신발신:' + d.appr + '→' + d.commander.id, t, axisOf(d.commander));
+    this.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_APPROVAL_RETURN',
+      { threat: threat, commander: d.commander, appr: d.appr, key: d.key });
+  };
+
+  /**
+   * ADR-093 (c): 회신 접수 — C2A 큐의 작업(kind 'approval_return')이다. 서비스가 끝나야 승인이
+   * 'granted'가 되고 사수 확정·명령 하달(`_iadsDecide`)이 이어진다. ECS의 교전명령 접수
+   * (directive_reception)와 같은 대우 — 「접수는 일이다」. 드롭(대기실 초과)은 승인 요청 드롭과
+   * 같은 실패 증거(approval_dropped)로 계상한다(stage: 'return').
+   */
+  Simulation.prototype._onIadsApprovalReturn = function (t, d) {
+    var self = this, threat = d.threat;
+    if (!threat.alive || threat.pipelineDead) return;
+    this._mark(threat, '승인회신접수:' + d.commander.id, t, axisOf(d.commander));
+    var disp = this._nodeArrive(d.commander.id, t, {
+      threat: threat, kind: 'approval_return', commander: d.commander,
+      jobId: 'APPR_RET_' + threat.id + '_' + d.commander.id
+    }, function (t2, job) {
+      self._mark(job.threat, '승인회신처리완료:' + d.commander.id, t2, axisOf(d.commander));
+      job.threat._iadsApproval[d.key] = 'granted';
+      self._iadsDecide(job.threat, t2, d.commander);
+    });
+    if (disp === 'dropped') {
+      threat._iadsApproval[d.key] = 'dropped';
+      this._recordFailureEvidence(threat, 'approval_dropped',
+        { commanderId: d.commander.id, approvalId: d.appr, stage: 'return' });
     }
   };
 
@@ -3115,6 +3212,7 @@
       case 'IADS_RELOAD': this._onIadsReload(ev.t, ev.data); break;
       case 'IADS_STATUS_ARRIVE': this._onIadsStatusArrive(ev.t, ev.data); break;
       case 'IADS_APPROVE_ARRIVE': this._onIadsApproveArrive(ev.t, ev.data); break;
+      case 'IADS_APPROVAL_RETURN': this._onIadsApprovalReturn(ev.t, ev.data); break;   // ADR-093
       case 'SERVICE_END': this._onServiceEnd(ev.t, ev.data); break;
       case 'EXIT': this._onExit(ev.t, ev.data); break;
     }
@@ -3151,6 +3249,8 @@
       var kindKeys = self.highResolutionDeployment
         ? ['track', 'approval', 'engage', 'iads_track', 'directive_reception']
         : ['track', 'approval', 'engage'];
+      // ADR-093: 회신 처리 kind는 플래그 ON에서만 노출 — OFF wire shape(기준선 SHA) 불변.
+      if (self.approvalPipelineRealism) kindKeys = kindKeys.concat(['approval_return']);
       var rhoByKind = {}, arrivalsByKind = {}, dropsByKind = {}, WqByKind = {};
       kindKeys.forEach(function (k) {
         var b = ns.byKind[k];

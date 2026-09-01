@@ -159,6 +159,17 @@ K-JAMDS_시뮬레이터_단일본.html
   인라인 `<script>`로 동봉한 **자기완결(self-contained)** 빌드라 외부 파일·CDN 의존이 없고,
   화면·조작은 프로토타입과 동일합니다. 계산은 워커 없이 **메인 스레드**에서 실행됩니다
   (`file://`는 외부 Worker 파일을 불러올 수 없기 때문 — 앱 단일본과 같은 제약).
+- 이 단일본은 **생성물**입니다 — 손으로 고치지 마십시오. `prototype/command-flow.html`이나 그것이
+  import하는 `js/`를 수정한 뒤에는 아래로 재생성합니다(인라인 순서는 프로토타입의 import 순서를
+  그대로 읽어 씁니다):
+
+  ```bash
+  node scripts/build-command-flow-single.mjs           # → K-JAMDS_지휘흐름_단일본.html 갱신
+  node scripts/build-command-flow-single.mjs --check   # 쓰지 않고, 저장된 단일본이 소스와 같은지만 확인
+  ```
+
+  회귀 스위트(`tests/command-flow-single.test.mjs`)가 `--check`를 돌리므로, 재생성을 잊으면
+  `node tests/run-all.js`가 실패합니다.
 
 > 📘 **처음 사용한다면**: [`docs/사용자_가이드.html`](docs/사용자_가이드.html) — 실행법·화면 조작·
 > 지표 읽는 법(일상어)·자주 오해되는 지표·FAQ.
@@ -228,7 +239,7 @@ legacy C2 이론은 **정책 계층으로 이식**되었습니다. 여덟 가지
 ```
 index.html                       # 진입점: 탭 구조·컨트롤·디스클레이머
 K-JAMDS_시뮬레이터_단일본.html    # ★ 자기완결 단일본(서버 없이 실행, IIFE 커널 동봉) — build-single.mjs로 재생성
-K-JAMDS_지휘흐름_단일본.html      # ★ [지휘 흐름] 프로토타입의 자기완결 단일본(서버 없이 실행)
+K-JAMDS_지휘흐름_단일본.html      # ★ [지휘 흐름] 프로토타입의 자기완결 단일본(서버 없이 실행) — build-command-flow-single.mjs로 재생성
 css/style.css                    # 레이아웃·테마
 js/
   config/ system-types.js · geo-mdl.js · deployments.js · deployment-adapter.js
@@ -257,7 +268,8 @@ docs/
   adr/ADR-001~009, 050~086       # 결정 기록
 scripts/
   serve.sh (macOS·Linux) · serve.bat + serve.ps1 (Windows 내장 PowerShell, 설치 불요)
-  build-single.mjs · bias-ledger.mjs · experiment-lib/run/report.mjs 등
+  build-single.mjs · build-command-flow-single.mjs · single-lib.mjs(두 단일본 빌더 공용) ·
+  bias-ledger.mjs · experiment-lib/run/report.mjs 등
 tests/  run-all.js + 30개 스위트  # 아래 [검증] 참조. 폐기 스위트 원장: tests/retired-legacy-suites.md
 ```
 

@@ -123,11 +123,26 @@
 
   // ADR-058 동반 스윕: 운용자 처리시간 성분(high/mid/low)을 변형 카탈로그로 선택.
   // 기본 'mid'(종전과 동일 — bit-exact). IADS-C2-COMPAT-01 operator 값(등급 C) 민감도 분리용.
-  function c2Service(type, operatorLevel) {
+  /**
+   * C2 처리 시간의 두 성분(ADR-092). 카탈로그(system-types.js)는 처음부터 이렇게 갈라 적었다:
+   *  - systemSec  [lo, hi] — 체계가 표적 자료를 처리·표시하는 구간. 사람이 서둘러도 줄지 않는 **바닥**.
+   *  - operatorSec         — 운용자 판단 평균(운용 수준별).
+   * 종전 c2Service는 둘을 평균 하나로 접어 엔진이 지수분포 한 번으로 뽑았고, 그 결과 MCRC 승인이
+   * 0.4초에 끝나는 표본이 생겼다. 엔진은 `c2ServiceFloor` ON에서 이 성분을 따로 뽑는다.
+   */
+  function c2ServiceParts(type, operatorLevel) {
     var p = type.processing;
-    var sys = (p.system[0] + p.system[1]) / 2;
     var op = p.operator[operatorLevel || 'mid'];
-    return sys + (typeof op === 'number' ? op : p.operator.mid);
+    return {
+      systemSec: [p.system[0], p.system[1]],
+      operatorSec: typeof op === 'number' ? op : p.operator.mid
+    };
+  }
+
+  /** 평균 처리 시간 = 체계 구간 중점 + 운용자 평균. c2ServiceParts와 같은 수에서 나온다(갈라지지 않게). */
+  function c2Service(type, operatorLevel) {
+    var parts = c2ServiceParts(type, operatorLevel);
+    return (parts.systemSec[0] + parts.systemSec[1]) / 2 + parts.operatorSec;
   }
 
   function c2Capacity(type) {
@@ -196,6 +211,8 @@
         queue: {
           servers: type.simultaneousCapacity,
           serviceTimeSec: { asis: svc, tobe: svc },
+          // ADR-092: 성분 분리(체계 구간 + 운용자 평균). 중점+평균 = serviceTimeSec 와 항등.
+          serviceParts: c2ServiceParts(type, opLevel),
           capacity: c2Capacity(type), paramRef: type.paramRef
         },
         c2Axis: decl.c2Axis || null, forceOwner: decl.forceOwner || 'ROK',

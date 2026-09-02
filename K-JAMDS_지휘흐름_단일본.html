@@ -222,6 +222,15 @@
   .ncirc.shooter { stroke: #34d399; }
   .ncirc.busy { fill: #1d3a52; stroke-width: 2.5; }
   .ncirc.queued { stroke-dasharray: 3 2; }
+  /* 이 항적과 무관한 노드 — 배치 전체를 배경으로 깔아 「쓰이지 않은 자리」를 보여준다.
+     관련 노드의 크기를 지키려고 열 아래쪽 작은 격자에 반투명으로 깐다(같은 간격으로
+     늘어놓으면 열이 3배 길어져 정작 봐야 할 노드가 그만큼 작아진다). */
+  #lyr-idle { opacity: .3; }
+  #lyr-idle circle { fill: #131c28; stroke: #33445c; stroke-width: 1; }
+  #lyr-idle circle.sensor { stroke: #1c8ea3; }
+  #lyr-idle circle.c2 { stroke: #3a72b0; }
+  #lyr-idle circle.shooter { stroke: #2a8f6c; }
+  #lyr-idle text { fill: #55637a; font-size: 8px; }
   .edge { fill: none; stroke-linecap: round; }
   .dot { stroke: #04121f; stroke-width: .8; }
   .dotlab { font-size: 9px; fill: #cfe0f5; paint-order: stroke; stroke: #04121f; stroke-width: 2.5; }
@@ -481,6 +490,7 @@
         <button data-spd="1">×1</button><button data-spd="5" class="on">×5</button><button data-spd="20">×20</button><button data-spd="60">×60</button>
       </span>
       <label><input type="checkbox" id="show-sensor"> 센서 보고 표시</label>
+      <label title="이 항적과 무관한 노드를 배치 전체에서 반투명으로 함께 그린다 — 「쓰이지 않은 제대·포대」가 보인다"><input type="checkbox" id="show-idle" checked> 미사용 노드 표시</label>
     </div>
     <!-- 범례는 기본 접힘. 네 줄이 화면 하단을 계속 먹던 것을 접었다.
          ⚠️ 접되 **없애지는 않는다** — 색·모양이 뜻하는 바를 모르면 화면을 오독한다.
@@ -9064,9 +9074,33 @@ function layoutGraph() {
   });
   // ⚠️ **빈 열도 지우지 않는다.** 조율층 칸이 비어 있다는 것(As-Is)이 이 화면이 보여주려는
   //    차이 그 자체다 — 열을 접으면 "원래 없는 단계"처럼 보인다.
+  // 이 항적과 무관한 노드 — 배치 전체를 배경으로 깐다(사용자 결정 2026-09-02).
+  // ⚠️ 관련 노드와 **같은 간격으로 늘어놓지 않는다.** LEGACY 배치만 해도 센서 19기라
+  //    열이 3배 길어지고, viewBox가 그만큼 커져 정작 봐야 할 노드가 3분의 1로 작아진다
+  //    (#graph는 preserveAspectRatio meet — 세로가 길수록 전체가 축소된다).
+  //    대신 열 아래쪽에 **작은 격자**로 깔아 높이 비용을 90px 남짓으로 묶는다.
+  const showIdle = el('show-idle').checked;
+  const idleBuckets = COLS.map(() => []);
+  if (showIdle) {
+    const used = new Set(sel.nodeIds);
+    Object.keys(run.nodes).forEach((id) => {
+      if (used.has(id)) return;
+      const n = run.nodes[id];
+      // 중복 자리를 갖는 노드(ECS·ICC)는 **하행 자리 하나만** 깐다 — 배경에 같은 노드를
+      // 두 번 그리면 "안 쓰인 자리가 두 배"로 읽힌다.
+      const sl = nodeSlots(n);
+      idleBuckets[(sl[sl.length - 1] || sl[0]).col].push(id);
+    });
+    idleBuckets.forEach((b) => b.sort((x, y) =>
+      ((run.nodes[x] && run.nodes[x].name) || x).localeCompare((run.nodes[y] && run.nodes[y].name) || y, 'ko')));
+  }
+  const idleMax = Math.max(0, ...idleBuckets.map((b) => b.length));
+  const IDLE_PER_ROW = 5, IDLE_STEP = 15;
+  const gridH = idleMax ? 16 + Math.ceil(idleMax / IDLE_PER_ROW) * IDLE_STEP : 0;
+
   const rowMax = Math.max(1, ...buckets.map((b) => b.length));
   // 화면 높이를 꽉 채운다. 모자라면(노드가 많으면) 늘려 스크롤 대신 축소되게 둔다.
-  const H = Math.max(wrap.clientHeight || 340, 58 + rowMax * 68 + 24);
+  const H = Math.max(wrap.clientHeight || 340, 58 + rowMax * 68 + 24 + gridH);
   const colW = W / COLS.length;
 
   const nodes = {};
@@ -9075,7 +9109,7 @@ function layoutGraph() {
       const nx = run.nodes[slotNodeId(x)], ny = run.nodes[slotNodeId(y)];
       return ((nx && nx.name) || x).localeCompare((ny && ny.name) || y, 'ko');
     });
-    const step = (H - 78) / Math.max(1, ids.length);
+    const step = (H - 78 - gridH) / Math.max(1, ids.length);
     ids.forEach((k, ri) => {
       nodes[k] = { id: slotNodeId(k), key: k, dup: slotOf[k].dup, col: ci,
         x: colW * (ci + .5), y: 64 + step * (ri + .5) };
@@ -9119,8 +9153,10 @@ function layoutGraph() {
     return `<g><rect class="colband${i % 2 ? ' alt' : ''}" x="${x}" y="0" width="${colW}" height="${H}"></rect>` +
       `<text class="colhdr" x="${x + colW / 2}" y="18" text-anchor="middle">${esc(c.label)}</text>` +
       `<text class="colhdr" x="${x + colW / 2}" y="30" text-anchor="middle" opacity=".65">${esc(c.hint)}</text>` +
-      (buckets[i].length ? '' :
-        `<text class="colhdr" x="${x + colW / 2}" y="${H / 2}" text-anchor="middle" opacity=".5">없음</text>`) +
+      // ⚠️ 「없음」은 이 항적이 그 열을 **한 번도 안 거쳤다**는 뜻이다. 미사용 격자가 아래에
+      //    깔려 있으면 그 격자가 이미 「자리는 있는데 안 쓰였다」를 말하므로 겹쳐 적지 않는다.
+      (buckets[i].length || idleBuckets[i].length ? '' :
+        `<text class="colhdr" x="${x + colW / 2}" y="${((H - gridH) / 2).toFixed(0)}" text-anchor="middle" opacity=".5">없음</text>`) +
       `</g>`;
   }).join('');
 
@@ -9186,7 +9222,22 @@ function layoutGraph() {
     `<title>${esc(nodeName(e.g.from) + ' ↛ ' + nodeName(e.g.to) + ' — 가야 했으나 못 간 계선\n' +
       '사유: ' + ghostReasonText(e.g) + '\n최초 ' + fmt(e.g.t))}</title></g>`).join('');
 
-  svg.innerHTML = bands + `<g id="lyr-edges">${edgeSvg}</g><g id="lyr-ghost">${ghostSvg}</g>` +
+  // 미사용 노드 격자 — 열 아래쪽. 이름은 툴팁으로만 준다(라벨을 달면 다시 열이 길어진다).
+  const idleSvg = idleBuckets.map((ids, ci) => {
+    if (!ids.length) return '';
+    const x0 = colW * ci, y0 = H - gridH + 12;
+    return ids.map((id, i) => {
+      const n = run.nodes[id] || {};
+      const cx = x0 + colW / 2 + ((i % IDLE_PER_ROW) - (Math.min(ids.length, IDLE_PER_ROW) - 1) / 2) * 15;
+      const cy = y0 + Math.floor(i / IDLE_PER_ROW) * IDLE_STEP;
+      return `<circle class="${esc(n.category || 'c2')}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.5">` +
+        `<title>${esc((n.name || id) + ' — 이 항적에는 쓰이지 않았습니다')}</title></circle>`;
+    }).join('') +
+      `<text x="${(x0 + colW / 2).toFixed(1)}" y="${(y0 - 6).toFixed(1)}" text-anchor="middle">미사용 ${ids.length}</text>`;
+  }).join('');
+
+  svg.innerHTML = bands + `<g id="lyr-idle">${idleSvg}</g>` +
+    `<g id="lyr-edges">${edgeSvg}</g><g id="lyr-ghost">${ghostSvg}</g>` +
     `<g id="lyr-arrows"></g><g id="lyr-nodes">${nodeSvg}</g><g id="lyr-dots"></g>`;
   geo = { nodes, edges, W, H, colW };
   // 간선 길이는 점 위치 계산에 쓴다(getPointAtLength) — DOM에 붙인 뒤에만 잴 수 있다.
@@ -10457,6 +10508,7 @@ document.querySelectorAll('.spd button').forEach((b) => {
     if (run) drawFrame();
   });
 });
+el('show-idle').addEventListener('change', () => { if (sel && view === 'track') { layoutGraph(); drawFrame(); } });
 el('show-sensor').addEventListener('change', () => {
   if (view === 'all') {
     el('graph').classList.toggle('hide-sensor', !el('show-sensor').checked);

@@ -301,6 +301,22 @@
     // (전투기·헬기·순항)은 IAOC 감독승인 큐를 타므로 (a)(c)가 적용되고, (b)는 요청이 계선을 타지
     // 않았으므로(협조 단계 생략) 회신도 0초 — 「회신은 요청이 간 길을 되짚는다」는 규칙의 결과.
     this.approvalPipelineRealism = ff('approvalPipelineRealism', false);
+    // ADR-094: ICC 중계 인가 — As-Is 교전명령이 ICC를 「1초 홉」으로 지나가던 것을, ICC가 실제로
+    // 접수·인가하고 필요하면 권역 안에서 조정하는 단계로 만든다. ADSIM(KIDA ADSIM v2.0)의
+    // ICC = relay(10초) + 교전의도 충돌 해소자 역할과 같은 자리다.
+    //  (a) 전송을 두 구간으로 쪼갠다 — 상급→ICC 도착 후 ICC 큐 작업(`directive_relay`)을 거쳐야
+    //      ICC→포대 하행 계선을 탄다. 서비스 시간은 ICC 노드 자신의 값(평균 9초 = 체계 3~5초 +
+    //      운용자 5초)을 쓴다. ⚠️ ADR-078 §미구현이 경고한 「track 처리용 값을 중계에 오적용」은
+    //      KAMDOC 37.5초를 두고 한 말이다. ICC 9초는 명령 접수·권역 정합 확인·하달의 크기로
+    //      그럴듯하고, ADSIM의 10초가 독립 방증이다(그래도 등급은 설계 추정 — ADR-094 §한계).
+    //  (b) 인가 시점에 대상 포대를 재검증한다. 못 쏘면 같은 ICC 권역의 다른 포대로 재배정하고,
+    //      대안이 없으면 ECS 큐에 도달하기 **전에** 상급으로 반송한다(종전은 ECS 접수까지 간 뒤 실패).
+    // To-Be는 IAOC→ECS 직결선이 최단이라 경로에 ICC가 없다 → ON/OFF bit-exact(테스트 고정).
+    // 국지방공 축(BIHO·천마)은 iccC2Id가 없어 해당 없음. 기본 OFF(불변 규칙 1 · 재기준선 대상).
+    this.iccRelayAuthorization = ff('iccRelayAuthorization', false);
+    // ADR-094 민감도 손잡이 — ICC 중계 인가의 서비스 시간(초). 미지정이면 ICC 노드 자신의 값(평균 9초).
+    // 0을 주면 인가가 즉시 끝나 **재검증·반송·재배정 로직의 몫만** 남는다(시간 효과와 로직 효과 분리).
+    this.iccRelaySec = (typeof f.iccRelaySec === 'number' && f.iccRelaySec >= 0) ? f.iccRelaySec : null;
     // ADR-090: 조기경보 보고원 — 책임 C2가 최속 보고경로 하나만 쓰지 않고, 조기경보 레이더
     // (role에 early_warning)의 보고경로를 **함께** 채택하며, 조기경보 센서가 최초 보고 스냅숏
     // 이후에 획득하면 그 시점에 추가 보고를 접수한다(스냅숏 부분 해제) — 기본 OFF(불변 규칙 1).
@@ -589,6 +605,8 @@
       } : null;
       self.nodeState[n.id] = {
         node: n, c: c, mean: mean * self.mult.service, K: K, parts: parts,
+        // ADR-094: 중계 인가 전용 서비스 시간(손잡이). null이면 노드 기본값을 그대로 쓴다.
+        relayMean: (n.category === 'c2' && self.iccRelaySec !== null) ? self.iccRelaySec * self.mult.service : null,
         busy: 0, queue: [], lastT: 0,
         busyTime: 0, qTime: 0,
         arrivals: 0, completions: 0, drops: 0,
@@ -870,13 +888,21 @@
       this._metricEvent('ENGAGEMENT_FIRED', t,
         job.threat._dup ? job.threat._real : job.threat, fireDetail);
     }
+    // ADR-094: 중계 인가는 kind 전용 평균을 쓸 수 있다(ADR-078 §미구현이 요구한 kind별 서비스시간의
+    // 최소 형태). 손잡이가 없으면 nsMean·nsParts는 노드 기본값 그대로라 OFF 경로는 불변이다.
+    var nsMean = ns.mean, nsParts = ns.parts;
+    if (job.kind === 'directive_relay' && ns.relayMean !== null && ns.relayMean !== undefined) {
+      var kScale = ns.mean > 0 ? ns.relayMean / ns.mean : 0;
+      nsMean = ns.relayMean;
+      nsParts = ns.parts ? { sysLo: ns.parts.sysLo * kScale, sysHi: ns.parts.sysHi * kScale, op: ns.parts.op * kScale } : null;
+    }
     var svc;
-    if (this.c2ServiceFloor && ns.parts) {
+    if (this.c2ServiceFloor && nsParts) {
       // ADR-092: 체계 구간(균등·바닥) + 운용자 판단(지수). 기대값 = (lo+hi)/2 + op = ns.mean.
       // ⚠️ 추첨 순서(균등 → 지수)를 바꾸면 ON 결과가 조용히 다른 표본이 된다.
-      svc = this.rng.uniform(ns.parts.sysLo, ns.parts.sysHi) + this.rng.exponential(ns.parts.op);
+      svc = this.rng.uniform(nsParts.sysLo, nsParts.sysHi) + this.rng.exponential(nsParts.op);
     } else {
-      svc = this.rng.exponential(ns.mean);   // ← RNG 소비: kind 분리와 무관하게 draw 1회 유지 (OFF bit-exact)
+      svc = this.rng.exponential(nsMean);   // ← RNG 소비: kind 분리와 무관하게 draw 1회 유지 (OFF bit-exact)
     }
     this.schedule(t + svc, PRI.SERVICE_END, 'SERVICE_END', { nsId: ns.node.id, job: job, onDone: onDone });
   };
@@ -2521,15 +2547,156 @@
     this._mark(threat, '사수선정·표적할당:' + commander.typeId + '→' + chosen.shooter.id, t, axisOf(commander));
     this._mark(threat, '자체교전승인:' + commander.typeId, t, axisOf(commander));
     this._sendIadsStatus(threat, commander, 'assigned', t);
-    var delay = 0;
-    path.forEach(function (l) {
-      var d = self._linkDelay(l.comm[self.mode]);
-      self._recordLink(l.from, l.to, l.comm[self.mode], l.kind,
-        { threat: threat, t0: t + delay, delay: d });
-      delay += d;
-    });
+    // ADR-094: 경로 위에 ICC가 있으면 거기서 전송을 끊는다 — 1구간만 보내고 ICC 인가를 받는다.
+    var relayAt = this.iccRelayAuthorization
+      ? this._iadsRelayIccIndex(path, commander.id) : -1;
     this._iadsTransitionPlan(plan, 'in_transit', t);
+    if (relayAt >= 0) {
+      var d1 = this._iadsSendAlong(path, 0, relayAt + 1, t, threat);
+      this.schedule(t + d1, PRI.LINK_ARRIVE, 'IADS_ICC_RELAY', {
+        threat: threat, commander: commander, shooterId: chosen.shooter.id, plan: plan,
+        iccId: path[relayAt].to, path: path, from: relayAt + 1
+      });
+      return;
+    }
+    var delay = this._iadsSendAlong(path, 0, path.length, t, threat);
     this.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_FIRE', { threat: threat, commander: commander, shooterId: chosen.shooter.id, plan: plan });
+  };
+
+  /**
+   * ADR-094 (a)(b): ICC 중계 인가.
+   * 명령이 ICC에 도착하면 ICC 큐의 작업(`directive_relay`)이 된다. 서비스가 끝나야
+   *  - 대상 포대가 아직 쏠 수 있으면 → 남은 계선을 타고 그대로 하달
+   *  - 못 쏘면 → 같은 ICC 권역의 다른 포대로 **재배정**(새 교전명령), 대안이 없으면 **반송**
+   * 하는 세 갈래로 갈린다. 반송은 ECS 큐에 닿기 전에 일어나므로 상급 재시도가 종전보다 빠르다.
+   */
+  Simulation.prototype._onIadsIccRelay = function (t, d) {
+    var self = this, threat = d.threat, plan = d.plan;
+    if (!threat.alive || threat.pipelineDead || plan.released || plan.resolved) return;
+    this.global.c2Orders.received++;
+    this._iadsTransitionPlan(plan, 'received', t);
+    this._mark(threat, '교전명령중계접수:' + d.iccId, t, axisOf(d.commander));
+    var disp = this._nodeArrive(d.iccId, t, {
+      threat: threat, kind: 'directive_relay', jobId: plan.directiveId,
+      directiveId: plan.directiveId, validUntil: plan.validUntil,
+      onAbandon: function (at) {
+        if (plan.released || plan.resolved) return;
+        self._iadsTransitionPlan(plan, 'expired', at, 'released', 'relay_queue_deadline');
+        self.global.c2Orders.expired++;
+        self.global.c2Orders.released++;
+        self.global.c2Orders.expiryByReason.relay_queue_deadline =
+          (self.global.c2Orders.expiryByReason.relay_queue_deadline || 0) + 1;
+        self._recordFailureEvidence(threat, 'window_lost_due_to_c2', {
+          commanderId: d.commander.id, shooterId: d.shooterId, phase: 'relay-queue'
+        });
+        self._sendIadsStatus(threat, d.commander, 'released', at);
+        self._scheduleIadsRetry(threat, d.commander, at + 0.5);
+      }
+    }, function (done) {
+      if (!threat.alive || threat.pipelineDead || plan.released || plan.resolved) return;
+      self._iadsRelayAuthorize(done, d);
+    });
+    if (disp === 'dropped') {
+      this._iadsTransitionPlan(plan, 'expired', t, 'released', 'relay_queue_capacity');
+      this.global.c2Orders.expired++;
+      this.global.c2Orders.released++;
+      this.global.c2Orders.expiryByReason.relay_queue_capacity =
+        (this.global.c2Orders.expiryByReason.relay_queue_capacity || 0) + 1;
+      this._recordFailureEvidence(threat, 'capacity_full', {
+        commanderId: d.commander.id, shooterId: d.shooterId, phase: 'relay-queue'
+      });
+      this._sendIadsStatus(threat, d.commander, 'released', t);
+      this._scheduleIadsRetry(threat, d.commander, t + 0.5);
+    }
+  };
+
+  /** ADR-094 (b): 인가 시점 재검증 → 하달 / 권역 내 재배정 / 반송. */
+  Simulation.prototype._iadsRelayAuthorize = function (t, d) {
+    var self = this, threat = d.threat, plan = d.plan;
+    var shooter = this._nodeById(d.shooterId);
+    var ev = shooter ? this._iadsEvaluate(shooter, threat, t) : { feasible: false, reason: 'not_operational' };
+    if (ev.feasible) {
+      this._mark(threat, '교전명령인가:' + d.iccId, t, axisOf(d.commander));
+      var delay = this._iadsSendAlong(d.path, d.from, d.path.length, t, threat);
+      this.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_FIRE',
+        { threat: threat, commander: d.commander, shooterId: d.shooterId, plan: plan });
+      return;
+    }
+    // 권역 내 대안 — 같은 ICC 예하에서 지금 쏠 수 있는 포대를 WTA 점수로 고른다.
+    var alts = [];
+    this._nodesInMode().forEach(function (n) {
+      if (n.category !== 'shooter' || n.id === d.shooterId || n.iccC2Id !== d.iccId) return;
+      var e = self._iadsEvaluate(n, threat, t);
+      if (!e.feasible) return;
+      var r = self.iadsResources[n.id], ammoRatio = r && r.initialAmmo ? e.ammo / r.initialAmmo : 0;
+      var load = r && r.maxSimultaneous ? r.active / r.maxSimultaneous : 1;
+      e.score = self._iadsWtaScore(e, n, ammoRatio, load, threat);
+      e.shooter = n;
+      alts.push(e);
+    });
+    alts.sort(function (a, b) { return b.score - a.score || (a.shooter.id < b.shooter.id ? -1 : 1); });
+    this._recordFailureEvidence(threat, ev.reason,
+      { commanderId: d.commander.id, shooterId: d.shooterId, phase: 'relay-authorization' });
+    this._iadsTransitionPlan(plan, 'released', t, 'released',
+      alts.length ? 'relay_reassigned' : 'relay_rejected');
+    this.global.c2Orders.released++;
+    if (!alts.length) {
+      // 반송 — ECS 큐에 닿기 전에 상급으로 되돌린다.
+      this._mark(threat, '교전명령반송:' + d.iccId + '(' + ev.reason + ')', t, axisOf(d.commander));
+      this._sendIadsStatus(threat, d.commander, 'released', t);
+      this._scheduleIadsRetry(threat, d.commander, ev.readyAt || t + 1);
+      return;
+    }
+    // 재배정 — ICC가 자기 권역 안에서 새 교전명령을 낸다.
+    var alt = alts[0];
+    var path2 = this._iadsShortestPath(d.iccId, alt.shooter.id, ['coord', 'command']);
+    if (path2 === null) {
+      this._mark(threat, '교전명령반송:' + d.iccId + '(no_command_path)', t, axisOf(d.commander));
+      this._sendIadsStatus(threat, d.commander, 'released', t);
+      this._scheduleIadsRetry(threat, d.commander, t + 1);
+      return;
+    }
+    var window2 = this._iadsGeometryWindow(alt.shooter, threat);
+    var plan2 = this._iadsCreatePlan(d.commander, alt.shooter.id, t, threat, {
+      targetEcsId: alt.shooter.ecsC2Id || null,
+      delegationLevel: 'ICC',
+      launchCause: plan.launchCause || 'commanded',
+      validUntil: window2 ? window2.lastFire + 3 : null
+    });
+    threat._iadsPlans.push(plan2);
+    this.global.c2Orders.created++;
+    this._mark(threat, '교전명령재배정:' + d.iccId + '→' + alt.shooter.id + '(' + ev.reason + ')', t, axisOf(d.commander));
+    this._iadsTransitionPlan(plan2, 'in_transit', t);
+    var delay2 = this._iadsSendAlong(path2, 0, path2.length, t, threat);
+    this.schedule(t + delay2, PRI.LINK_ARRIVE, 'IADS_FIRE',
+      { threat: threat, commander: d.commander, shooterId: alt.shooter.id, plan: plan2 });
+  };
+
+  /**
+   * ADR-094: 명령 경로 위의 ICC 홉을 찾는다 — 지휘관 자신도, 목적지 ECS도 아닌 ICC.
+   * 반환: 그 ICC에 **도착하는** 간선의 인덱스(그 앞까지가 1구간), 없으면 -1.
+   * ⚠️ 경로(다익스트라 결과)에서 찾는다 — shooter.iccC2Id로 단정하면 실제로 안 지나간 노드에
+   *    작업을 얹게 된다(KAMDOC 무력화 배치에서 ICC가 곧 지휘관인 경우 등).
+   */
+  Simulation.prototype._iadsRelayIccIndex = function (path, commanderId) {
+    for (var i = 0; i < path.length; i++) {
+      var to = path[i].to;
+      if (to === commanderId) continue;
+      var n = this._nodeById(to);
+      if (n && n.category === 'c2' && n.typeId === 'ICC') return i;
+    }
+    return -1;
+  };
+
+  /** ADR-094: 경로 구간 [from, to)의 간선을 실제 이동으로 기록하고 총 지연을 돌려준다. */
+  Simulation.prototype._iadsSendAlong = function (path, from, to, t, threat) {
+    var self = this, delay = 0;
+    for (var i = from; i < to; i++) {
+      var l = path[i], comm = l.comm[self.mode], d = self._linkDelay(comm);
+      self._recordLink(l.from, l.to, comm, l.kind, { threat: threat, t0: t + delay, delay: d });
+      delay += d;
+    }
+    return delay;
   };
 
   Simulation.prototype._onIadsRetry = function (t, d) {
@@ -3213,6 +3380,7 @@
       case 'IADS_STATUS_ARRIVE': this._onIadsStatusArrive(ev.t, ev.data); break;
       case 'IADS_APPROVE_ARRIVE': this._onIadsApproveArrive(ev.t, ev.data); break;
       case 'IADS_APPROVAL_RETURN': this._onIadsApprovalReturn(ev.t, ev.data); break;   // ADR-093
+      case 'IADS_ICC_RELAY': this._onIadsIccRelay(ev.t, ev.data); break;                // ADR-094
       case 'SERVICE_END': this._onServiceEnd(ev.t, ev.data); break;
       case 'EXIT': this._onExit(ev.t, ev.data); break;
     }
@@ -3251,6 +3419,8 @@
         : ['track', 'approval', 'engage'];
       // ADR-093: 회신 처리 kind는 플래그 ON에서만 노출 — OFF wire shape(기준선 SHA) 불변.
       if (self.approvalPipelineRealism) kindKeys = kindKeys.concat(['approval_return']);
+      // ADR-094: 중계 인가 kind도 ON에서만 노출 — OFF wire shape 불변.
+      if (self.iccRelayAuthorization) kindKeys = kindKeys.concat(['directive_relay']);
       var rhoByKind = {}, arrivalsByKind = {}, dropsByKind = {}, WqByKind = {};
       kindKeys.forEach(function (k) {
         var b = ns.byKind[k];

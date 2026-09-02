@@ -111,8 +111,10 @@ assert(onC2 > 200 && viol === 0, 'ON: C2 표본 ' + onC2 + '건 중 바닥 위�
 // 사수 노드는 성분이 없으므로(2 참조) 엔진의 else 분기(종전 지수분포)를 탄다 — 소스에서 그 가드를 고정한다.
 // (iads-c2 충실도에서 발사대는 교전 모델이 맡아 ns/nd 체류 표본이 없다 — 표본으로는 확인 불가.)
 const engSrc = fs.readFileSync(path.join(root, 'js/engine/sim-engine.js'), 'utf8');
-assert(/n\.category === 'c2' && n\.queue\.serviceParts/.test(engSrc) && /if \(this\.c2ServiceFloor && ns\.parts\)/.test(engSrc),
-  '엔진 가드: parts는 C2 성분에만 · 바닥 분기는 c2ServiceFloor && parts 에서만 — 사수는 종전 지수분포');
+// ADR-094로 kind별 평균(nsMean/nsParts)이 들어오면서 분기 변수명이 바뀌었다 — 보증 내용은 같다.
+assert(/n\.category === 'c2' && n\.queue\.serviceParts/.test(engSrc) && /if \(this\.c2ServiceFloor && nsParts\)/.test(engSrc) &&
+  /var nsMean = ns\.mean, nsParts = ns\.parts;/.test(engSrc),
+  '엔진 가드: parts는 C2 성분에만 · 바닥 분기는 c2ServiceFloor && parts 에서만 · 기본은 노드값 — 사수는 종전 지수분포');
 
 // ── 5. ON 평균 항등 (통계) ──
 console.log('# 5) ON — 노드별 표본 평균 ≈ 카탈로그 평균');

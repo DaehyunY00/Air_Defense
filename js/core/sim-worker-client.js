@@ -138,8 +138,8 @@
     var instance;
     try {
       instance = kind === 'module'
-        ? new Worker('js/workers/sim-worker.mjs?v=20260902b', { type: 'module' })
-        : new Worker('js/workers/sim-worker.js?v=20260902b');
+        ? new Worker('js/workers/sim-worker.mjs?v=20260902c', { type: 'module' })
+        : new Worker('js/workers/sim-worker.js?v=20260902c');
       worker = instance;
       workerReady = false;
       worker.onmessage = function (ev) {

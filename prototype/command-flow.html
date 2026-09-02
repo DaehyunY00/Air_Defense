@@ -504,7 +504,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20260902b';
+const V = '?v=20260902c';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -731,7 +731,9 @@ function features() {
     iccRelayAuthorization: P.icc,     // ADR-094 — 〃 (ICC가 「1초 홉」으로만 보이던 문제)
     iccRelaySec: P.iccsec >= 0 ? P.iccsec : undefined,  // ADR-094 민감도 손잡이(-1 = 미지정 = ICC 기본 9초)
     ecsExecutionTime: P.ecs,                            // ADR-095 — 엔진 기본 OFF (이 화면도 기본 OFF)
-    ecsExecutionSec: P.ecssec >= 0 ? P.ecssec : undefined // ADR-095 민감도 손잡이(-1 = 미지정 = 10초)
+    ecsExecutionSec: P.ecssec >= 0 ? P.ecssec : undefined, // ADR-095 민감도 손잡이(-1 = 미지정 = 10초)
+    directiveIssueTime: P.issue,                          // ADR-096 — 엔진 기본 OFF, 이 화면만 기본 ON
+    directiveIssueSec: P.issuesec >= 0 ? P.issuesec : undefined // ADR-096(-1 = 미지정 = 노드 체계 성분)
   };
 }
 
@@ -784,7 +786,11 @@ const PARAMS = [
   // ecs는 예외가 아니다 — ECS는 OFF에서도 「교전명령 접수」 줄로 화면에 이미 보이므로
   // 이 화면만 켤 이유가 없다(pipe·icc와 다른 점). 엔진 기본 그대로 OFF.
   { k: 'ecs',   d: 0,       t: 'bool', h: 'ECS 실행 시간 ADSIM 정합 — 교전명령 실행을 10초로 (ADR-095 · 양 모드 공통 · 기본 꺼짐)' },
-  { k: 'ecssec', d: -1,     t: 'num',  h: 'ECS 실행 시간(초) 민감도 — 미지정(-1)이면 10초 (ADR-095)' }
+  { k: 'ecssec', d: -1,     t: 'num',  h: 'ECS 실행 시간(초) 민감도 — 미지정(-1)이면 10초 (ADR-095)' },
+  // ⚠️ issue도 pipe·icc와 같은 예외다 — OFF면 결심 노드(KAMDOC 등)의 로그에 「발령」 줄이
+  //    구조적으로 생기지 않아, 명령을 냈다는 사실이 이 화면에서 통째로 사라진다.
+  { k: 'issue', d: 1,       t: 'bool', h: '교전명령 발령 작업 — 결심 노드가 명령을 낼 때마다 큐를 탄다 (ADR-096 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  { k: 'issuesec', d: -1,   t: 'num',  h: '발령 시간(초) 민감도 — 미지정(-1)이면 노드 체계 성분(KAMDOC 7.5·IAOC 1.5초) (ADR-096)' }
 ];
 const qs = new URLSearchParams(location.search);
 const P = {};
@@ -820,6 +826,7 @@ function activeConfigChips() {
   if (P.pipe) out.push('승인 파이프라인 현실화 ON');
   if (P.icc) out.push('ICC 중계 인가 ON' + (P.iccsec >= 0 ? ` (${P.iccsec}초)` : ''));
   if (P.ecs) out.push('ECS 실행 ' + (P.ecssec >= 0 ? `${P.ecssec}초` : '10초'));
+  if (P.issue) out.push('명령 발령 ON' + (P.issuesec >= 0 ? ` (${P.issuesec}초)` : ''));
   return out;
 }
 
@@ -2495,6 +2502,39 @@ function renderAllLog() {
  *  한 줄 = 작업 하나(도착 시각 기준): 무슨 일이(jk)·어느 항적 몫이(th)·얼마나 기다렸고
  *  (wait)·얼마나 걸렸는가(svc), 드롭이면 그 사유. 관측 종료까지 안 끝난 작업은
  *  지어내지 않고 「미완」으로 적는다. */
+/**
+ * 작업 하나의 **결과** — 「무슨 일을 했나」 옆에 「그래서 무엇이 됐나」를 붙이기 위한 판정.
+ * 엔진이 서비스 완료 순간에 찍는 마크를 그대로 읽는다(재구성·추정 금지).
+ * ⚠️ 대부분의 결과 마크는 완료 시각과 **같은 순간**이라 정확히 그 시각으로 찾는다.
+ *    발사만 계선(ECS→포대)을 타고 나오므로 창을 넓게 둔다.
+ */
+const OUTCOME_RULES = [
+  { re: /^사수선정·표적할당:[^→]*→(\S+)/, cls: 'ok', txt: (m) => `사수선정 ${m[1]}` },
+  { re: /^교전명령발령:[^→]*→(\S+)/, cls: 'ok', txt: (m) => `발령 → ${m[1]}` },
+  { re: /^교전명령재배정:[^→]*→([^(]+)\(([^)]*)\)/, cls: 'warn', txt: (m) => `재배정 → ${m[1]} (${m[2]})` },
+  { re: /^교전명령반송:[^(]*\(([^)]*)\)/, cls: 'bad', txt: (m) => `반송 (${m[1]})` },
+  { re: /^교전명령인가:/, cls: 'ok', txt: () => '인가 → 하달' },
+  { re: /^승인회신처리완료:/, cls: 'ok', txt: () => '회신 처리 → 사수 확정' },
+  { re: /^승인완료:/, cls: 'ok', txt: () => '승인' },
+  { re: /^발사:([^/]+)/, cls: 'ok', txt: (m) => `발사 ${m[1]}` }
+];
+/** 서비스 완료 직후 창에서 첫 결과 마크를 찾는다. 없으면 kind별 「아무 일도 못 됨」을 말해 준다. */
+function spanOutcome(s) {
+  if (s.done == null || !s.track) return null;
+  const win = s.jk === 'directive_reception' ? 8 : 0.002;   // 발사만 계선을 탄다
+  for (const m of (s.track.stages || [])) {
+    if (m.t < s.done - 0.002 || m.t > s.done + win) continue;
+    for (const r of OUTCOME_RULES) {
+      const g = r.re.exec(m.name);
+      if (g) return { cls: r.cls, txt: r.txt(g) };
+    }
+  }
+  // 결과 마크가 없다 = 판단은 끝났는데 다음 단계로 못 갔다는 뜻이다. 그것을 그대로 적는다.
+  if (s.jk === 'iads_track') return { cls: 'dim', txt: '쏠 수 있는 사수 없음 · 계속 감시' };
+  if (s.jk === 'directive_reception') return { cls: 'bad', txt: '발사 못함' };
+  return null;
+}
+
 function buildC2Rows(id) {
   const end = run.cfg.endTimeSec;
   return run.allSpans.filter((s) => s.at === id).map((s) => {
@@ -2508,6 +2548,7 @@ function buildC2Rows(id) {
       : '큐 정리(항적 종결)';
     return { t: s.arrive, th: s.track ? s.track.id : null, jk: s.jk, wait, svc, started,
       start: s.start, done: s.done, drop: s.drop, dropR: s.dropR, dropText,
+      outcome: spanOutcome(s),
       openSvc: started && s.done == null, openWait: !started && s.drop == null };
   });   // allSpans가 이미 도착순 정렬이라 재정렬하지 않는다
 }
@@ -2519,7 +2560,11 @@ function renderC2Log(id) {
   const dropped = rows.filter((r) => r.drop != null && r.dropR !== 'dead').length;
   const waited = rows.filter((r) => r.wait > 0.5).length;
   el('log-title').textContent = `${nodeName(id)} — 처리 로그`;
-  el('log-hint').innerHTML = `${rows.length}건` +
+  // 이 노드가 **무슨 일들을** 맡는지 한눈에 — 「위협판단 23 · 발령 6」처럼 종류별로 적는다.
+  const byKind = {};
+  rows.forEach((r) => { byKind[r.jk] = (byKind[r.jk] || 0) + 1; });
+  const kindTxt = Object.keys(byKind).map((k) => `${JOB_LABEL[k] || k} ${byKind[k]}`).join(' · ');
+  el('log-hint').innerHTML = `${rows.length}건` + (kindTxt ? ` <span class="dim">(${esc(kindTxt)})</span>` : '') +
     (waited ? ` · <b style="color:var(--warn)">대기 ${waited}건</b>` : '') +
     (dropped ? ` · <b style="color:var(--bad)">드롭 ${dropped}건</b>` : '');
   body.innerHTML = rows.length ? rows.map((r) => {
@@ -2531,11 +2576,16 @@ function renderC2Log(id) {
     const tail =
       (r.wait > 0.5 ? `<span class="med" style="color:var(--warn)">대기 ${sec0(r.wait)}${r.openWait ? '+' : ''}</span>` : '') +
       (r.svc != null ? `<span class="med" style="color:var(--accent)">처리 ${sec0(r.svc)}${r.openSvc ? '+' : ''}</span>` : '') +
-      (r.dropText ? `<span class="med" style="color:${r.dropR === 'dead' ? 'var(--dim)' : 'var(--bad)'}">${esc(r.dropText)}</span>` : '');
+      (r.dropText ? `<span class="med" style="color:${r.dropR === 'dead' ? 'var(--dim)' : 'var(--bad)'}">${esc(r.dropText)}</span>` : '') +
+      // 「그래서 무엇이 됐나」 — 이게 없으면 KAMDOC이 명령을 냈는데도 로그가 침묵한다.
+      (r.outcome ? `<span class="med" style="color:${
+        r.outcome.cls === 'ok' ? 'var(--ok)' : r.outcome.cls === 'warn' ? 'var(--warn)'
+        : r.outcome.cls === 'bad' ? 'var(--bad)' : 'var(--dim)'}">→ ${esc(r.outcome.txt)}</span>` : '');
     const tip = [`${fmt(r.t)} 도착 — ${JOB_LABEL[r.jk] || r.jk}${r.th ? ` · ${r.th}` : ''}`,
       r.started
         ? `대기 ${r.wait.toFixed(1)}초 → 처리 ${r.svc.toFixed(1)}초` +
-          (r.openSvc ? ' (관측 종료까지 미완)' : ` → ${fmt(r.done)} 완료`)
+          (r.openSvc ? ' (관측 종료까지 미완)' : ` → ${fmt(r.done)} 완료`) +
+          (r.outcome ? `\n결과 — ${r.outcome.txt}` : '')
         : r.drop != null
           ? `대기 ${r.wait.toFixed(1)}초 → ${fmt(r.drop)} ${r.dropText}`
           : `대기 ${r.wait.toFixed(1)}초 — 관측 종료까지 서비스에 못 들어감`,
@@ -2712,6 +2762,7 @@ const JOB_LABEL = {
   iads_track: '위협판단·표적할당 준비',
   approval: '교전 승인',
   approval_return: '승인 회신 처리·교전명령',   // ADR-093 — C2A가 승인 회신을 접수해 사수 확정·명령을 내는 작업
+  directive_issue: '교전명령 발령',            // ADR-096 — 결심 노드가 명령을 작성해 계선에 올리는 작업
   directive_relay: 'ICC 중계 인가',            // ADR-094 — ICC가 교전명령을 접수·인가(필요시 권역 내 재배정)하는 작업
   directive_reception: '교전명령 접수',
   engage: '발사 처리'

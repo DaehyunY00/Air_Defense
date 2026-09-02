@@ -85,6 +85,7 @@ var suites = [
   ,['approval-pipeline-realism.test.mjs', 'ADR-093 승인 파이프라인 현실화 (OFF 골든·To-Be bit-exact·요청 시 실행가능·회신 역방향·C2A 회신 큐·마크 순서·wire shape)']
   ,['icc-relay-authorization.test.mjs', 'ADR-094 ICC 중계 인가 (OFF 골든·To-Be 동역학 불변·ICC 큐 작업·전송 분할·인가/재배정/반송·손잡이)']
   ,['ecs-execution-time.test.mjs', 'ADR-095 ECS 실행 시간 ADSIM 정합 (OFF 골든·실효 10초·kind 한정·양 모드 공통·손잡이·바닥 합성)']
+  ,['directive-issue-time.test.mjs', 'ADR-096 교전명령 발령 작업 (OFF 골든·발령=명령 건수·체계성분 7.5초·재발령 계상·로그 결과 표시)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

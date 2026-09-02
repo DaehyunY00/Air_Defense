@@ -7044,6 +7044,21 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 기본 OFF(불변 규칙 1 · 재기준선 대상). 손잡이 ecsExecutionSec(기본 10초).
     this.ecsExecutionTime = ff('ecsExecutionTime', false);
     this.ecsExecutionSec = (typeof f.ecsExecutionSec === 'number' && f.ecsExecutionSec >= 0) ? f.ecsExecutionSec : 10;
+    // ADR-096: 교전명령 발령 — 결심 노드가 명령을 **낼 때마다** 큐 작업을 태운다.
+    // 종전에는 「위협판단·표적할당 준비」서비스 1회가 항적당 유일한 비용이었고, 실제 발령은
+    // 그 콜백 안에서 0초였다. 실측(SC3 As-Is): KAMDOC 명령 58건 중 **69%(40건)가 준비 완료보다
+    // 나중**에 나갔고(중앙값 +22.8초·최대 +113초) 그 40건은 큐를 다시 타지 않았다.
+    // 창이 열리길 기다리다 내는 발령, ICC가 반송한 뒤의 재발령, 같은 항적의 두 번째 명령이
+    // 전부 무료였다 — 특히 **반송 후 재결심 0초**는 어떤 해석으로도 방어되지 않는다.
+    // 서비스 시간은 새로 짓지 않고 **그 노드의 체계 성분 중점**(ADR-092 serviceParts.systemSec)을
+    // 쓴다: 운용자 판단은 준비 단계에서 이미 지불했고 발령은 체계가 하는 일(명령 생성·전송)이다.
+    // KAMDOC·MCRC 7.5초 · ICC 4초 · IAOC·국지방공 1.5초 — ADSIM의 relay 10초·executor 10초와
+    // 같은 크기대다(ADSIM은 발령을 결심에 포함시켜 별도 비용을 두지 않으므로 직접 방증은 없다).
+    // ⚠️ ADR-078 §미구현이 무너뜨린 것은 **노드 평균 37.5초**를 중계에 오적용한 경우다. 여기서는
+    //    kind별 평균(ADR-095 기구)으로 체계 성분만 쓰므로 그 함정이 아니다 — 그래도 ρ가 오르므로
+    //    손잡이 directiveIssueSec와 민감도를 함께 둔다. 기본 OFF(불변 규칙 1 · 재기준선 대상).
+    this.directiveIssueTime = ff('directiveIssueTime', false);
+    this.directiveIssueSec = (typeof f.directiveIssueSec === 'number' && f.directiveIssueSec >= 0) ? f.directiveIssueSec : null;
     // ADR-090: 조기경보 보고원 — 책임 C2가 최속 보고경로 하나만 쓰지 않고, 조기경보 레이더
     // (role에 early_warning)의 보고경로를 **함께** 채택하며, 조기경보 센서가 최초 보고 스냅숏
     // 이후에 획득하면 그 시점에 추가 보고를 접수한다(스냅숏 부분 해제) — 기본 OFF(불변 규칙 1).
@@ -7321,6 +7336,12 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var m = null;
     if (sim.iccRelaySec !== null) (m = m || {}).directive_relay = sim.iccRelaySec * sim.mult.service;
     if (sim.ecsExecutionTime) (m = m || {}).directive_reception = sim.ecsExecutionSec * sim.mult.service;
+    if (sim.directiveIssueTime) {
+      var sp = n.queue && n.queue.serviceParts;
+      var v = (sim.directiveIssueSec !== null) ? sim.directiveIssueSec
+        : (sp ? (sp.systemSec[0] + sp.systemSec[1]) / 2 : null);
+      if (v !== null) (m = m || {}).directive_issue = v * sim.mult.service;
+    }
     return m;
   }
 
@@ -9292,20 +9313,66 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     this._mark(threat, '사수선정·표적할당:' + commander.typeId + '→' + chosen.shooter.id, t, axisOf(commander));
     this._mark(threat, '자체교전승인:' + commander.typeId, t, axisOf(commander));
     this._sendIadsStatus(threat, commander, 'assigned', t);
-    // ADR-094: 경로 위에 ICC가 있으면 거기서 전송을 끊는다 — 1구간만 보내고 ICC 인가를 받는다.
+    var dd = { threat: threat, commander: commander, shooterId: chosen.shooter.id, plan: plan, path: path };
+    // ADR-096: 발령도 일이다 — 결심 노드 큐를 거쳐야 명령이 계선을 탄다.
+    if (this.directiveIssueTime && this.nodeState[commander.id]) this._iadsIssueDirective(t, dd);
+    else this._iadsDispatchDirective(t, dd);
+  };
+
+  /**
+   * ADR-096: 교전명령 발령 작업(`directive_issue`) — 결심 노드가 명령을 낼 때마다 태운다.
+   * 첫 발령이든 ICC 반송 뒤의 재발령이든 같다. 서비스가 끝나야 하달이 시작된다.
+   */
+  Simulation.prototype._iadsIssueDirective = function (t, d) {
+    var self = this, threat = d.threat, plan = d.plan;
+    var disp = this._nodeArrive(d.commander.id, t, {
+      threat: threat, kind: 'directive_issue', commander: d.commander,
+      jobId: 'ISSUE_' + plan.directiveId, directiveId: plan.directiveId, validUntil: plan.validUntil,
+      onAbandon: function (at) {
+        if (plan.released || plan.resolved) return;
+        self._iadsTransitionPlan(plan, 'expired', at, 'released', 'issue_queue_deadline');
+        self.global.c2Orders.expired++;
+        self.global.c2Orders.released++;
+        self.global.c2Orders.expiryByReason.issue_queue_deadline =
+          (self.global.c2Orders.expiryByReason.issue_queue_deadline || 0) + 1;
+        self._recordFailureEvidence(threat, 'window_lost_due_to_c2',
+          { commanderId: d.commander.id, shooterId: d.shooterId, phase: 'issue-queue' });
+        self._scheduleIadsRetry(threat, d.commander, at + 0.5);
+      }
+    }, function (done) {
+      if (!threat.alive || threat.pipelineDead || plan.released || plan.resolved) return;
+      self._mark(threat, '교전명령발령:' + d.commander.id + '→' + d.shooterId, done, axisOf(d.commander));
+      self._iadsDispatchDirective(done, d);
+    });
+    if (disp === 'dropped') {
+      this._iadsTransitionPlan(plan, 'expired', t, 'released', 'issue_queue_capacity');
+      this.global.c2Orders.expired++;
+      this.global.c2Orders.released++;
+      this.global.c2Orders.expiryByReason.issue_queue_capacity =
+        (this.global.c2Orders.expiryByReason.issue_queue_capacity || 0) + 1;
+      this._recordFailureEvidence(threat, 'capacity_full',
+        { commanderId: d.commander.id, shooterId: d.shooterId, phase: 'issue-queue' });
+      this._scheduleIadsRetry(threat, d.commander, t + 0.5);
+    }
+  };
+
+  /** 교전명령 하달 — ADR-094의 ICC 중계 분기를 포함한 전송 개시. */
+  Simulation.prototype._iadsDispatchDirective = function (t, d) {
+    var path = d.path, plan = d.plan;
     var relayAt = this.iccRelayAuthorization
-      ? this._iadsRelayIccIndex(path, commander.id) : -1;
+      ? this._iadsRelayIccIndex(path, d.commander.id) : -1;
     this._iadsTransitionPlan(plan, 'in_transit', t);
     if (relayAt >= 0) {
-      var d1 = this._iadsSendAlong(path, 0, relayAt + 1, t, threat);
+      var d1 = this._iadsSendAlong(path, 0, relayAt + 1, t, d.threat);
       this.schedule(t + d1, PRI.LINK_ARRIVE, 'IADS_ICC_RELAY', {
-        threat: threat, commander: commander, shooterId: chosen.shooter.id, plan: plan,
+        threat: d.threat, commander: d.commander, shooterId: d.shooterId, plan: plan,
         iccId: path[relayAt].to, path: path, from: relayAt + 1
       });
       return;
     }
-    var delay = this._iadsSendAlong(path, 0, path.length, t, threat);
-    this.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_FIRE', { threat: threat, commander: commander, shooterId: chosen.shooter.id, plan: plan });
+    var delay = this._iadsSendAlong(path, 0, path.length, t, d.threat);
+    this.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_FIRE',
+      { threat: d.threat, commander: d.commander, shooterId: d.shooterId, plan: plan });
   };
 
   /**
@@ -10166,6 +10233,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       if (self.approvalPipelineRealism) kindKeys = kindKeys.concat(['approval_return']);
       // ADR-094: 중계 인가 kind도 ON에서만 노출 — OFF wire shape 불변.
       if (self.iccRelayAuthorization) kindKeys = kindKeys.concat(['directive_relay']);
+      if (self.directiveIssueTime) kindKeys = kindKeys.concat(['directive_issue']);   // ADR-096
       var rhoByKind = {}, arrivalsByKind = {}, dropsByKind = {}, WqByKind = {};
       kindKeys.forEach(function (k) {
         var b = ns.byKind[k];
@@ -11301,8 +11369,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var instance;
     try {
       instance = kind === 'module'
-        ? new Worker('js/workers/sim-worker.mjs?v=20260902b', { type: 'module' })
-        : new Worker('js/workers/sim-worker.js?v=20260902b');
+        ? new Worker('js/workers/sim-worker.mjs?v=20260902c', { type: 'module' })
+        : new Worker('js/workers/sim-worker.js?v=20260902c');
       worker = instance;
       workerReady = false;
       worker.onmessage = function (ev) {

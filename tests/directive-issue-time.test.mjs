@@ -157,7 +157,7 @@ assert(on.nodes.every((n) => 'directive_issue' in n.arrivalsByKind), 'ON에만 d
 
 const proto = fs.readFileSync(path.join(root, 'prototype/command-flow.html'), 'utf8');
 assert(/directiveIssueTime:\s*P\.issue/.test(proto), '프로토타입 features()에 directiveIssueTime: P.issue');
-assert(/\{ k: 'issue',\s*d: 1,/.test(proto), "프로토타입 ?issue= (이 화면만 기본 1)");
+assert(/\{ k: 'issue',\s*d: 0,/.test(proto), "프로토타입 ?issue= (기본 0 — ADSIM 정합, 사용자 결정 2026-09-03)");
 assert(/\{ k: 'issuesec',\s*d: -1,/.test(proto), "프로토타입 ?issuesec= 민감도 손잡이");
 assert(proto.includes("out.push('명령 발령 ON'"), '켜진 동안 상태줄 칩');
 assert(/directive_issue:\s*'교전명령 발령'/.test(proto), 'JOB_LABEL directive_issue');

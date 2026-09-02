@@ -7036,6 +7036,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // ADR-094 민감도 손잡이 — ICC 중계 인가의 서비스 시간(초). 미지정이면 ICC 노드 자신의 값(평균 9초).
     // 0을 주면 인가가 즉시 끝나 **재검증·반송·재배정 로직의 몫만** 남는다(시간 효과와 로직 효과 분리).
     this.iccRelaySec = (typeof f.iccRelaySec === 'number' && f.iccRelaySec >= 0) ? f.iccRelaySec : null;
+    // ADR-095: ECS 교전명령 실행 시간을 ADSIM과 맞춘다. 우리 ECS는 노드 카탈로그 값(체계 1~2초 +
+    // 운용자 2초 = 3.5초)을 쓰는데, ADSIM은 역할 기반으로 `executor` = localExecution **10초**를
+    // 쓴다(같은 자리·같은 일에 3배 차이). ON이면 directive_reception 서비스를 10초로 둔다.
+    // ⚠️ **양 모드 공통**이다 — As-Is·To-Be 사슬에 같은 크기로 더해지므로 아키텍처 비교(Δ)는
+    //    구조상 거의 불변이고, 움직이는 것은 절대 시간선과 그로 인한 교전창 상실이다(§수치 영향).
+    // 기본 OFF(불변 규칙 1 · 재기준선 대상). 손잡이 ecsExecutionSec(기본 10초).
+    this.ecsExecutionTime = ff('ecsExecutionTime', false);
+    this.ecsExecutionSec = (typeof f.ecsExecutionSec === 'number' && f.ecsExecutionSec >= 0) ? f.ecsExecutionSec : 10;
     // ADR-090: 조기경보 보고원 — 책임 C2가 최속 보고경로 하나만 쓰지 않고, 조기경보 레이더
     // (role에 early_warning)의 보고경로를 **함께** 채택하며, 조기경보 센서가 최초 보고 스냅숏
     // 이후에 획득하면 그 시점에 추가 보고를 접수한다(스냅숏 부분 해제) — 기본 OFF(불변 규칙 1).
@@ -7301,6 +7309,21 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     return KJ.resolveRoleId ? KJ.resolveRoleId(id, this.catalog) : id;
   };
 
+  /**
+   * ADR-094·095: 노드의 kind별 서비스 시간 표. 손잡이가 켜진 kind만 들어간다.
+   *  - directive_relay      ICC 중계 인가 (ADR-094 · iccRelaySec)
+   *  - directive_reception  ECS 교전명령 실행 (ADR-095 · ecsExecutionSec, ADSIM localExecution 10초)
+   * ⚠️ 노드 기본값과 같은 값을 굳이 넣지 않는다 — 비면 `_startService`가 분기 자체를 타지 않아
+   *    OFF 경로가 자구 동일하게 유지된다.
+   */
+  function kindMeanOf(n, sim) {
+    if (n.category !== 'c2') return null;
+    var m = null;
+    if (sim.iccRelaySec !== null) (m = m || {}).directive_relay = sim.iccRelaySec * sim.mult.service;
+    if (sim.ecsExecutionTime) (m = m || {}).directive_reception = sim.ecsExecutionSec * sim.mult.service;
+    return m;
+  }
+
   Simulation.prototype._initNodes = function () {
     var self = this, mode = this.mode;
     this._nodesInMode().forEach(function (n) {
@@ -7324,8 +7347,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       } : null;
       self.nodeState[n.id] = {
         node: n, c: c, mean: mean * self.mult.service, K: K, parts: parts,
-        // ADR-094: 중계 인가 전용 서비스 시간(손잡이). null이면 노드 기본값을 그대로 쓴다.
-        relayMean: (n.category === 'c2' && self.iccRelaySec !== null) ? self.iccRelaySec * self.mult.service : null,
+        // ADR-094·095: **kind별 서비스 시간**(ADR-078 §미구현이 요구한 기구의 최소 형태).
+        // 비어 있으면 노드 기본값을 그대로 쓴다 — 그 경우 OFF 경로와 자구 동일하다.
+        kindMean: kindMeanOf(n, self),
         busy: 0, queue: [], lastT: 0,
         busyTime: 0, qTime: 0,
         arrivals: 0, completions: 0, drops: 0,
@@ -7607,12 +7631,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       this._metricEvent('ENGAGEMENT_FIRED', t,
         job.threat._dup ? job.threat._real : job.threat, fireDetail);
     }
-    // ADR-094: 중계 인가는 kind 전용 평균을 쓸 수 있다(ADR-078 §미구현이 요구한 kind별 서비스시간의
-    // 최소 형태). 손잡이가 없으면 nsMean·nsParts는 노드 기본값 그대로라 OFF 경로는 불변이다.
+    // ADR-094·095: kind 전용 평균이 있으면 그것을 쓴다(ADR-078 §미구현이 요구한 kind별 서비스시간의
+    // 최소 형태). 표가 비어 있으면 nsMean·nsParts는 노드 기본값 그대로라 OFF 경로는 불변이다.
+    // ADR-092의 바닥은 성분을 같은 비율로 스케일해 합성한다 — 두 플래그가 겹쳐도 뜻이 유지된다.
     var nsMean = ns.mean, nsParts = ns.parts;
-    if (job.kind === 'directive_relay' && ns.relayMean !== null && ns.relayMean !== undefined) {
-      var kScale = ns.mean > 0 ? ns.relayMean / ns.mean : 0;
-      nsMean = ns.relayMean;
+    var kindMean = ns.kindMean ? ns.kindMean[job.kind] : undefined;
+    if (kindMean !== null && kindMean !== undefined) {
+      var kScale = ns.mean > 0 ? kindMean / ns.mean : 0;
+      nsMean = kindMean;
       nsParts = ns.parts ? { sysLo: ns.parts.sysLo * kScale, sysHi: ns.parts.sysHi * kScale, op: ns.parts.op * kScale } : null;
     }
     var svc;
@@ -11275,8 +11301,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var instance;
     try {
       instance = kind === 'module'
-        ? new Worker('js/workers/sim-worker.mjs?v=20260902a', { type: 'module' })
-        : new Worker('js/workers/sim-worker.js?v=20260902a');
+        ? new Worker('js/workers/sim-worker.mjs?v=20260902b', { type: 'module' })
+        : new Worker('js/workers/sim-worker.js?v=20260902b');
       worker = instance;
       workerReady = false;
       worker.onmessage = function (ev) {

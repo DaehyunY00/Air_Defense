@@ -504,7 +504,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20260902a';
+const V = '?v=20260902b';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -729,7 +729,9 @@ function features() {
     c2ServiceFloor: P.floor,     // ADR-092 — 〃 (C2 처리 로그의 「처리 0초」가 이 화면에서 드러난 문제)
     approvalPipelineRealism: P.pipe,  // ADR-093 — 〃 (같은 항적 승인 2건·AOC 카운트 부재가 이 화면에서 드러난 문제)
     iccRelayAuthorization: P.icc,     // ADR-094 — 〃 (ICC가 「1초 홉」으로만 보이던 문제)
-    iccRelaySec: P.iccsec >= 0 ? P.iccsec : undefined   // ADR-094 민감도 손잡이(-1 = 미지정 = ICC 기본 9초)
+    iccRelaySec: P.iccsec >= 0 ? P.iccsec : undefined,  // ADR-094 민감도 손잡이(-1 = 미지정 = ICC 기본 9초)
+    ecsExecutionTime: P.ecs,                            // ADR-095 — 엔진 기본 OFF (이 화면도 기본 OFF)
+    ecsExecutionSec: P.ecssec >= 0 ? P.ecssec : undefined // ADR-095 민감도 손잡이(-1 = 미지정 = 10초)
   };
 }
 
@@ -778,7 +780,11 @@ const PARAMS = [
   // ⚠️ icc도 pipe와 같은 예외다 — 이 화면에서 ICC는 OFF면 도착 0건의 통과점이라 계선 위 점만
   //    지나갈 뿐 「무엇을 하는 제대인가」가 보이지 않는다. 켜진 동안 칩으로 상시 표기한다.
   { k: 'icc',   d: 1,       t: 'bool', h: 'ICC 중계 인가 — 교전명령을 ICC가 접수·인가하고 권역 내 재배정/반송 (ADR-094 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
-  { k: 'iccsec', d: -1,     t: 'num',  h: 'ICC 중계 인가 시간(초) 민감도 — 미지정(-1)이면 ICC 기본 9초, 0이면 재검증 로직만 (ADR-094)' }
+  { k: 'iccsec', d: -1,     t: 'num',  h: 'ICC 중계 인가 시간(초) 민감도 — 미지정(-1)이면 ICC 기본 9초, 0이면 재검증 로직만 (ADR-094)' },
+  // ecs는 예외가 아니다 — ECS는 OFF에서도 「교전명령 접수」 줄로 화면에 이미 보이므로
+  // 이 화면만 켤 이유가 없다(pipe·icc와 다른 점). 엔진 기본 그대로 OFF.
+  { k: 'ecs',   d: 0,       t: 'bool', h: 'ECS 실행 시간 ADSIM 정합 — 교전명령 실행을 10초로 (ADR-095 · 양 모드 공통 · 기본 꺼짐)' },
+  { k: 'ecssec', d: -1,     t: 'num',  h: 'ECS 실행 시간(초) 민감도 — 미지정(-1)이면 10초 (ADR-095)' }
 ];
 const qs = new URLSearchParams(location.search);
 const P = {};
@@ -813,6 +819,7 @@ function activeConfigChips() {
   // pipe는 이 화면만 기본 ON(엔진 기본 OFF) — 기본이라도 켜져 있는 동안은 항상 표기한다(PARAMS 주석).
   if (P.pipe) out.push('승인 파이프라인 현실화 ON');
   if (P.icc) out.push('ICC 중계 인가 ON' + (P.iccsec >= 0 ? ` (${P.iccsec}초)` : ''));
+  if (P.ecs) out.push('ECS 실행 ' + (P.ecssec >= 0 ? `${P.ecssec}초` : '10초'));
   return out;
 }
 

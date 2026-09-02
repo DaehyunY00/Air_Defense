@@ -209,8 +209,12 @@
   @keyframes crawl { to { stroke-dashoffset: -15; } }
 
   /* 그래프 */
-  #graph-wrap { flex: 1; min-height: 0; position: relative; overflow: hidden; }
-  svg#graph { width: 100%; height: 100%; display: block; }
+  /* ⚠️ 종전에는 overflow:hidden + svg height:100% + preserveAspectRatio meet 이라
+     **세로가 길어질수록 전체가 축소**됐다 — 노드를 더 그리면 정작 봐야 할 것이 작아지는
+     구조였다(사용자 지적 2026-09-02). 이제 세로로 스크롤한다: viewBox가 길어지면 그린 것이
+     작아지는 게 아니라 화면이 길어진다. 가로는 항상 폭에 맞춘다. */
+  #graph-wrap { flex: 1; min-height: 0; position: relative; overflow-y: auto; overflow-x: hidden; }
+  svg#graph { width: 100%; height: auto; display: block; }
   .colhdr { fill: #55637a; font-size: 10px; }
   .colband { fill: #0e1520; }
   .colband.alt { fill: #0b1017; }
@@ -225,10 +229,13 @@
   /* 이 항적과 무관한 노드 — [전체 흐름]과 **같은 자리**에 흐릿하게 남긴다.
      자리를 지워 버리면 「어디를 안 거쳤나」가 안 보이고, 탭을 오갈 때 배치가 달라져
      눈이 매번 다시 익혀야 한다(사용자 결정 2026-09-02). */
-  .idlen { fill: #131c28; stroke: #33445c; stroke-width: 1; opacity: .3; }
+  .idleg { opacity: .34; }
+  .idleg:hover { opacity: .85; }
+  .idlen { fill: #131c28; stroke: #33445c; stroke-width: 1.2; }
   .idlen.sensor { stroke: #1c8ea3; }
   .idlen.c2 { stroke: #3a72b0; }
   .idlen.shooter { stroke: #2a8f6c; }
+  .idlelabel { fill: #6b7a91; font-size: 9px; }
   .edge { fill: none; stroke-linecap: round; }
   .dot { stroke: #04121f; stroke-width: .8; }
   .dotlab { font-size: 9px; fill: #cfe0f5; paint-order: stroke; stroke: #04121f; stroke-width: 2.5; }
@@ -1852,12 +1859,12 @@ function layoutGraph() {
   // 노드만 그려서 「어디를 안 거쳤나」가 안 보였다 — 사거리 밖이라 못 쓴 포대, 계선이 없어
   // 못 간 제대가 화면에서 사라졌다. 배치 전체를 세우고 이 항적이 쓴 것만 또렷하게 둔다.
   // 두 보기가 같은 자리에 같은 노드를 두므로 탭을 오갈 때 배치를 다시 익힐 필요가 없다.
-  const H = Math.max(480, wrap.clientHeight || 480);
   const showIdle = el('show-idle').checked;
   const rel = new Set(sel.nodeIds);
   const nid = (k) => slotNodeId(k);
-  // 열 안 정렬은 **이 항적이 쓴 것 먼저** — 쓴 노드가 위로 모여야 라벨·실린더가 겹치지 않는다.
-  const { nodes, colW, buckets } = placeSlots(W, H, (a, b) =>
+  // 열 안 정렬은 **이 항적이 쓴 것 먼저** — 쓴 노드가 위로 모여야 흐름을 위에서부터 읽는다.
+  // 높이는 placeSlots가 노드 수에서 정한다([전체 흐름]과 같은 값 → 두 보기의 자리가 같다).
+  const { nodes, colW, buckets, H } = placeSlots(W, wrap.clientHeight || 480, (a, b) =>
     (rel.has(nid(b)) - rel.has(nid(a))) ||
     ((run.nodes[nid(a)] && run.nodes[nid(a)].name) || a)
       .localeCompare((run.nodes[nid(b)] && run.nodes[nid(b)].name) || b, 'ko'));
@@ -1927,11 +1934,14 @@ function layoutGraph() {
   const nodeSvg = Object.keys(nodes).map((k) => {
     const p = nodes[k], n = run.nodes[p.id] || {};
     const cat = n.category || 'c2';
-    // 이 항적과 무관한 노드 — 자리는 지키되 흐릿한 작은 링으로만. 이름은 툴팁으로 준다.
+    // 이 항적과 무관한 노드 — 자리도 이름도 남기되 흐리게. 「어느 장비가 안 쓰였나」를
+    // 이름으로 읽을 수 있어야 배치 그림이 된다(사용자 지적 2026-09-02).
     if (!rel.has(p.id)) {
       if (!showIdle) return '';
-      return `<circle class="idlen ${cat}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.dense ? 3.2 : 5}">` +
-        `<title>${esc((n.name || p.id) + '\n이 항적에는 쓰이지 않았습니다')}</title></circle>`;
+      const nm = wrapLabel(n.name || p.id, 15, 1);
+      return `<g class="idleg"><circle class="idlen ${cat}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="6"></circle>` +
+        `<text class="idlelabel" x="${p.x.toFixed(1)}" y="${(p.y + 18).toFixed(1)}" text-anchor="middle">${esc(nm[0] || '')}</text>` +
+        `<title>${esc((n.name || p.id) + '\n이 항적에는 쓰이지 않았습니다')}</title></g>`;
     }
     // 「닿지 못한」 노드는 점선 원으로만 — 이 항적의 일이 벌어진 적 없는 자리에 실린더를
     // 그리면 케파가 있는 것처럼 읽힌다.
@@ -1940,11 +1950,10 @@ function layoutGraph() {
     // ⚠️ 실린더는 **일하는 자리에만**. 중복 노드의 상행 자리는 순수 중계라 용량을 그리지 않는다
     //    (같은 부하를 두 번 그리면 노드가 두 배로 바쁜 것처럼 보인다).
     const cap = !gh && isWorkSlot(p.dup) ? nodeCap(n) : null;
-    // 밀집 열에서는 실린더를 그리지 않는다 — 26px 높이가 21px 행 간격을 넘어 겹친다
-    // ([전체 흐름]과 같은 규칙). 라벨은 한 줄로 줄여 이름은 남긴다.
-    const hasCap = !!cap && !p.dense;
-    const lines = wrapLabel((n.name || p.id) + (p.dup === 'up' ? ' ↑중계' : ''), 13, p.dense ? 1 : 2);
-    const labelY = hasCap ? p.y + CYL.h / 2 + 13 : p.y + (p.dense ? 15 : 22);
+    // 행 높이가 54px라 실린더(26px)와 두 줄 라벨이 모두 들어간다 — 밀집 예외가 필요 없다.
+    const hasCap = !!cap;
+    const lines = wrapLabel((n.name || p.id) + (p.dup === 'up' ? ' ↑중계' : ''), 14, 2);
+    const labelY = hasCap ? p.y + CYL.h / 2 + 12 : p.y + 20;
     return `<g class="nodeg${hasCap ? ' hascyl' : ''}${p.dup === 'up' ? ' relay' : ''}${gh ? ' ghost' : ''}" data-id="${esc(p.id)}" data-slot="${esc(k)}">` +
       (hasCap ? cylSvg(p, cap.c, cap.unit)
         : `<circle class="ncirc ${cat}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.dense ? 7 : 9}"></circle>` +
@@ -2100,7 +2109,7 @@ let geoAll = null;
  * 밀집 열(센서 19 · ECS 15 …)은 소열로 갈라 작은 링으로 세운다 — 한 줄로 늘어놓으면 열이
  * 길어지고, #graph는 preserveAspectRatio meet이라 전체가 그만큼 축소된다.
  */
-function placeSlots(W, H, cmp) {
+function placeSlots(W, minH, cmp) {
   const colW = W / COLS.length;
   const buckets = COLS.map(() => []);
   const slotOf = {};   // 인스턴스키 -> {id, dup}
@@ -2110,38 +2119,37 @@ function placeSlots(W, H, cmp) {
       buckets[sl.col].push(k); slotOf[k] = { id: id, dup: sl.dup };
     });
   });
+  // 행 하나에 **이름표 두 줄이 들어갈** 높이를 준다. 종전에는 남는 높이를 노드 수로 나눠
+  // 밀집 열(센서 19 · ECS 15 …)의 이름을 통째로 지웠는데, 그러면 「어느 장비인가」를
+  // 화면에서 읽을 수 없다(사용자 지적). 이제 높이는 노드 수가 정하고 화면은 스크롤한다.
+  const ROW = 54;
+  // 소열 분할은 **아주 큰 열에만** 남긴다(FULL 배치의 ECS 84 · 사수 84 대비).
+  // LEGACY 배치의 최대 열은 센서 19라 분할되지 않는다 — 전 노드가 제 이름을 단다.
+  const DENSE = 30;
+  const rowsOf = (n) => Math.min(n, DENSE);
+  const rowMax = Math.max(1, ...buckets.map((b) => rowsOf(b.length)));
+  const H = Math.max(minH || 0, 74 + rowMax * ROW + 26);
   const nodes = {};
-  const DENSE = 12;
   buckets.forEach((ids, ci) => {
     ids.sort(cmp);
     const cx = colW * (ci + .5);
-    if (ids.length <= DENSE) {
-      const step = (H - 92) / Math.max(1, ids.length);
-      ids.forEach((k, ri) => {
-        nodes[k] = { id: slotNodeId(k), key: k, dup: slotOf[k].dup, col: ci,
-          x: cx, y: 70 + step * (ri + .5), r: 9, dense: false };
-      });
-    } else {
-      const rowH = 21;
-      const maxRows = Math.max(8, Math.floor((H - 92) / rowH));
-      const subCols = Math.ceil(ids.length / maxRows);
-      const gap = Math.min(46, (colW - 24) / subCols);
-      ids.forEach((k, i) => {
-        const si = Math.floor(i / maxRows), ri = i % maxRows;
-        nodes[k] = { id: slotNodeId(k), key: k, dup: slotOf[k].dup, col: ci, r: 4.5, dense: true,
-          x: cx + (si - (subCols - 1) / 2) * gap,
-          y: 70 + rowH * ri + rowH / 2 };
-      });
-    }
+    const subCols = Math.max(1, Math.ceil(ids.length / DENSE));
+    const gap = subCols > 1 ? Math.min(colW / subCols, (colW - 16) / subCols) : 0;
+    ids.forEach((k, i) => {
+      const si = subCols > 1 ? Math.floor(i / DENSE) : 0;
+      const ri = subCols > 1 ? i % DENSE : i;
+      nodes[k] = { id: slotNodeId(k), key: k, dup: slotOf[k].dup, col: ci,
+        x: cx + (si - (subCols - 1) / 2) * gap,
+        y: 74 + ROW * (ri + .5), r: subCols > 1 ? 7 : 9, dense: subCols > 1 };
+    });
   });
-  return { nodes, colW, buckets };
+  return { nodes, colW, buckets, H };
 }
 
 function layoutAll() {
   const svg = el('graph');
   const wrap = el('graph-wrap');
   const W = Math.max(760, wrap.clientWidth);
-  const H = Math.max(480, wrap.clientHeight || 480);
   const actOf = (id) => (gv.stats[id] ? gv.stats[id].arr : 0);
   // 간선 양 끝으로 등장하는 노드도 「활동」으로 친다(센서·포대는 큐가 없어 arr=0이다).
   run.allFlows.forEach((f) => {
@@ -2155,7 +2163,7 @@ function layoutAll() {
   // 배치 전체를 세운다(사용자 결정). 열 안 정렬은 **활동 많은 순** — 바쁜 장비가 위로
   // 모여야 놀고 있는 장비 수십 개가 화면 중앙을 차지하지 않는다. 놀면 흐리게(idle).
   const nid = (k) => slotNodeId(k);
-  const { nodes, colW, buckets } = placeSlots(W, H, (a, b) =>
+  const { nodes, colW, buckets, H } = placeSlots(W, wrap.clientHeight || 480, (a, b) =>
     (actOf(nid(b)) - actOf(nid(a))) || (touched(nid(b)) - touched(nid(a))) ||
     ((run.nodes[nid(a)] && run.nodes[nid(a)].name) || a)
       .localeCompare((run.nodes[nid(b)] && run.nodes[nid(b)].name) || b, 'ko'));
@@ -2768,8 +2776,43 @@ function setView(v) {
    6. 프레임 — 시각 t에서 "선 위에 떠 있는 전문"과 "노드에서 일어나는 일"
    ══════════════════════════════════════════════════════════════════════════ */
 function drawFrame() {
-  if (view === 'all') { drawFrameAll(); return; }
-  drawFrameTrack();
+  if (view === 'all') { drawFrameAll(); }
+  else { drawFrameTrack(); }
+  followFlow();
+}
+
+/**
+ * 재생 중 **흐름을 따라 세로 스크롤**한다. 배치 전체를 이름까지 그리면서 그래프가 창보다
+ * 길어졌으므로(1126 vs 759), 지금 전문이 움직이는 자리가 화면 밖이면 흐름을 놓친다.
+ * ⚠️ 사용자가 직접 스크롤하는 중에는 끼어들지 않는다 — 재생 중이고, 지금 그려진 점이
+ *    보이는 구간 밖일 때만 움직인다. 지도를 끌어다 보는 손을 빼앗지 않기 위한 규율이다.
+ */
+let userScrollAt = 0, autoScrolling = false;
+el('graph-wrap').addEventListener('scroll', () => {
+  // 자기가 움직인 스크롤은 「사용자 조작」으로 치지 않는다.
+  if (autoScrolling) { autoScrolling = false; return; }
+  userScrollAt = Date.now();
+});
+
+function followFlow() {
+  if (!playing) return;
+  // 사용자가 직접 굴리는 중이면 4초간 손대지 않는다 — 보던 자리를 빼앗지 않는다.
+  if (Date.now() - userScrollAt < 4000) return;
+  const wrap = el('graph-wrap'), svg = el('graph');
+  if (wrap.scrollHeight <= wrap.clientHeight + 2) return;
+  const dots = svg.querySelectorAll('#lyr-dots circle');
+  if (!dots.length) return;
+  const vb = (svg.getAttribute('viewBox') || '').split(/\s+/);
+  const vh = +vb[3] || 0;
+  if (!vh) return;
+  const scale = wrap.scrollHeight / vh;          // viewBox 좌표 → 화면 픽셀
+  let sum = 0;
+  dots.forEach((d) => { sum += +d.getAttribute('cy') || 0; });
+  const y = (sum / dots.length) * scale;
+  const top = wrap.scrollTop, bot = top + wrap.clientHeight;
+  if (y > top + 70 && y < bot - 70) return;      // 이미 보이면 두 번 움직이지 않는다
+  autoScrolling = true;
+  wrap.scrollTop = Math.max(0, Math.min(wrap.scrollHeight - wrap.clientHeight, y - wrap.clientHeight / 2));
 }
 
 /** 노드 작업 종류 → 「무엇을 하려는 중인가」. 큐에 선 작업의 **다음 할 일**을 말해 준다. */

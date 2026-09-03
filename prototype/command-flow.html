@@ -439,7 +439,7 @@
   <span class="modesw">
     <button id="m-asis" class="on">As-Is 분절형</button><button id="m-tobe">To-Be 통합형</button>
   </span>
-  <label>seed <input id="seed" class="mono" type="number" value="12345" style="width:78px"></label>
+  <label>seed <input id="seed" class="mono" type="number" value="29" style="width:78px"></label>
   <label>관측 <input id="dur" class="mono" type="number" value="600" step="60" style="width:64px">초</label>
   <button id="run">▶ 실행</button>
   <span class="modesw" id="viewsw">
@@ -747,7 +747,7 @@ function features() {
     iccRelaySec: P.iccsec >= 0 ? P.iccsec : undefined,  // ADR-094 민감도 손잡이(-1 = 미지정 = ICC 기본 9초)
     ecsExecutionTime: P.ecs,                            // ADR-095 — 엔진 기본 OFF (이 화면도 기본 OFF)
     ecsExecutionSec: P.ecssec >= 0 ? P.ecssec : undefined, // ADR-095 민감도 손잡이(-1 = 미지정 = 10초)
-    directiveIssueTime: P.issue,                          // ADR-096 — 엔진 기본 OFF, 이 화면만 기본 ON
+    directiveIssueTime: P.issue,                          // ADR-096 — 엔진·이 화면 모두 기본 OFF(ADSIM 정합, ?issue=1로 켠다)
     directiveIssueSec: P.issuesec >= 0 ? P.issuesec : undefined // ADR-096(-1 = 미지정 = 노드 체계 성분)
   };
 }
@@ -771,7 +771,17 @@ const PARAMS = [
   // ⚠️ 무력화 배치(MCRC_DOWN·KAMDOC_DOWN)는 이 화면에서 볼 수 없게 된다 — 필요해지면
   //    상수를 파라미터로 되돌린다.
   { k: 'mode',  d: 'asis',  t: 'str',  h: '체계 모드 (asis|tobe)' },
-  { k: 'seed',  d: 12345,   t: 'num',  h: '난수 seed' },
+  // seed 기본값은 **대표 표본**이다(사용자 결정 2026-09-03). 종전 12345는 이 화면의 조건에서
+  // 32 seed 중 가장 심한 이상치였다 — KAMDOC 도착 75건·ρ 0.81(중앙값 50건·ρ 0.48)이라 한 노드가
+  // 홀로 포화된 판이었고, ?issue=1을 켜면 격추가 34 → 14로 무너져(중앙값 Δ −2.5) 「발령 비용을
+  // 켜면 격추가 반토막」이라는 잘못된 인상을 준다. 화면은 조건을 갈아 끼우며 **같은 판을 계속
+  // 보는** 도구라, 그 한 판이 이상치면 읽는 모든 것이 이상치의 성질을 띤다.
+  // 선정 규칙(사후 고르기를 막기 위해 먼저 정한 것): SC3·As-Is·600초·LEGACY_NORMAL·화면 기본
+  // 플래그에서 seed 1~31 + 12345를 돌려, ①As-Is 격추 ②To-Be 우위 ③?issue=1의 격추 Δ 세 지표의
+  // **중앙값 이격 합이 최소**인 seed를 고른다 → 29 (30격추 · 우위 +18 · Δ −2 · KAMDOC 53건 ρ0.60).
+  // 근거 표는 ADR-084 §추기(2026-09-03). ⚠️ 본 앱(js/core/router.js DEFAULTS)의 seed는 12345
+  // 그대로다 — 두 화면의 항적 번호는 서로 다른 위협을 가리킨다.
+  { k: 'seed',  d: 29,      t: 'num',  h: '난수 seed (기본 29 — 32 seed 중 대표 표본, ADR-084 §추기)' },
   { k: 'dur',   d: 600,     t: 'num',  h: '관측 시간(초)' },
   // 위협 강도는 **×1 고정**이다(사용자 결정). 배율을 바꾸면 같은 화면이 다른 부하의
   // 결과를 같은 모양으로 보여주게 되고, 본 앱 기본값과도 어긋난다. 파라미터를 두지 않는다.

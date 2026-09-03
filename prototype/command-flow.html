@@ -9,20 +9,36 @@
   ────────────────────
   지도가 아니라 **계선(간선)** 위에서 전문이 움직이는 것을 본다. 두 보기가 있다.
 
-  · [전체 흐름] — 배치 전체(251노드)를 세우고 전 항적을 겹친다. 노드 테두리 링이
-    처리중/서버수만큼 차오르고(가득=노랑, 가득+대기=빨강), 큐 대기는 점 꼬리로 쌓이고,
-    대기실 초과 즉시 드롭은 붉은 섬광으로 튄다. 좌측에 부하 순위와 「C2 처리|병목」 로그
-    (C2 처리 = 노드 하나의 도착·대기·처리·드롭 — 실린더가 차오르는 것을 줄로 읽는 자리).
-    느린 매체(≥10초)만 개별 점으로 그리고 빠른 매체는 선 맥동으로 집약한다.
-  · [항적 개별] — 항적 하나의 전문 이동을 따라간다. 점 하나가 전문 한 건이고,
-    점이 선을 건너는 데 걸리는 시간이 곧 그 계선의 실제 지연이다. 그래서 **빠르면
-    데이터링크, 기어가면 음성·문자·VTC**로 눈에 바로 들어온다.
+  · [전체 흐름] — **트래픽 흐름**을 본다. 배치 전체를 세우고 전 항적을 겹친다. 같은 계선의
+    동시 전문은 점을 흩지 않고 **이동 묶음 하나 + 「N건 · 최장 N초」 배지**로 모으고(배지를
+    누르면 그 계선만 개별 전문으로 펼친다), 계선 굵기는 통행량을 따른다. 노드는 실린더가
+    처리중/서버수만큼 차오르고 대기는 위로 쌓이며, 대기실 초과 즉시 드롭은 붉은 섬광으로 튄다.
+    좌측에 병목 카드·부하 순위·활성 교신, 그리고 접어 둔 「C2 처리|병목」 로그.
+  · [항적 개별] — **전문 하나하나**를 본다. 점 하나가 전문 한 건이고, 점이 선을 건너는 데
+    걸리는 시간이 곧 그 계선의 실제 지연이다. 그래서 **빠르면 데이터링크, 기어가면
+    음성·문자·VTC**로 눈에 바로 들어온다. 기본 표시는 **이 항적이 실제로 지난 경로뿐**이고,
+    배치의 나머지 계선은 [전체 계선 표시] 토글로만 회색 점선으로 함께 세운다.
   전체 보기의 느린 점을 클릭하면 그 항적의 개별 보기로 내려간다. **병목 로그의 줄도 같은
   입구다** — 항적이 걸린 줄(누수·중복교전·계선 막힘·넘침)을 누르면 그 사건이 난 시각으로
   맞춰진 채 개별 보기가 열리고, 여러 항적이 묶인 줄은 눌러서 펼친 뒤 고른다.
 
   좌→우를 읽는 장치 (두 보기 공통)
   ──────────────────────────────
+  · **색 두 축** — 계선 색(무엇이 어떻게 가는가: 청=항적·정보 · 보라=지휘·협조 ·
+    녹=교전·사격통제 · 황=음성·문자·유선 · 회색=체계 내부)과 상태 색(정상=회색·청 ·
+    대기·지연=주황 · 실패·드롭=적)을 **가른다**. 적색은 실패에만, 주황은 대기에만 쓴다 —
+    종전에는 음성/VTC가 적색이라 붉은 선이 계선인지 실패인지 화면에서 가릴 수 없었다.
+    색 하나에 기대지 않도록 실선/점선과 글자 꼬리표(DL·KV·음성·VTC…)를 함께 건다.
+  · **계선 활성도** — 밝기가 곧 「지금 쓰이는가」다. 안 쓰는 계선은 거의 안 보이고,
+    교신 중인 계선은 굵고 밝게 발광하며, 막 도착한 계선은 1.5초 동안 녹색으로 남는다.
+    같은 열 안의 왕복(상급 C2끼리·군단↔수방사)은 좌·우로 갈라 그려 방향이 겹치지 않고,
+    여러 노드가 한 노드로 보내는 계선은 목적지 앞까지 한 줄기로 묶는다.
+  · **노드 상태 배지** — 테두리 하나는 상태 하나만 말한다. 동시에 벌어지는 일은 세어서
+    나란히 적는다(● 처리 · ○ 대기 · ↔ 교신 · ✕ 드롭). 그 아래 가는 막대는 **대기실
+    점유율**이고 포화에 가까울수록 황→주황→적으로 짙어진다 — 넘침은 대기실이 찰 때 나므로
+    병목의 임박이 여기서 먼저 보인다.
+  · **레인 타임라인**(하단) — 「어디에서 시간이 갔는가」를 킬체인 단계별로 편 것이다.
+    진한 칸 = 처리, 연한 칸 = 대기. 누르면 그 시각으로 간다. 시간축은 스크럽과 같다.
   · **작업 맥동** — 지금 일하는 노드가 깜빡이고, **그 주기가 곧 처리 중인 작업의 실제
     서비스 시간**이다. ECS(평균 3.5초)는 빠르게 깜빡이고 MCRC·KAMDOC(37.5초)·사수
     (40~60초)는 느리게 고동친다. 속도를 읽는 자리가 흐름이 벌어지는 자리와 같아야
@@ -53,6 +69,17 @@
     --bg: #0b1017; --panel: #111823; --panel2: #0d1117; --line: #1e2937;
     --fg: #dbe4f0; --dim: #7d8ba0; --accent: #4da3ff;
     --ok: #34d399; --bad: #f87171; --warn: #fbbf24;
+    /* ── 상태 색과 매체 색을 가른다 (사용자 결정 2026-09-03) ─────────────────
+       종전에는 음성/VTC가 적색, 문자가 주황이라 **매체 색이 상태 색과 같았다** —
+       붉은 선이 「실패」인지 「VTC 계선」인지 화면만 보고 가를 수 없었다. 이제 색은
+       두 축으로 나뉘고, 서로의 자리를 침범하지 않는다:
+         · 계선(무엇이 어떻게 가는가) — 청 계열(항적·정보) · 보라(지휘·협조) ·
+           녹(교전·사격통제) · 황 계열(음성·문자·유선) · 회색(체계 내부)
+         · 상태(지금 어떤가) — 회색·청(정상) · --wait 주황(대기·지연) ·
+           --bad 적(실패·드롭·발사불가)
+       그래서 **적색은 실패에만, 주황은 대기에만** 쓴다. 색만으로 가르지 않도록
+       실선/점선(매체)과 아이콘(범례·로그 꼬리표)을 함께 건다. */
+    --wait: #fb923c;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
@@ -80,6 +107,14 @@
 
   /* 조작 손잡이 줄은 걷어냈다(URL 파라미터로만 조작). 남은 것은 재실행 알림뿐. */
   .dim { color: var(--dim); }
+  /* 상단 바는 두 단계다(사용자 결정 2026-09-03). 기본 줄에는 **무엇을 볼지**만 둔다 —
+     보기 전환 · 시나리오 · 체계 모드 · 실행. 판을 재는 손잡이(seed·관측시간)와 고정
+     배치 표기는 [고급 모의설정]으로 접는다.
+     ⚠️ 접되 **없애지 않는다** — 어떤 조건의 수치인지는 화면에서 확인할 수 있어야 한다
+        (기본값이 아닌 조건은 접혀 있어도 상태줄 칩에 그대로 뜬다). */
+  #adv { display: inline-flex; align-items: center; gap: 10px;
+    padding: 3px 9px; border: 1px solid var(--line); border-radius: 5px; background: #0d141d; }
+  #adv[hidden] { display: none; }
   /* 고정 배치 표기 — 조작은 못 하되 어떤 배치인지는 늘 보여야 한다 */
   #dep-fixed { color: var(--dim); font-size: 12px; }
   #dep-fixed b { color: var(--fg); font-weight: 600; }
@@ -96,17 +131,85 @@
   #pop-body button { text-align: left; display: flex; justify-content: space-between; gap: 8px; }
   #pop-body button .h { color: var(--dim); font-size: 11px; }
   #pop-warn { color: var(--warn); font-size: 11px; line-height: 1.45; margin-bottom: 8px; }
-  .edge.hot { opacity: .95 !important; }
-  .edge { cursor: pointer; }
+  /* ── 계선의 활성도 (사용자 결정 2026-09-03) ────────────────────────────────
+     종전에는 모든 선이 같은 밝기(.3~.42)로 상시 떠 있어, 지금 전문이 지나는 선이
+     나머지 100~220가닥에 묻혔다. 이제 **밝기가 곧 「지금 쓰이는가」**를 말한다:
+       · 기본(지금 안 쓰임)  opacity .12 — 자리는 남기되 거의 보이지 않는다
+       · .rel   이 항적의 경로  .40 — 항적 개별 보기의 「내 길」
+       · .hot   지금 교신 중    1.0 + 굵기 2.1배 + 발광 (점선 매체는 흐른다)
+       · .done  막 도착함       녹색으로 잠깐 — 「방금 끝났다」
+       · .unused 통행 0(토글)   회색 점선 — 「있는데 한 번도 안 쓰인 계선」
+     ⚠️ 굵기는 인라인 CSS 변수 `--w`로 준다 — 전문량에 따라 계선마다 다르기 때문이다.
+        stroke-width **속성**으로 주면 .hot의 배수 규칙이 그것을 이기지 못한다. */
+  .edge { fill: none; stroke-linecap: round; cursor: pointer;
+    stroke-width: var(--w, 2); opacity: .12;
+    transition: opacity .18s linear, stroke-width .18s linear, stroke .3s linear; }
+  #graph.alllinks .edge { opacity: .3; }
+  .edge.rel { opacity: .4; }
+  .edge.unused { stroke: #3a4759 !important; stroke-dasharray: 2 6 !important; opacity: .18; }
+  .edge.hot { opacity: 1; stroke-width: calc(var(--w, 2) * 2.1);
+    filter: drop-shadow(0 0 3.5px rgba(255,255,255,.5));
+    animation: edgeflow 1.1s linear infinite; }
+  @keyframes edgeflow { to { stroke-dashoffset: -32; } }
+  .edge.done { opacity: .85; stroke: var(--ok) !important; }
   .edge-hit { stroke: transparent; stroke-width: 14; fill: none; cursor: pointer; }
   .edge.overridden { stroke-dasharray: 1 5 !important; }
   .ovrmark { fill: var(--warn); font-size: 11px; }
+  /* 계선 라벨 — 평상시엔 감추고 손을 올린 계선에만 매체명이 뜬다. 상시 표시하면
+     118~223가닥의 라벨이 그림을 통째로 덮는다(가장 먼저 복잡해지는 자리다).
+     활성 계선의 실시간 수치는 아래 .aggbadge(전문 N건 · 최장 N초)가 따로 맡는다. */
+  .elabel { font-size: 9px; fill: #cfe0f5; opacity: 0; pointer-events: none;
+    paint-order: stroke; stroke: #0b1017; stroke-width: 2.6; transition: opacity .12s linear; }
+  .elabel.on { opacity: .95; }
+  /* 전문 묶음 배지 — 「12건 · 최장 18초」. 누르면 그 계선만 개별 전문으로 펼친다. */
+  .aggbadge { cursor: pointer; }
+  .aggbadge rect { fill: rgba(11,16,23,.9); stroke-width: 1; }
+  .aggbadge text { font-size: 9px; font-weight: 700; paint-order: stroke;
+    stroke: rgba(11,16,23,.9); stroke-width: 2; }
+  .agg-tok { stroke: #fff; stroke-width: 1.6; }
 
   /* ── 본문 3분할 ── */
   main { flex: 1; display: flex; min-height: 0; }
   #side { width: 340px; flex: none; display: flex; flex-direction: column;
     background: var(--panel2); border-right: 1px solid var(--line); min-height: 0; }
-  #stage { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  /* position:relative — 계선 범례가 그래프 위에 떠 있되 **스크롤을 따라가지 않게** 한다.
+     #graph-wrap 안에 두면 세로로 긴 그래프를 굴릴 때 범례가 위로 흘러가 사라진다. */
+  #stage { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0;
+    position: relative; }
+
+  /* ── 계선 범례(토글) ──────────────────────────────────────────────────────
+     「각 연결선이 뭘 의미하는가」는 그림을 보는 동안 손이 닿는 곳에 있어야 한다.
+     하단 접이 범례는 화면 전체의 설명서라 길고, 계선만 확인하려고 펴기에는 무겁다.
+     ⚠️ 기본은 닫힘이고, 닫으면 매체 강조도 함께 풀린다 — 켜진 줄 모르는 필터가
+        그래프에 남아 「선이 안 보인다」로 읽히면 안 된다. */
+  #linekey { position: absolute; z-index: 6; top: 8px; right: 12px; width: 272px;
+    max-height: calc(100% - 96px); overflow-y: auto;
+    background: rgba(13,20,29,.96); border: 1px solid #33456b; border-radius: 8px;
+    box-shadow: 0 12px 34px rgba(0,0,0,.6); font-size: 11px; }
+  #linekey[hidden] { display: none; }
+  .lk-h { display: flex; justify-content: space-between; align-items: center; gap: 6px;
+    padding: 6px 9px; border-bottom: 1px solid var(--line); font-weight: 700; }
+  .lk-h button { padding: 0 7px; line-height: 18px; }
+  .lk-sec { padding: 6px 9px 2px; color: var(--dim); font-size: 10px; }
+  .lk { display: flex; align-items: center; gap: 7px; padding: 3px 9px; cursor: pointer;
+    border-left: 3px solid transparent; }
+  .lk:hover { background: #16202e; }
+  .lk.on { background: #17293f; border-left-color: var(--accent); }
+  .lk.none { opacity: .4; cursor: default; }
+  .lk.none:hover { background: none; }
+  .lk i { flex: none; width: 26px; height: 0; border-top-style: solid; display: inline-block; }
+  .lk .tg { flex: none; width: 28px; font-weight: 700; }
+  .lk .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lk .n { flex: none; color: var(--dim); font-variant-numeric: tabular-nums; font-size: 10px; }
+  .lk-note { padding: 3px 9px; color: var(--dim); line-height: 1.55; }
+  .lk-note b { color: var(--fg); font-weight: 600; }
+  .lk-kind { display: flex; flex-wrap: wrap; gap: 3px 8px; padding: 2px 9px 5px; }
+  .lk-kind span { color: var(--dim); }
+  .lk-kind b { color: var(--fg); font-weight: 600; }
+  /* 매체 강조 — 고른 매체만 남기고 나머지 계선·화살촉·라벨을 죽인다. */
+  .edgeg.mtoff { opacity: .1; }
+  .earrow.mtoff { opacity: .07; }
+  .elabel.mtoff { display: none; }
   /* 패널 접기 — 발표할 때는 그래프가 주인공이고, 분석할 때는 로그가 항적으로 내려가는
      입구다. 둘 중 하나를 고를 이유가 없어 **없애지 않고 접는다**.
      ⚠️ `#side{display:flex}`가 UA 기본 `[hidden]{display:none}`을 **이긴다** — 바로 아래
@@ -124,8 +227,51 @@
     display: flex; justify-content: space-between; align-items: center; gap: 6px; }
   .scroll { overflow-y: auto; overflow-x: hidden; }
 
+  /* ── 패널 정보 계층 (사용자 결정 2026-09-03) ──────────────────────────────
+     위에서부터 **지금 중요한 것** 순으로 세운다:
+       ① 현재 병목 노드 → ② 노드 부하 순위 / 항적 목록 → ③ 현재 활성 교신 ·
+       선택 항적 결과 → ④ 전체 이벤트 로그(기본 접힘)
+     이벤트 로그는 길고 과거를 향한다. 접어 두되 **없애지는 않는다** — 로그 줄은
+     항적 개별 보기로 내려가는 입구다(openRowTracks). 대신 접힌 동안에도 ①③이
+     같은 입구를 제공한다(병목 카드·활성 교신 줄 클릭). */
+  #bneck { flex: none; padding: 7px 10px; border-bottom: 1px solid var(--line);
+    background: #101a26; cursor: pointer; }
+  #bneck.jam { background: #22141a; box-shadow: inset 3px 0 0 var(--bad); }
+  #bneck.busy { background: #201a12; box-shadow: inset 3px 0 0 var(--wait); }
+  #bneck .h { font-size: 10px; color: var(--dim); }
+  #bneck .n { font-size: 13px; font-weight: 700; }
+  #bneck .s { font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  #bneck .s b { color: var(--fg); font-weight: 600; }
+  #bneck .s .w { color: var(--wait); font-weight: 700; }
+  #bneck .s .d { color: var(--bad); font-weight: 700; }
+
+  /* 현재 활성 교신 — 「지금 선 위에 떠 있는 전문」의 목록. 그래프의 움직이는 점과
+     같은 재료이고, 점을 눈으로 좇지 못할 때 읽는 자리다. */
+  #live { flex: 0 1 auto; max-height: 34%; min-height: 56px; }
+  #live-body { padding: 2px 0; }
+  .lv { display: flex; gap: 6px; align-items: baseline; padding: 2px 10px; font-size: 11px;
+    border-left: 3px solid transparent; cursor: pointer; }
+  .lv:hover { background: #17293f; border-left-color: var(--accent); }
+  .lv .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lv .md { flex: none; font-size: 10px; }
+  .lv .tm { flex: none; color: var(--dim); font-variant-numeric: tabular-nums; font-size: 10px; }
+  .lv .tm.slow { color: var(--wait); font-weight: 700; }
+  /* 선택 항적 결과 — 개별 보기에서 활성 교신 위에 얹는다(신호등의 글줄 판) */
+  .lvsum { padding: 5px 10px; border-bottom: 1px solid var(--line); font-size: 11.5px; }
+  .lvsum b { font-weight: 700; }
+  .lvsum.leak { color: var(--bad); }
+  .lvsum.kill { color: var(--ok); }
+  .lvsum .sub { color: var(--dim); font-size: 10.5px; display: block; margin-top: 1px; }
+
+  /* 접이식 섹션 — 제목 줄을 눌러 접는다 */
+  .sec > h2 .fold { flex: none; color: var(--dim); font-size: 10px; }
+  .sec.folded { flex: none !important; }
+  .sec.folded > .scroll, .sec.folded > #log-trk-bar { display: none; }
+  .sec > h2.clk { cursor: pointer; }
+  .sec > h2.clk:hover { color: var(--fg); background: #16202e; }
+
   /* 항적 목록 */
-  #tracks { flex: 0 0 34%; }
+  #tracks { flex: 1 1 30%; min-height: 110px; }
   #track-list { padding: 2px 0; }
   .trk { display: flex; align-items: center; gap: 6px; padding: 4px 10px; cursor: pointer;
     border-left: 3px solid transparent; }
@@ -139,10 +285,8 @@
   .pill.idle { color: var(--dim); border-color: var(--line); }
   .pill.dup { color: #f0a060; border-color: #6b4a20; }
 
-  #tracks { flex: 0 0 34%; }
-
   /* 이벤트 로그 */
-  #log { flex: 1; }
+  #log { flex: 1 1 34%; }
   #log-body { padding: 2px 0 40px; }
   /* 전체 흐름 좌하단 로그의 모드 스위치(항적/병목)·항적 선택줄.
      ⚠️ display를 직접 주는 요소는 [hidden]을 이긴다(#signal과 같은 함정) — 짝을 꼭 둔다. */
@@ -161,8 +305,21 @@
   .ev .res { flex-basis: 100%; margin-left: 59px; font-size: 11px; line-height: 1.35;
     white-space: normal; word-break: keep-all; }
   .ev .res::before { content: '↳ '; color: var(--dim); }
+  /* 종결·분기 마크는 색으로 가른다 — 로그를 스크롤할 때 「어디서 끝났나 / 어디서 못
+     쐈나」가 먼저 눈에 들어와야 한다. 누수와 발사불가를 같은 회색으로 두면 둘 다 묻힌다. */
+  .ev.leak .x { color: var(--bad); font-weight: 700; }
+  .ev.leak .res { color: var(--bad); }
+  .ev.fail .x { color: var(--warn); font-weight: 700; }
+  .ev.hit .x { color: var(--ok); font-weight: 700; }
+  .ev.shot .x { color: var(--accent); }
   .ev .t { color: var(--dim); flex: none; width: 52px; text-align: right; font-size: 11px; }
-  .ev .x { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* 줄바꿈한다. nowrap+ellipsis 였을 때 노드 이름을 배치 이름으로 푼 뒤로는 거의 모든
+     줄이 오른쪽 끝에서 잘려 나갔다 — 「발사 못함 — 천궁-II (BAT_E1) · 요격점(PIP) 미성립」
+     에서 **사유가 통째로** 사라지는 식이다(CDP 측정 2026-09-03: 10줄이 최대 201px 잘림).
+     로그는 근거로 읽는 화면이므로 높이를 내주고 글자를 살린다. keep-all로 한국어는
+     어절 단위로만 꺾는다. */
+  .ev .x { flex: 1; min-width: 0; white-space: normal; word-break: keep-all;
+    overflow-wrap: anywhere; }
   /* 줄 사이에 흐른 시간. **붉은 것은 병목(대기·막힘)뿐이다** — 공백은 C2가 막은 것이
      아니고(ADR-083 ④) 처리·이동은 일한 시간이라, 같이 붉히면 「C2가 막았다」가 부풀려진다.
      ⚠️ .now/.past보다 **먼저** 선언한다. 붉은 배경이 현재 줄 강조를 덮으면 어디를
@@ -199,8 +356,8 @@
   .sig .sub { font-weight: 400; opacity: .75; font-size: 11px; }
   .sig.go    { border-color: #1c6448; color: var(--ok); }
   .sig.go    .lamp { background: var(--ok); }
-  .sig.wait  { border-color: #6b5220; color: var(--warn); }
-  .sig.wait  .lamp { background: var(--warn); animation: blink 1.1s infinite; }
+  .sig.wait  { border-color: #7a4a1c; color: var(--wait); }
+  .sig.wait  .lamp { background: var(--wait); animation: blink 1.1s infinite; }
   .sig.stop  { border-color: #6b2b2b; color: var(--bad); }
   .sig.stop  .lamp { background: var(--bad); animation: blink .7s infinite; }
   .sig.idle  { border-color: var(--line); color: var(--dim); }
@@ -209,7 +366,7 @@
 
   /* 막힌 지점 강조 — 신호등이 가리키는 곳을 그래프에서도 짚는다 */
   .blockmark { fill: none; stroke: var(--bad); stroke-width: 2.5; animation: blink 1.1s infinite; }
-  .blockmark.wait { stroke: var(--warn); }
+  .blockmark.wait { stroke: var(--wait); }
   .wantpath { fill: none; stroke: var(--bad); stroke-width: 5; opacity: .3;
     stroke-dasharray: 9 6; animation: crawl 1.4s linear infinite; }
   @keyframes crawl { to { stroke-dashoffset: -15; } }
@@ -235,7 +392,7 @@
   /* 이 항적과 무관한 노드 — [전체 흐름]과 **같은 자리**에 흐릿하게 남긴다.
      자리를 지워 버리면 「어디를 안 거쳤나」가 안 보이고, 탭을 오갈 때 배치가 달라져
      눈이 매번 다시 익혀야 한다(사용자 결정 2026-09-02). */
-  .idleg { opacity: .34; }
+  .idleg { opacity: .16; }
   .idleg:hover { opacity: .85; }
   .idlen { fill: #131c28; stroke: #33445c; stroke-width: 1.2; }
   .idlen.sensor { stroke: #1c8ea3; }
@@ -246,17 +403,42 @@
      노드에서 처리·대기하는 동안은 그 노드 옆에 머문다. 종전에는 전송 중일 때만 점이 있어
      노드에 머무는 구간에서 공이 사라졌다(사용자 지적 2026-09-03). */
   .tok { fill: #0b1017; stroke: #dbe4f0; stroke-width: 2; }
-  .tok.wait { stroke: var(--warn); stroke-dasharray: 3.5 2.5; }
+  .tok.wait { stroke: var(--wait); stroke-dasharray: 3.5 2.5; }
   .tok.work { stroke: var(--accent); }
   .tok.move { stroke: #fff; }
   .toklab { fill: #dbe4f0; font-size: 9px; paint-order: stroke; stroke: #0b1017; stroke-width: 2.5; }
   /* 이동 꼬리 — 길이가 곧 속도다. 데이터링크 1초는 선을 거의 다 덮는 긴 자국을 남기고,
      음성 20초는 짧은 자국만 남긴다. 「빠른 것은 순식간」을 형태로 읽게 한다. */
   .trail { fill: none; stroke-linecap: round; opacity: .5; }
-  .edge { fill: none; stroke-linecap: round; }
   .dot { stroke: #04121f; stroke-width: .8; }
   .dotlab { font-size: 9px; fill: #cfe0f5; paint-order: stroke; stroke: #04121f; stroke-width: 2.5; }
-  .qbadge { font-size: 9px; fill: #fbbf24; }
+  .qbadge { font-size: 9px; fill: var(--wait); }
+
+  /* ── 노드 상태 배지 (사용자 결정 2026-09-03) ─────────────────────────────
+     테두리·맥동은 **우선순위가 높은 상태 하나만** 말한다(처리 중이면 교신이 가려진다).
+     동시에 벌어지는 일은 세어서 나란히 적는다: ● 처리 · ○ 대기 · ↔ 교신 · ✕ 드롭.
+     ⚠️ 지어낸 값이 아니다 — ●·⏳는 stateAt(t)의 busy·q, ↔는 지금 이 노드를 끝점으로
+        계선 위에 떠 있는 전문 수, ⚠는 시각 t까지의 넘침·기한 드롭 누계다.
+        항적 종결로 큐를 비운 것(dead)은 실패가 아니므로 ⚠에 넣지 않는다. */
+  .nbadge { font-size: 8.5px; font-weight: 700; paint-order: stroke;
+    stroke: #0b1017; stroke-width: 2.4; pointer-events: none; }
+  .nbadge .b-work { fill: var(--accent); }
+  .nbadge .b-wait { fill: var(--wait); }
+  .nbadge .b-talk { fill: #cfe0f5; }
+  .nbadge .b-drop { fill: var(--bad); }
+  .nbadge .b-idle { fill: #55637a; font-weight: 400; }
+  /* 큐 점유 막대 — **대기실(K)** 대비 지금 줄 선 건수. 포화에 가까울수록 황 → 주황 → 적.
+     실린더가 「처리 슬롯」을 말한다면 이 막대는 「대기실이 얼마나 찼나」를 말한다 —
+     넘침(드롭)은 대기실이 꽉 찰 때 나므로, 병목의 임박은 여기서 먼저 보인다. */
+  .qbar-bg { fill: #1a2534; }
+  .qbar-i { fill: var(--warn); }
+  .qbar-i.mid { fill: var(--wait); }
+  .qbar-i.hi { fill: var(--bad); }
+  /* 노드 이름의 세 위계 — 제대·분류(위, 작게) · 이름(가운데, 크게) · 상태/인스턴스(아래).
+     ⚠️ 자리가 넉넉한 열에만 세운다(placeSlots의 pitch로 판정) — 센서 19줄처럼 빽빽한
+        열에 세 줄을 넣으면 아랫줄이 다음 노드 위로 올라탄다. */
+  .ntier { fill: #55637a; font-size: 8px; }
+  .nname { fill: #dbe4f0; font-size: 11px; font-weight: 700; }
 
   /* ── 좌→우 방향 표기 (ADR-088) ────────────────────────────────────────────
      간선이 어느 쪽으로 흐르는지 **정지 상태에서도** 보여야 한다. 종전에는 점이
@@ -264,6 +446,7 @@
      양방향처럼 보였다. 화살촉을 선 위 62% 지점에 접선 방향으로 박는다. */
   .earrow { opacity: .55; }
   .earrow.back { opacity: .8; }
+  .earrow.unused { opacity: .22; fill: #3a4759; }
   /* 열 활성 — 지금 무슨 일이 벌어지는 열을 밝힌다. 시간이 흐르면 밝은 띠가
      좌에서 우로 옮겨 가고, 그것이 곧 「항적의 움직임에 C2가 반응하는」 그림이다. */
   .colband { transition: fill .18s linear; }
@@ -283,7 +466,7 @@
   .cyl-edge { fill: none; stroke: #34435a; stroke-width: 1.4; }
   .cyl-cap { fill: #1b2637; stroke: #34435a; stroke-width: 1.4; }
   .cyl-fill { fill: var(--accent); opacity: .85; transition: none; }
-  .cyl.full .cyl-fill { fill: var(--warn); }
+  .cyl.full .cyl-fill { fill: var(--wait); }
   .cyl.jam  .cyl-fill { fill: var(--bad); }
   /* ── 작업 맥동 — 「빠르면 빨리, 느리면 천천히 깜빡인다」 (ADR-088) ─────────
      작업중인 노드가 깜빡이고, **그 주기가 곧 지금 처리 중인 작업의 서비스 시간**이다.
@@ -301,7 +484,7 @@
   @keyframes cylrim  { 0%, 100% { stroke: #34435a; stroke-width: 1.2 } 50% { stroke: #7fb6ff; stroke-width: 2.6 } }
   .cyl.full.working .cyl-edge { animation-name: cylrim-full; }
   .cyl.jam.working  .cyl-edge { animation-name: cylrim-jam; }
-  @keyframes cylrim-full { 0%, 100% { stroke: #34435a; stroke-width: 1.2 } 50% { stroke: var(--warn); stroke-width: 2.6 } }
+  @keyframes cylrim-full { 0%, 100% { stroke: #34435a; stroke-width: 1.2 } 50% { stroke: var(--wait); stroke-width: 2.6 } }
   @keyframes cylrim-jam  { 0%, 100% { stroke: var(--bad); stroke-width: 2 } 50% { stroke: #ffd0d0; stroke-width: 3 } }
   /* 실린더를 못 그린 자리(밀집 열·센서·사수)의 동그라미도 **같은 규칙으로** 깜빡인다.
      사수의 발사 처리는 40~60초라 눈에 띄게 느리게 고동친다 — 그것이 사실이다. */
@@ -326,7 +509,7 @@
      단위 없이 숫자만 견주면 서로 다른 양을 비교하게 된다(실제 오독 문답). */
   .cyl-num .u { font-size: 6.5px; font-weight: 400; fill: var(--dim); }
   /* 대기 디스크 — 쌓일수록 위로 자란다 */
-  .cyl-qd { fill: var(--warn); opacity: .9; }
+  .cyl-qd { fill: var(--wait); opacity: .9; }
   .cyl.jam .cyl-qd { fill: var(--bad); }
   .cyl-qn { font-size: 9px; font-weight: 700; fill: var(--bad);
     paint-order: stroke; stroke: #0b1017; stroke-width: 2.4; }
@@ -355,12 +538,12 @@
   .nodeg.s-det .qbadge { fill: #22d3ee; }
   .nodeg.s-trk .qbadge { fill: #4da3ff; }
   .nodeg.s-fc  .qbadge { fill: var(--ok); }
-  .qtail { font-size: 9px; fill: var(--warn); paint-order: stroke; stroke: #0b1017; stroke-width: 2; }
+  .qtail { font-size: 9px; fill: var(--wait); paint-order: stroke; stroke: #0b1017; stroke-width: 2; }
   .flash { fill: none; stroke: var(--bad); stroke-width: 2; opacity: .9; pointer-events: none; }
   /* 「못 가는」 전문 — 움직이는 점(채운 원)과 반드시 달라 보여야 한다: 점선 테두리 빈 원 */
-  .wait-dot { fill: rgba(251,191,36,.12); stroke: var(--warn); stroke-width: 1.8; stroke-dasharray: 3 2; }
+  .wait-dot { fill: rgba(251,146,60,.12); stroke: var(--wait); stroke-width: 1.8; stroke-dasharray: 3 2; }
   .wait-dot.forever { stroke: var(--bad); fill: rgba(248,113,113,.14); }
-  .blocklab { font-size: 9.5px; fill: var(--warn); font-weight: 700;
+  .blocklab { font-size: 9.5px; fill: var(--wait); font-weight: 700;
     paint-order: stroke; stroke: #0b1017; stroke-width: 2.6; }
   .drop-x line { stroke: var(--bad); stroke-width: 2.4; stroke-linecap: round; }
   /* 종결 배너 — 격추/누수를 그래프 위에 못박는다 */
@@ -373,7 +556,6 @@
   .endbanner.leak .sub { fill: #c9899a; }
   .endbanner.kill rect { stroke: #1c6448; }
   .endbanner.kill text { fill: var(--ok); }
-  .edge.hot { opacity: .95 !important; }
   svg.hide-sensor .sensor-edge { display: none; }
   .dot[data-th] { cursor: pointer; }
 
@@ -385,7 +567,7 @@
   .rk .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rk .bar { flex: none; width: 64px; height: 7px; background: #1a2534; border-radius: 3px; overflow: hidden; }
   .rk .bar i { display: block; height: 100%; background: var(--accent); }
-  .rk.full .bar i { background: var(--warn); }
+  .rk.full .bar i { background: var(--wait); }
   .rk.jam .bar i { background: var(--bad); }
   .rk .st { flex: none; width: 86px; text-align: right; color: var(--dim); font-size: 11px; }
   .rk .st b { color: var(--fg); font-weight: 600; }
@@ -395,13 +577,13 @@
   .ev.overflow .x { color: var(--bad); }
   .ev.ttl .x { color: #f0a060; }
   .ev.dead .x { color: var(--dim); }
-  .ev.sat .x { color: var(--warn); }
+  .ev.sat .x { color: var(--wait); }
   .ev.chdrop .x { color: var(--bad); font-weight: 600; }
   .ev.leak .x { color: var(--bad); font-weight: 700; }
   .ev.leak .t { color: var(--bad); }
   .ev.dup .x { color: #f0a060; font-weight: 600; }
-  .ev.chwait .x { color: var(--warn); }
-  .ev.block .x { color: var(--warn); }
+  .ev.chwait .x { color: var(--wait); }
+  .ev.block .x { color: var(--wait); }
   /* 항적이 걸린 줄은 눌러서 그 항적의 개별 보기로 내려간다. 화살표는 **별도 칸**으로 둔다 —
      .x 안에 넣으면 말줄임(ellipsis)에 잘려 「누를 수 있다」가 긴 줄에서만 사라진다. */
   .ev.hit { cursor: pointer; }
@@ -416,12 +598,37 @@
   .evtrk .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
   #ticks i.bad { background: var(--bad); height: 9px; }
 
-  /* 하단 재생 바 */
-  #transport { flex: none; display: flex; align-items: center; gap: 10px; padding: 7px 12px;
-    background: var(--panel); border-top: 1px solid var(--line); flex-wrap: wrap; }
+  /* ── 하단 재생 바 — 진행률 막대가 아니라 **다중 레인 타임라인** ─────────────
+     종전에는 스크럽 막대 하나뿐이라 「지금 몇 초인가」만 알 수 있었다. 정작 알고 싶은
+     것은 **어느 단계에서 시간이 갔는가**다. 레인 다섯 줄로 나눠 같은 시간축 위에
+     겹쳐 놓으면, 네트워크 그림과 시간 배분을 한 눈에 같이 읽는다:
+       탐지·보고 / MCRC·KAMDOC 처리 / AOC·JAOC·ICC 처리 / ECS 교전통제 / 요격·타격
+     ⚠️ 막대의 재료는 실행 기록 그대로다(체류 na/ns/nd·계선 link). 진한 칸은 **처리**,
+        연한 칸은 **대기**다 — 시간이 어디서 갔는지는 대개 연한 칸이 말한다.
+     ⚠️ 시간축은 스크럽과 **같은 축**이다(전체 보기 = 실행 전 구간, 개별 보기 = 그 항적의
+        생존 구간). 축이 어긋나면 눌러서 가는 시각이 그림과 달라진다. */
+  #transport { flex: none; display: flex; flex-direction: column; gap: 5px; padding: 6px 12px 8px;
+    background: var(--panel); border-top: 1px solid var(--line); }
+  #tp-ctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #tp-time { display: flex; gap: 8px; align-items: stretch; }
+  #lane-names { flex: none; width: 118px; display: flex; flex-direction: column;
+    gap: 1px; font-size: 9.5px; color: var(--dim); padding-top: 1px; }
+  #lane-names span { height: 11px; line-height: 11px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  #lane-names span.off { opacity: .3; }
+  #tp-plot { flex: 1; min-width: 0; }
+  #lanes { position: relative; height: 60px; cursor: pointer;
+    background: #0c121a; border: 1px solid var(--line); border-radius: 3px; }
+  #lanes svg { width: 100%; height: 100%; display: block; }
+  #lane-head { position: absolute; top: 0; bottom: 0; width: 1px; background: #fff;
+    opacity: .8; pointer-events: none; }
+  #lanes .lane-row { fill: #0c121a; }
+  #lanes .lane-alt { fill: #0e1520; }
+  #lanes .lane-wait { fill: var(--wait); }
+  #lanes .lane-work { fill: currentColor; }
   /* 스크럽 막대 위에 사건 눈금을 겹쳐 둔다 — 눈금이 없는 넓은 구간이 곧 「아무 일도
      일어나지 않는 시간」이고, 그것을 안 보이게 두면 재생이 멈춘 것으로 오해된다. */
-  #scrub-wrap { flex: 1; min-width: 180px; position: relative; display: block; }
+  #scrub-wrap { display: block; position: relative; margin-top: 2px; }
   #ticks { position: absolute; left: 0; right: 0; top: 2px; height: 7px; pointer-events: none; }
   #ticks i { position: absolute; top: 0; width: 1px; height: 7px; background: #64809f; }
   #scrub { width: 100%; accent-color: var(--accent); margin-top: 6px; }
@@ -451,16 +658,20 @@
 
 <header>
   <h1>🛰 지휘 흐름</h1>
+  <!-- 기본 줄 — 「무엇을 볼지」만. 판을 재는 손잡이는 [고급 모의설정]으로 접는다. -->
+  <span class="modesw" id="viewsw">
+    <button id="v-all" class="on" title="전 항적을 겹쳐 노드 케파·병목을 본다">전체 흐름</button><button id="v-track" title="항적 하나의 전문 이동을 따라간다">항적 개별</button>
+  </span>
   <label>시나리오 <select id="sc"></select></label>
-  <span id="dep-fixed" title="이 화면은 배치를 고정한다 — 본 앱·기준선과 같은 legacy 정상 배치">배치 <b></b></span>
   <span class="modesw">
     <button id="m-asis" class="on">As-Is 분절형</button><button id="m-tobe">To-Be 통합형</button>
   </span>
-  <label>seed <input id="seed" class="mono" type="number" value="29" style="width:78px"></label>
-  <label>관측 <input id="dur" class="mono" type="number" value="600" step="60" style="width:64px">초</label>
-  <button id="run">▶ 실행</button>
-  <span class="modesw" id="viewsw">
-    <button id="v-all" class="on" title="전 항적을 겹쳐 노드 케파·병목을 본다">전체 흐름</button><button id="v-track" title="항적 하나의 전문 이동을 따라간다">항적 개별</button>
+  <button id="run">▶ 모의 실행</button>
+  <button id="adv-toggle" title="배치·seed·관측시간 — 판을 재는 조건. 접혀 있어도 기본값이 아닌 조건은 상태줄에 뜬다">⚙ 고급 모의설정</button>
+  <span id="adv" hidden>
+    <span id="dep-fixed" title="이 화면은 배치를 고정한다 — 본 앱·기준선과 같은 legacy 정상 배치">배치 <b></b></span>
+    <label>seed <input id="seed" class="mono" type="number" value="29" style="width:78px"></label>
+    <label>관측 <input id="dur" class="mono" type="number" value="600" step="60" style="width:64px">초</label>
   </span>
   <button id="side-toggle" title="왼쪽 패널을 접고 그래프를 넓게 쓴다">‹ 패널 접기</button>
   <span id="dirty" hidden>⟳ 조건이 바뀌었습니다 — [실행]</span>
@@ -487,12 +698,21 @@
 
 <main>
   <aside id="side">
+    <!-- ① 현재 병목 — 「지금 어디가 막혔나」를 추론하게 두지 않고 한 줄로 적는다.
+         눌러서 그 노드로 초점을 옮긴다(그래프 강조 + 병목/처리 로그 필터). -->
+    <div id="bneck"><span class="h">현재 병목</span><div class="n">—</div><div class="s">실행을 눌러 시작합니다.</div></div>
     <section class="sec" id="tracks">
       <h2><span id="tracks-label">항적 (이벤트)</span><span id="track-count"></span></h2>
       <div class="scroll" id="track-list"><div class="empty">아직 실행하지 않았습니다.</div></div>
     </section>
-    <section class="sec" id="log">
-      <h2><span id="log-title">이벤트 로그</span><span class="minisw" id="log-mode" hidden><button id="lm-c2" title="C2 노드 하나를 골라 그 노드의 처리 로그(도착·대기·처리·드롭)를 읽는다 — 전체 화면은 그대로 둔다">C2 처리</button><button id="lm-bot" title="넘침·큐 이탈·포화 등 병목 사건만 모아 본다">병목</button></span><span id="log-hint"></span></h2>
+    <!-- ③ 현재 활성 교신 (개별 보기에서는 그 위에 「선택 항적 결과」를 얹는다) -->
+    <section class="sec" id="live">
+      <h2><span id="live-title">현재 활성 교신</span><span id="live-count"></span></h2>
+      <div class="scroll" id="live-body"><div class="empty">아직 실행하지 않았습니다.</div></div>
+    </section>
+    <!-- ④ 전체 이벤트 로그 — 기본 접힘. 제목 줄을 눌러 편다. -->
+    <section class="sec folded" id="log">
+      <h2 class="clk" id="log-h2"><span class="fold">▸</span><span id="log-title">이벤트 로그</span><span class="minisw" id="log-mode" hidden><button id="lm-c2" title="C2 노드 하나를 골라 그 노드의 처리 로그(도착·대기·처리·드롭)를 읽는다 — 전체 화면은 그대로 둔다">C2 처리</button><button id="lm-bot" title="넘침·큐 이탈·포화 등 병목 사건만 모아 본다">병목</button></span><span id="log-hint"></span></h2>
       <div id="log-trk-bar" hidden>
         <select id="log-trk-sel" title="처리 로그를 볼 C2 노드"></select>
       </div>
@@ -501,24 +721,42 @@
   </aside>
 
   <section id="stage">
+    <!-- 계선 범례 — 「이 선이 무엇인가」를 그림 옆에서 바로 확인하는 자리(토글).
+         ⚠️ 하단 [범례] 접이판과 역할이 다르다. 저것은 화면 전체의 설명서이고, 이것은
+            **지금 실행에 실제로 있는 계선만** 건수와 함께 세우고, 누르면 그 매체만
+            남기고 나머지를 죽이는 **조작 가능한** 범례다. -->
+    <div id="linekey" hidden>
+      <div class="lk-h"><span>계선 범례 — 이 선이 무엇인가</span><button id="linekey-close" title="닫기 (매체 강조도 함께 풀린다)">✕</button></div>
+      <div id="linekey-body"></div>
+    </div>
     <!-- 신호등 — 「지금 이 항적이 어디서 무엇을 기다리는가」를 추론하게 두지 않고 직접 적는다. -->
     <div id="graph-wrap"><div id="signal" hidden></div><svg id="graph"></svg></div>
     <div id="transport">
-      <button id="play" disabled>▶</button>
-      <button id="skip" disabled title="다음 사건까지 건너뛴다 — 항적 하나에는 아무 일도 일어나지 않는 긴 구간이 있다">⏭ 다음 사건</button>
-      <span id="clock" class="mono">—</span>
-      <span id="scrub-wrap"><span id="ticks"></span><input id="scrub" type="range" min="0" max="1000" value="0" disabled></span>
-      <span class="spd">배속
-        <button data-spd="1" class="on">×1</button><button data-spd="5">×5</button><button data-spd="20">×20</button><button data-spd="60">×60</button>
-      </span>
-      <label><input type="checkbox" id="show-sensor"> 센서 보고 표시</label>
-      <label title="이 항적과 무관한 노드를 배치 전체에서 반투명으로 함께 그린다 — 「쓰이지 않은 제대·포대」가 보인다"><input type="checkbox" id="show-idle" checked> 미사용 노드 표시</label>
+      <div id="tp-ctl">
+        <button id="play" disabled>▶</button>
+        <button id="skip" disabled title="다음 사건까지 건너뛴다 — 항적 하나에는 아무 일도 일어나지 않는 긴 구간이 있다">⏭ 다음 사건</button>
+        <span id="clock" class="mono">—</span>
+        <span class="spd">배속
+          <button data-spd="0.5">×0.5</button><button data-spd="1" class="on">×1</button><button data-spd="5">×5</button><button data-spd="20">×20</button><button data-spd="60">×60</button>
+        </span>
+        <label><input type="checkbox" id="show-sensor"> 센서 보고 표시</label>
+        <label title="이 항적과 무관한 노드를 배치 전체에서 반투명으로 함께 그린다 — 「쓰이지 않은 제대·포대」가 보인다"><input type="checkbox" id="show-idle" checked> 미사용 노드 표시</label>
+        <label title="통행이 한 건도 없던 계선까지 회색 점선으로 함께 그린다 — 「있는데 안 쓰인 계선」이 보인다"><input type="checkbox" id="show-alllinks"> 전체 계선 표시</label>
+        <button id="key-toggle" title="각 연결선이 무엇을 뜻하는지 — 매체·계선 종류·방향·상태. 매체를 누르면 그것만 남는다">▤ 계선 범례</button>
+      </div>
+      <div id="tp-time">
+        <div id="lane-names"></div>
+        <div id="tp-plot">
+          <div id="lanes" title="어느 단계에서 시간이 갔는가 — 진한 칸 = 처리, 연한 칸 = 대기. 눌러서 그 시각으로 간다"><svg id="lanesvg" preserveAspectRatio="none"></svg><i id="lane-head" style="left:0"></i></div>
+          <span id="scrub-wrap"><span id="ticks"></span><input id="scrub" type="range" min="0" max="1000" value="0" disabled></span>
+        </div>
+      </div>
     </div>
     <!-- 범례는 기본 접힘. 네 줄이 화면 하단을 계속 먹던 것을 접었다.
          ⚠️ 접되 **없애지는 않는다** — 색·모양이 뜻하는 바를 모르면 화면을 오독한다.
             접힌 상태에서도 무엇이 들어 있는지 한 줄로 알린다. -->
     <details id="legend-box">
-      <summary>범례 — 작업·교신 맥동(빠른 자리·굼뜬 자리) · 매체별 이동 속도 · 케파 실린더 · 못 가는 전문</summary>
+      <summary>범례(전체) — 색 체계(계선 ↔ 상태) · 계선 활성도 · 전문 묶음 · 노드 배지·큐 막대 · 작업·교신 맥동 · 레인 타임라인 &nbsp;— 계선만 빠르게 보려면 위 [▤ 계선 범례]</summary>
       <div id="legend"></div>
     </details>
   </section>
@@ -556,18 +794,34 @@ installIadsKernel(KJ);
  * 실행이 뽑은 건별 값(`d`)이다 — 범례의 숫자는 "대략 이 정도" 이상을 뜻하지 않는다.
  * 출처: js/config/deployment-adapter.js 상단 상수(DL_FAST·VOICE·CHAT_TRACK·VOICE_STATUS…).
  */
+/*
+ * ⚠️ 색 체계는 **상태 색과 갈라 둔다**(사용자 결정 2026-09-03 · :root 주석 참조).
+ *    종전 음성/VTC는 적색(#ef4444), 문자는 주황(#fb923c)이었다 — 실패·드롭(적)과
+ *    대기·지연(주황)이 쓰는 바로 그 색이라, 붉은 선이 「VTC 계선」인지 「실패」인지
+ *    화면만 보고 가를 수 없었다. 이제 매체는 **계통 색**만 쓴다:
+ *      · 항적·정보 전송 — 청 계열   · 지휘·협조 — 보라
+ *      · 음성·문자·유선 — 황 계열   · 체계 내부/통보 — 회색
+ *    적·주황은 상태 전용이다. 색맹 독자를 위해 색 하나에 기대지 않는다 —
+ *    **실선/점선 모양(dash)** 과 **글자 꼬리표(tag)** 를 함께 건다(범례·묶음 배지).
+ */
 const MEDIA = {
-  'datalink':     { label: '데이터링크',      color: '#38bdf8', w: 2.4, dash: null,    hint: '1~2초' },
-  'ifcn':         { label: 'IFCN 킬웹',       color: '#5eead4', w: 2.4, dash: null,    hint: '1초 · To-Be' },
-  'internal':     { label: '체계 내부',       color: '#64748b', w: 2.0, dash: null,    hint: '1초' },
-  'report-cycle': { label: '센서 보고주기',   color: '#22d3ee', w: 1.8, dash: null,    hint: '센서별 주기' },
-  'kvmf-relay':   { label: 'KVMF 상급경유',   color: '#a78bfa', w: 2.4, dash: '6 4',   hint: '30초' },
-  'voice':        { label: '음성 협조',       color: '#fbbf24', w: 2.6, dash: '6 4',   hint: '평균 20초' },
-  'chat':         { label: '문자(서버 채팅)', color: '#fb923c', w: 2.6, dash: '6 4',   hint: '평균 45초' },
-  'voice-vtc':    { label: '음성/VTC',        color: '#ef4444', w: 3.2, dash: '6 4',   hint: '평균 135초 · 1채널 4건' },
-  'fanout':       { label: '병렬 통보',       color: '#475569', w: 1.6, dash: '2 3',   hint: '모델상 0초' }
+  'datalink':     { label: '데이터링크',      color: '#38bdf8', w: 2.4, dash: null,    hint: '1~2초',            cls: '항적·정보', tag: 'DL' },
+  'ifcn':         { label: 'IFCN 킬웹',       color: '#22d3ee', w: 2.4, dash: null,    hint: '1초 · To-Be',      cls: '항적·정보', tag: 'IF' },
+  'internal':     { label: '체계 내부',       color: '#64748b', w: 2.0, dash: null,    hint: '1초',              cls: '체계 내부', tag: 'IN' },
+  'report-cycle': { label: '센서 보고주기',   color: '#7dd3fc', w: 1.8, dash: null,    hint: '센서별 주기',      cls: '항적·정보', tag: 'RP' },
+  'kvmf-relay':   { label: 'KVMF 상급경유',   color: '#a78bfa', w: 2.4, dash: '6 4',   hint: '30초',             cls: '지휘·협조', tag: 'KV' },
+  'voice':        { label: '음성 협조',       color: '#fbbf24', w: 2.6, dash: '7 4',   hint: '평균 20초',        cls: '음성·문자·유선', tag: '음성' },
+  'chat':         { label: '문자(서버 채팅)', color: '#fde047', w: 2.6, dash: '2 4',   hint: '평균 45초',        cls: '음성·문자·유선', tag: '문자' },
+  'voice-vtc':    { label: '음성/VTC',        color: '#f59e0b', w: 3.2, dash: '11 5',  hint: '평균 135초 · 1채널 4건', cls: '음성·문자·유선', tag: 'VTC' },
+  'fanout':       { label: '병렬 통보',       color: '#475569', w: 1.6, dash: '2 3',   hint: '모델상 0초',       cls: '체계 내부', tag: '통보' }
 };
-const media = (t) => MEDIA[t] || { label: t, color: '#8892a4', w: 2, dash: null, hint: '' };
+const media = (t) => MEDIA[t] || { label: t, color: '#8892a4', w: 2, dash: null, hint: '', cls: '', tag: '?' };
+/** 계선 굵기 = 매체 기본 굵기 × 통행량(전문 건수) — 「많이 흐르는 계선」이 굵게 보인다.
+ *  로그 스케일이다: 1건과 200건이 200배 차이로 그려지면 굵은 선이 면이 된다. */
+function edgeWidth(m, n) {
+  const k = 0.72 + 0.42 * Math.log10(1 + Math.max(0, n || 0));
+  return Math.max(1.1, Math.min(5.4, m.w * k));
+}
 
 /**
  * 계선의 **종류**(kind) — 「무엇이 흐르는 계선인가」. 매체(어떻게 가는가)와 다른 축이다.
@@ -699,7 +953,10 @@ const PULSE = { min: 0.35, max: 3.0 };
  */
 function workPulseSec(st) {
   const svc = st && st.svcN ? st.svcSum / st.svcN : Infinity;
-  return Math.min(PULSE.max, Math.max(PULSE.min, svc / Math.max(1, speed)));
+  // ⚠️ 하한을 0.5로 둔 것은 **화면에 있는 가장 느린 배속**이 0.5이기 때문이다(종전 1).
+  //    0.5배속에서는 같은 작업이 벽시계로 두 배 오래 걸리므로 맥동도 그만큼 느려야
+  //    「주기 = 그 작업의 서비스 시간」이라는 계약이 유지된다(위 상한 3초에서 잘린다).
+  return Math.min(PULSE.max, Math.max(PULSE.min, svc / Math.max(.5, speed)));
 }
 /**
  * 맥동 주기를 인라인으로 건다.
@@ -714,8 +971,47 @@ function applyPulse(node, st) {
 /** 교신 맥동 주기 — 전송 시간 d(초)를 작업 맥동과 같은 규칙(배속 나눔·클립)으로 건다. */
 function commPulse(node, d) {
   if (!node) return;
-  const v = Math.min(PULSE.max, Math.max(PULSE.min, d / Math.max(1, speed))).toFixed(2) + 's';
+  const v = Math.min(PULSE.max, Math.max(PULSE.min, d / Math.max(.5, speed))).toFixed(2) + 's';
   if (node.dataset.pulse !== v) { node.dataset.pulse = v; node.style.animationDuration = v; }
+}
+
+/* ── 노드 이름의 세 위계 (사용자 결정 2026-09-03) ────────────────────────────
+   종전에는 카탈로그 이름 한 벌을 두 줄로 접어 적었다 — 「1군단 방공상황실(AOC)」처럼
+   제대·기능·약칭이 한 덩어리라 무엇이 부대이고 무엇이 분류인지 눈이 가르지 못했다.
+   이제 세 줄로 나눈다: **제대·분류(위, 작게) · 이름(가운데, 크게) · 상태(아래)**.
+   ⚠️ 새 사실을 짓지 않는다 — 분류는 카탈로그 typeId·echelon의 사람 말 사본이고,
+      이름은 카탈로그 name에서 분류어를 덜어낸 것이다. 전체 원문은 툴팁에 그대로 남는다. */
+const NODE_TIER = {
+  KAMD_OPS: '전구 탄도탄방어 C2', MCRC: '전구 공중방어 C2',
+  IAOC: '통합 조율 C2 · To-Be', ARMY_LOCAL_AD: '군단·권역 방공 C2',
+  ICC: '권역 교전통제 · 대대', ECS: '포대 교전통제',
+  USFK_THAAD_C2: '미군 독립 C2', USFK_PATRIOT_C2: '미군 독립 C2',
+  GREEN_PINE_B: '탄도탄 조기경보', GREEN_PINE_C: '탄도탄 조기경보',
+  FPS117: '장거리 항공감시', TPS880K: '국지방공 감시',
+  MSAM_MFR: '포대 전속 사격통제', PATRIOT_RADAR: '포대 전속 사격통제',
+  LSAM_MFR: '포대 전속 사격통제'
+};
+function nodeTier(n) {
+  if (!n) return '';
+  if (NODE_TIER[n.typeId]) return NODE_TIER[n.typeId];
+  if (n.category === 'sensor') return '탐지 자산';
+  if (n.category === 'shooter') return '요격 포대';
+  return 'C2';
+}
+/** 가운데 큰 글씨 — 분류어를 덜어낸 부대 이름. 못 줄이면 원문 그대로 둔다. */
+function nodeShortName(n) {
+  if (!n) return '';
+  const nm = n.name || n.id || '';
+  if (n.typeId === 'KAMD_OPS' || n.typeId === 'MCRC') return nm;
+  if (n.typeId === 'IAOC') return 'IAOC';
+  if (n.typeId === 'ARMY_LOCAL_AD') {
+    return nm.replace(/합동방공상황실|방공상황실/, ' ').replace(/[()]/g, ' ')
+      .replace(/\s+/g, ' ').trim() || nm;
+  }
+  if (n.typeId === 'ECS') return nm.replace(/^ECS\s+/, 'ECS ');
+  const par = nm.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  if (par) return par[2];          // 센서·포대는 위치키(BAT_W2·GPR)가 그 인스턴스의 이름이다
+  return nm;
 }
 
 /** 두 자리에 서는 노드 유형 — [상행 열, 하행 열]. 하행 자리가 「일하는 자리」다. */
@@ -784,6 +1080,20 @@ let simT = 0;
 let lastWall = 0;
 let timerId = null;
 const SLOW = 10;       // 이 이상 걸리는 전문만 전체 보기에서 개별 점으로 그린다(음성·문자·VTC·KVMF)
+/* ── 전체 보기의 전문 집약 (사용자 결정 2026-09-03) ────────────────────────────
+   SC3처럼 전문이 많으면 점이 지나치게 많아져 **흐름이 아니라 소음**으로 보인다.
+   그래서 두 화면의 역할을 가른다:
+     · [전체 흐름] = 트래픽 흐름 — 같은 계선의 동시 전문은 **이동 묶음 하나 + N건**으로
+       모으고, 계선 위에 「N건 · 최장 N초」 배지를 세운다. 굵기도 통행량을 따른다.
+     · [항적 개별] = 전문 하나하나 — 점 하나가 전문 한 건이다(종전 그대로).
+   개별 전문은 배지를 눌러 그 계선만 펼칠 때 보인다.
+   ⚠️ 집약은 **표시**만 바꾼다 — 묶음의 위치는 실제 진행률의 평균이고, 「최장」은 그
+      계선 위 전문들의 실제 전송 시간 최댓값이다. 없는 수치를 만들지 않는다. */
+const AGG_MIN = 3;     // 이만큼부터 묶는다(둘까지는 점 두 개가 더 읽기 쉽다)
+const DONE_HOLD = 1.5; // 도착한 계선을 녹색으로 붙잡아 두는 시간(초 · 화면 시각)
+let expandedEdges = new Set();   // 배지를 눌러 개별 전문으로 펼친 계선
+/** 대략의 글자 폭(px) — 배지 상자 크기용. 한글은 넓다. */
+const textW = (t, px) => [...String(t)].reduce((a, c) => a + (c.charCodeAt(0) > 255 ? px : px * .58), 0);
 
 /** 현재 보기의 시간축. 전체 보기는 실행 전 구간, 개별 보기는 그 항적의 생존 구간이다. */
 function viewT0() { return view === 'all' ? 0 : (sel ? sel.spawnT : 0); }
@@ -1378,8 +1688,23 @@ const LEAK_LABEL = {
   'no_coordination_path': '협조 경로 없음(계선 부재)',
   'commander_unreached': '책임 C2 — 보고가 닿지 못함'
 };
-const LEAK_FAMILY = { kinematic: '기하·운동', capacity: '용량', architecture: '구조', stochastic: '확률' };
-const LEAK_STRUCT = { structural: '구조적', conditional: '조건부', nonstructural: '비구조적' };
+// 계열·구조성은 엔진 taxonomy(KJ.leakTaxonomy)의 family/structurality 정본을 그대로 받는다.
+// ⚠️ 여기 표에 없는 계열이 오면 원문 코드가 그대로 찍힌다 — 엔진에 계열이 늘면 여기도 늘린다.
+//    종전에는 4종만 적어 두어 capability·resource·unknown 이 영문으로 새어 나왔다.
+const LEAK_FAMILY = { kinematic: '기하·운동', capacity: '용량', architecture: '구조',
+  stochastic: '확률', capability: '교전수단', resource: '자원·군수', unknown: '원인 미분해' };
+const LEAK_STRUCT = { structural: '구조적', conditional: '조건부',
+  nonstructural: '비구조적', unknown: '원인 미분해' };
+// 계열이 실무에서 뜻하는 바 — 「무엇을 고쳐야 없어지는 누수인가」. 툴팁에만 쓴다.
+const FAMILY_HINT = {
+  architecture: '지휘·보고 계선의 구조 문제 — 배치·계선을 바꿔야 없어진다',
+  capability: '쏠 수단·기하가 없었다 — C2를 빠르게 해도 막히지 않는다',
+  capacity: '처리·교전 자리가 없었다 — 부하가 몰릴 때 난다',
+  resource: '탄약·가용성이 모자랐다',
+  kinematic: '시간·기하가 모자랐다',
+  stochastic: '확률 — 난수 씨앗이 바뀌면 결과도 바뀐다',
+  unknown: '엔진이 원인을 더 가르지 못한 자리 — 분류를 더 파야 한다는 신호'
+};
 /** 누수 사유 코드 → 읽을 수 있는 짧은 말. overflow:<노드> 처럼 인자를 문 코드도 다룬다. */
 function leakText(code) {
   if (!code) return '사유 미기록';
@@ -1396,7 +1721,94 @@ function leakText(code) {
 function ghostReasonText(g) {
   return g.items.map((it) => leakText(it.code) + (it.n > 1 ? ` ×${it.n}` : '')).join(' · ');
 }
-/** 항적의 종결 정보 — { leaked, code, text, family, struct, contributors } */
+/** 센서 상태 마크의 한글 이름. 엔진 마크 접두사와 1:1. */
+const SENSOR_MARK = { SENSOR_DETECTED: '센서 탐지', SENSOR_TRACKED: '센서 추적',
+  SENSOR_FIRE_CONTROL: '사격통제 확보' };
+
+/** 마크 문자열 안의 노드 ID(콜론·화살표·슬래시 뒤)를 배치 이름으로 바꾼다.
+ *  ⚠️ 구분자 뒤에서만 바꾼다 — 앵커 없이 바꾸면 `SENSOR_DETECTED` 같은 **마크 이름**까지
+ *     ID로 오인해 집어삼킨다. */
+function humanIds(s) {
+  return String(s).replace(/([:→/])((?:SENSOR|BATTERY|ECS|C2)_[A-Z0-9_]+)/g,
+    (all, sep, id) => sep + ((run && run.nodes[id]) ? nodeName(id) : id));
+}
+
+/**
+ * 마크 원문 → 화면에 읽히는 말. `{ text, sub, cls, raw, note }`.
+ *
+ * 엔진 마크는 노드 ID와 **영문 사유코드**를 그대로 물고 있어(`누수:window_lost_due_to_c2`,
+ * `발사불가:BATTERY_BAT_E1(no_feasible_pip)`) 로그만 봐서는 「그래서 결과가 뭐였나」가
+ * 읽히지 않았다 — 누수 사유가 오직 왼쪽 목록의 배지에만 있었다(사용자 지적 2026-09-03).
+ *
+ * ⚠️ 원문은 `raw`로 반드시 보존한다. 화면 문구는 읽으라고 있는 것이고, 인용·대조·재현은
+ *    엔진 코드 원문으로 한다 — 이 규율을 깨면 로그가 근거로 못 쓰인다.
+ * ⚠️ 새 수치를 만들지 않는다 — 사유·계열·구조성·기여횟수 전부 failure 기록에서 읽는다.
+ */
+function markView(name, trk, axis) {
+  let m;
+  // ── 종결: 누수 ── 「무엇 때문에」에 더해 **쐈는가 못 쐈는가**를 함께 적는다. 이 판의
+  //    누수 34건 중 29건은 발사 자체에 이르지 못했다 — 둘을 가르지 않으면 전부
+  //    「요격 실패」로 잘못 읽힌다.
+  if ((m = /^누수:(.+)$/.exec(name))) {
+    const oc = outcomeInfo(trk), ev = (trk.failure && trk.failure.evidence) || {};
+    const why = ((trk.failure && trk.failure.contributors) || [])
+      .map((k) => leakText(k) + (ev[k] && ev[k].count > 1 ? ' ×' + ev[k].count : '')).join(' · ');
+    return { text: '누수 — ' + leakText(m[1]), cls: 'leak', raw: name,
+      note: (FAMILY_HINT[(trk.failure || {}).family] || ''),
+      sub: (oc.fired ? '발사까지 갔으나 막지 못함' : '발사에 이르지 못함') +
+        (oc.family ? ' · 계열 ' + oc.family + ' · ' + oc.struct : '') +
+        (why ? ' · 함께 작용: ' + why : '') };
+  }
+  // ── 종결: 교전 결과 판정(BDA) ──
+  if ((m = /^BDA:(HIT|MISS):(.+)$/.exec(name))) {
+    return m[1] === 'HIT'
+      ? { text: '격추 — ' + nodeName(m[2]) + ' 명중', cls: 'hit', raw: name }
+      : { text: '명중 실패 — ' + nodeName(m[2]), cls: 'fail', raw: name };
+  }
+  // ── 명령은 닿았는데 쏘지 못한 순간 ── 누수의 실제 분기점이라 눈에 띄게 둔다.
+  if ((m = /^발사불가:([^(]+)\(([^)]*)\)$/.exec(name))) {
+    return { text: '발사 못함 — ' + nodeName(m[1].trim()) + ' · ' + leakText(m[2]),
+      cls: 'fail', raw: name };
+  }
+  // ── 발사 ── `발사:<사수>/<발사대>/PIP<거리>km`. 자위권발사는 사수만 물고 꼬리가 없다.
+  if ((m = /^(발사|자위권발사):([^/]+)(?:\/(.*))?$/.exec(name))) {
+    const pip = /PIP([\d.]+)km/.exec(m[3] || '');
+    return { text: m[1] + ' — ' + nodeName(m[2].trim()) +
+      (pip ? ' · 요격점 ' + pip[1] + 'km' : ''), cls: 'shot', raw: name };
+  }
+  // ── 센서 상태 ──
+  if ((m = /^(SENSOR_[A-Z_]+):(.+)$/.exec(name)) && SENSOR_MARK[m[1]]) {
+    return { text: SENSOR_MARK[m[1]] + ' — ' + nodeName(m[2]), raw: name };
+  }
+  // ── 위협우선순위 ── 엔진 인코딩 원시값(유형순위×10⁶ + 절박도)이라 그대로 적으면
+  //    「4099828」 같은 읽을 수 없는 수가 찍힌다(실제 지적). 화면에는 풀어 적는다.
+  if ((m = /^위협우선순위:([^/]+)\/(\d+)$/.exec(name))) {
+    const v = +m[2];
+    return { text: '위협우선순위 — ' + shortC2(m[1], axis) + ' · 유형순위 ' + Math.floor(v / 1000000) +
+      '/7 · 잔여체공 ' + Math.max(0, 100000 - (v % 1000000)) + '초', raw: name };
+  }
+  // ── 그 밖의 마크 ── 노드 ID를 이름으로 바꾸고, 앞머리 콜론을 「 — 」로 벌린다.
+  //    `항적정보접수:KAMD_OPS(1출처)` → `항적정보접수 — KAMDOC (1출처)`
+  let h = humanIds(shortC2(name, axis));
+  h = h.replace(/^([^:]+):/, '$1 — ').replace(/→/g, ' → ').replace(/\s+/g, ' ');
+  return { text: h, raw: h === name ? null : name };
+}
+
+/**
+ * 마크 안의 **접두사 없는 지휘소 약칭**(`KAMD_OPS`, `MCRC`)을 배치 이름으로 바꾼다.
+ * 노드 ID(`C2_KAMD_OPS_KAMD_OPS`)와 달리 약칭은 접두사가 없어 humanIds가 못 잡는데,
+ * 마크의 axis 꼬리표가 그 지휘소의 노드 ID를 이미 물고 있으므로 거기서 되짚는다.
+ * ⚠️ axis가 가리키는 지휘소의 약칭만 바꾼다 — 아무 대문자 토큰이나 바꾸면
+ *    `STALE`·`COP` 같은 마크 인자까지 노드 이름으로 오인한다.
+ */
+function shortC2(name, axis) {
+  const cid = String(axis || '').split('|')[1];
+  if (!cid || !(run && run.nodes[cid])) return name;
+  return name.replace(/[A-Z][A-Z0-9_]{2,}/g,
+    (tok) => (tok === cid || cid.endsWith('_' + tok)) ? nodeName(cid) : tok);
+}
+
+/** 항적의 종결 정보 — { leaked, code, text, family, struct, contributors, fired } */
 function outcomeInfo(t) {
   if (t.outcome === 'killed') return { leaked: false };
   if (t.exitT == null) return { leaked: false, open: true };
@@ -1406,6 +1818,9 @@ function outcomeInfo(t) {
   return { leaked: true, code: code, text: leakText(code),
     family: LEAK_FAMILY[f.family] || f.family || null,
     struct: LEAK_STRUCT[f.structurality] || f.structurality || null,
+    // 「쏘고 놓쳤나 / 쏘지도 못했나」 — 누수를 읽는 첫 갈림길인데 종전에는 어디에도 없었다.
+    // fireShooters는 발사 마크에서 모은 것이라 새 판정이 아니다.
+    fired: (t.fireShooters || []).length > 0,
     contributors: f.contributors || [] };
 }
 
@@ -1477,19 +1892,12 @@ function buildLogRows(t) {
           high: cps >= 5 };
       }
     }
-    // 위협우선순위 마크는 엔진 인코딩 원시값(유형순위×10⁶ + 절박도)이라 그대로 적으면
-    // 「4099828」 같은 읽을 수 없는 수가 찍힌다(실제 지적). 화면에는 풀어 적고 원문은
-    // 툴팁에 보존한다 — 인용·대조는 원문 코드로 한다는 규율 그대로.
-    let txt = s.name, raw = null;
-    const pr = s.name.match(/^위협우선순위:([^/]+)\/(\d+)$/);
-    if (pr) {
-      const v = +pr[2];
-      const rank = Math.floor(v / 1000000);
-      const remainSec = Math.max(0, 100000 - (v % 1000000));
-      txt = `위협우선순위:${pr[1]} — 유형순위 ${rank}/7 · 잔여체공 ${remainSec}초`;
-      raw = s.name;
-    }
-    rows.push({ t: s.t, kind: 'mark', sensor: /^SENSOR_/.test(s.name), text: txt, raw: raw,
+    // 마크 원문을 사람이 읽는 말로 푼다(markView) — 원문은 raw로 보존해 툴팁에 남긴다.
+    // ⚠️ sensor 판정은 **원문**으로 한다. 화면 문구(「센서 탐지 — …」)로 재면 그래프의
+    //    거르는 기준과 어긋나 체크박스를 꺼도 로그에만 센서 줄이 남는다.
+    const mv = markView(s.name, t, s.axis);
+    rows.push({ t: s.t, kind: 'mark', sensor: /^SENSOR_/.test(s.name), text: mv.text,
+      raw: mv.raw, sub: mv.sub || null, note: mv.note || null, cls: mv.cls || null,
       tail: '', lane: laneTag(s.axis), cost: cost });
   });
   // 「못 간」 전문 — 이 항적의 로그에서도 출발한 전문과 나란히 시각순으로 보여야,
@@ -1549,14 +1957,25 @@ function renderTrackLog(trk) {
   const stalled = rows.filter((r) => r.gap && r.gap.stall);
   const stallSec = stalled.reduce((s, r) => s + r.gap.dur, 0);
   el('log-title').textContent = `${trk.id} — 이벤트 로그`;
-  el('log-hint').innerHTML = rows.length + '건' + (stalled.length
+  // 결과를 로그 머리에 먼저 적는다 — 종전에는 왼쪽 목록의 배지에만 있어, 로그를 끝까지
+  // 훑어야 이 항적이 어떻게 끝났는지 알 수 있었다. 누수는 「쐈는가」까지 함께 적는다.
+  const oc = outcomeInfo(trk);
+  const res = trk.outcome === 'killed'
+    ? '<b style="color:var(--ok)">격추</b>'
+    : (oc.leaked
+      ? `<b style="color:var(--bad)">누수 · ${esc(oc.text)}</b>` +
+        `<span style="color:var(--dim)"> (${oc.fired ? '발사 후 실패' : '발사 못함'}` +
+        `${oc.family ? ' · ' + esc(oc.family) + ' · ' + esc(oc.struct) : ''})</span>`
+      : '<span style="color:var(--dim)">진행중</span>');
+  el('log-hint').innerHTML = res + ' · ' + rows.length + '건' + (stalled.length
     ? ` · <b style="color:var(--bad)">병목 ${stalled.length}곳 ${stallSec.toFixed(0)}초</b>` : '');
   body.innerHTML = rows.map((r, i) => {
     const m = r.kind === 'link' ? media(r.mt) : null;
     const tip = r.kind === 'link'
       ? `${r.text}\n${r.tail} — ${fmt(r.t)} 출발 → ${fmt(r.ref.t1)} 도착` +
         edgeMetaLine(r.ref.from, r.ref.to, r.mt)
-      : `${fmt(r.t)} ${r.text}` + (r.raw ? `\n원문: ${r.raw}` : '');
+      : `${fmt(r.t)} ${r.text}` + (r.sub ? `\n${r.sub}` : '') +
+        (r.note ? `\n${r.note}` : '') + (r.raw ? `\n원문: ${r.raw}` : '');
     const c = r.cost;
     const costChip = c
       ? `<span class="med cost${c.high ? ' hi' : ''}">${c.cps} M$ → ${c.val} M$` +
@@ -1581,7 +2000,7 @@ function renderTrackLog(trk) {
       <span class="t mono">${fmt(r.t)}</span>
       <span class="x">${esc(r.text)}${m ? `<span class="med" style="color:${m.color}">${esc(r.tail)}</span>` : ''}${
       r.grade ? `<span class="med" style="color:${r.grade.low ? 'var(--warn)' : 'var(--dim)'}">${esc(r.grade.label)}</span>` : ''}${costChip}${r.lane ? `<span class="med lane">${esc(r.lane)}</span>` : ''}</span>
-      ${gapChip}
+      ${gapChip}${r.sub ? `<span class="res">${esc(r.sub)}</span>` : ''}
     </div>`;
   }).join('');
   trk.logEls = [...body.querySelectorAll('.ev')];
@@ -1627,6 +2046,194 @@ function renderTicks() {
     seen.add(key);
     return `<i${m.bad ? ' class="bad"' : ''} style="left:${p}%"></i>`;
   }).join('');
+  // 레인 타임라인은 눈금과 **같은 시간축**을 쓴다 — 같은 계기에 함께 다시 굽는다.
+  buildLanes();
+  // 계선 범례의 건수는 「지금 보는 축」의 것이라 축이 바뀌면 함께 다시 센다.
+  if (!el('linekey').hidden) renderLineKey();
+}
+
+/* ── 다중 레인 타임라인 — 「어디에서 시간이 갔는가」 ─────────────────────────
+   스크럽 막대는 「지금 몇 초인가」만 답한다. 정작 알고 싶은 것은 **어느 단계가
+   시간을 먹었는가**이고, 그것은 네트워크 그림과 **같은 시간축 위에서** 읽혀야 한다.
+   레인 다섯 줄은 킬체인의 순서 그대로다(좌→우 열 배치와 같은 축을 세로로 편 것).
+
+   ⚠️ 진한 칸 = **처리**(개시~완료), 연한 주황 = **대기**(도착~개시). 시간이 어디서
+      갔는지는 대개 연한 칸이 말한다 — 둘을 한 색으로 칠하면 「일한 시간」과
+      「기다린 시간」이 섞여 병목이 흐려진다.
+   ⚠️ 센서 레인은 큐가 없다(엔진이 센서에 nodeState를 만들지 않는다). 그래서 센서에서
+      **출발한 계선의 이동 시간**을 그 레인의 일한 시간으로 읽는다 — 없는 큐를 짓지 않는다.
+   ⚠️ 시간축은 스크럽과 같다(전체 = 실행 전 구간 · 개별 = 그 항적의 생존 구간). */
+const LANES = [
+  { key: 'sense', label: '탐지·보고',         color: '#38bdf8' },
+  { key: 'upper', label: 'MCRC·KAMDOC 처리',  color: '#a78bfa' },
+  { key: 'mid',   label: 'AOC·JAOC·ICC 처리', color: '#818cf8' },
+  { key: 'ecs',   label: 'ECS 교전통제',      color: '#5eead4' },
+  { key: 'fire',  label: '요격·타격',         color: '#34d399' }
+];
+const LANE_INDEX = {}; LANES.forEach((l, i) => { LANE_INDEX[l.key] = i; });
+const LANE_BINS = 240;
+let laneData = null;
+
+function laneOfNode(id) {
+  const n = run && run.nodes[id];
+  if (!n) return -1;
+  if (n.category === 'sensor') return LANE_INDEX.sense;
+  if (n.category === 'shooter') return LANE_INDEX.fire;
+  if (n.typeId === 'ECS') return LANE_INDEX.ecs;
+  if (n.typeId === 'MCRC' || n.typeId === 'KAMD_OPS' ||
+      n.typeId === 'USFK_THAAD_C2' || n.typeId === 'USFK_PATRIOT_C2') return LANE_INDEX.upper;
+  return LANE_INDEX.mid;     // ICC · IAOC · 방공C2A(군단·수방사)
+}
+
+/** 레인 재료를 굽는다 — 실행/항적이 바뀔 때 한 번(renderTicks와 같은 계기). */
+function buildLanes() {
+  const svg = el('lanesvg');
+  if (!run || (view === 'track' && !sel)) { laneData = null; svg.innerHTML = ''; el('lane-names').innerHTML = ''; return; }
+  const t0 = viewT0(), t1 = viewT1(), span = Math.max(1e-6, t1 - t0);
+  const wait = LANES.map(() => new Float64Array(LANE_BINS));
+  const work = LANES.map(() => new Float64Array(LANE_BINS));
+  const add = (arr, li, a, b) => {
+    if (li < 0 || !(b > a)) return;
+    const i0 = Math.max(0, Math.floor((Math.max(a, t0) - t0) / span * LANE_BINS));
+    const i1 = Math.min(LANE_BINS, Math.ceil((Math.min(b, t1) - t0) / span * LANE_BINS));
+    for (let i = i0; i < i1; i++) arr[li][i] += 1;
+  };
+  (view === 'all' ? run.allSpans : sel.spans).forEach((sp) => {
+    const li = laneOfNode(sp.at);
+    const end = sp.drop != null ? sp.drop : (sp.done != null ? sp.done : t1);
+    add(wait, li, sp.arrive, sp.start != null ? sp.start : end);
+    if (sp.start != null) add(work, li, sp.start, sp.done != null ? sp.done : end);
+  });
+  (view === 'all' ? run.allFlows : sel.flows).forEach((f) => {
+    const n = run.nodes[f.from];
+    if (!n || n.category !== 'sensor') return;
+    add(work, LANE_INDEX.sense, f.t0, f.d > 0 ? f.t1 : f.t0 + 1);
+  });
+  // 요격·타격 — 사수에도 체류 기록이 없다(엔진이 사수에 nodeState를 만들지 않는다 —
+  // 실측: 체류 249건이 전부 C2다). 대신 **발사 마크에서 BDA 마크까지**를 읽는다.
+  // ⚠️ 지어낸 구간이 아니다: 두 시각 모두 실행이 기록한 마크의 시각이고, BDA가 없으면
+  //    (관측 종료 등) 길이를 모르므로 2초 눈금만 세운다.
+  (view === 'all' ? run.tracks : [sel]).forEach((t) => {
+    const stg = (t && t.stages) || [];
+    for (let i = 0; i < stg.length; i++) {
+      if (!/^(발사|자위권발사):/.test(stg[i].name)) continue;
+      let end = stg[i].t + 2;
+      for (let j = i + 1; j < stg.length; j++) {
+        if (/^BDA:/.test(stg[j].name)) { end = stg[j].t; break; }
+      }
+      add(work, LANE_INDEX.fire, stg[i].t, end);
+    }
+  });
+  laneData = { t0: t0, t1: t1, span: span, wait: wait, work: work };
+  renderLanes();
+}
+
+function renderLanes() {
+  const svg = el('lanesvg');
+  if (!laneData) { svg.innerHTML = ''; return; }
+  const LH = 12, H = LANES.length * LH;
+  svg.setAttribute('viewBox', `0 0 ${LANE_BINS} ${H}`);
+  let out = '';
+  const empty = [];
+  LANES.forEach((L, li) => {
+    const y = li * LH;
+    out += `<rect class="lane-row${li % 2 ? ' lane-alt' : ''}" x="0" y="${y}" width="${LANE_BINS}" height="${LH}"></rect>`;
+    const w = laneData.work[li], q = laneData.wait[li];
+    let mx = 1;
+    for (let i = 0; i < LANE_BINS; i++) { if (w[i] > mx) mx = w[i]; if (q[i] > mx) mx = q[i]; }
+    let g = `<g style="color:${L.color}">`;
+    let any = false;
+    for (let i = 0; i < LANE_BINS; i++) {
+      if (q[i] > 0) {
+        const h = Math.max(1.6, (LH - 2) * Math.min(1, q[i] / mx));
+        g += `<rect class="lane-wait" x="${i}" y="${(y + LH - 1 - h).toFixed(1)}" width="1" height="${h.toFixed(1)}" opacity=".55"></rect>`;
+        any = true;
+      }
+      if (w[i] > 0) {
+        const h = Math.max(1.6, (LH - 2) * Math.min(1, w[i] / mx));
+        g += `<rect class="lane-work" x="${i}" y="${(y + LH - 1 - h).toFixed(1)}" width="1" height="${h.toFixed(1)}"></rect>`;
+        any = true;
+      }
+    }
+    g += '</g>';
+    out += g;
+    empty[li] = !any;
+  });
+  svg.innerHTML = out;
+  // ⚠️ 빈 레인 안내를 SVG 글자로 적으면 안 된다 — preserveAspectRatio="none"이라
+  //    화면 폭만큼 늘어난 글자가 그림을 덮는다(실측). 왼쪽 이름을 흐리게 해서 알린다.
+  el('lane-names').innerHTML = LANES.map((L, i) =>
+    `<span class="${empty[i] ? 'off' : ''}" style="color:${L.color}"` +
+    ` title="${esc(L.label)}${empty[i] ? ' — 이 구간에는 일이 없었습니다' : ' — 진한 칸 = 처리, 연한 칸 = 대기'}">` +
+    `${esc(L.label)}</span>`).join('');
+}
+
+/* ── 계선 범례(토글) — 「이 선이 무엇인가」 ─────────────────────────────────
+   하단 접이 범례가 화면 전체의 설명서라면, 이것은 **지금 실행에 실제로 있는 계선만**
+   건수와 함께 세우는 조작 가능한 범례다. 매체 줄을 누르면 그 매체만 남기고 나머지
+   계선·화살촉·라벨·점을 죽인다 — 「음성 계선만 어디에 있나」를 한 번에 본다.
+   ⚠️ 강조는 **표시 필터**일 뿐이다. 열 밝힘·맥동·병목 계산은 전량을 그대로 센다
+      (「센서 보고 표시」 토글과 같은 규율 — 손잡이가 사실을 바꾸지 않는다).
+   ⚠️ 건수는 **지금 보는 축**의 것이다: 전체 흐름이면 실행 전량, 항적 개별이면 그 항적. */
+let keyFocusMt = null;
+
+function renderLineKey() {
+  const box = el('linekey-body');
+  if (!run) { box.innerHTML = '<div class="empty">실행 후에 채워집니다.</div>'; return; }
+  const src = view === 'all' ? run.allFlows : (sel ? sel.flows : []);
+  const cnt = {}, kcnt = {};
+  src.forEach((f) => {
+    cnt[f.mt] = (cnt[f.mt] || 0) + 1;
+    if (f.kind) kcnt[f.kind] = (kcnt[f.kind] || 0) + 1;
+  });
+  const keys = Object.keys(MEDIA).sort((a, b) => (cnt[b] || 0) - (cnt[a] || 0));
+  const row = (k) => {
+    const m = MEDIA[k], n = cnt[k] || 0;
+    return `<div class="lk${n ? '' : ' none'}${keyFocusMt === k ? ' on' : ''}" data-mt="${esc(k)}"` +
+      ` title="${esc(m.label + ' · ' + m.cls + ' 계통 · ' + m.hint +
+        (n ? ` · 이 축에서 ${n}건` : ' · 이 실행에서는 통행 없음') +
+        (n ? '\n누르면 이 매체만 남기고 나머지를 죽입니다' : ''))}">` +
+      `<i style="border-top-color:${m.color};border-top-width:${Math.max(2, m.w).toFixed(0)}px;` +
+      `${m.dash ? 'border-top-style:dashed' : ''}"></i>` +
+      `<span class="tg" style="color:${m.color}">${esc(m.tag)}</span>` +
+      `<span class="nm">${esc(m.label)} <span style="opacity:.6">${esc(m.hint)}</span></span>` +
+      `<span class="n">${n ? n + '건' : '—'}</span></div>`;
+  };
+  box.innerHTML =
+    '<div class="lk-sec">매체 — 어떻게 가는가 (색 = 계통 · 점선 = 사람이 매개하는 계선)</div>' +
+    keys.map(row).join('') +
+    '<div class="lk-sec">계선 종류 — 무엇이 흐르는가 (매체와 다른 축)</div>' +
+    '<div class="lk-kind">' + Object.keys(LINK_KIND).map((k) =>
+      `<span title="${esc(LINK_KIND[k].hint)}"><b>${esc(LINK_KIND[k].label)}</b> ` +
+      `${kcnt[k] ? kcnt[k] + '건' : '—'}</span>`).join('') + '</div>' +
+    '<div class="lk-sec">방향 · 상태</div>' +
+    '<div class="lk-note">▸ <b>화살촉</b> = 흐르는 방향 · ' +
+    '<span style="color:var(--bad)">붉은 화살촉</span> = <b>역방향</b>(승인 협조·교전명령 하달)<br>' +
+    '▸ <b>굵고 밝은 선</b> = 지금 교신 중 · ' +
+    '<span style="color:var(--ok)">녹색</span> = 방금 도착(1.5초) · ' +
+    '<span style="opacity:.55">거의 안 보임</span> = 지금 안 쓰는 계선<br>' +
+    '▸ <span style="opacity:.55">회색 점선</span> = 통행이 한 번도 없던 계선' +
+    '([전체 계선 표시]를 켰을 때만)<br>' +
+    '▸ <b>굵기</b> = 통행량(전문 건수) · 같은 열 왕복은 <b>좌·우로 갈라</b> 그린다<br>' +
+    '▸ <b>계선을 누르면</b> 실측 지연·항적 목록·매체 교체가 열린다</div>';
+  box.querySelectorAll('.lk:not(.none)').forEach((d) => {
+    d.addEventListener('click', () => {
+      keyFocusMt = keyFocusMt === d.dataset.mt ? null : d.dataset.mt;
+      renderLineKey();
+      applyKeyFocus();
+      drawFrame();
+    });
+  });
+}
+
+/** 고른 매체만 남긴다 — 배치를 다시 세울 때마다 다시 걸어야 한다(DOM이 새로 만들어진다). */
+function applyKeyFocus() {
+  const svg = el('graph');
+  ['.edgeg', '.earrow', '.elabel'].forEach((q) => {
+    svg.querySelectorAll(q).forEach((n) => {
+      n.classList.toggle('mtoff', !!keyFocusMt && n.dataset.mt !== keyFocusMt);
+    });
+  });
 }
 
 /** 현재 시각 이후 가장 가까운 사건으로 건너뛴다(없으면 끝으로). */
@@ -1741,6 +2348,7 @@ function selectTrack(i) {
   el('v-all').classList.remove('on');
   el('v-track').classList.add('on');
   el('tracks-label').textContent = '항적 (이벤트)';
+  el('live-title').textContent = '선택 항적 결과 · 현재 교신';
   // 로그 모드 스위치·C2 선택줄은 전체 보기 전용 — 개별 보기의 로그는 늘 sel의 것이다.
   el('log-mode').hidden = true;
   el('log-trk-bar').hidden = true;
@@ -1869,11 +2477,88 @@ function cylSvg(p, c, unit) {
     `<g class="cyl-q"></g></g>`;
 }
 
+/* ── 노드 장식 — 이름 세 위계 · 상태 배지 · 큐 점유 막대 (두 보기 **공용**) ────
+   ⚠️ cylSvg와 같은 규율이다: 두 벌을 두면 같은 노드가 화면마다 다르게 읽힌다.
+      [전체 흐름]과 [항적 개별]이 이 한 함수를 쓴다.                             */
+/** 정적 부분(그릴 때 한 번). 배지·막대는 빈 자리만 잡아 두고 매 프레임 채운다. */
+function nodeDecorSvg(p, n, cap) {
+  const cyl = !!p.cyl;
+  const half = cyl ? CYL.h / 2 : p.r + (p.dense ? 2.2 : 3.2);
+  const suffix = p.dup === 'up' ? ' ↑중계' : '';
+  const badge = (x, y, anchor) =>
+    `<text class="nbadge" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}"></text>`;
+  let out = '';
+  // 큐 점유 막대 — **용량이 선언된 노드에만**. 없는 대기실을 지어내지 않는다(ADR-062).
+  if (cap) {
+    const bw = cyl ? CYL.w : 16, bx = (p.x - bw / 2).toFixed(1), by = (p.y + half + 2).toFixed(1);
+    out += `<rect class="qbar-bg" x="${bx}" y="${by}" width="${bw}" height="2.6" rx="1.3"></rect>` +
+      `<rect class="qbar-i" x="${bx}" y="${by}" width="0" height="2.6" rx="1.3" data-bw="${bw}"></rect>`;
+  }
+  // 밀집 열은 이름을 못 단다(자리가 없다) — 배지만 글리프 옆에 붙인다.
+  if (p.dense) return out + badge(p.x + half + 3, p.y + 3, 'start');
+  const top = p.y + half + (cap ? 6 : 0);
+  if (p.tier3) {
+    out += `<text class="ntier" x="${p.x.toFixed(1)}" y="${(p.y - half - 7).toFixed(1)}"` +
+      ` text-anchor="middle">${esc(nodeTier(n))}</text>`;
+    const lines = wrapLabel(nodeShortName(n) + suffix, 12, 2);
+    lines.forEach((ln, i) => {
+      out += `<text class="nname" x="${p.x.toFixed(1)}" y="${(top + 13 + i * 12).toFixed(1)}"` +
+        ` text-anchor="middle">${esc(ln)}</text>`;
+    });
+    return out + badge(p.x, top + 13 + lines.length * 12, 'middle');
+  }
+  const lines = wrapLabel((n.name || p.id) + suffix, 13, 2);
+  lines.forEach((ln, i) => {
+    out += `<text class="nlabel" x="${p.x.toFixed(1)}" y="${(top + 12 + i * 11).toFixed(1)}"` +
+      ` text-anchor="middle">${esc(ln)}</text>`;
+  });
+  // 줄 간격이 좁은 열(센서 19줄)은 배지를 아래에 못 둔다 — 다음 노드 이름 위로 올라탄다.
+  return out + (p.pitch >= 60
+    ? badge(p.x, top + 12 + lines.length * 11, 'middle')
+    : badge(p.x + half + 3, p.y + 3, 'start'));
+}
+/** 노드 하나의 배지·막대를 시각 t의 상태로 채운다. talkN = 지금 이 노드를 끝점으로
+ *  계선 위에 떠 있는 전문 수. idleText = 아무 일도 없을 때 대신 적을 말(용량·인스턴스). */
+function paintNodeDecor(els, cap, st, talkN, idleText) {
+  if (els.qbar && cap) {
+    const r = Math.min(1, (st.q || 0) / Math.max(1, cap.K));
+    const bw = +els.qbar.dataset.bw || 20;
+    els.qbar.setAttribute('width', (bw * r).toFixed(1));
+    els.qbar.classList.toggle('mid', r >= .35 && r < .7);
+    els.qbar.classList.toggle('hi', r >= .7);
+  }
+  const b = els.nbadge;
+  if (!b) return;
+  const parts = [];
+  // ⚠️ 글리프는 **색이 먹는 것**만 쓴다. ⏳·⚠ 는 macOS에서 이모지 표현으로 그려져
+  //    fill 이 무시되고, 그러면 「색으로 상태를 가른다」는 규율이 그 자리에서만 깨진다.
+  if (st.busy) parts.push(['b-work', '●' + st.busy]);
+  if (st.q) parts.push(['b-wait', '○' + st.q]);
+  if (talkN) parts.push(['b-talk', '↔' + talkN]);
+  if (st.drops) parts.push(['b-drop', '✕' + st.drops]);
+  const key = parts.length ? parts.map((x) => x[1]).join(' ') : 'idle:' + (idleText || '');
+  // ⚠️ 값이 같으면 건드리지 않는다 — 매 프레임 innerHTML을 다시 쓰면 105노드 × 30fps가
+  //    그대로 낭비가 된다(맥동 주기를 다시 쓰지 않는 것과 같은 규율).
+  if (b.dataset.k === key) return;
+  b.dataset.k = key;
+  b.innerHTML = parts.length
+    ? parts.map((x, i) => `<tspan class="${x[0]}"${i ? ' dx="4"' : ''}>${esc(x[1])}</tspan>`).join('')
+    : (idleText ? `<tspan class="b-idle">${esc(idleText)}</tspan>` : '');
+}
+/** 아무 일도 없을 때 배지 자리에 적을 말 — 용량(석·발)이나 인스턴스 이름. */
+function nodeIdleText(p, n, cap) {
+  if (!p.tier3) return '';
+  if (cap) return `${cap.c}${cap.unit} · 대기실 ${cap.K}${cap.unit}`;
+  return n && n.category === 'sensor' ? '처리 큐 없음' : '';
+}
+
 function cylEls(g) {
   return { cyl: g.querySelector('.cyl'), fill: g.querySelector('.cyl-fill'),
     // rim(테두리)도 맥동한다 — 주기를 두 요소에 각각 걸어야 서로 어긋나지 않는다.
     rim: g.querySelector('.cyl-edge'),
-    num: g.querySelector('.cyl-num .n'), qbox: g.querySelector('.cyl-q') };
+    num: g.querySelector('.cyl-num .n'), qbox: g.querySelector('.cyl-q'),
+    // 상태 배지·큐 점유 막대는 실린더가 없는 노드에도 있다(같이 담는다).
+    nbadge: g.querySelector('.nbadge'), qbar: g.querySelector('.qbar-i') };
 }
 
 /**
@@ -1900,8 +2585,11 @@ function paintCyl(els, p, c, st, mine) {
   els.num.textContent = `${st.busy}/${c}`;
   const shown = Math.min(st.q, CYL.qmax);
   let q = '';
+  // qOff — 세 위계 이름의 「제대·분류」 캡션이 실린더 위에 서는 노드는 대기 디스크를
+  // 그만큼 위로 밀어 쌓는다. 안 밀면 대기 1건에 캡션이 통째로 가려진다.
+  const qOff = p.qOff || 0;
   for (let i = 0; i < shown; i++) {
-    const y = p.y - CYL.h / 2 - CYL.ry - CYL.qgap - (i + 1) * (CYL.qh + CYL.qgap);
+    const y = p.y - CYL.h / 2 - CYL.ry - CYL.qgap - qOff - (i + 1) * (CYL.qh + CYL.qgap);
     const isMine = mine && mine.kind === 'queue' && mine.pos === i;
     q += `<rect class="cyl-qd${isMine ? ' mine' : ''}" x="${(p.x - CYL.w / 2 + 2).toFixed(1)}"` +
       ` y="${y.toFixed(1)}" width="${CYL.w - 4}" height="${CYL.qh}" rx="1.4"></rect>`;
@@ -1910,16 +2598,47 @@ function paintCyl(els, p, c, st, mine) {
       ` y="${(y + CYL.qh).toFixed(1)}">이 항적 ${mine.pos + 1}번째</text>`;
   }
   if (st.q > CYL.qmax) {
-    const y = p.y - CYL.h / 2 - CYL.ry - CYL.qgap - (CYL.qmax + 1) * (CYL.qh + CYL.qgap) - 1;
+    const y = p.y - CYL.h / 2 - CYL.ry - CYL.qgap - qOff - (CYL.qmax + 1) * (CYL.qh + CYL.qgap) - 1;
     q += `<text class="cyl-qn" x="${p.x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle">+${st.q - CYL.qmax}</text>`;
   }
   // 대기줄이 화면 상한을 넘는 자리에 내 것이 있으면 숫자로라도 알린다.
   if (mine && mine.kind === 'queue' && mine.pos >= CYL.qmax) {
-    const y = p.y - CYL.h / 2 - CYL.ry - CYL.qgap - (CYL.qmax + 2) * (CYL.qh + CYL.qgap) - 1;
+    const y = p.y - CYL.h / 2 - CYL.ry - CYL.qgap - qOff - (CYL.qmax + 2) * (CYL.qh + CYL.qgap) - 1;
     q += `<text class="cyl-mine" x="${p.x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle">이 항적 ${mine.pos + 1}번째</text>`;
   }
   els.qbox.innerHTML = q;
 }
+
+/* ── 간선 경로 (두 보기 **공용**) ──────────────────────────────────────────
+   정방향은 완만한 S자, 역방향은 아래로 크게 휘는 호, **같은 열 안의 왕복은 좌·우로
+   갈라** 그린다.
+   ⚠️ 종전에는 같은 열의 두 노드 사이 왕복(KAMDOC↔MCRC · 1군단 AOC↔수방사 JAOC)이
+      `back` 갈래를 **양쪽 다** 타서 정확히 겹쳤다 — 화살촉 두 개가 한 선 위에 포개져
+      어느 쪽이 보고이고 어느 쪽이 명령인지 가릴 수 없었다(사용자 지적 2026-09-03).
+   @param off  병렬 계선 벌림(같은 두 자리를 잇는 가닥이 여럿일 때)
+   @param dip  역방향 호의 깊이 규칙 {min, k, add} — 보기마다 조금 다르다
+   @param gate 팬인 묶음 지점 x(없으면 null). 여러 노드가 한 노드로 보내는 계선을
+               **목적지 앞 일정 구간까지 한 줄기로** 모아 hairball을 줄인다. */
+function edgePathD(a, b, off, dip, gate) {
+  const back = b.col <= a.col;
+  if (back && a.col === b.col) {
+    const s = (a.y > b.y || (a.y === b.y && a.x > b.x)) ? -1 : 1;   // 위로 가는 가닥은 왼쪽
+    const bow = s * (34 + Math.abs(off));
+    return `M${a.x},${a.y} C${a.x + bow},${a.y} ${b.x + bow},${b.y} ${b.x},${b.y}`;
+  }
+  if (back) {
+    const dd = Math.max(dip.min, Math.abs(a.x - b.x) * dip.k + dip.add) + off;
+    return `M${a.x},${a.y} C${a.x - 10},${a.y + dd} ${b.x + 10},${b.y + dd} ${b.x},${b.y}`;
+  }
+  if (gate != null) {
+    return `M${a.x},${a.y} C${((a.x + gate) / 2).toFixed(1)},${a.y} ` +
+      `${(gate - (gate - a.x) * .22).toFixed(1)},${b.y} ${gate.toFixed(1)},${b.y} L${b.x},${b.y}`;
+  }
+  const mx = (a.x + b.x) / 2;
+  return `M${a.x},${a.y} C${mx},${a.y + off} ${mx},${b.y + off} ${b.x},${b.y}`;
+}
+/** 팬인 묶음이 시작되는 최소 가닥 수. 이보다 적으면 묶어도 얻는 것이 없다. */
+const BUNDLE_MIN = 5;
 
 /**
  * 간선 화살촉 — 선 위 62% 지점에 접선 방향으로 박는다.
@@ -1935,10 +2654,18 @@ function arrowsSvg(edges) {
     const ang = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
     const m = media(e.mt);
     const sensor = e.mt === 'report-cycle' ? ' sensor-edge' : '';
-    return `<path class="earrow${e.back ? ' back' : ''}${sensor}" d="M-4.4,-3.3 L4.4,0 L-4.4,3.3 Z"` +
+    const cx = (p1.x + p2.x) / 2, cy = (p1.y + p2.y) / 2;
+    // 라벨은 **평상시 감춘다**(CSS opacity 0) — 계선이 100~220가닥이라 상시로 적으면
+    // 라벨이 그림을 덮는다. 손을 올린 계선에만 매체명이 뜨고, 활성 계선의 실시간
+    // 수치(전문 N건 · 최장 N초)는 묶음 배지가 따로 맡는다.
+    return `<path class="earrow${e.back ? ' back' : ''}${e.unused ? ' unused' : ''}${sensor}"` +
+      ` data-mt="${esc(e.mt)}" d="M-4.4,-3.3 L4.4,0 L-4.4,3.3 Z"` +
       ` fill="${e.back ? '#f87171' : m.color}"` +
-      ` transform="translate(${((p1.x + p2.x) / 2).toFixed(1)},${((p1.y + p2.y) / 2).toFixed(1)})` +
-      ` rotate(${ang.toFixed(1)})"></path>`;
+      ` transform="translate(${cx.toFixed(1)},${cy.toFixed(1)})` +
+      ` rotate(${ang.toFixed(1)})"></path>` +
+      `<text class="elabel" data-ek="${esc(e.key)}" data-mt="${esc(e.mt)}"` +
+      ` x="${cx.toFixed(1)}" y="${(cy - 7).toFixed(1)}"` +
+      ` text-anchor="middle">${esc(m.tag + ' ' + m.label)}</text>`;
   }).join('');
 }
 
@@ -1976,30 +2703,39 @@ function layoutGraph() {
   // 이 항적이 그 열을 거쳤는가 — 배치 전체를 그리므로 buckets 길이로는 알 수 없다.
   const relInCol = buckets.map((ids) => ids.filter((k) => rel.has(nid(k))).length);
 
+  // 이 보기의 **기본 표시는 이 항적이 실제로 지나간 경로뿐**이다(사용자 결정 2026-09-03).
+  // 배치의 나머지 계선은 [전체 계선 표시] 토글로만 회색 점선으로 함께 세운다 —
+  // 「무엇을 안 썼나」가 필요할 때만 켠다. 항상 켜 두면 실제 경로가 그 속에 묻힌다.
+  const eAll = sel.edges.map((e) => Object.assign({}, e, { rel: true }));
+  if (el('show-alllinks').checked) {
+    const have = new Set(sel.edges.map((e) => e.key));
+    (KJ.linksInMode(mode, run.catalog) || []).forEach((l) => {
+      const c = l.comm && l.comm[mode];
+      if (!c || !run.nodes[l.from] || !run.nodes[l.to]) return;
+      const k = l.from + '>' + l.to + '|' + c.type;
+      if (have.has(k)) return;
+      have.add(k);
+      eAll.push({ key: k, from: l.from, to: l.to, mt: c.type, kind: l.kind, n: 0,
+        rel: false, unused: true });
+    });
+  }
   // 같은 두 노드를 잇는 병렬 계선은 서로 벌려 그린다 — 겹치면 세 채널이 한 가닥으로 보인다.
   const par = {};
-  sel.edges.forEach((e) => {
+  eAll.forEach((e) => {
     const pk = pickSlots(run.nodes[e.from], run.nodes[e.to]);
     e._ak = slotKey(e.from, pk.a.dup); e._bk = slotKey(e.to, pk.b.dup);
     (par[e._ak + '>' + e._bk] = par[e._ak + '>' + e._bk] || []).push(e);
   });
 
-  // 간선 경로 — 정방향은 완만한 S자, 역방향은 아래로 크게 휘는 호
-  const edges = sel.edges.map((e) => {
+  // 간선 경로 — 정방향 S자 · 역방향 호 · 같은 열 왕복은 좌우로 갈라 (edgePathD 공용)
+  const edges = eAll.map((e) => {
     const a = nodes[e._ak], b = nodes[e._bk];
     if (!a || !b) return null;
     if (a.x === b.x && a.y === b.y) return null;
     const sib = par[e._ak + '>' + e._bk];
     const off = (sib.indexOf(e) - (sib.length - 1) / 2) * 26;   // 병렬 계선 벌림
     const back = b.col <= a.col;
-    let d;
-    if (back) {
-      const dip = Math.max(40, Math.abs(a.x - b.x) * .22 + 34) + off;
-      d = `M${a.x},${a.y} C${a.x - 10},${a.y + dip} ${b.x + 10},${b.y + dip} ${b.x},${b.y}`;
-    } else {
-      const mx = (a.x + b.x) / 2;
-      d = `M${a.x},${a.y} C${mx},${a.y + off} ${mx},${b.y + off} ${b.x},${b.y}`;
-    }
+    const d = edgePathD(a, b, off, { min: 40, k: .22, add: 34 }, null);
     // ca·cb — 이 간선이 넘는 열 구간. 열 밝힘(liveCols)·킬체인 프론티어가 쓴다.
     return Object.assign({}, e, { d: d, back: back, a: a, b: b, ca: a.col, cb: b.col });
   }).filter(Boolean);
@@ -2024,14 +2760,17 @@ function layoutGraph() {
     const m = media(e.mt);
     const ovr = overrides[ovrKey(e)];
     // 클릭 판정용 투명 굵은 선을 밑에 깐다 — 2~3px 선은 정확히 집기가 어렵다.
-    return `<g class="edgeg" data-ei="${i}">` +
+    return `<g class="edgeg" data-ei="${i}" data-ek="${esc(e.key)}" data-mt="${esc(e.mt)}">` +
       `<path class="edge-hit" d="${e.d}"></path>` +
-      `<path class="edge${ovr ? ' overridden' : ''}" d="${e.d}" stroke="${m.color}" stroke-width="${m.w}" opacity=".42"` +
+      `<path class="edge${e.rel ? ' rel' : ''}${ovr ? ' overridden' : ''}${e.unused ? ' unused' : ''}"` +
+      ` d="${e.d}" stroke="${m.color}" style="--w:${edgeWidth(m, e.n).toFixed(2)}"` +
       (m.dash && !ovr ? ` stroke-dasharray="${m.dash}"` : '') + `>` +
       `<title>${esc(nodeName(e.from) + ' → ' + nodeName(e.to) + ' · ' + m.label +
-        ' · 전문 ' + e.n + '건' + (e.back ? ' (역방향 — 계선을 되돌아간다)' : '') +
+        ' · 전문 ' + e.n + '건' +
+        (e.unused ? ' (이 항적은 안 씀)' : '') +
+        (e.back ? ' (역방향 — 계선을 되돌아간다)' : '') +
         edgeMetaLine(e.from, e.to, e.mt) +
-        '\n클릭하면 이 계선의 매체를 바꿔볼 수 있습니다')}</title></path></g>`;
+        '\n클릭하면 이 계선의 상세와 매체 교체가 열립니다')}</title></path></g>`;
   }).join('');
 
   // 큐가 선언된 노드는 전체 흐름과 **같은 DB 실린더**를 쓴다. 종전 항적 개별 보기는
@@ -2056,16 +2795,15 @@ function layoutGraph() {
     // ⚠️ 실린더는 **일하는 자리에만**. 중복 노드의 상행 자리는 순수 중계라 용량을 그리지 않는다
     //    (같은 부하를 두 번 그리면 노드가 두 배로 바쁜 것처럼 보인다).
     const cap = !gh && isWorkSlot(p.dup) ? nodeCap(n) : null;
+    p.cap = cap;   // 그리기는 이 판정을 그대로 읽는다(layoutAll 주석 참조)
     // 행 높이가 54px라 실린더(26px)와 두 줄 라벨이 모두 들어간다 — 밀집 예외가 필요 없다.
     const hasCap = !!cap;
-    const lines = wrapLabel((n.name || p.id) + (p.dup === 'up' ? ' ↑중계' : ''), 14, 2);
-    const labelY = hasCap ? p.y + CYL.h / 2 + 12 : p.y + 20;
+    p.cyl = hasCap;
     return `<g class="nodeg${hasCap ? ' hascyl' : ''}${p.dup === 'up' ? ' relay' : ''}${gh ? ' ghost' : ''}" data-id="${esc(p.id)}" data-slot="${esc(k)}">` +
       (hasCap ? cylSvg(p, cap.c, cap.unit)
         : `<circle class="ncirc ${cat}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.dense ? 7 : 9}"></circle>` +
           `<text class="qbadge" x="${(p.x + 12).toFixed(1)}" y="${(p.y - 8).toFixed(1)}"></text>`) +
-      lines.map((ln, li) =>
-        `<text class="nlabel" x="${p.x.toFixed(1)}" y="${(labelY + li * 11).toFixed(1)}" text-anchor="middle">${esc(ln)}</text>`).join('') +
+      nodeDecorSvg(p, n, cap) +
       `<title>${esc((n.name || p.id) + '\n' + p.id +
         (gh ? '\n⚠️ 가야 했으나 닿지 못한 노드 — 이 항적의 전문이 한 번도 도달하지 못했다' +
           '\n사유: ' + ghostReasonText(gh) + '\n최초 ' + fmt(gh.t)
@@ -2104,6 +2842,7 @@ function layoutGraph() {
   });
   // 화살촉은 길이를 잰 **뒤에** 그린다.
   svg.querySelector('#lyr-arrows').innerHTML = arrowsSvg(edges);
+  applyKeyFocus();   // DOM을 새로 만들었으므로 매체 강조를 다시 건다
   // 「닿지 못한」 계선 끝에 ✕ — 도착 지점 직전에 세워 「여기까지 못 갔다」를 못박는다.
   // 실패 시각 전에는 옅게 두었다가(geo.ghostEls) 재생이 그 시각을 지나면 또렷해진다.
   geo.ghostEls = [];
@@ -2138,12 +2877,46 @@ function layoutGraph() {
       근거 없는 수치가 결과에 섞이는데, 화면에서는 그 구분이 보이지 않는다.          */
 const ovrKey = (e) => e.from + '>' + e.to + '>' + e.kind;
 
+/* 계선을 누르면 **먼저 그 계선이 무엇인지** 적고, 그 아래에 매체 교체(반사실)를 둔다.
+   종전에는 교체 버튼만 있어서 「이 선이 무엇을 얼마나 실어 날랐나」를 툴팁 한 줄로만
+   볼 수 있었다 — 링크 라벨이 화면에서 가장 먼저 복잡해지는 자리라 라벨을 걷어낸 대신,
+   누르면 나오는 이 판이 그 정보를 맡는다(사용자 결정 2026-09-03). */
 function openMediaPopover(edge, ev) {
   const pop = el('pop');
   const cur = overrides[ovrKey(edge)] || edge.mt;
+  const m0 = media(edge.mt);
+  const meta = edgeMetaOf(edge.from, edge.to, edge.mt);
+  // 실측 — 이 실행에서 이 계선을 실제로 건넌 전문들. 대표값이 아니라 뽑힌 값 그대로다.
+  const fl = (edge.flows && edge.flows.length ? edge.flows
+    : (run ? run.allFlows.filter((f) => edgeKey(f) === edge.key) : []));
+  let sum = 0, mx = 0, mn = Infinity;
+  const ths = [];
+  fl.forEach((f) => {
+    sum += f.d; if (f.d > mx) mx = f.d; if (f.d < mn) mn = f.d;
+    if (f.th && ths.indexOf(f.th) < 0) ths.push(f.th);
+  });
+  const exp = expandedEdges.has(edge.key);
   el('pop-title').innerHTML =
     `${esc(nodeName(edge.from))} <span class="dim">→</span> ${esc(nodeName(edge.to))}` +
-    `<div class="dim" style="font-weight:400">${esc(edge.kind)} 계선 · 현재 ${esc(media(cur).label)}</div>`;
+    `<div class="dim" style="font-weight:400">${esc(kindLabel(meta) || edge.kind)} 계선 · ` +
+    `<b style="color:${m0.color}">${esc(m0.tag)} ${esc(media(cur).label)}</b>` +
+    `${gradeLabel(meta) ? ' · ' + esc(gradeLabel(meta)) : ''}</div>` +
+    (fl.length
+      ? `<div class="dim" style="font-weight:400">실측 전문 <b>${fl.length}건</b> · 지연 ` +
+        `${mn.toFixed(1)}~${mx.toFixed(1)}초 (평균 ${(sum / fl.length).toFixed(1)}초)</div>` +
+        `<div class="dim" style="font-weight:400">항적 ${esc(ths.slice(0, 8).join(', ') || '—')}` +
+        `${ths.length > 8 ? ` 외 ${ths.length - 8}` : ''}</div>`
+      : '<div class="dim" style="font-weight:400">이 실행에서는 통행이 없었습니다</div>') +
+    (fl.length && view === 'all'
+      ? `<button id="pop-exp" style="margin-top:6px">${exp ? '전문 묶어 보기' : '전문 하나하나 펼쳐 보기'}</button>`
+      : '');
+  const expBtn = el('pop-exp');
+  if (expBtn) expBtn.addEventListener('click', () => {
+    if (expandedEdges.has(edge.key)) expandedEdges.delete(edge.key);
+    else expandedEdges.add(edge.key);
+    pop.hidden = true;
+    drawFrame();
+  });
   el('pop-body').innerHTML = Object.keys(KJ.LINK_MEDIA_PRESETS).map((k) => {
     const m = media(k), p = KJ.LINK_MEDIA_PRESETS[k];
     const on = k === cur;
@@ -2291,12 +3064,29 @@ function placeSlots(W, minH, cmp) {
     const cx = colW * (ci + .5);
     const subCols = Math.max(1, Math.ceil(ids.length / DENSE));
     const gap = subCols > 1 ? Math.min(colW / subCols, (colW - 16) / subCols) : 0;
+    // 짧은 열은 조금 내려 세운다. 대표 C2는 열에 둘뿐(상급 C2 = KAMDOC·MCRC, 국지방공 C2 =
+    // 1군단 AOC·수방사 JAOC)이라 센서 19줄짜리 화면의 **맨 위 모서리**에 붙어 있었다 —
+    // 읽는 길(센서→…→요격부대)의 한복판인데 눈이 위로 튀었다(사용자 지적 2026-09-03).
+    // 남는 높이의 1/4만, 그것도 세 줄까지만 내린다 — 가운데로 완전히 몰면 짧은 열끼리
+    // 높이가 제각각이 되어 열이라는 것 자체가 안 읽힌다.
+    const rows = subCols > 1 ? DENSE : ids.length;
+    // 짧은 열은 **줄 간격도 벌린다**(최대 두 배). 대표 C2는 열에 둘뿐이라 54px 간격으로
+    // 붙어 있으면 KAMDOC·MCRC가 한 덩어리로 읽혀 「둘은 다른 지휘소」가 안 보였다
+    // (사용자 지적 2026-09-03). 열이 가진 높이를 나눠 갖되 두 배를 넘기지 않는다 —
+    // 더 벌리면 열의 위아래 끝으로 흩어져 같은 열이라는 것이 안 읽힌다.
+    const pitch = Math.min(ROW * 2, rowMax * ROW / Math.max(1, rows));
+    const off = Math.min((rowMax * ROW - rows * pitch) * .25, ROW * 3);
     ids.forEach((k, i) => {
       const si = subCols > 1 ? Math.floor(i / DENSE) : 0;
       const ri = subCols > 1 ? i % DENSE : i;
+      // pitch(줄 간격)를 노드에 실어 둔다 — 이름을 세 위계로 세울 자리가 있는지,
+      // 상태 배지를 아래에 둘지 옆에 둘지가 전부 여기서 갈린다.
+      // tier3 기준 72px: 대표 C2(2줄 → 108) · 국지방공(2줄) · ICC(11줄 → 93)는 들어가고,
+      // ECS·사수(15줄 → 68) · 센서(19줄 → 54)는 종전대로 두 줄 이름만 단다.
       nodes[k] = { id: slotNodeId(k), key: k, dup: slotOf[k].dup, col: ci,
         x: cx + (si - (subCols - 1) / 2) * gap,
-        y: 74 + ROW * (ri + .5), r: subCols > 1 ? 7 : 9, dense: subCols > 1 };
+        y: 74 + off + pitch * (ri + .5), r: subCols > 1 ? 7 : 9, dense: subCols > 1,
+        pitch: pitch, tier3: subCols <= 1 && pitch >= 72, qOff: (subCols <= 1 && pitch >= 72) ? 11 : 0 };
     });
   });
   return { nodes, colW, buckets, H };
@@ -2332,27 +3122,44 @@ function layoutAll() {
     if (!e) em.set(k, e = { key: k, from: f.from, to: f.to, mt: f.mt, kind: f.kind, n: 0, flows: [] });
     e.n++; e.flows.push(f);
   });
+  // 「있는데 한 번도 안 쓰인 계선」 — [전체 계선 표시] 토글이 켜졌을 때만 붙인다.
+  // ⚠️ 통행이 0이라 점도 배지도 붙지 않는다. 회색 점선으로만 서서 「선은 있었다」를 말한다.
+  if (el('show-alllinks').checked) {
+    (KJ.linksInMode(mode, run.catalog) || []).forEach((l) => {
+      const c = l.comm && l.comm[mode];
+      if (!c) return;
+      const k = l.from + '>' + l.to + '|' + c.type;
+      if (em.has(k)) return;
+      em.set(k, { key: k, from: l.from, to: l.to, mt: c.type, kind: l.kind, n: 0, flows: [], unused: true });
+    });
+  }
   const par = {};
   const eList = [...em.values()];
   eList.forEach((e) => {
+    if (!run.nodes[e.from] || !run.nodes[e.to]) { e._skip = true; return; }
     const pk = pickSlots(run.nodes[e.from], run.nodes[e.to]);
     e._ak = slotKey(e.from, pk.a.dup); e._bk = slotKey(e.to, pk.b.dup);
     (par[e._ak + '>' + e._bk] = par[e._ak + '>' + e._bk] || []).push(e);
   });
+  // 팬인 묶음 — 같은 열에서 같은 노드로 들어가는 가닥이 BUNDLE_MIN 이상이면 묶는다
+  // (센서 19가닥 → ECS 처럼 선이 면이 되던 자리).
+  const fan = {};
+  eList.forEach((e) => {
+    const a = nodes[e._ak], b = nodes[e._bk];
+    if (e._skip || !a || !b || b.col <= a.col) return;
+    const k = a.col + '>' + e._bk;
+    fan[k] = (fan[k] || 0) + 1;
+  });
   const edges = eList.map((e) => {
+    if (e._skip) return null;
     const a = nodes[e._ak], b = nodes[e._bk];
     if (!a || !b || (a.x === b.x && a.y === b.y)) return null;
     const sib = par[e._ak + '>' + e._bk];
     const off = (sib.indexOf(e) - (sib.length - 1) / 2) * 18;
     const back = b.col <= a.col;
-    let d;
-    if (back) {
-      const dip = Math.max(36, Math.abs(a.x - b.x) * .18 + 30) + off;
-      d = `M${a.x},${a.y} C${a.x - 10},${a.y + dip} ${b.x + 10},${b.y + dip} ${b.x},${b.y}`;
-    } else {
-      const mx = (a.x + b.x) / 2;
-      d = `M${a.x},${a.y} C${mx},${a.y + off} ${mx},${b.y + off} ${b.x},${b.y}`;
-    }
+    const gate = (!back && (fan[a.col + '>' + e._bk] || 0) >= BUNDLE_MIN)
+      ? b.x - Math.min(colW * .32, Math.abs(b.x - a.x) * .4) : null;
+    const d = edgePathD(a, b, off, { min: 36, k: .18, add: 30 }, gate);
     // ca·cb — 이 간선이 넘는 열 구간(열 밝힘이 셀 경계).
     return Object.assign({}, e, { d, back, ca: a.col, cb: b.col });
   }).filter(Boolean);
@@ -2375,15 +3182,19 @@ function layoutAll() {
     const m = media(e.mt);
     const ovr = overrides[ovrKey(e)];
     const sensor = e.mt === 'report-cycle' ? ' sensor-edge' : '';
-    // 밀집 열(센서·ECS·사수)에 닿는 간선은 가늘게 — 수십 가닥이 정상 굵기면 면이 된다.
+    // 굵기 = 매체 기본 × 통행량(로그). 밀집 열에 닿는 가닥은 한 번 더 줄인다 —
+    // 수십 가닥이 정상 굵기면 선이 아니라 면이 된다.
     const thin = nodes[e._ak].dense || nodes[e._bk].dense;
-    return `<g class="edgeg${sensor}" data-ek="${esc(e.key)}">` +
+    const w = edgeWidth(m, e.n) * (thin ? .6 : 1);
+    return `<g class="edgeg${sensor}" data-ek="${esc(e.key)}" data-mt="${esc(e.mt)}">` +
       `<path class="edge-hit" d="${e.d}"></path>` +
-      `<path class="edge${ovr ? ' overridden' : ''}" d="${e.d}" stroke="${m.color}" stroke-width="${thin ? 1.4 : m.w}" opacity=".3"` +
+      `<path class="edge${ovr ? ' overridden' : ''}${e.unused ? ' unused' : ''}" d="${e.d}"` +
+      ` stroke="${m.color}" style="--w:${w.toFixed(2)}"` +
       (m.dash && !ovr ? ` stroke-dasharray="${m.dash}"` : '') + `>` +
       `<title>${esc(nodeName(e.from) + ' → ' + nodeName(e.to) + ' · ' + m.label + ' · 전문 ' + e.n + '건' +
+        (e.unused ? ' (통행 없음 — 선은 있으나 이 실행에서 한 번도 쓰이지 않았다)' : '') +
         (e.back ? ' (역방향)' : '') + edgeMetaLine(e.from, e.to, e.mt) +
-        '\n클릭하면 이 계선의 매체를 바꿔볼 수 있습니다')}</title></path></g>`;
+        '\n클릭하면 이 계선의 상세와 매체 교체가 열립니다')}</title></path></g>`;
   }).join('');
 
   // 노드 표현은 둘로 나뉜다.
@@ -2397,25 +3208,26 @@ function layoutAll() {
     const p = nodes[k], n = run.nodes[p.id] || {};
     const cat = n.category || 'c2';
     // 실린더는 **일하는 자리에만** — 중복 노드의 상행 자리는 순수 중계다.
+    // ⚠️ 판정을 노드에 실어 둔다(p.cap). 그리기 쪽에서 nodeCap()을 다시 부르면 중계 자리에
+    //    없는 대기실이 배지로 뜬다(실측 — 「ICC ↑중계 · 5석 대기실 25석」).
     const cap = isWorkSlot(p.dup) ? nodeCap(n) : null;
+    p.cap = cap;
     const hasCap = !!cap;
     const cyl = hasCap && !p.dense;
     const rr = p.r + (p.dense ? 2.2 : 3.2);
-    const lines = p.dense ? [] : wrapLabel((n.name || p.id) + (p.dup === 'up' ? ' ↑중계' : ''), 13, 2);
     const idle = touched(p.id) ? '' : ' idle';
-    const labelY = cyl ? p.y + CYL.h / 2 + 13 : p.y + rr + 12;
     let glyph;
     if (cyl) {
       p.cyl = true;
       glyph = cylSvg(p, cap.c, cap.unit);
     } else {
+      p.cyl = false;
       glyph = `<circle class="ncirc ${cat}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.r}"></circle>` +
         `<text class="qtail" x="${(p.x + rr + 3).toFixed(1)}" y="${(p.y - 4).toFixed(1)}"></text>`;
     }
     return `<g class="nodeg${idle}${cyl ? ' hascyl' : ''}${p.dup === 'up' ? ' relay' : ''}"` +
       ` data-id="${esc(p.id)}" data-slot="${esc(k)}">` + glyph +
-      lines.map((ln, li) =>
-        `<text class="nlabel" x="${p.x.toFixed(1)}" y="${(labelY + li * 11).toFixed(1)}" text-anchor="middle">${esc(ln)}</text>`).join('') +
+      nodeDecorSvg(p, n, cap) +
       `<title>${esc((n.name || p.id) + '\n' + p.id +
         (p.dup === 'up' ? '\n보고 상행 중계 자리 — 같은 노드가 오른쪽 「명령 ↓」 열에 한 번 더 선다'
           : p.dup === 'dn' ? '\n명령 하행 자리 — 큐가 여기 쌓인다' : '') +
@@ -2435,6 +3247,7 @@ function layoutAll() {
   });
   // 화살촉은 길이를 잰 **뒤에** 그린다.
   svg.querySelector('#lyr-arrows').innerHTML = arrowsSvg(edges);
+  applyKeyFocus();   // DOM을 새로 만들었으므로 매체 강조를 다시 건다
   geoAll.bandEls = [...svg.querySelectorAll('.colband')];
   [...svg.querySelectorAll('.nodeg')].forEach((g) => {
     const id = g.dataset.id;
@@ -2465,18 +3278,31 @@ function toggleFocusNode(id) {
 }
 
 /**
- * 시각 t의 노드별 {busy, q, svcSum, svcN} — 전역 체류에서 복원.
- * svcSum/svcN은 지금 서비스 중인 작업들의 **총 소요 시간**(완료−개시)이고, 작업 맥동의
- * 주기가 여기서 나온다. 관측 종료까지 안 끝난 작업은 길이를 모르므로 세지 않는다 —
- * 그런 노드는 svcN이 0으로 남아 workPulseSec()이 가장 느린 쪽으로 잡는다(지어내지 않는다).
+ * 시각 t의 노드별 상태 — 전역 체류(allSpans)에서 복원한다. 한 번의 훑기에서 다 낸다:
+ *   busy·q            지금 처리 중 / 줄 서 있는 건수 (노드 배지 ●·⏳, 실린더, 부하 순위)
+ *   svcSum·svcN       지금 서비스 중인 작업들의 총 소요(완료−개시) — 작업 맥동의 주기
+ *   arr·done          시각 t까지 도착·완료한 누계 — 병목 카드의 「처리 완료 N%」
+ *   maxWait           t까지 그 노드에서 가장 오래 기다린 시간(아직 기다리는 중이면 t−도착)
+ *   drops             t까지의 넘침·기한 드롭 누계 — 노드 배지 ⚠
+ * ⚠️ 항적 종결로 큐를 비운 것(dropR==='dead')은 **실패가 아니다** — drops에 넣지 않는다
+ *    (buildGlobal의 drops/dead 구분과 같은 계정).
+ * ⚠️ 관측 종료까지 안 끝난 작업은 길이를 모르므로 svc에 세지 않는다 — 그런 노드는 svcN이
+ *    0으로 남아 workPulseSec()이 가장 느린 쪽으로 잡는다(지어내지 않는다).
  */
 function stateAt(t) {
   const state = {};
   run.allSpans.forEach((s) => {
     if (s.arrive > t) return;
+    const st = state[s.at] || (state[s.at] =
+      { q: 0, busy: 0, svcSum: 0, svcN: 0, arr: 0, done: 0, drops: 0, maxWait: 0 });
+    st.arr++;
+    const w = (s.start != null && s.start <= t) ? s.start - s.arrive
+      : (s.drop != null && s.drop <= t) ? s.drop - s.arrive : t - s.arrive;
+    if (w > st.maxWait) st.maxWait = w;
+    if (s.done != null && s.done <= t) st.done++;
+    if (s.drop != null && s.drop <= t && s.dropR !== 'dead') st.drops++;
     const endT = s.drop != null ? s.drop : (s.done != null ? s.done : Infinity);
     if (t > endT) return;
-    const st = state[s.at] || (state[s.at] = { q: 0, busy: 0, svcSum: 0, svcN: 0 });
     if (s.start != null && t >= s.start) {
       st.busy++;
       if (s.done != null) { st.svcSum += s.done - s.start; st.svcN++; }
@@ -2484,6 +3310,8 @@ function stateAt(t) {
   });
   return state;
 }
+/** 빈 상태 — state[id]가 없을 때 쓰는 0 판. 필드를 빠뜨리면 조용히 NaN이 화면에 뜬다. */
+const ZERO_ST = { q: 0, busy: 0, svcSum: 0, svcN: 0, arr: 0, done: 0, drops: 0, maxWait: 0 };
 
 let lastState = null;
 let lastRankWall = 0;
@@ -2494,23 +3322,28 @@ function drawFrameAll() {
   const showSensor = el('show-sensor').checked;
   let out = '';
 
-  // 전문: 느린 매체(음성·문자·VTC·KVMF ≥ 10초)만 개별 점 — 빠른 전문까지 다 찍으면
-  // 초당 수십 개가 지나가며 깜박임만 남는다(사용자 결정). 빠른 매체는 선 맥동으로 집약.
+  // ── 지금 계선 위에 떠 있는 전문을 **계선별로** 모은다 ─────────────────────
   const hotEdges = new Set();
+  const doneEdges = new Set();
   const liveCols = new Set();
   const talking = new Map();   // nodeId → 지금 이 노드를 끝점으로 나는 전문 중 가장 긴 전송 시간
-  let slowCount = 0;
+  const talkN = new Map();     // nodeId → 그 전문의 **건수**(노드 배지 ↔)
+  const byEdge = new Map();    // 간선키 → 지금 그 계선 위에 있는 전문 목록
   run.allFlows.forEach((f) => {
+    const e = geoAll.edgeByKey[edgeKey(f)];
+    if (!e || !e.el) return;
+    // 방금 도착한 계선 — 「이 전문은 갔다」를 잠깐 녹색으로 못박고 흐려진다.
+    if (f.t1 <= simT && simT - f.t1 <= DONE_HOLD) doneEdges.add(e.key);
     const inFlight = f.d > 0 ? (simT >= f.t0 && simT <= f.t1) : (simT >= f.t0 && simT <= f.t0 + 1.5);
     if (!inFlight) return;
-    const e = geoAll.edgeByKey[edgeKey(f)];
-    if (!e) return;
     if (e.ca != null) { liveCols.add(e.ca); liveCols.add(e.cb); }
-    // 교신 맥동 재료 — 이 전문의 양 끝. 센서 보고(report-cycle)는 세지 않는다(CSS 주석 참조).
+    // 교신 맥동·↔ 배지 재료 — 이 전문의 양 끝. 센서 보고(report-cycle)는 세지 않는다
+    // (주기 보고가 상시 흐르는 센서·ECS 열이 영영 깜빡여 신호가 아니라 소음이 된다).
     if (f.d > 0 && f.mt !== 'report-cycle') {
       [f.from, f.to].forEach((id) => {
         const p = talking.get(id);
         if (p == null || f.d > p) talking.set(id, f.d);
+        talkN.set(id, (talkN.get(id) || 0) + 1);
       });
     }
     // ⚠️ 「센서 보고 표시」 토글은 **점의 혼잡을 줄이는 손잡이**이지 흐름을 부정하는 것이
@@ -2518,22 +3351,67 @@ function drawFrameAll() {
     //    전부 report-cycle이라, 토글을 따르면 맨 왼쪽 두 열이 **영영 꺼진 채**로 남아
     //    킬체인이 시작부터 죽은 것처럼 읽힌다.
     if (!showSensor && f.mt === 'report-cycle') return;
-    // ⚠️ 종전에는 **느린 전문(d ≥ SLOW)만** 점으로 그리고 빠른 것은 간선 강조로만 처리했다.
-    //    그래서 화면에서 움직이는 공이 음성·VTC뿐이었고, 데이터링크 1초짜리 전문은 흐름으로
-    //    보이지 않았다(사용자 지적 2026-09-03). 이제 **전부 그린다** — 빠른 것은 꼬리가 길어
-    //    한순간에 선을 가로지르는 자국으로 보이고, 느린 것은 꼬리 없이 천천히 기어간다.
-    //    「빠르고 느림」이 점의 유무가 아니라 **자국의 길이**로 읽힌다.
-    if (!e.el) return;
-    const p = f.d > 0 ? (simT - f.t0) / f.d : 1;
-    const pt = edgePt(e, p);
-    const m = media(f.mt);
-    if (f.d >= SLOW) slowCount++; else hotEdges.add(e.key);
-    out += trailSvg(e, p, f.d, m.color) +
-      `<circle class="dot" data-th="${esc(f.th || '')}" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${f.d >= SLOW ? 5 : 4}" fill="${m.color}">` +
-      `<title>${esc((f.th || '') + ' · ' + m.label + ' ' + f.d.toFixed(f.d < 10 ? 1 : 0) + '초 — 클릭하면 이 항적을 따라간다')}</title></circle>`;
+    if (keyFocusMt && f.mt !== keyFocusMt) return;   // 계선 범례의 매체 강조(표시 필터)
+    hotEdges.add(e.key);
+    const list = byEdge.get(e.key);
+    if (list) list.push(f); else byEdge.set(e.key, [f]);
   });
+
+  // ── 그리기 — 같은 계선의 동시 전문은 「이동 묶음 + N건」으로 집약한다 ────────
+  // 배지는 서로 겹치지 않게 아래로 비킨다. 두 계선의 묶음이 같은 자리에서 만나면
+  // 글자가 포개져 둘 다 못 읽는다(실측 — 1군단 AOC 앞에서 음성·문자 배지가 겹쳤다).
+  const placed = [];
+  const dodge = (x, y, w) => {
+    for (let i = 0; i < 5; i++) {
+      const hit = placed.some((b) => Math.abs(b.y - y) < 14 && x < b.x + b.w + 4 && b.x < x + w + 4);
+      if (!hit) break;
+      y += 15;
+    }
+    placed.push({ x: x, y: y, w: w });
+    return y;
+  };
+  byEdge.forEach((list, key) => {
+    const e = geoAll.edgeByKey[key];
+    const m = media(e.mt);
+    if (expandedEdges.has(key) || list.length < AGG_MIN) {
+      // 펼친 계선(또는 두 건 이하) — 전문 하나에 점 하나. 꼬리 길이가 곧 속도다.
+      list.forEach((f) => {
+        const p = f.d > 0 ? (simT - f.t0) / f.d : 1;
+        const pt = edgePt(e, p);
+        out += trailSvg(e, p, f.d, m.color) +
+          `<circle class="dot" data-th="${esc(f.th || '')}" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}"` +
+          ` r="${f.d >= SLOW ? 5 : 4}" fill="${m.color}">` +
+          `<title>${esc((f.th || '') + ' · ' + m.label + ' ' + f.d.toFixed(f.d < 10 ? 1 : 0) +
+            '초 — 클릭하면 이 항적을 따라간다')}</title></circle>`;
+      });
+      return;
+    }
+    // 묶음 — 위치는 이 계선 위 전문들의 **실제 진행률 평균**, 「최장」은 실제 전송 시간 최댓값.
+    let sum = 0, maxD = 0;
+    const ths = [];
+    list.forEach((f) => {
+      sum += f.d > 0 ? (simT - f.t0) / f.d : 1;
+      if (f.d > maxD) maxD = f.d;
+      if (f.th && ths.indexOf(f.th) < 0) ths.push(f.th);
+    });
+    const p = Math.min(1, Math.max(0, sum / list.length));
+    const pt = edgePt(e, p);
+    out += `<circle class="dot agg-tok" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}"` +
+      ` r="${Math.min(9.5, 4.6 + list.length * .38).toFixed(1)}" fill="${m.color}">` +
+      `<title>${esc(nodeName(e.from) + ' → ' + nodeName(e.to) + ' · ' + m.label +
+        '\n지금 이 계선 위 전문 ' + list.length + '건 · 최장 ' + maxD.toFixed(maxD < 10 ? 1 : 0) + '초' +
+        '\n항적: ' + ths.slice(0, 6).join(', ') + (ths.length > 6 ? ' 외 ' + (ths.length - 6) : ''))}</title></circle>`;
+    const lab = `${m.tag} ${list.length}건 · 최장 ${maxD.toFixed(maxD < 10 ? 1 : 0)}초`;
+    const bw = textW(lab, 8.4) + 10, bx = pt.x + 11, by = dodge(pt.x + 11, pt.y - 18, bw);
+    out += `<g class="aggbadge" data-agg="${esc(key)}">` +
+      `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="13.5" rx="3" stroke="${m.color}"></rect>` +
+      `<text x="${(bx + 5).toFixed(1)}" y="${(by + 10).toFixed(1)}" fill="${m.color}">${esc(lab)}</text>` +
+      `<title>누르면 이 계선의 전문 ${list.length}건을 개별 점으로 펼칩니다</title></g>`;
+  });
+  // 펼쳐 둔 계선을 눈에 띄게 — 배지가 사라져도 「내가 펼쳤다」를 알 수 있어야 한다.
   geoAll.edges.forEach((e) => {
     e.el.classList.toggle('hot', hotEdges.has(e.key));
+    e.el.classList.toggle('done', !hotEdges.has(e.key) && doneEdges.has(e.key));
   });
 
   // 계선 입구에 막혀 있는 전문 — 「가야 할 방향은 있는데 못 가는」 그림.
@@ -2553,7 +3431,11 @@ function drawFrameAll() {
   // 노드 케파 — 링 채움(처리중/서버수)·큐 꼬리·색 단계(여유→가득→가득+대기).
   const state = stateAt(simT);
   lastState = state;
-  const liveNow = new Set(Object.keys(state));
+  // 「살아 있다」 = 지금 일하거나 줄이 있거나 드롭이 쌓였거나 교신 중. 나머지는 안 만진다.
+  const talkNow = new Set(talking.keys());
+  const liveNow = new Set(Object.keys(state).filter(
+    (id) => state[id].busy || state[id].q || state[id].drops));
+  talkNow.forEach((id) => liveNow.add(id));
   // 이번에 살아 있는 노드 + 직전 프레임에 살아 있던 노드만 만진다(전 노드 갱신은 낭비).
   const dirty = new Set([...liveNow, ...geoAll.prevLive]);
   const dirtySlots = new Set();
@@ -2563,7 +3445,10 @@ function drawFrameAll() {
     if (!els) return;
     const id = els.id, n = run.nodes[id];
     const cap = nodeCap(n); const c = cap ? cap.c : null;
-    const st = state[id] || { busy: 0, q: 0 };
+    const st = state[id] || ZERO_ST;
+    // 동시에 벌어지는 일은 세어서 나란히 적는다(테두리 하나로는 하나만 말할 수 있다).
+    const p = geoAll.nodes[k] || {};
+    paintNodeDecor(els, p.cap, st, talkN.get(id) || 0, nodeIdleText(p, n, p.cap));
     // 일이 있는 노드의 열도 밝힌다 — 선 위의 이동만 세면 「처리 중」인 단계가 꺼져 보인다.
     if ((st.busy || st.q) && geoAll.nodes[k]) liveCols.add(geoAll.nodes[k].col);
     if (els.fill && c) {
@@ -2584,7 +3469,6 @@ function drawFrameAll() {
 
   // 교신 맥동 — 전문 끝점 노드의 테두리를 그 전문의 전송 시간 주기로 고동시킨다.
   // 처리 중(busy)이면 작업 맥동이 우선한다(CSS :not 가드와 같은 규칙을 JS에서도 지킨다).
-  const talkNow = new Set(talking.keys());
   const talkDirty = new Set([...talkNow, ...(geoAll.prevTalking || [])]);
   Object.keys(geoAll.nodeEls).forEach((k) => {
     const els = geoAll.nodeEls[k];
@@ -2602,11 +3486,115 @@ function drawFrameAll() {
   geoAll.prevTalking = talkNow;
   paintLiveCols(geoAll, liveCols);
 
-  // 부하 순위는 300ms 스로틀 — 매 프레임 정렬·DOM 재생성은 낭비다.
+  // 패널(병목 카드·부하 순위·활성 교신)은 **재생 중에만** 300ms 스로틀 — 매 프레임 정렬·
+  // DOM 재생성은 낭비다. 멈춰 있을 때(스크럽·보기 전환·⏭)는 즉시 반영한다 — 안 그러면
+  // 눌러 옮긴 시각과 패널의 수치가 최대 0.3초 어긋난 채로 남는다.
   const wall = performance.now();
-  if (wall - lastRankWall > 300) { lastRankWall = wall; renderLoadRank(state); }
+  if (!playing || wall - lastRankWall > 300) {
+    lastRankWall = wall;
+    renderBneck(state);
+    renderLoadRank(state);
+    renderLive(byEdge, geoAll);
+  }
   if (allLogMode === 'c2') paintC2Log(); else paintBotLog();
   paintClock();
+}
+
+/* ── ① 현재 병목 — 「지금 어디가 막혔나」를 추론하게 두지 않고 한 줄로 적는다 ────
+   ⚠️ 네 수치 모두 실행 기록에서 나온다(stateAt):
+        대기 N건    지금 그 노드 큐에 서 있는 작업 수
+        최대 대기   시각 t까지 그 노드에서 가장 오래 기다린 시간(아직 대기 중이면 t−도착)
+        처리 완료   완료 건수 / 도착 건수 — 「처리율」을 지어낸 비율로 적지 않는다
+        드롭        넘침·기한 만료 누계(항적 종결로 큐를 비운 것은 빼고 센다)
+   ⚠️ 대기가 0이면 「병목 없음」이라고 적는다 — 굳이 1등을 세워 병목처럼 보이게 하지 않고,
+      대신 그때까지 **가장 오래 기다리게 한 자리**를 참고로 남긴다. */
+function renderBneck(state) {
+  const box = el('bneck');
+  if (!run) return;
+  let best = null;
+  Object.keys(state).forEach((id) => {
+    const n = run.nodes[id];
+    if (!n) return;
+    const cap = nodeCap(n);
+    if (!cap) return;                     // 용량이 선언되지 않은 자리는 병목을 말할 수 없다
+    const st = state[id];
+    // ⚠️ 대기 · 최장대기 · 점유율 순으로 가른다. 대기가 전부 0인 판(포화가 없는 실행)에서
+    //    동률로 두면 **먼저 만난 노드가 그냥 1등**이 되어 없는 병목을 지목한다.
+    const st2 = st.q * 1e9 + st.maxWait * 1e3 + (cap.c ? st.busy / cap.c : 0);
+    if (!best || st2 > best.score) best = { id: id, n: n, cap: cap, st: st, score: st2 };
+  });
+  box.classList.remove('jam', 'busy');
+  if (!best) {
+    box.innerHTML = '<span class="h">현재 병목</span><div class="n">—</div>' +
+      '<div class="s">아직 어느 노드에도 작업이 도착하지 않았습니다.</div>';
+    box.dataset.id = '';
+    return;
+  }
+  const st = best.st, c = best.cap.c;
+  const jam = st.busy >= c && st.q > 0;
+  if (jam) box.classList.add('jam'); else if (st.q > 0) box.classList.add('busy');
+  const rate = st.arr ? Math.round(st.done / st.arr * 100) : 100;
+  box.dataset.id = best.id;
+  box.innerHTML =
+    `<span class="h">${st.q > 0 ? '현재 병목' : '현재 병목 없음 — 최장 대기를 낸 자리'}` +
+    (view === 'all' ? ' · 눌러서 그래프에서 짚기' : '') + '</span>' +
+    `<div class="n">${esc(nodeShortName(best.n))}</div>` +
+    `<div class="s">대기 <b class="${st.q ? 'w' : ''}">${st.q}건</b> · 최대 대기 ` +
+    `<b class="${st.maxWait >= 30 ? 'w' : ''}">${st.maxWait.toFixed(1)}초</b> · 처리 완료 <b>${rate}%</b>` +
+    ` · 처리 <b>${st.busy}/${c}${esc(best.cap.unit)}</b>` +
+    (st.drops ? ` · <b class="d">드롭 ${st.drops}</b>` : '') + '</div>';
+}
+
+/* ── ③ 현재 활성 교신 — 「지금 선 위에 떠 있는 전문」 목록 ──────────────────
+   그래프의 움직이는 점과 **같은 재료**다(byEdge). 점을 눈으로 좇지 못할 때 읽는 자리이고,
+   개별 보기에서는 그 위에 「선택 항적 결과」를 얹는다(패널 정보 계층 ②③). */
+function renderLive(byEdge, geoRef) {
+  const box = el('live-body');
+  const rows = [];
+  byEdge.forEach((list, key) => {
+    const e = geoRef && geoRef.edgeByKey ? geoRef.edgeByKey[key] : null;
+    if (!e) return;
+    let maxD = 0, th = null, multi = false;
+    list.forEach((f) => {
+      if (f.d > maxD) maxD = f.d;
+      if (th == null) th = f.th; else if (th !== f.th) multi = true;
+    });
+    rows.push({ e: e, n: list.length, maxD: maxD, th: multi ? '' : (th || '') });
+  });
+  rows.sort((a, b) => b.maxD - a.maxD || b.n - a.n);
+  // ⚠️ 매체 강조가 걸려 있으면 이 목록도 그 매체만 담긴다(같은 재료를 쓴다). 그 사실을
+  //    제목에 적는다 — 안 적으면 「지금 교신이 두 건뿐」으로 읽힌다.
+  el('live-count').textContent = (rows.length ? rows.length + '개 계선' : '') +
+    (keyFocusMt ? (rows.length ? ' · ' : '') + media(keyFocusMt).label + '만' : '');
+  let head = '';
+  if (view === 'track' && sel) {
+    const oc = outcomeInfo(sel);
+    const who = esc(sel.id + ' · ' + (THREAT_LABEL[sel.type] || sel.type));
+    head = oc.open
+      ? `<div class="lvsum"><b>진행 중</b><span class="sub">${who}</span></div>`
+      : oc.leaked
+        ? `<div class="lvsum leak"><b>누수 — ${esc(oc.text)}</b><span class="sub">` +
+          `${esc(oc.fired ? '발사 후 실패' : '발사 못함')}` +
+          `${oc.family ? ' · ' + esc(oc.family) + ' 계열' : ''}` +
+          `${oc.struct ? ' · ' + esc(oc.struct) : ''} · ${who}</span></div>`
+        : `<div class="lvsum kill"><b>격추${sel.exitT != null ? ' ' + esc(fmt(sel.exitT)) : ''}</b>` +
+          `<span class="sub">${who}</span></div>`;
+  }
+  box.innerHTML = head + (rows.length ? rows.slice(0, 14).map((r) => {
+    const m = media(r.e.mt);
+    return `<div class="lv" data-th="${esc(r.th)}"` +
+      ` title="${esc(nodeName(r.e.from) + ' → ' + nodeName(r.e.to) + ' · ' + m.label +
+        ' · 이 계선 위 ' + r.n + '건 · 최장 ' + r.maxD.toFixed(1) + '초' +
+        (r.th ? '\n항적 ' + r.th + ' — 클릭하면 따라간다' : '\n여러 항적이 섞여 있습니다'))}">` +
+      `<span class="nm">${esc(nodeShortName(run.nodes[r.e.from] || { name: r.e.from }) + ' → ' +
+        nodeShortName(run.nodes[r.e.to] || { name: r.e.to }))}</span>` +
+      `<span class="md" style="color:${m.color}">${esc(m.tag)}</span>` +
+      `<span class="tm${r.maxD >= SLOW ? ' slow' : ''}">${r.maxD.toFixed(r.maxD < 10 ? 1 : 0)}초` +
+      `${r.n > 1 ? ' ×' + r.n : ''}</span></div>`;
+  }).join('') : '<div class="empty">지금 계선 위에 떠 있는 전문이 없습니다.</div>');
+  box.querySelectorAll('.lv').forEach((d) => {
+    d.addEventListener('click', () => { if (d.dataset.th) drillToTrack(d.dataset.th, simT); });
+  });
 }
 
 /** 좌상단: 현재 시각의 노드 부하 순위 (대기+처리 기준, 상위만). */
@@ -2617,7 +3605,7 @@ function renderLoadRank(state, force) {
     .map((id) => {
       const n = run.nodes[id];
       const cap = nodeCap(n); const c = cap ? cap.c : null;
-      const st = state[id] || { busy: 0, q: 0 };
+      const st = state[id] || ZERO_ST;
       const jam = c != null && st.busy >= c && st.q > 0;
       const full = c != null && st.busy >= c && !jam;
       return { id, n, c, st, jam, full, drops: gv.stats[id].drops, dead: gv.stats[id].dead };
@@ -2960,6 +3948,7 @@ function setView(v) {
   el('v-all').classList.toggle('on', v === 'all');
   el('v-track').classList.toggle('on', v === 'track');
   el('tracks-label').textContent = v === 'all' ? '노드 부하 순위 (현재 시각)' : '항적 (이벤트)';
+  el('live-title').textContent = v === 'all' ? '현재 활성 교신' : '선택 항적 결과 · 현재 교신';
   if (!run) return;
   if (v === 'all') {
     el('signal').hidden = true;   // 신호등은 항적 하나를 볼 때만 뜻이 있다
@@ -3144,6 +4133,10 @@ function drawFrameTrack() {
 
   const liveCols = new Set();
   const talking = new Map();   // nodeId → 지금 이 항적의 전문이 나는 계선 끝점의 전송 시간
+  const talkN = new Map();     // nodeId → 그 전문의 건수(노드 배지 ↔)
+  const hotEdges = new Set();  // 지금 교신 중인 계선 — 밝게·굵게
+  const doneEdges = new Set(); // 방금 도착한 계선 — 잠깐 녹색
+  const byEdge = new Map();    // 계선키 → 지금 그 위에 있는 전문(활성 교신 목록의 재료)
   // 킬체인 프론티어 — 이 항적의 계선이 **지금까지 도달한** 가장 오른쪽 열.
   // 「항적이 움직이니 C2가 왼쪽부터 차례로 반응한다」를 한 줄로 못박는 표시다.
   let frontier = -1;
@@ -3156,6 +4149,7 @@ function drawFrameTrack() {
     if (!e || !e.el) return;
     // 도착이 끝난 전문은 프론티어를 그만큼 밀어 둔다(역방향 도착은 밀지 않는다).
     if (simT >= f.t1 && !e.back && e.cb != null) frontier = Math.max(frontier, e.cb);
+    if (f.t1 <= simT && simT - f.t1 <= DONE_HOLD) doneEdges.add(e.key);
     // 순간 전달(지연 0 — 병렬 통보)은 도착 직후 잠깐만 깜빡인다. 0초를 "이동"으로 그리면
     // 없는 시간을 지어내는 것이고, 아예 안 그리면 통보가 없었던 것처럼 보인다.
     const inFlight = f.d > 0 ? (simT >= f.t0 && simT <= f.t1) : (simT >= f.t0 && simT <= f.t0 + 1.5);
@@ -3166,11 +4160,16 @@ function drawFrameTrack() {
       [f.from, f.to].forEach((id) => {
         const p = talking.get(id);
         if (p == null || f.d > p) talking.set(id, f.d);
+        talkN.set(id, (talkN.get(id) || 0) + 1);
       });
     }
     // 프론티어·열 밝기는 「센서 보고 표시」 토글과 무관하다(전체 보기와 같은 규율) —
     // 토글은 점의 혼잡을 줄이는 손잡이일 뿐이다. 점만 여기서 거른다.
     if (!showSensor && f.mt === 'report-cycle') return;
+    if (keyFocusMt && f.mt !== keyFocusMt) return;   // 계선 범례의 매체 강조(표시 필터)
+    hotEdges.add(e.key);
+    const lst = byEdge.get(e.key);
+    if (lst) lst.push(f); else byEdge.set(e.key, [f]);
     const p = f.d > 0 ? (simT - f.t0) / f.d : 1;
     const pt = e.el.getPointAtLength(e.len * Math.min(1, Math.max(0, p)));
     const m = media(f.mt);
@@ -3181,6 +4180,15 @@ function drawFrameTrack() {
         `${esc(m.label)} ${f.d.toFixed(0)}초</text>`;
     }
   });
+  // 활성 계선을 밝히고, 방금 도착한 계선은 잠깐 녹색으로 둔다.
+  // ⚠️ 개별 보기의 점은 **집약하지 않는다** — 이 화면의 역할이 「전문 하나하나」다
+  //    (전체 보기는 트래픽 흐름, 개별 보기는 전문 한 건 — 사용자 결정 2026-09-03).
+  geo.edges.forEach((e) => {
+    if (!e.el) return;
+    e.el.classList.toggle('hot', hotEdges.has(e.key));
+    e.el.classList.toggle('done', !hotEdges.has(e.key) && doneEdges.has(e.key));
+  });
+
   // 이 항적의 작업이 놓인 노드의 열도 밝힌다 — 대기든 처리든 「반응 중」이다.
   // 선 위의 이동만 세면 노드에서 시간을 다 보내는 구간이 통째로 꺼져 보인다.
   const myNodes = new Set();
@@ -3288,8 +4296,12 @@ function drawFrameTrack() {
   Object.keys(geo.nodeEls).forEach((k) => {
     const els = geo.nodeEls[k], id = els.id, n = run.nodes[id] || {};
     const cap = nodeCap(n); const c = cap ? cap.c : null;
-    const st = gstate[id] || { busy: 0, q: 0 };
+    const st = gstate[id] || ZERO_ST;
     const talkD = talking.get(id);
+    // 상태 배지·큐 점유 막대는 **전역 부하**를 적는다(실린더와 같은 규칙) — 이 항적 몫만
+    // 세면 앞에 남의 작업이 20건 쌓여 있어도 「대기 1」로 보인다.
+    const np = geo.nodes[k] || {};
+    paintNodeDecor(els, np.cap, st, talkN.get(id) || 0, nodeIdleText(np, n, np.cap));
     if (els.fill && c) {
       paintCyl(els, geo.nodes[k], c, st, mineAt[id] || null);
       // 교신 맥동 — 처리 중이면 작업 맥동이 우선한다(전체 보기와 같은 규칙).
@@ -3331,6 +4343,13 @@ function drawFrameTrack() {
     });
   });
 
+  // 패널은 재생 중에만 300ms 스로틀 — 전체 보기와 같은 규칙.
+  const wall = performance.now();
+  if (!playing || wall - lastRankWall > 300) {
+    lastRankWall = wall;
+    renderBneck(gstate);
+    renderLive(byEdge, geo);
+  }
   paintLog();
   paintClock();
 }
@@ -3400,6 +4419,8 @@ function paintClock() {
   el('clock').textContent = fmt(simT) + ' / ' + fmt(viewT1());
   const t0 = viewT0(), span = Math.max(1e-6, viewT1() - t0);
   el('scrub').value = String(Math.round((simT - t0) / span * 1000));
+  // 레인 위의 재생 헤드 — 그래프와 타임라인이 같은 시각을 가리켜야 둘을 겹쳐 읽는다.
+  el('lane-head').style.left = (Math.min(100, Math.max(0, (simT - t0) / span * 100))).toFixed(2) + '%';
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -3445,6 +4466,52 @@ el('dur').value = String(P.dur);
 if (P.mode === 'tobe') setMode('tobe');
 
 el('legend').innerHTML =
+  // ── 색 체계 — 이 화면을 읽는 첫 규칙. 계선 색과 상태 색이 서로의 자리를 침범하지 않는다.
+  '<b>색 체계</b> — <b>계선</b>(무엇이 어떻게 가는가)과 <b>상태</b>(지금 어떤가)를 **다른 색축**으로 가른다.' +
+  ' 계선: <span style="color:#38bdf8">청 = 항적·정보 전송</span> ·' +
+  ' <span style="color:#a78bfa">보라 = 지휘·협조</span> ·' +
+  ' <span style="color:var(--ok)">녹 = 교전·사격통제</span> ·' +
+  ' <span style="color:var(--warn)">황 = 음성·문자·유선</span> ·' +
+  ' <span style="opacity:.7">회색 = 체계 내부·통보</span>.' +
+  ' 상태: <span style="opacity:.7">회색·청 = 정상</span> ·' +
+  ' <span style="color:var(--wait)">주황 = 대기·지연</span> ·' +
+  ' <span style="color:var(--bad)">적 = 실패·드롭·발사불가</span>.' +
+  ' <b>적색은 실패에만, 주황은 대기에만</b> 쓴다 — 종전에는 음성/VTC가 적색, 문자가 주황이라' +
+  ' 붉은 선이 계선인지 실패인지 가릴 수 없었다.' +
+  ' 색 하나에 기대지 않도록 <b>실선/점선 모양</b>과 <b>글자 꼬리표</b>(DL·KV·음성·VTC…)를 함께 건다. ' +
+  // ── 계선 활성도
+  '<b>계선 활성도</b> — 밝기가 곧 「지금 쓰이는가」다:' +
+  ' <span style="opacity:.45">거의 안 보임 = 지금 안 쓰는 계선</span> ·' +
+  ' <b>굵고 밝은 선(발광) = 지금 교신 중</b> ·' +
+  ' <span style="color:var(--ok)">녹색 = 방금 도착함(1.5초)</span> ·' +
+  ' <span style="opacity:.6">회색 점선 = [전체 계선 표시]로 켠, 통행이 한 번도 없던 계선</span>.' +
+  ' <b>굵기는 통행량</b>(전문 건수의 로그)이라, 굵은 선이 곧 많이 흐른 계선이다.' +
+  ' 같은 열 안의 왕복(상급 C2끼리·군단↔수방사)은 <b>좌·우로 갈라</b> 그려 방향이 겹치지 않는다.' +
+  ' 여러 노드가 한 노드로 보내는 계선은 목적지 앞 일정 구간까지 <b>한 줄기로 묶는다</b>.' +
+  ' 계선에 손을 올리면 매체명이 뜨고, 누르면 <b>상세(실측 지연·항적 목록)와 매체 교체</b>가 열린다. ' +
+  // ── 전문 묶음
+  '<b>전문 묶음</b>(전체 흐름 전용) — 같은 계선의 동시 전문이 3건 이상이면 점을 흩지 않고' +
+  ' <b>이동 묶음 하나 + 「N건 · 최장 N초」 배지</b>로 모은다. 배지를 누르면 그 계선만' +
+  ' 개별 전문으로 펼쳐진다. <b>전체 흐름은 트래픽 흐름, 항적 개별은 전문 하나하나</b>다. ' +
+  // ── 노드 배지 · 큐 막대 · 이름 위계
+  '<b>노드 상태 배지</b> — 테두리 하나는 상태 하나만 말한다(처리 중이면 교신이 가려진다).' +
+  ' 그래서 동시에 벌어지는 일을 세어 나란히 적는다:' +
+  ' <span style="color:var(--accent)">● 처리</span> ·' +
+  ' <span style="color:var(--wait)">○ 대기</span> ·' +
+  ' <span style="color:#cfe0f5">↔ 교신</span> ·' +
+  ' <span style="color:var(--bad)">✕ 드롭(넘침·기한)</span>.' +
+  ' 그 아래 <b>가는 막대</b>는 <b>대기실 점유율</b>(대기 건수 / 대기실 K)이고,' +
+  ' <span style="color:var(--warn)">황</span> → <span style="color:var(--wait)">주황</span> →' +
+  ' <span style="color:var(--bad)">적</span>으로 짙어진다 — 넘침은 대기실이 찰 때 나므로' +
+  ' <b>병목의 임박은 여기서 먼저 보인다</b>.' +
+  ' 자리가 넉넉한 열의 노드는 이름을 <b>세 위계</b>로 세운다:' +
+  ' 위 작은 글씨 = 제대·분류, 가운데 큰 글씨 = 부대 이름, 아래 = 현재 상태(또는 선언 용량). ' +
+  // ── 레인 타임라인
+  '<b>레인 타임라인</b>(하단) — 「어디에서 시간이 갔는가」를 킬체인 단계별로 편 것이다:' +
+  ' 탐지·보고 / MCRC·KAMDOC 처리 / AOC·JAOC·ICC 처리 / ECS 교전통제 / 요격·타격.' +
+  ' <b>진한 칸 = 처리</b>(개시~완료) · <span style="color:var(--wait)">연한 칸 = 대기</span>(도착~개시)이고,' +
+  ' 시간이 어디서 갔는지는 대개 연한 칸이 말한다. 누르면 그 시각으로 간다.' +
+  ' 시간축은 스크럽과 같다(전체 = 실행 전 구간 · 개별 = 그 항적의 생존 구간). ' +
   '<b>작업 맥동</b> — 지금 일하는 노드가 깜빡이고, <b>깜빡이는 주기가 곧 그 작업의 서비스 시간</b>이다.' +
   ' 빠른 자리는 빠르게, 굼뜬 자리는 느리게 고동친다:' +
   ' <span style="color:#7fd0f5">ECS 평균 3.5초</span> ·' +
@@ -3467,7 +4534,8 @@ el('legend').innerHTML =
   Object.keys(MEDIA).map((k) => {
     const m = MEDIA[k];
     return `<span class="lg"><i style="border-top-color:${m.color};${m.dash ? 'border-top-style:dashed' : ''}"></i>` +
-      `${esc(m.label)} <span style="opacity:.7">${esc(m.hint)}</span></span>`;
+      `<b style="color:${m.color}">${esc(m.tag)}</b> ${esc(m.label)} ` +
+      `<span style="opacity:.7">${esc(m.hint)}</span></span>`;
   }).join('') +
   // ⚠️ 계선 종류와 등급 — 매체 옆에 나란히 둔다. 매체만 적으면 상행 보고와 하행 명령이
   //    화면에서 같아 보이고(실제 오독), 등급을 안 적으면 추정값이 실측처럼 읽힌다.
@@ -3558,6 +4626,57 @@ document.querySelectorAll('.spd button').forEach((b) => {
   });
 });
 el('show-idle').addEventListener('change', () => { if (sel && view === 'track') { layoutGraph(); drawFrame(); } });
+// 「전체 계선 표시」 — 통행이 없던 계선까지 세운다. 계선 목록 자체가 바뀌므로 다시 세운다.
+el('show-alllinks').addEventListener('change', relayout);
+// 계선 범례 — 그림 옆에서 「이 선이 무엇인가」를 바로 확인한다.
+// ⚠️ 닫을 때 매체 강조도 함께 푼다 — 켜진 줄 모르는 필터가 그래프에 남으면
+//    「선이 안 보인다」로 읽힌다.
+el('key-toggle').addEventListener('click', () => {
+  const on = el('linekey').hidden;
+  el('linekey').hidden = !on;
+  el('key-toggle').classList.toggle('on', on);
+  if (on) { renderLineKey(); return; }
+  if (keyFocusMt) { keyFocusMt = null; applyKeyFocus(); if (run) drawFrame(); }
+});
+el('linekey-close').addEventListener('click', () => el('key-toggle').click());
+// 고급 모의설정 — 판을 재는 손잡이는 접어 둔다(상단 바를 가볍게).
+el('adv-toggle').addEventListener('click', () => {
+  const on = el('adv').hidden;
+  el('adv').hidden = !on;
+  el('adv-toggle').classList.toggle('on', on);
+});
+// 이벤트 로그 접기 — 기본은 접힘. ⚠️ 제목 줄 안의 모드 스위치 버튼은 접기가 아니다.
+el('log-h2').addEventListener('click', (ev) => {
+  if (ev.target.closest('button')) return;
+  const sec = el('log');
+  sec.classList.toggle('folded');
+  el('log-h2').querySelector('.fold').textContent = sec.classList.contains('folded') ? '▸' : '▾';
+});
+// 병목 카드 — 누르면 그래프에서 그 노드를 짚는다(전체 보기에서만 뜻이 있다).
+el('bneck').addEventListener('click', () => {
+  if (view !== 'all' || !gv || !el('bneck').dataset.id) return;
+  toggleFocusNode(el('bneck').dataset.id);
+});
+// 레인 타임라인 — 누른 자리의 시각으로 간다(스크럽과 같은 축이라 자리가 어긋나지 않는다).
+el('lanes').addEventListener('click', (ev) => {
+  if (!run || (view === 'track' && !sel)) return;
+  const r = el('lanes').getBoundingClientRect();
+  const f = Math.min(1, Math.max(0, (ev.clientX - r.left) / Math.max(1, r.width)));
+  setPlaying(false);
+  simT = viewT0() + (viewT1() - viewT0()) * f;
+  drawFrame();
+});
+// 계선 라벨 — 손을 올린 계선에만 매체명이 뜬다(상시 표시는 그림을 덮는다).
+let hoverEK = null;
+el('graph').addEventListener('mouseover', (ev) => {
+  const g = ev.target.closest && ev.target.closest('.edgeg');
+  const ek = g ? g.dataset.ek : null;
+  if (ek === hoverEK) return;
+  hoverEK = ek;
+  el('graph').querySelectorAll('.elabel').forEach((t) => {
+    t.classList.toggle('on', !!ek && t.dataset.ek === ek);
+  });
+});
 el('show-sensor').addEventListener('change', () => {
   if (view === 'all') {
     el('graph').classList.toggle('hide-sensor', !el('show-sensor').checked);
@@ -3607,8 +4726,18 @@ el('v-track').addEventListener('click', () => { if (run) setView('track'); });
 // 전체 보기의 느린 전문 점 클릭 → 그 항적의 개별 보기로 내려간다.
 // 점은 매 프레임 다시 만들어지므로 위임으로 받는다.
 el('graph').addEventListener('click', (ev) => {
+  if (!run) return;
+  // 묶음 배지 — 누르면 그 계선만 개별 전문으로 펼치고, 다시 누르면 접는다.
+  const agg = ev.target.closest && ev.target.closest('.aggbadge');
+  if (agg) {
+    ev.stopPropagation();
+    const k = agg.dataset.agg;
+    if (expandedEdges.has(k)) expandedEdges.delete(k); else expandedEdges.add(k);
+    drawFrame();
+    return;
+  }
   const dot = ev.target.closest && ev.target.closest('.dot[data-th]');
-  if (!dot || view !== 'all' || !run) return;
+  if (!dot || view !== 'all' || !dot.dataset.th) return;
   ev.stopPropagation();
   // 점을 눌렀을 때 보던 시각을 그대로 넘긴다 — 개별 보기로 내려가며 처음으로 되감기면
   // 문맥이 끊긴다. 로그 줄 클릭과 **같은 함수**를 쓴다(두 벌을 두면 동선이 갈라진다).

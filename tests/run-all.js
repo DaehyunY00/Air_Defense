@@ -81,6 +81,7 @@ var suites = [
   ,['flow-trace.test.mjs', '지휘 흐름 관측 flowTrace (ON/OFF bit-exact·간선/매체 정합·병렬 계선·체류 순서·절삭 고지)']
   ,['usfk-track-sharing.test.mjs', 'ADR-085 연합 항적 공유 반사실 (OFF 계선 0·상황인식만 개방·지휘/승인 격리 유지·매체 검증)']
   ,['command-flow-single.test.mjs', '[지휘 흐름] 단일본 (빌더 바이트 재현·자기완결·인라인 순서=import 순서·커널 IIFE 공유)']
+  ,['prototype-readability.test.mjs', '[지휘 흐름] 판독성 (마크 서식 ↔ markView·누수 근거·「쐈는가」·한글화·잘림 회귀·대표 C2 배치)']
   ,['c2-service-floor.test.mjs', 'ADR-092 C2 처리 시간 바닥 (OFF 골든 bit-exact·성분 항등·바닥 위반 0·평균 항등·mult 배율·배선)']
   ,['approval-pipeline-realism.test.mjs', 'ADR-093 승인 파이프라인 현실화 (OFF 골든·To-Be bit-exact·요청 시 실행가능·회신 역방향·C2A 회신 큐·마크 순서·wire shape)']
   ,['icc-relay-authorization.test.mjs', 'ADR-094 ICC 중계 인가 (OFF 골든·To-Be 동역학 불변·ICC 큐 작업·전송 분할·인가/재배정/반송·손잡이)']

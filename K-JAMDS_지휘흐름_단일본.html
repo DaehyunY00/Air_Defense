@@ -154,7 +154,13 @@
   #log-trk-bar[hidden] { display: none; }
   #log-trk-bar select { flex: 1; min-width: 0; font-size: 12px; padding: 2px 6px; }
   #log-trk-bar button { flex: none; font-size: 11px; padding: 2px 8px; white-space: nowrap; }
-  .ev { display: flex; gap: 7px; padding: 2px 10px; border-left: 3px solid transparent; align-items: baseline; }
+  .ev { display: flex; flex-wrap: wrap; gap: 7px; padding: 2px 10px; border-left: 3px solid transparent; align-items: baseline; }
+  /* 결과는 **둘째 줄**로 내린다. 첫 줄(.x)은 nowrap+ellipsis라 긴 결과가 줄 끝에서 통째로
+     잘려 나갔다 — DOM에는 있는데 화면에는 없는 상태였다(사용자 지적 2026-09-03).
+     flex-basis:100%로 한 줄을 통째로 차지하게 해 잘리지 않게 한다. */
+  .ev .res { flex-basis: 100%; margin-left: 59px; font-size: 11px; line-height: 1.35;
+    white-space: normal; word-break: keep-all; }
+  .ev .res::before { content: '↳ '; color: var(--dim); }
   .ev .t { color: var(--dim); flex: none; width: 52px; text-align: right; font-size: 11px; }
   .ev .x { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* 줄 사이에 흐른 시간. **붉은 것은 병목(대기·막힘)뿐이다** — 공백은 C2가 막은 것이
@@ -9936,11 +9942,12 @@ function renderC2Log(id) {
     const tail =
       (r.wait > 0.5 ? `<span class="med" style="color:var(--warn)">대기 ${sec0(r.wait)}${r.openWait ? '+' : ''}</span>` : '') +
       (r.svc != null ? `<span class="med" style="color:var(--accent)">처리 ${sec0(r.svc)}${r.openSvc ? '+' : ''}</span>` : '') +
-      (r.dropText ? `<span class="med" style="color:${r.dropR === 'dead' ? 'var(--dim)' : 'var(--bad)'}">${esc(r.dropText)}</span>` : '') +
-      // 「그래서 무엇이 됐나」 — 이게 없으면 KAMDOC이 명령을 냈는데도 로그가 침묵한다.
-      (r.outcome ? `<span class="med" style="color:${
-        r.outcome.cls === 'ok' ? 'var(--ok)' : r.outcome.cls === 'warn' ? 'var(--warn)'
-        : r.outcome.cls === 'bad' ? 'var(--bad)' : 'var(--dim)'}">→ ${esc(r.outcome.txt)}</span>` : '');
+      (r.dropText ? `<span class="med" style="color:${r.dropR === 'dead' ? 'var(--dim)' : 'var(--bad)'}">${esc(r.dropText)}</span>` : '');
+    // 「그래서 무엇이 됐나」 — 이게 없으면 KAMDOC이 명령을 냈는데도 로그가 침묵한다.
+    // 첫 줄에 붙이면 잘리므로 **줄을 따로** 준다.
+    const resLine = r.outcome ? `<span class="res" style="color:${
+      r.outcome.cls === 'ok' ? 'var(--ok)' : r.outcome.cls === 'warn' ? 'var(--warn)'
+      : r.outcome.cls === 'bad' ? 'var(--bad)' : 'var(--dim)'}">${esc(r.outcome.txt)}</span>` : '';
     const thName = r.th ? (THREAT_LABEL[(r.th.split('#')[0])] || '') : '';
     const tip = [`${fmt(r.t)} 도착 — ${jobLabel(r.jk)}${r.th ? ` · ${r.th}${thName ? ' (' + thName + ')' : ''}` : ''}`,
       r.started
@@ -9953,7 +9960,7 @@ function renderC2Log(id) {
       '클릭 — 전체 시계를 이 도착 시각으로'].join('\n');
     return `<div class="ev mark${cls ? ' ' + cls : ''}" data-t="${r.t}" title="${esc(tip)}">` +
       `<span class="t mono">${fmt(r.t)}</span>` +
-      `<span class="x">${esc(jobLabel(r.jk) + (r.th ? ' — ' + r.th : ''))}${tail}</span></div>`;
+      `<span class="x">${esc(jobLabel(r.jk) + (r.th ? ' — ' + r.th : ''))}${tail}</span>${resLine}</div>`;
   }).join('') : '<div class="empty">이 노드에는 도착한 작업이 없습니다.</div>';
   c2Log = { id, rows, els: [...body.querySelectorAll('.ev')], times: rows.map((r) => r.t) };
   c2Log.els.forEach((n) => n.addEventListener('click', () => {

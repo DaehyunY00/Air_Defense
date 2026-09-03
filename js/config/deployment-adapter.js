@@ -10,17 +10,20 @@
   window.KJ = window.KJ || {};
 
   var THREAT_KEYS = ['uav_small', 'ac_low', 'heli', 'fighter', 'cruise', 'srbm', 'mrl_large'];
-  var DL_FAST = Object.freeze({ type: 'datalink', delaySec: 2, paramRef: 'C2-DL-DLY-01' });
-  var INTERNAL = Object.freeze({ type: 'internal', delaySec: 1, paramRef: 'IADS-LINK-INTERNAL-01' });
-  var SHORT = Object.freeze({ type: 'datalink', delaySec: 4, paramRef: 'IADS-LINK-SHORT-01' });
-  var LONG = Object.freeze({ type: 'datalink', delaySec: 16, paramRef: 'IADS-LINK-LONG-01' });
+  // ⚠️ `confidence`는 **표시 전용 메타데이터**다(엔진이 읽지 않는다 — 결과 bit-exact).
+  //    권위는 docs/params.md의 「신뢰도 등급」이고 여기 값은 그 사본이다. 원장을 고치면
+  //    여기도 함께 고친다(ADR-084 §추기 — 화면이 등급을 말하게 하려고 승계한다).
+  var DL_FAST = Object.freeze({ type: 'datalink', delaySec: 2, paramRef: 'C2-DL-DLY-01', confidence: 'C' });
+  var INTERNAL = Object.freeze({ type: 'internal', delaySec: 1, paramRef: 'IADS-LINK-INTERNAL-01', confidence: 'C' });
+  var SHORT = Object.freeze({ type: 'datalink', delaySec: 4, paramRef: 'IADS-LINK-SHORT-01', confidence: 'B' });
+  var LONG = Object.freeze({ type: 'datalink', delaySec: 16, paramRef: 'IADS-LINK-LONG-01', confidence: 'C' });
   // ADR-080: 분포를 균등(10,30) → 정규(평균 20, σ5)로 교체 — ±2σ가 종전 구간과 일치한다.
   // 절차 지연은 "10~30초 사이 아무 값이나 같은 확률"보다 대표값 부근에 몰리는 게 자연스럽다.
   // 음수 꼬리는 엔진이 0으로 절단한다(_linkDelay의 Math.max(0, ·)).
   var VOICE = Object.freeze({
     type: 'voice', delaySec: 20,
     dist: Object.freeze({ kind: 'normal', mean: 20, stddev: 5 }),
-    paramRef: 'C2-VOICE-COORD-01'
+    paramRef: 'C2-VOICE-COORD-01', confidence: 'C'
   });
   // 군단 AOC→MCRC 교전현황 공유. 음성/VTC 1개 채널이 현재 처리 중
   // 메시지를 포함해 최대 4건만 수용한다. 수치는 정책연구용 개념값(등급 C).
@@ -165,15 +168,15 @@
   function reportCycleComm(typeId) {
     var t = (KJ.SENSOR_TYPES || {})[typeId];
     var rp = t && Number.isFinite(t.reportingPeriod) ? t.reportingPeriod : 1;
-    return Object.freeze({ type: 'report-cycle', delaySec: rp, paramRef: 'IADS-LINK-RP-01' });
+    return Object.freeze({ type: 'report-cycle', delaySec: rp, paramRef: 'IADS-LINK-RP-01', confidence: 'C' });
   }
   // C2↔C2 전송 지연 — codex LINK_DELAYS.shortRange 1초로 환원(구 SHORT 4초·LONG 16초의
   // 조정 근거를 저장소 어디에서도 찾지 못함 — "조정 근거 불명 — codex 값으로 환원").
-  var C2_TRANSFER = Object.freeze({ type: 'datalink', delaySec: 1, paramRef: 'IADS-LINK-SHORT-01' });
+  var C2_TRANSFER = Object.freeze({ type: 'datalink', delaySec: 1, paramRef: 'IADS-LINK-SHORT-01', confidence: 'B' });
   // To-Be(킬웹) 측 — codex LINK_DELAYS.ifcn 1초: "Kill Web 모든 링크 (ADR-014: 킬웹 보고주기
   // 전부 1s)". 킬웹에서는 IFCN 네트워크가 융합 항적을 1초 주기로 밀어내므로 센서 자체 주기가
   // 아니라 네트워크 주기가 정보 나이를 지배한다는 것이 codex 정본의 판정이다.
-  var IFCN = Object.freeze({ type: 'ifcn', delaySec: 1, paramRef: 'IADS-LINK-IFCN-01' });
+  var IFCN = Object.freeze({ type: 'ifcn', delaySec: 1, paramRef: 'IADS-LINK-IFCN-01', confidence: 'C' });
 
   function buildDeploymentCatalog(id, opts) {
     var v2 = !!(opts && opts.linkSemanticsV2);

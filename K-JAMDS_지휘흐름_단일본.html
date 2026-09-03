@@ -2384,17 +2384,20 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   window.KJ = window.KJ || {};
 
   var THREAT_KEYS = ['uav_small', 'ac_low', 'heli', 'fighter', 'cruise', 'srbm', 'mrl_large'];
-  var DL_FAST = Object.freeze({ type: 'datalink', delaySec: 2, paramRef: 'C2-DL-DLY-01' });
-  var INTERNAL = Object.freeze({ type: 'internal', delaySec: 1, paramRef: 'IADS-LINK-INTERNAL-01' });
-  var SHORT = Object.freeze({ type: 'datalink', delaySec: 4, paramRef: 'IADS-LINK-SHORT-01' });
-  var LONG = Object.freeze({ type: 'datalink', delaySec: 16, paramRef: 'IADS-LINK-LONG-01' });
+  // ⚠️ `confidence`는 **표시 전용 메타데이터**다(엔진이 읽지 않는다 — 결과 bit-exact).
+  //    권위는 docs/params.md의 「신뢰도 등급」이고 여기 값은 그 사본이다. 원장을 고치면
+  //    여기도 함께 고친다(ADR-084 §추기 — 화면이 등급을 말하게 하려고 승계한다).
+  var DL_FAST = Object.freeze({ type: 'datalink', delaySec: 2, paramRef: 'C2-DL-DLY-01', confidence: 'C' });
+  var INTERNAL = Object.freeze({ type: 'internal', delaySec: 1, paramRef: 'IADS-LINK-INTERNAL-01', confidence: 'C' });
+  var SHORT = Object.freeze({ type: 'datalink', delaySec: 4, paramRef: 'IADS-LINK-SHORT-01', confidence: 'B' });
+  var LONG = Object.freeze({ type: 'datalink', delaySec: 16, paramRef: 'IADS-LINK-LONG-01', confidence: 'C' });
   // ADR-080: 분포를 균등(10,30) → 정규(평균 20, σ5)로 교체 — ±2σ가 종전 구간과 일치한다.
   // 절차 지연은 "10~30초 사이 아무 값이나 같은 확률"보다 대표값 부근에 몰리는 게 자연스럽다.
   // 음수 꼬리는 엔진이 0으로 절단한다(_linkDelay의 Math.max(0, ·)).
   var VOICE = Object.freeze({
     type: 'voice', delaySec: 20,
     dist: Object.freeze({ kind: 'normal', mean: 20, stddev: 5 }),
-    paramRef: 'C2-VOICE-COORD-01'
+    paramRef: 'C2-VOICE-COORD-01', confidence: 'C'
   });
   // 군단 AOC→MCRC 교전현황 공유. 음성/VTC 1개 채널이 현재 처리 중
   // 메시지를 포함해 최대 4건만 수용한다. 수치는 정책연구용 개념값(등급 C).
@@ -2539,15 +2542,15 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   function reportCycleComm(typeId) {
     var t = (KJ.SENSOR_TYPES || {})[typeId];
     var rp = t && Number.isFinite(t.reportingPeriod) ? t.reportingPeriod : 1;
-    return Object.freeze({ type: 'report-cycle', delaySec: rp, paramRef: 'IADS-LINK-RP-01' });
+    return Object.freeze({ type: 'report-cycle', delaySec: rp, paramRef: 'IADS-LINK-RP-01', confidence: 'C' });
   }
   // C2↔C2 전송 지연 — codex LINK_DELAYS.shortRange 1초로 환원(구 SHORT 4초·LONG 16초의
   // 조정 근거를 저장소 어디에서도 찾지 못함 — "조정 근거 불명 — codex 값으로 환원").
-  var C2_TRANSFER = Object.freeze({ type: 'datalink', delaySec: 1, paramRef: 'IADS-LINK-SHORT-01' });
+  var C2_TRANSFER = Object.freeze({ type: 'datalink', delaySec: 1, paramRef: 'IADS-LINK-SHORT-01', confidence: 'B' });
   // To-Be(킬웹) 측 — codex LINK_DELAYS.ifcn 1초: "Kill Web 모든 링크 (ADR-014: 킬웹 보고주기
   // 전부 1s)". 킬웹에서는 IFCN 네트워크가 융합 항적을 1초 주기로 밀어내므로 센서 자체 주기가
   // 아니라 네트워크 주기가 정보 나이를 지배한다는 것이 codex 정본의 판정이다.
-  var IFCN = Object.freeze({ type: 'ifcn', delaySec: 1, paramRef: 'IADS-LINK-IFCN-01' });
+  var IFCN = Object.freeze({ type: 'ifcn', delaySec: 1, paramRef: 'IADS-LINK-IFCN-01', confidence: 'C' });
 
   function buildDeploymentCatalog(id, opts) {
     var v2 = !!(opts && opts.linkSemanticsV2);
@@ -7763,6 +7766,72 @@ const MEDIA = {
   'fanout':       { label: '병렬 통보',       color: '#475569', w: 1.6, dash: '2 3',   hint: '모델상 0초' }
 };
 const media = (t) => MEDIA[t] || { label: t, color: '#8892a4', w: 2, dash: null, hint: '' };
+
+/**
+ * 계선의 **종류**(kind) — 「무엇이 흐르는 계선인가」. 매체(어떻게 가는가)와 다른 축이다.
+ * 종전 로그·툴팁은 매체와 지연만 적어서, 상행 보고(센서→상급)와 하행 명령(상급→포대)이
+ * 화면에서 똑같이 「데이터링크 1.0초」로 보였다 — 실제 오독 사례: `MCRC → ICC C1`이
+ * 교전명령처럼 읽혔는데 그것은 공군 레이더 항적이 KAMDOC으로 가는 **보고**였다.
+ * 값은 카탈로그 link.kind 그대로다(deployment-adapter.js addLink 4번째 인자).
+ */
+const LINK_KIND = {
+  report:  { label: '항적보고', hint: '센서·하급이 올리는 상황' },
+  coord:   { label: '협조',     hint: '승인 요청·회신, 상급↔권역 조정' },
+  command: { label: '명령',     hint: '체계 내부 발사 지시' },
+  status:  { label: '교전현황', hint: '누가 무엇에 교전 중인가' }
+};
+
+/**
+ * 지연값의 **신뢰도 등급** — `docs/params.md`의 「신뢰도 등급」이 단일 권위이고,
+ * 카탈로그 comm.confidence는 그 사본이다(표시 전용 · 엔진 미사용 · 결과 bit-exact).
+ *
+ * ⚠️ 이 표시를 넣는 이유: 이 화면의 계선 지연은 **거의 전부 등급 C(추정)** 인데, 화면에서는
+ *    실측값과 구분되지 않아 「음성 20초」가 근거 있는 수치처럼 읽힌다. 공개자료 기반 교리도에서
+ *    추정 계선을 `inferred`로 못 박는 것과 같은 규율이다 — **모르는 것을 모른다고 적는다.**
+ */
+const GRADE = {
+  A: { tag: '등급 A', text: '실측·공개근거' },
+  B: { tag: '등급 B', text: '2차 자료·상위 판정 승계' },
+  C: { tag: '등급 C', text: '추정 — 근거 문헌 없음' }
+};
+const gradeOf = (g) => GRADE[g] || null;
+
+/**
+ * 계선 메타 색인 — 키는 간선의 신원과 같다(`from>to|매체`). 카탈로그가 단일 출처이고
+ * 화면은 읽기만 한다. 같은 두 노드 사이에 종류가 다른 계선이 여러 가닥이면 전부 모은다
+ * (예: 군단 AOC → MCRC 는 협조(음성)와 항적보고(문자)가 별개 가닥이다).
+ */
+let EDGE_META = {};
+function buildEdgeMeta(catalog, mode) {
+  const idx = {};
+  (KJ.linksInMode(mode, catalog) || []).forEach((l) => {
+    const c = l.comm && l.comm[mode];
+    if (!c) return;
+    const k = l.from + '>' + l.to + '|' + c.type;
+    const e = idx[k] || (idx[k] = { kinds: [], paramRef: c.paramRef || null, confidence: c.confidence || null });
+    if (e.kinds.indexOf(l.kind) < 0) e.kinds.push(l.kind);
+  });
+  return idx;
+}
+const edgeMetaOf = (from, to, mt) => EDGE_META[from + '>' + to + '|' + mt] || null;
+/** 계선 종류 라벨 — 여러 종류가 한 가닥에 겹치면 「·」로 잇는다. 모르면 빈 문자열. */
+function kindLabel(meta) {
+  if (!meta || !meta.kinds.length) return '';
+  return meta.kinds.map((k) => (LINK_KIND[k] ? LINK_KIND[k].label : k)).join('·');
+}
+/** 등급 꼬리표 — 「등급 C(추정)」. 등급이 없는 계선(반사실 덮어쓰기 등)은 빈 문자열. */
+function gradeLabel(meta) {
+  const g = meta && gradeOf(meta.confidence);
+  return g ? `${g.tag}${meta.confidence === 'C' ? '(추정)' : ''}` : '';
+}
+/** 툴팁 한 줄 — 「항적보고 · 등급 C(추정 — 근거 문헌 없음) · IADS-LINK-RP-01」 */
+function edgeMetaLine(from, to, mt) {
+  const meta = edgeMetaOf(from, to, mt);
+  if (!meta) return '';
+  const g = gradeOf(meta.confidence);
+  return '\n' + [kindLabel(meta), g ? `${g.tag} — ${g.text}` : '등급 미표기', meta.paramRef || '']
+    .filter(Boolean).join(' · ');
+}
 /** 간선의 신원 = 양 끝 + **매체**. 매체를 빼면 병렬 계선이 한 가닥으로 접힌다. */
 const edgeKey = (f) => f.from + '>' + f.to + '|' + f.mt;
 
@@ -8104,6 +8173,7 @@ function doRun() {
     }
     const wall = performance.now() - t0;
     const catalog = KJ.resolveModelCatalog(cfg);
+    EDGE_META = buildEdgeMeta(catalog, mode);   // 계선 종류·등급 색인(표시 전용)
     const nodes = {};
     KJ.nodesInMode(mode, catalog).forEach((n) => { nodes[n.id] = n; });
     const built = buildTracks(res);
@@ -8580,9 +8650,13 @@ function buildLogRows(t) {
     const m = media(f.mt);
     // 센서 보고 통과도 「센서」로 묶어 함께 접는다 — 그래프에서 이미 같은 기준으로
     // 걸러내므로(drawFrame), 로그만 다른 기준을 쓰면 화면과 로그가 어긋난다.
+    // 「무엇이 흐르는가(종류) · 어떻게 가는가(매체) · 얼마나 걸렸나 · 그 값을 믿을 수 있나(등급)」
+    const meta = edgeMetaOf(f.from, f.to, f.mt);
+    const kl = kindLabel(meta), gl = gradeLabel(meta);
     rows.push({ t: f.t0, kind: 'link', mt: f.mt, ref: f, sensor: f.mt === 'report-cycle',
       text: `${nodeName(f.from)} → ${nodeName(f.to)}`,
-      tail: `${m.label} ${f.d.toFixed(1)}초` });
+      grade: gl ? { label: gl, low: meta.confidence === 'C' } : null,
+      tail: `${kl ? kl + ' · ' : ''}${m.label} ${f.d.toFixed(1)}초` });
   });
   const threatValueM = (KJ.threatType(t.type) || {}).unitCostM;
   t.stages.forEach((s) => {
@@ -8678,7 +8752,8 @@ function renderTrackLog(trk) {
   body.innerHTML = rows.map((r, i) => {
     const m = r.kind === 'link' ? media(r.mt) : null;
     const tip = r.kind === 'link'
-      ? `${r.text}\n${r.tail} — ${fmt(r.t)} 출발 → ${fmt(r.ref.t1)} 도착`
+      ? `${r.text}\n${r.tail} — ${fmt(r.t)} 출발 → ${fmt(r.ref.t1)} 도착` +
+        edgeMetaLine(r.ref.from, r.ref.to, r.mt)
       : `${fmt(r.t)} ${r.text}` + (r.raw ? `\n원문: ${r.raw}` : '');
     const c = r.cost;
     const costChip = c
@@ -8702,7 +8777,8 @@ function renderTrackLog(trk) {
       (c ? `\n요격탄 ${c.cps} M$ · 위협 가치 ${c.val} M$` +
         (c.high ? '\n고가 유도탄(≥5 M$) — 보존율 지표의 분자에 들어간다' : '') : '') + gapTip)}">
       <span class="t mono">${fmt(r.t)}</span>
-      <span class="x">${esc(r.text)}${m ? `<span class="med" style="color:${m.color}">${esc(r.tail)}</span>` : ''}${costChip}${r.lane ? `<span class="med lane">${esc(r.lane)}</span>` : ''}</span>
+      <span class="x">${esc(r.text)}${m ? `<span class="med" style="color:${m.color}">${esc(r.tail)}</span>` : ''}${
+      r.grade ? `<span class="med" style="color:${r.grade.low ? 'var(--warn)' : 'var(--dim)'}">${esc(r.grade.label)}</span>` : ''}${costChip}${r.lane ? `<span class="med lane">${esc(r.lane)}</span>` : ''}</span>
       ${gapChip}
     </div>`;
   }).join('');
@@ -9152,6 +9228,7 @@ function layoutGraph() {
       (m.dash && !ovr ? ` stroke-dasharray="${m.dash}"` : '') + `>` +
       `<title>${esc(nodeName(e.from) + ' → ' + nodeName(e.to) + ' · ' + m.label +
         ' · 전문 ' + e.n + '건' + (e.back ? ' (역방향 — 계선을 되돌아간다)' : '') +
+        edgeMetaLine(e.from, e.to, e.mt) +
         '\n클릭하면 이 계선의 매체를 바꿔볼 수 있습니다')}</title></path></g>`;
   }).join('');
 
@@ -9453,7 +9530,8 @@ function layoutAll() {
       `<path class="edge${ovr ? ' overridden' : ''}" d="${e.d}" stroke="${m.color}" stroke-width="${thin ? 1.4 : m.w}" opacity=".3"` +
       (m.dash && !ovr ? ` stroke-dasharray="${m.dash}"` : '') + `>` +
       `<title>${esc(nodeName(e.from) + ' → ' + nodeName(e.to) + ' · ' + m.label + ' · 전문 ' + e.n + '건' +
-        (e.back ? ' (역방향)' : '') + '\n클릭하면 이 계선의 매체를 바꿔볼 수 있습니다')}</title></path></g>`;
+        (e.back ? ' (역방향)' : '') + edgeMetaLine(e.from, e.to, e.mt) +
+        '\n클릭하면 이 계선의 매체를 바꿔볼 수 있습니다')}</title></path></g>`;
   }).join('');
 
   // 노드 표현은 둘로 나뉜다.
@@ -10460,6 +10538,24 @@ el('legend').innerHTML =
     return `<span class="lg"><i style="border-top-color:${m.color};${m.dash ? 'border-top-style:dashed' : ''}"></i>` +
       `${esc(m.label)} <span style="opacity:.7">${esc(m.hint)}</span></span>`;
   }).join('') +
+  // ⚠️ 계선 종류와 등급 — 매체 옆에 나란히 둔다. 매체만 적으면 상행 보고와 하행 명령이
+  //    화면에서 같아 보이고(실제 오독), 등급을 안 적으면 추정값이 실측처럼 읽힌다.
+  ' <span style="opacity:.85">· <b>계선 종류</b> — 무엇이 흐르는가(매체와 다른 축):' +
+  Object.keys(LINK_KIND).map((k) =>
+    ` <b>${esc(LINK_KIND[k].label)}</b> <span style="opacity:.7">${esc(LINK_KIND[k].hint)}</span>`).join(' ·') +
+  '. 항적 로그의 계선 줄과 간선 툴팁에 적는다.' +
+  ' <b style="color:var(--warn)">⚠️ 종류는 그 계선의 선언된 용도이지 그 전문의 용도가 아니다</b> —' +
+  ' 보고 경로는 최단경로가 <b>항적보고·협조 간선을 섞어</b> 쓰므로(엔진 `_iadsShortestPath`),' +
+  ' <b>협조 간선 위를 항적 보고가 지나갈 수 있다</b>' +
+  ' (예: 공군 레이더 항적이 KAMDOC으로 갈 때 <span style="opacity:.7">MCRC → ICC → KAMDOC</span>을 탄다 —' +
+  ' 두 상급 사이에 직통 계선이 없기 때문이다).</span>' +
+  ' <span style="opacity:.85">· <b>지연값 신뢰도 등급</b> — <b>이 화면의 계선 지연은 거의 전부 ' +
+  '<span style="color:var(--warn)">등급 C(추정 — 근거 문헌 없음)</span></b>이다.' +
+  ' C2↔C2 데이터링크(<span style="opacity:.7">IADS-LINK-SHORT-01</span>)만 등급 B이고,' +
+  ' 음성 20초·문자 45초·음성/VTC 135초·KVMF 30초·센서 보고주기·IFCN 1초는 모두 C다.' +
+  ' 단일 권위는 <b>docs/params.md</b>이고 화면은 그 사본(<span style="opacity:.7">comm.confidence</span>)을 읽기만 한다' +
+  ' — <b>수치에는 영향이 없다</b>(표시 전용).' +
+  ' 등급 C 값을 인용할 때는 가정임을 함께 밝혀야 한다.</span>' +
   ' <span style="opacity:.85">· <b>케파 실린더</b> — 처리 슬롯이 아래에서 차오르고 대기는 위로 쌓인다:' +
   ' <span style="color:var(--accent)">여유</span> →' +
   ' <span style="color:var(--warn)">가득</span> →' +

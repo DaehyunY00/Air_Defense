@@ -9837,7 +9837,8 @@ function renderAllLog() {
  *    발사만 계선(ECS→포대)을 타고 나오므로 창을 넓게 둔다.
  */
 const OUTCOME_RULES = [
-  { re: /^사수선정·표적할당:[^→]*→(\S+)/, cls: 'ok', txt: (m) => `사수선정 ${m[1]}` },
+  { re: /^사수선정·표적할당:[^→]*→(\S+)/, cls: 'ok', txt: (m) => `사수선정·표적할당 ${m[1]}` },
+  { re: /^자체교전승인:/, cls: 'ok', txt: () => '자체 교전승인' },
   { re: /^교전명령발령:[^→]*→(\S+)/, cls: 'ok', txt: (m) => `발령 → ${m[1]}` },
   { re: /^교전명령재배정:[^→]*→([^(]+)\(([^)]*)\)/, cls: 'warn', txt: (m) => `재배정 → ${m[1]} (${m[2]})` },
   { re: /^교전명령반송:[^(]*\(([^)]*)\)/, cls: 'bad', txt: (m) => `반송 (${m[1]})` },
@@ -9846,19 +9847,44 @@ const OUTCOME_RULES = [
   { re: /^승인완료:/, cls: 'ok', txt: () => '승인' },
   { re: /^발사:([^/]+)/, cls: 'ok', txt: (m) => `발사 ${m[1]}` }
 ];
-/** 서비스 완료 직후 창에서 첫 결과 마크를 찾는다. 없으면 kind별 「아무 일도 못 됨」을 말해 준다. */
+/**
+ * 서비스 완료 직후 창에서 결과 마크를 **전부** 모은다 — 한 번의 서비스가 사수선정과
+ * 자체 교전승인을 함께 내는 일이 흔해서, 첫 개만 적으면 「승인은 없었나」로 읽힌다.
+ * ⚠️ 결과가 **나중에** 나오는 경우가 오히려 많다(실측: KAMDOC 명령의 69%가 판단 완료보다
+ *    늦게 나갔고 중앙값 +22.8초). 그것을 「없음」으로 적으면 거짓이 되므로 **언제 무엇이
+ *    됐는지**를 시각과 함께 적는다.
+ */
 function spanOutcome(s) {
   if (s.done == null || !s.track) return null;
+  const ms = s.track.stages || [];
   const win = s.jk === 'directive_reception' ? 8 : 0.002;   // 발사만 계선을 탄다
-  for (const m of (s.track.stages || [])) {
+  const hits = [];
+  for (const m of ms) {
     if (m.t < s.done - 0.002 || m.t > s.done + win) continue;
     for (const r of OUTCOME_RULES) {
       const g = r.re.exec(m.name);
-      if (g) return { cls: r.cls, txt: r.txt(g) };
+      if (g) { hits.push({ cls: r.cls, txt: r.txt(g) }); break; }
     }
   }
-  // 결과 마크가 없다 = 판단은 끝났는데 다음 단계로 못 갔다는 뜻이다. 그것을 그대로 적는다.
-  if (s.jk === 'iads_track') return { cls: 'dim', txt: '쏠 수 있는 사수 없음 · 계속 감시' };
+  if (hits.length) {
+    return {
+      cls: hits.some((h) => h.cls === 'bad') ? 'bad' : hits.some((h) => h.cls === 'warn') ? 'warn' : 'ok',
+      txt: [...new Set(hits.map((h) => h.txt))].join(' · ')
+    };
+  }
+  if (s.jk === 'iads_track') {
+    // 이 서비스가 끝난 뒤 **언젠가** 이 항적에 사수가 붙었나 — 붙었으면 그때까지 기다린 것이다.
+    const later = ms.find((m) => m.t > s.done + 0.002 && /^사수선정·표적할당:/.test(m.name));
+    if (later) {
+      const g = /→(\S+)/.exec(later.name);
+      // 그 시점에 함께 난 승인도 같이 적는다 — 빼면 「승인 없이 쐈나」로 읽힌다.
+      const appr = ms.some((m) => Math.abs(m.t - later.t) < 0.002 && /^자체교전승인:/.test(m.name))
+        ? ' · 자체 교전승인' : '';
+      return { cls: 'warn',
+        txt: `교전창 대기 ${(later.t - s.done).toFixed(0)}초 → 사수선정·표적할당 ${g ? g[1] : ''}${appr}` };
+    }
+    return { cls: 'dim', txt: '쏠 수 있는 사수 없음 · 계속 감시' };
+  }
   if (s.jk === 'directive_reception') return { cls: 'bad', txt: '발사 못함' };
   return null;
 }
@@ -9891,7 +9917,7 @@ function renderC2Log(id) {
   // 이 노드가 **무슨 일들을** 맡는지 한눈에 — 「위협판단 23 · 발령 6」처럼 종류별로 적는다.
   const byKind = {};
   rows.forEach((r) => { byKind[r.jk] = (byKind[r.jk] || 0) + 1; });
-  const kindTxt = Object.keys(byKind).map((k) => `${JOB_LABEL[k] || k} ${byKind[k]}`).join(' · ');
+  const kindTxt = Object.keys(byKind).map((k) => `${jobLabel(k)} ${byKind[k]}`).join(' · ');
   el('log-hint').innerHTML = `${rows.length}건` + (kindTxt ? ` <span class="dim">(${esc(kindTxt)})</span>` : '') +
     (waited ? ` · <b style="color:var(--warn)">대기 ${waited}건</b>` : '') +
     (dropped ? ` · <b style="color:var(--bad)">드롭 ${dropped}건</b>` : '');
@@ -9909,7 +9935,7 @@ function renderC2Log(id) {
       (r.outcome ? `<span class="med" style="color:${
         r.outcome.cls === 'ok' ? 'var(--ok)' : r.outcome.cls === 'warn' ? 'var(--warn)'
         : r.outcome.cls === 'bad' ? 'var(--bad)' : 'var(--dim)'}">→ ${esc(r.outcome.txt)}</span>` : '');
-    const tip = [`${fmt(r.t)} 도착 — ${JOB_LABEL[r.jk] || r.jk}${r.th ? ` · ${r.th}` : ''}`,
+    const tip = [`${fmt(r.t)} 도착 — ${jobLabel(r.jk)}${r.th ? ` · ${r.th}` : ''}`,
       r.started
         ? `대기 ${r.wait.toFixed(1)}초 → 처리 ${r.svc.toFixed(1)}초` +
           (r.openSvc ? ' (관측 종료까지 미완)' : ` → ${fmt(r.done)} 완료`) +
@@ -9920,7 +9946,7 @@ function renderC2Log(id) {
       '클릭 — 전체 시계를 이 도착 시각으로'].join('\n');
     return `<div class="ev mark${cls ? ' ' + cls : ''}" data-t="${r.t}" title="${esc(tip)}">` +
       `<span class="t mono">${fmt(r.t)}</span>` +
-      `<span class="x">${esc((JOB_LABEL[r.jk] || r.jk) + (r.th ? ' — ' + r.th : ''))}${tail}</span></div>`;
+      `<span class="x">${esc(jobLabel(r.jk) + (r.th ? ' — ' + r.th : ''))}${tail}</span></div>`;
   }).join('') : '<div class="empty">이 노드에는 도착한 작업이 없습니다.</div>';
   c2Log = { id, rows, els: [...body.querySelectorAll('.ev')], times: rows.map((r) => r.t) };
   c2Log.els.forEach((n) => n.addEventListener('click', () => {
@@ -10120,6 +10146,16 @@ function followFlow() {
   wrap.scrollTop = Math.max(0, Math.min(wrap.scrollHeight - wrap.clientHeight, y - wrap.clientHeight / 2));
 }
 
+/**
+ * 작업 이름 — `iads_track`은 발령이 별도 작업이 아닐 때(기본, ADR-096 OFF) 판단부터
+ * 사수선정·교전승인·명령까지를 **한 번의 서비스가 대표한다**. 그때 「…준비」라고만 적으면
+ * 표적할당·사수선정·교전승인이 없는 것처럼 읽힌다(사용자 지적 2026-09-03).
+ */
+function jobLabel(jk) {
+  if (jk === 'iads_track') return P.issue ? '위협판단·표적할당 준비' : '위협판단·표적할당';
+  return JOB_LABEL[jk] || jk;
+}
+
 /** 노드 작업 종류 → 「무엇을 하려는 중인가」. 큐에 선 작업의 **다음 할 일**을 말해 준다. */
 const JOB_LABEL = {
   iads_track: '위협판단·표적할당 준비',
@@ -10170,7 +10206,7 @@ function trackSignals(t) {
     if (s.start != null && t >= s.start) {
       out.push({ cls: 'go', kind: 'service', node: s.at,
         text: `${nodeName(s.at)} 처리 중`,
-        sub: `${JOB_LABEL[s.jk] || s.jk} · ${(t - s.start).toFixed(0)}초째` });
+        sub: `${jobLabel(s.jk)} · ${(t - s.start).toFixed(0)}초째` });
     } else {
       // 같은 노드에서 나보다 먼저 도착해 아직 서비스에 못 들어간 작업 수 = 내 앞 대기줄
       let ahead = 0;
@@ -10181,7 +10217,7 @@ function trackSignals(t) {
         if (t <= oe && !(o.start != null && t >= o.start)) ahead++;
       });
       out.push({ cls: 'wait', kind: 'queue', node: s.at,
-        text: `${nodeName(s.at)}에서 ${JOB_LABEL[s.jk] || s.jk} 대기`,
+        text: `${nodeName(s.at)}에서 ${jobLabel(s.jk)} 대기`,
         sub: `앞에 ${ahead}건 · ${(t - s.arrive).toFixed(0)}초째` });
     }
   });

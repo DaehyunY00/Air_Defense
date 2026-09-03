@@ -242,6 +242,17 @@
   .idlen.c2 { stroke: #3a72b0; }
   .idlen.shooter { stroke: #2a8f6c; }
   .idlelabel { fill: #6b7a91; font-size: 9px; }
+  /* 항적 토큰 — 탐지부터 요격까지 **끊기지 않는 공**. 계선을 건널 때는 선 위를 지나고,
+     노드에서 처리·대기하는 동안은 그 노드 옆에 머문다. 종전에는 전송 중일 때만 점이 있어
+     노드에 머무는 구간에서 공이 사라졌다(사용자 지적 2026-09-03). */
+  .tok { fill: #0b1017; stroke: #dbe4f0; stroke-width: 2; }
+  .tok.wait { stroke: var(--warn); stroke-dasharray: 3.5 2.5; }
+  .tok.work { stroke: var(--accent); }
+  .tok.move { stroke: #fff; }
+  .toklab { fill: #dbe4f0; font-size: 9px; paint-order: stroke; stroke: #0b1017; stroke-width: 2.5; }
+  /* 이동 꼬리 — 길이가 곧 속도다. 데이터링크 1초는 선을 거의 다 덮는 긴 자국을 남기고,
+     음성 20초는 짧은 자국만 남긴다. 「빠른 것은 순식간」을 형태로 읽게 한다. */
+  .trail { fill: none; stroke-linecap: round; opacity: .5; }
   .edge { fill: none; stroke-linecap: round; }
   .dot { stroke: #04121f; stroke-width: .8; }
   .dotlab { font-size: 9px; fill: #cfe0f5; paint-order: stroke; stroke: #04121f; stroke-width: 2.5; }
@@ -2173,6 +2184,56 @@ function renderOverrides() {
   else if (sel && geo) { layoutGraph(); drawFrame(); }
 }
 
+/** 벽시계로 이만큼(초) 전까지의 자취를 꼬리로 남긴다. 배속을 곱해 화면 시간으로 환산한다. */
+const TRAIL_WALL = 0.22;
+
+/** 간선 위 진행률 p(0~1) 지점. */
+function edgePt(e, p) { return e.el.getPointAtLength(e.len * Math.min(1, Math.max(0, p))); }
+
+/**
+ * 이동 꼬리 — 지금 위치에서 **조금 전 위치**까지를 잇는다. 전송이 빠를수록(d가 작을수록)
+ * 같은 벽시계 동안 더 많이 나아가므로 꼬리가 길어진다 — 길이가 곧 속도다.
+ */
+function trailSvg(e, pNow, dSec, color) {
+  if (!(dSec > 0)) return '';
+  const back = (TRAIL_WALL * speed) / dSec;          // 그동안 나아간 진행률
+  const p0 = Math.max(0, pNow - back);
+  if (pNow - p0 < 0.004) return '';
+  const N = 6, pts = [];
+  for (let i = 0; i <= N; i++) {
+    const q = edgePt(e, p0 + (pNow - p0) * (i / N));
+    pts.push(q.x.toFixed(1) + ',' + q.y.toFixed(1));
+  }
+  return `<polyline class="trail" points="${pts.join(' ')}" stroke="${color}" stroke-width="3.5"></polyline>`;
+}
+
+/**
+ * 항적 토큰의 지금 자리 — **탐지부터 요격까지 끊기지 않는다.**
+ *  1) 계선을 건너는 중이면 그 선 위 (kind 'move')
+ *  2) 아니면 지금 머무는 노드 (kind 'node' — 대기 'wait' / 처리 'work')
+ *  3) 둘 다 아니면 **마지막으로 있던 노드**에 붙여 둔다 (kind 'node', 'hold') —
+ *     재시도로 교전창을 기다리는 구간이 여기다. 비워 두면 공이 사라져 흐름이 끊겨 보인다.
+ */
+function threatToken(t, at) {
+  if (at < t.spawnT) return null;
+  if (t.exitT != null && at > t.exitT) return null;
+  for (const f of t.flows) {
+    if (f.d > 0 ? (at >= f.t0 && at <= f.t1) : (at >= f.t0 && at <= f.t0 + 1.5)) {
+      return { kind: 'move', f: f, p: f.d > 0 ? (at - f.t0) / f.d : 1 };
+    }
+  }
+  let last = null;
+  for (const sp of t.spans) {
+    if (sp.arrive > at) continue;
+    const end = sp.done != null ? sp.done : (sp.drop != null ? sp.drop : Infinity);
+    if (at <= end) {
+      return { kind: 'node', id: sp.at, state: (sp.start != null && at >= sp.start) ? 'work' : 'wait' };
+    }
+    last = sp.at;
+  }
+  return last ? { kind: 'node', id: last, state: 'hold' } : null;
+}
+
 /** 노드 이름을 낱말 경계에서 최대 `max`줄로 접는다. 넘치면 마지막 줄을 …로 자른다. */
 function wrapLabel(s, per, max) {
   const words = String(s).split(/\s+/);
@@ -2457,17 +2518,19 @@ function drawFrameAll() {
     //    전부 report-cycle이라, 토글을 따르면 맨 왼쪽 두 열이 **영영 꺼진 채**로 남아
     //    킬체인이 시작부터 죽은 것처럼 읽힌다.
     if (!showSensor && f.mt === 'report-cycle') return;
-    if (f.d >= SLOW) {
-      if (!e.el) return;
-      const p = (simT - f.t0) / f.d;
-      const pt = e.el.getPointAtLength(e.len * Math.min(1, Math.max(0, p)));
-      const m = media(f.mt);
-      slowCount++;
-      out += `<circle class="dot" data-th="${esc(f.th || '')}" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5" fill="${m.color}">` +
-        `<title>${esc((f.th || '') + ' · ' + m.label + ' ' + f.d.toFixed(0) + '초 — 클릭하면 이 항적을 따라간다')}</title></circle>`;
-    } else {
-      hotEdges.add(e.key);
-    }
+    // ⚠️ 종전에는 **느린 전문(d ≥ SLOW)만** 점으로 그리고 빠른 것은 간선 강조로만 처리했다.
+    //    그래서 화면에서 움직이는 공이 음성·VTC뿐이었고, 데이터링크 1초짜리 전문은 흐름으로
+    //    보이지 않았다(사용자 지적 2026-09-03). 이제 **전부 그린다** — 빠른 것은 꼬리가 길어
+    //    한순간에 선을 가로지르는 자국으로 보이고, 느린 것은 꼬리 없이 천천히 기어간다.
+    //    「빠르고 느림」이 점의 유무가 아니라 **자국의 길이**로 읽힌다.
+    if (!e.el) return;
+    const p = f.d > 0 ? (simT - f.t0) / f.d : 1;
+    const pt = edgePt(e, p);
+    const m = media(f.mt);
+    if (f.d >= SLOW) slowCount++; else hotEdges.add(e.key);
+    out += trailSvg(e, p, f.d, m.color) +
+      `<circle class="dot" data-th="${esc(f.th || '')}" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${f.d >= SLOW ? 5 : 4}" fill="${m.color}">` +
+      `<title>${esc((f.th || '') + ' · ' + m.label + ' ' + f.d.toFixed(f.d < 10 ? 1 : 0) + '초 — 클릭하면 이 항적을 따라간다')}</title></circle>`;
   });
   geoAll.edges.forEach((e) => {
     e.el.classList.toggle('hot', hotEdges.has(e.key));
@@ -3166,6 +3229,28 @@ function drawFrameTrack() {
     } else {
       out += `<g class="endbanner kill"><rect x="${(W / 2 - 110).toFixed(0)}" y="${y}" width="220" height="22" rx="6"></rect>` +
         `<text x="${(W / 2).toFixed(0)}" y="${y + 15}" text-anchor="middle">격추 ${esc(fmt(sel.exitT))}</text></g>`;
+    }
+  }
+
+  // ── 항적 토큰 — 탐지부터 요격까지 이 항적이 「지금 어디에 있나」를 하나의 공으로 잇는다.
+  //    계선 위면 그 자리에, 노드에 머물면 노드 옆(오른쪽 위)에 붙인다. 종전에는 전송 중일
+  //    때만 점이 있어 노드에서 처리·대기하는 구간에서 공이 사라졌다(사용자 지적 2026-09-03).
+  const tk = threatToken(sel, simT);
+  if (tk) {
+    let tx = null, ty = null, cls = 'move', lab = '';
+    if (tk.kind === 'move') {
+      const te = geo.edgeByKey[edgeKey(tk.f)];
+      if (te && te.el) { const q = edgePt(te, tk.p); tx = q.x; ty = q.y; }
+      lab = media(tk.f.mt).label + ' ' + tk.f.d.toFixed(tk.f.d < 10 ? 1 : 0) + '초';
+    } else {
+      const np = slotPos(geo, tk.id);
+      if (np) { tx = np.x + 14; ty = np.y - 13; }
+      cls = tk.state;
+      lab = tk.state === 'work' ? '처리 중' : tk.state === 'wait' ? '큐 대기' : '교전창 대기';
+    }
+    if (tx != null) {
+      out += `<circle class="tok ${cls}" cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="9"></circle>` +
+        `<text class="toklab" x="${tx.toFixed(1)}" y="${(ty - 13).toFixed(1)}" text-anchor="middle">${esc(sel.id + ' · ' + lab)}</text>`;
     }
   }
 

@@ -509,7 +509,7 @@
       <span id="clock" class="mono">—</span>
       <span id="scrub-wrap"><span id="ticks"></span><input id="scrub" type="range" min="0" max="1000" value="0" disabled></span>
       <span class="spd">배속
-        <button data-spd="1">×1</button><button data-spd="5" class="on">×5</button><button data-spd="20">×20</button><button data-spd="60">×60</button>
+        <button data-spd="1" class="on">×1</button><button data-spd="5">×5</button><button data-spd="20">×20</button><button data-spd="60">×60</button>
       </span>
       <label><input type="checkbox" id="show-sensor"> 센서 보고 표시</label>
       <label title="이 항적과 무관한 노드를 배치 전체에서 반투명으로 함께 그린다 — 「쓰이지 않은 제대·포대」가 보인다"><input type="checkbox" id="show-idle" checked> 미사용 노드 표시</label>
@@ -774,7 +774,7 @@ const fmt = (t) => {
 };
 
 let mode = 'asis';   // URL의 mode= 로 초기화된다(배선부 참조)
-let speed = 5;
+let speed = 1;        // 기본 ×1 — 데이터링크 1초 홉도 눈으로 좇을 수 있어야 한다(사용자 결정 2026-09-03)
 let playing = false;
 let run = null;        // { res, cfg, catalog, nodes, tracks, allFlows, allSpans }
 let sel = null;        // [항적 개별] 선택된 항적 뷰모델
@@ -2705,7 +2705,10 @@ const OUTCOME_RULES = [
   { re: /^교전명령인가:/, cls: 'ok', txt: () => '인가 → 포대로 하달' },
   { re: /^승인회신처리완료:/, cls: 'ok', txt: () => '승인 회신 처리 → 사수 확정' },
   { re: /^승인완료:/, cls: 'ok', txt: () => '교전 승인' },
-  { re: /^발사:([^/]+)/, cls: 'ok', txt: (m) => `발사 — ${nodeName(m[1])}` }
+  { re: /^발사:([^/]+)/, cls: 'ok', txt: (m) => `발사 — ${nodeName(m[1])}` },
+  // 명령은 닿았는데 **못 쏜** 순간 — 발사 실패(명중 실패)와 다른 사건이다.
+  { re: /^발사불가:([^(]+)\(([^)]*)\)/, cls: 'bad',
+    txt: (m) => `발사 못함 — ${nodeName(m[1].trim())} · ${leakText(m[2])}` }
 ];
 /**
  * 서비스 완료 직후 창에서 결과 마크를 **전부** 모은다 — 한 번의 서비스가 사수선정과
@@ -2745,7 +2748,15 @@ function spanOutcome(s) {
     }
     return { cls: 'dim', txt: '쏠 수 있는 사수 없음 · 계속 감시' };
   }
-  if (s.jk === 'directive_reception') return { cls: 'bad', txt: '발사 못함' };
+  if (s.jk === 'directive_reception') {
+    // 왜 못 쐈는지까지 적는다 — 창이 넓어 놓쳤을 수 있으니 이 항적의 발사불가 마크를 찾아본다.
+    const nf = ms.find((m) => m.t >= s.done - 0.002 && /^발사불가:/.test(m.name));
+    if (nf) {
+      const g = /^발사불가:([^(]+)\(([^)]*)\)/.exec(nf.name);
+      return { cls: 'bad', txt: `발사 못함 — ${g ? nodeName(g[1].trim()) + ' · ' + leakText(g[2]) : ''}` };
+    }
+    return { cls: 'bad', txt: '발사 못함' };
+  }
   return null;
 }
 

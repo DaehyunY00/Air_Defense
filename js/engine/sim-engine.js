@@ -3077,6 +3077,12 @@
     }
     var ev = this._iadsEvaluate(shooter, threat, t);
     if (!ev.feasible) {
+      // 관측 전용(ADR-081과 같은 계열): **명령은 도착했는데 못 쏜 순간**을 항적 이력에 남긴다.
+      // 종전에는 이 자리에 아무 마크가 없어, 화면에서 「ECS → 포대」 전문이 도착한 뒤 발사도
+      // 실패도 없이 시간만 흐르다 누수로 끝났다 — 「신호가 갔으니 쐈겠지」로 읽힌다
+      // (사용자 지적 2026-09-03). 발사 실패(BDA:MISS)와는 다른 사건이라 이름을 가른다.
+      // ⚠️ trace가 켜졌을 때만 쌓이는 순수 관측이다 — RNG·스케줄·결과 wire shape 불변.
+      this._mark(threat, '발사불가:' + shooter.id + '(' + ev.reason + ')', t, axisOf(d.commander));
       this._recordFailureEvidence(threat, ev.reason, { commanderId: d.commander.id, shooterId: shooter.id, phase: 'fire-command' });
       if (ev.reason === 'no_feasible_pip') threat._windowLostAtFire = true;
       if (resource && ev.reason === 'capacity_full') resource.capacityBlocks++;

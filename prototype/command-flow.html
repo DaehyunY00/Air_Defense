@@ -113,6 +113,27 @@
      이 화면의 주제는 C2라 대표 C2·ICC·국지방공은 전부 이름을 달고, 나머지는 툴팁으로 읽는다.
   무력화 배치(MCRC_DOWN·KAMDOC_DOWN)는 스위치에 없고 `?dep=`로 고른다.
 
+  위협 출발점 — 탄도탄은 축선 연장선에서 쏜다 (2026-09-10)
+  ─────────────────────────────────────────────
+  ADR-091 발사점 연장(`lx`)을 **이 화면의 기본값**으로 올렸다(사용자 결정 「출발점은 모든
+  배치에서 수정」). 배치와 무관한 한 벌이다 — 적의 발사 원점은 우리 센서 배치의 함수가 아니고,
+  두 배치가 **같은 위협**을 받아야 「어느 배치가 더 잘 막나」를 물을 수 있다.
+  · 왜: 종전에는 탄도탄이 **이미 모두의 시야 한복판에서** 생겨났다. 축선 진입점을 생성 순간
+    이미 보는 원거리 센서가 LEGACY 3/3 · FULL 19~20/21이고 최대 여유가 620~731km였다.
+    실측 srbm 최초 탐지 — LEGACY 포대 MFR 53/53 · FULL 포대 MFR 53/53(그린파인 0).
+    FULL은 그린파인 4기·AN/TPY-2·FPS-117 16기를 갖고도 **한 번도 먼저 보지 못했다.**
+    lx ON에서 그린파인 48/53으로 뒤집힌다 — 탐지 선착이 난수가 아니라 기하에서 나온다.
+  · **탄도탄만** 옮긴다. 비탄도는 이미 적절한 센서가 먼저 본다(cruise·fighter FPS117 ·
+    uav_small TPS880K·MSAM_MFR) — 손댈 근거가 없다.
+  · `ew`(ADR-090)는 함께 켜지 않는다 — 효과가 0이다(전 배치·전 모드 동일).
+  · 지도의 항적 자국은 **실제 발사점**에서 끈다. 궤적은 `KJ.iadsThreatPosition`(엔진과 같은
+    함수)으로 되짚고, 재료(dwellSec·launchExtKm)는 관측에서 읽는다.
+  ⚠️ 대가를 숨기지 않는다: 누수가 줄고 To-Be 우위도 줄어든다(SC3·seed29·600초)
+       LEGACY 누수 As-Is 34→19 · To-Be 18→8 · 우위 18→15
+       FULL   누수 As-Is 13→ 7 · To-Be  5→3 · 우위 12→ 7
+     조기경보가 As-Is의 약점(느린 C2)을 일부 보상하기 때문이다.
+  엔진 기본은 여전히 OFF다(재기준선 대상) — 켜진 동안 상태줄 칩으로 상시 표기한다. 끄려면 ?lx=0.
+
   이 파일은 **프로토타입**이다. 본 앱(index.html)에는 아직 붙이지 않았다.
   실행: 저장소 루트에서 정적 서버를 띄우고 /prototype/command-flow.html 을 연다.
         (file:// 로는 안 된다 — ES 모듈 import가 막힌다)
@@ -1407,7 +1428,33 @@ const PARAMS = [
   // (2026-09-01): **엔진 기본 OFF인 것은 이 화면에서도 전부 기본 OFF** — 켜려면 URL로 명시한다
   // (예 ?ew=1&lx=1&floor=1). 켠 동안은 상태줄 칩으로 상시 표기한다.
   { k: 'ew',    d: 0,       t: 'bool', h: '조기경보 보고원 — 그린파인 보고가 책임 C2에 함께 접수 (ADR-090 · 기본 꺼짐)' },
-  { k: 'lx',    d: 0,       t: 'bool', h: '탄도 축선 발사점 연장 — 대표 사거리부터 비행, 탐지 선착이 기하에서 나옴 (ADR-091 · 기본 꺼짐)' },
+  // ── lx: 이 화면만 **기본 ON**으로 되돌린다(사용자 결정 2026-09-10 — 「출발점은 모든 배치에서
+  //    수정」). 2026-09-01에 기본 OFF로 내렸던 결정을 뒤집는 것이라, 근거를 남긴다.
+  //
+  // 문제: 탄도탄이 **이미 모두의 시야 한복판에서** 생겨난다. 축선 진입점을 생성 순간 이미
+  //   보고 있는 원거리 센서가 LEGACY 3/3 · FULL 19~20/21이고, **최대 여유가 620~731km**다
+  //   (진입점을 700km 더 북쪽에 두어도 여전히 보인다). 그래서 「누가 먼저 보는가」가 물리가
+  //   아니라 배열 순서로 정해진다.
+  // 실측(SC3·seed29·1800초) srbm 최초 탐지 센서:
+  //     LEGACY lx OFF → 포대 전속 MSAM_MFR **53/53** (그린파인 0)
+  //     FULL   lx OFF → 포대 전속 LSAM_MFR **53/53** (그린파인 0)
+  //     FULL   lx ON  → **그린파인 48/53**
+  //   FULL은 그린파인 4기·AN/TPY-2·FPS-117 16기를 갖고도 **한 번도 먼저 보지 못한다**.
+  //   조기경보 자산이 3 → 21개로 7배 늘었는데 그 전부가 무의미해지는 화면이었다.
+  // ⚠️ **탄도탄만의 문제다**(600초 실측 최초 탐지): mrl_large FPS117 56·TPS880K 34 ·
+  //    cruise FPS117 16 · fighter FPS117 16 · uav_small TPS880K 28·MSAM_MFR 25 —
+  //    비탄도는 이미 적절한 원거리/국지 센서가 먼저 본다. 그래서 **비탄도 출발점은 손대지
+  //    않는다**(codex의 비탄도 발사권역을 따라갈 근거가 없다).
+  // ⚠️ `ew`(ADR-090 조기경보 보고원)는 **함께 켜지 않는다** — 효과가 0이다(SC3·600초에서
+  //    lx ON과 lx+ew ON의 격추·누수가 전 배치·전 모드 동일). 근거 없는 플래그를 얹지 않는다.
+  // ⚠️ 배치와 무관하다 — 적의 발사 원점은 우리 센서 배치의 함수가 아니다. **한 벌만 두고
+  //    두 배치가 같은 위협을 받아야** 「같은 공격을 어느 배치가 더 잘 막나」를 물을 수 있다.
+  // 대가(정직하게): 누수가 크게 줄고 To-Be 우위도 줄어든다(SC3·seed29·600초)
+  //     LEGACY 누수 As-Is 34→19 · To-Be 18→8 · 우위 18→15
+  //     FULL   누수 As-Is 13→ 7 · To-Be  5→3 · 우위 12→ 7
+  //   조기경보가 As-Is의 약점(느린 C2)을 일부 보상해 주기 때문이다. 그것도 사실이다.
+  // 끄려면 ?lx=0. 켜진 동안은 상태줄 칩으로 상시 표기한다(엔진 기본은 여전히 OFF).
+  { k: 'lx',    d: 1,       t: 'bool', h: '탄도 축선 발사점 연장 — 대표 사거리부터 비행, 탐지 선착이 기하에서 나옴 (ADR-091 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   { k: 'floor', d: 0,       t: 'bool', h: 'C2 처리 시간 바닥 — 체계 처리 구간 + 운용자 판단을 따로 추첨, 평균 불변 (ADR-092 · 기본 꺼짐)' },
   // ⚠️ pipe는 위 규율의 **유일한 예외**다(사용자 결정 2026-09-01, ADR-093 추기). 이 화면의 존재 이유가
   //    C2 처리 로그로 결심 파이프라인을 읽는 것인데, OFF에서는 AOC·JAOC에 「승인 회신 처리」 줄이
@@ -1592,7 +1639,10 @@ function buildTracks(res) {
       //    dwellSec, target)`으로 되짚는데, 이 두 필드를 안 옮겨서 처음 붙였을 때 지도의
       //    항적이 **한 건도 안 그려졌다**(실측: 토큰 0개). 엔진이 실어 보내는 것을 여기서
       //    조용히 버리면 화면은 오류 없이 그냥 비어 보인다 — 위 두 주석과 같은 자리에 적는다.
-      dwellSec: tr.dwellSec, target: tr.target || null };
+      dwellSec: tr.dwellSec, target: tr.target || null,
+      // ADR-091 발사점 연장량 — dwellSec과 한 짝이다. 빠뜨리면 lx ON에서 궤적이 축선
+      // 진입점부터 그려져 **연장 구간이 통째로 사라진다**(위 세 주석과 같은 실수).
+      launchExtKm: tr.launchExtKm || 0 };
   });
   (res.flowEvents || []).forEach((e) => {
     if (e.k === 'link') { const t = byId[e.th]; if (t) t.flows.push(e); return; }
@@ -2530,7 +2580,10 @@ function mapBounds() {
   };
   Object.keys(run.nodes).forEach((id) => grow(run.nodes[id].coord));
   Object.keys(KJ.AXES).forEach((k) => { grow(KJ.AXES[k].entry); grow(KJ.AXES[k].target); });
-  run.tracks.forEach((t) => grow(t.target));
+  // ⚠️ 착탄점만이 아니라 **발사점**도 넣는다. ADR-091 연장이 켜지면 발사점이 축선 진입점보다
+  //    수백 km 북쪽에 서므로(srbm central +405km), 넣지 않으면 궤적의 시작이 화면 밖에서
+  //    잘려 「어디서 왔는지」가 사라진다.
+  run.tracks.forEach((t) => { grow(t.target); grow(threatPosAt(t, t.spawnT)); });
   const mLat = (latMax - latMin) * .04, mLon = (lonMax - lonMin) * .04;
   return { latMin: latMin - mLat, latMax: latMax + mLat, lonMin: lonMin - mLon, lonMax: lonMax + mLon };
 }
@@ -2631,14 +2684,25 @@ function mproj(c, g) {
   return [(c[1] - g.B.lonMin) / (g.B.lonMax - g.B.lonMin) * g.W,
           (g.B.latMax - c[0]) / (g.B.latMax - g.B.latMin) * g.H];
 }
-/** 시각 at의 위협 위치 — **엔진이 쓰는 바로 그 함수**(KJ.axisPosition)로 되짚는다.
- *  분모 dwellSec은 관측(threatTrace)에서 읽는다 — 밖에서 다시 짜 맞추면 ADR-091에서
- *  조용히 어긋난다(엔진 trace 주석 참조). */
+/**
+ * 시각 at의 위협 지상 위치 — **엔진이 쓰는 바로 그 함수**(`KJ.iadsThreatPosition`)로 되짚는다.
+ *
+ * ⚠️ 종전에는 `KJ.axisPosition`(축선 진입점→표적 보간)을 직접 불렀다. 그러면 **ADR-091
+ *    발사점 연장이 켜졌을 때 궤적이 틀린다** — 연장이 걸리면 엔진은 발사점 기준으로
+ *    재매개변수화(p' = p·f − (f−1))해서 진입점 **북쪽**부터 그리는데, axisPosition은 그 구간을
+ *    모르기 때문이다. lx가 이 화면의 기본이 된 뒤로는 그냥 틀린 그림이 된다.
+ * 재료는 전부 관측에서 온다: 축선·표적·생성시각·체공창·연장량(dwellSec·launchExtKm).
+ */
 function threatPosAt(tr, at) {
   if (!tr || !(tr.dwellSec > 0)) return null;
   if (at < tr.spawnT) return null;
   if (tr.exitT != null && at > tr.exitT) return null;
-  return KJ.axisPosition(tr.axis, (at - tr.spawnT) / tr.dwellSec, tr.target);
+  // ⚠️ 엔진 함수는 **객체** `{lat, lon, altKm}`를 돌려준다(우리 화면은 [위도, 경도] 배열을
+  //    쓴다 — KJ.geo·KJ.AXES와 같은 형식). 그대로 넘기면 좌표가 undefined가 되고, 지도는
+  //    오류 없이 **NaN 자리에 그린다**(실측: 토큰 25개가 전부 NaN이었다).
+  const p = KJ.iadsThreatPosition({ axis: tr.axis, target: tr.target, type: tr.type,
+    spawnT: tr.spawnT, dwellSec: tr.dwellSec, _launchExtKm: tr.launchExtKm || 0 }, at);
+  return p ? [p.lat, p.lon] : null;
 }
 
 function layoutMap() {
@@ -2850,7 +2914,10 @@ function paintMap(state, hot, done) {
       // 개별 보기에서는 **고른 항적만** 또렷하게 — 전 항적을 겹치면 그 항적을 잃는다.
       const isSel = t.id === selId;
       if (view === 'track' && !isSel) return;
-      const p = mproj(pos, mapGeo), e0 = mproj(KJ.AXES[t.axis] ? KJ.AXES[t.axis].entry : pos, mapGeo);
+      // 자국은 **실제 발사점**에서 끈다(축선 진입점이 아니다) — 연장이 켜지면 그 둘이 다르고,
+      // 「그린파인이 먼저 보는 그림」은 바로 그 연장 구간에서 벌어진다.
+      const launch = threatPosAt(t, t.spawnT) || pos;
+      const p = mproj(pos, mapGeo), e0 = mproj(launch, mapGeo);
       const col = THREAT_COLOR[t.type] || '#94a3b8';
       out += `<line class="mtrail" x1="${e0[0].toFixed(1)}" y1="${e0[1].toFixed(1)}"` +
         ` x2="${p[0].toFixed(1)}" y2="${p[1].toFixed(1)}" stroke="${col}"></line>` +

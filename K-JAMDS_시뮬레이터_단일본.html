@@ -10048,6 +10048,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
           //    공개 대응물이 없다)까지 걸린 값이라, 밖에서 다시 짜 맞추면 그 플래그에서
           //    조용히 어긋난다(실측: lx ON에서 uav_small·fighter 17건 불일치).
           dwellSec: threat.dwellSec,
+          // ADR-091 발사점 연장량(km). 0이면 축선 진입점에서 시작한다는 뜻이다.
+          // ⚠️ dwellSec과 한 짝이다 — 이 둘이 있어야 화면이 KJ.iadsThreatPosition으로
+          //    궤적을 되짚을 수 있다. 관측 전용이고 동역학에 되먹이지 않는다.
+          launchExtKm: threat._launchExtKm || 0,
           spawnT: t, exitT: null, outcome: null, stages: [{ name: '생성', t: t }]
         };
         // ADR-063: 산포 ON일 때만 착탄점을 trace에 노출한다(지도 애니메이션·검증용).
@@ -10542,6 +10546,11 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     }
     return result;
   };
+  // 위협 위치 재구성용 공개 helper — 순수 읽기(RNG·상태 미변경). 화면(프로토타입 [지휘 흐름]
+  // 지도)이 궤적을 되짚을 때 **엔진과 같은 함수**를 쓰게 하려는 것이다. 밖에서 다시 짜 맞추면
+  // ADR-091 발사점 연장(재매개변수화 p' = p·f − (f−1))에서 조용히 어긋난다.
+  // 필요한 필드: {axis, target, spawnT, dwellSec, type, _launchExtKm}
+  KJ.iadsThreatPosition = iadsThreatPosition;
   KJ.Simulation = Simulation;
   KJ.DELEG_QUEUE_MULT = DELEG_QUEUE_MULT;  // 감사/스윕용 노출 (속성 변경 시 엔진이 즉시 참조 — 기본 asis4/tobe1)
 

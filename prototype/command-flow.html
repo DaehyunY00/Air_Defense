@@ -22,6 +22,32 @@
   입구다** — 항적이 걸린 줄(누수·중복교전·계선 막힘·넘침)을 누르면 그 사건이 난 시각으로
   맞춰진 채 개별 보기가 열리고, 여러 항적이 묶인 줄은 눌러서 펼친 뒤 고른다.
 
+  왼쪽 자리 — 패널 **또는** 지도
+  ────────────────────────────
+  왼쪽 위 [▤ 패널]/[🗺 지도] 스위치로 한 자리를 나눠 쓴다. 수치를 볼 때는 패널(병목·부하
+  순위·활성 교신·로그), 공간을 볼 때는 지도. 사이 손잡이를 끌면 이 자리가 넓어진다.
+  ⚠️ 지도를 오른쪽에 따로 붙이지 않는다 — 계선 그래프는 원래 폭이 모자란 화면이라
+     (그래서 [패널 접기]가 있다) 오른쪽을 더 내주면 둘 다 좁아진다(실측: 붙였다 걷어냈다).
+
+  지도는 계선 그래프와 같은 시계·같은 실행·**같은 활성 계선 집합**을 쓴다. 그래서 그래프에서
+  주황으로 살아난 계선이 지도에서도 같이 살아나고, 노드를 누르면 양쪽이 같이 짚힌다.
+  · 계선 그래프가 「C2 절차가 **어떤 순서로** 흐르는가」라면 지도는 「**어디에서**」다.
+  · **해안선을 동봉한다**(js/data/coastline.js — Natural Earth, 퍼블릭 도메인, 표시 전용).
+    본 앱 지도는 OSM **타일**을 온라인으로 받지만, 이 단일본은 인터넷 없이 더블클릭으로
+    열려야 하므로(README) 타일 대신 좌표만 싣고 SVG로 직접 그린다. 군사분계선(근사)은
+    이미 저장소에 있는 geo-mdl.js를 읽는다.
+  · 항적 위치는 `KJ.axisPosition(축선, (t−생성)/체공창, 착탄점)` — **엔진이 쓰는 그 함수**다.
+    체공창(dwellSec)은 관측(threatTrace)에서 읽는다. 화면이 다시 계산하지 않는다.
+  · 사거리 링은 기본 꺼짐(34개가 겹치면 지도가 링 그림이 된다). 「사거리 밖이라 못 쐈다」를
+    물을 때 켠다. 폭을 좁히면 격자 라벨·이름표가 빠지며 그대로 미니맵이 된다.
+  · **확대**: 휠(커서 밑을 붙잡는다) · 끌어서 이동 · [− ＋ ⤢] 단추. 자산이 서울·중부에
+    몰려 있어 전체 보기에서는 점 덩어리라, 확대해야 그 안이 보인다. 확대는 SVG를 키우는
+    것이 아니라 **경계 상자를 좁혀 다시 그리는** 것이라 글자·선 굵기·노드 크기가 그대로다
+    (키우면 4배 확대에 글자도 4배가 되어 오히려 안 읽힌다). 머리줄에 「가로 N km · 확대 ×N」.
+  ⚠️ **실제 지리는 해안선과 군사분계선(근사)뿐이다.** 자산 위치·축선 진입점·표적권역은 전부
+     도시 수준 **개념좌표**다. 열 배치에서는 아무도 오해하지 않지만 지도에 얹으면 실제처럼
+     읽힌다 — 그래서 고지를 상시 띄운다. 지우지 말 것.
+
   좌→우를 읽는 장치 (두 보기 공통)
   ──────────────────────────────
   · **색 두 축** — 계선 색(무엇이 어떻게 가는가: 청=항적·정보 · 보라=지휘·협조 ·
@@ -376,7 +402,82 @@
      **세로가 길어질수록 전체가 축소**됐다 — 노드를 더 그리면 정작 봐야 할 것이 작아지는
      구조였다(사용자 지적 2026-09-02). 이제 세로로 스크롤한다: viewBox가 길어지면 그린 것이
      작아지는 게 아니라 화면이 길어진다. 가로는 항상 폭에 맞춘다. */
-  #graph-wrap { flex: 1; min-height: 0; position: relative; overflow-y: auto; overflow-x: hidden; }
+  #graph-wrap { flex: 1; min-height: 0; min-width: 0; position: relative; overflow-y: auto; overflow-x: hidden; }
+
+  /* ── 좌측 자리 = 패널 **또는** 지도 (사용자 결정 2026-09-09) ────────────────
+     종전에는 지도를 오른쪽에 따로 붙였는데, 계선 그래프는 원래 폭이 모자란 화면이라
+     (그래서 [패널 접기]가 있다) 오른쪽을 더 내주면 둘 다 좁아졌다. 이제 왼쪽 한 자리를
+     나눠 쓴다 — 수치를 볼 때는 패널, 공간을 볼 때는 지도. 손잡이로 폭을 넓힐 수 있다. */
+  #side-sw { flex: none; margin: 6px 8px 4px; }
+  #side-sw button { flex: 1; padding: 3px 0; font-size: 12px; }
+  #side-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  #side-body[hidden] { display: none; }
+  #side-map { flex: 1; display: flex; flex-direction: column; min-height: 0;
+    background: #080d14; }
+  #side-map[hidden] { display: none; }
+  #sidesplit { flex: none; width: 5px; cursor: col-resize; background: var(--line); }
+  #sidesplit:hover, #sidesplit.drag { background: var(--accent); }
+  #sidesplit[hidden] { display: none; }
+  #map-head { flex: none; display: flex; align-items: center; gap: 9px; padding: 4px 8px;
+    background: var(--panel); border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line); font-size: 11px; color: var(--dim); }
+  #map-head label { display: inline-flex; align-items: center; gap: 3px; }
+  #map-scale { flex: 1; min-width: 0; font-variant-numeric: tabular-nums;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mzoom { flex: none; display: inline-flex; border: 1px solid var(--line);
+    border-radius: 5px; overflow: hidden; }
+  .mzoom button { border: 0; border-radius: 0; padding: 1px 7px; font-size: 12px; line-height: 16px; }
+  svg#map { cursor: grab; }
+  svg#map.panning { cursor: grabbing; }
+  svg#map { flex: 1; min-height: 0; width: 100%; display: block; touch-action: none; }
+  #map-note { flex: none; padding: 3px 8px; font-size: 10px; line-height: 1.4;
+    color: var(--warn); background: rgba(251,191,36,.08); border-top: 1px solid var(--line); }
+  #map-note b { color: var(--warn); font-weight: 700; }
+
+  /* 지도 레이어 — 배경 지도(타일)는 쓰지 않는다. 자기완결 단일본이 인터넷 없이 열려야
+     하기 때문이다. 대신 경위도 격자와 축선이 공간 기준을 준다. */
+  /* 해안선 — **이 지도에서 실제 지리인 것**(Natural Earth 퍼블릭 도메인). 자산 위치·축선은
+     개념좌표라, 실제인 것과 개념인 것을 색으로 갈라 둔다: 실제 지리는 무채색, 개념은 색. */
+  .mcoast { fill: none; stroke: #2b3a4d; stroke-width: .9; stroke-linejoin: round;
+    stroke-linecap: round; }
+  .mmdl { fill: none; stroke: #5a4a6b; stroke-width: 1.2; stroke-dasharray: 7 4; opacity: .9; }
+  .mmdl-lab { fill: #6b5a80; font-size: 8px; }
+  .mgrid { stroke: #1a2534; stroke-width: .6; }
+  .mgrid-lab { fill: #46536a; font-size: 7.5px; }
+  .maxis { stroke: #6b4a20; stroke-width: 1; stroke-dasharray: 5 5; opacity: .75; }
+  .maxis-lab { fill: #8a7040; font-size: 8px; }
+  .mring { fill: none; stroke-width: 1; opacity: .3; }
+  .mring.sensor { stroke: #22d3ee; stroke-dasharray: 4 6; }
+  .mring.shooter { stroke: var(--ok); }
+  /* 계선 — 활성도 규칙은 계선 그래프와 **같은 클래스**를 쓴다(.hot·.done·.rel·.unused). */
+  .medge { fill: none; stroke-linecap: round; stroke-width: var(--w, 1.4); opacity: .13;
+    transition: opacity .18s linear, stroke-width .18s linear, stroke .3s linear; }
+  .medge.rel { opacity: .45; }
+  .medge.hot { opacity: 1; stroke-width: calc(var(--w, 1.4) * 2.2);
+    filter: drop-shadow(0 0 3px rgba(255,255,255,.5)); }
+  .medge.done { opacity: .85; stroke: var(--ok) !important; }
+  .medge.mtoff { opacity: .04; }
+  /* 노드 — 상태 색은 실린더와 같은 판정(여유 → 가득 → 가득+대기) */
+  .mnode { cursor: pointer; }
+  .mnode circle { stroke-width: 1.2; }
+  .mnode .mdot { fill: #16202e; stroke: #34435a; }
+  .mnode.sensor .mdot { stroke: #22d3ee; }
+  .mnode.c2 .mdot { stroke: var(--accent); }
+  .mnode.shooter .mdot { stroke: var(--ok); }
+  .mnode.busy .mdot { fill: #1d3a52; stroke: #7fb6ff; stroke-width: 2; }
+  .mnode.full .mdot { fill: #3a2c10; stroke: var(--wait); stroke-width: 2; }
+  .mnode.jam  .mdot { fill: #3a1616; stroke: var(--bad); stroke-width: 2.4; }
+  .mnode.focus .mdot { stroke: #fff; stroke-width: 2.4; }
+  .mnode.idle { opacity: .3; }
+  .mnode-lab { fill: #7d8ba0; font-size: 7.5px; paint-order: stroke;
+    stroke: #080d14; stroke-width: 2; pointer-events: none; }
+  /* 항적 — 축선 진입점에서 지금 위치까지의 자국 + 현재 위치 */
+  .mtrail { fill: none; stroke-width: 1; opacity: .3; }
+  .mthreat { stroke: #04121f; stroke-width: .7; }
+  .mthreat.sel { stroke: #fff; stroke-width: 1.8; }
+  .mthreat-lab { fill: #dbe4f0; font-size: 8px; paint-order: stroke;
+    stroke: #080d14; stroke-width: 2.4; pointer-events: none; }
+  .mimpact { fill: none; stroke: var(--bad); stroke-width: 1.2; opacity: .55; }
   svg#graph { width: 100%; height: auto; display: block; }
   .colhdr { fill: #55637a; font-size: 10px; }
   .colband { fill: #0e1520; }
@@ -673,7 +774,7 @@
     <label>seed <input id="seed" class="mono" type="number" value="29" style="width:78px"></label>
     <label>관측 <input id="dur" class="mono" type="number" value="600" step="60" style="width:64px">초</label>
   </span>
-  <button id="side-toggle" title="왼쪽 패널을 접고 그래프를 넓게 쓴다">‹ 패널 접기</button>
+  <button id="side-toggle" title="왼쪽 자리(패널·지도)를 접고 그래프를 넓게 쓴다">‹ 패널 접기</button>
   <span id="dirty" hidden>⟳ 조건이 바뀌었습니다 — [실행]</span>
   <span id="status">실행을 눌러 시작합니다.</span>
 </header>
@@ -698,6 +799,15 @@
 
 <main>
   <aside id="side">
+    <!-- 좌측 자리는 **패널 또는 지도** 둘 중 하나다(사용자 결정 2026-09-09).
+         종전에는 지도를 오른쪽에 따로 붙여 그래프 폭을 잘라 먹었다 — 계선 그래프는 원래
+         폭이 모자란 화면이라(그래서 [패널 접기]가 있다) 오른쪽을 더 내주면 둘 다 좁아졌다.
+         이제 왼쪽 한 자리를 나눠 쓴다: 수치를 볼 때는 패널, 공간을 볼 때는 지도.
+         손잡이를 끌면 이 자리의 폭이 넓어진다(지도를 볼 때 쓴다). -->
+    <div class="modesw" id="side-sw">
+      <button id="sw-panel" class="on" title="병목·부하 순위·활성 교신·이벤트 로그">▤ 패널</button><button id="sw-map" title="같은 실행을 지도 위에서 본다 — 계선·노드·항적이 실제 좌표에 선다">🗺 지도</button>
+    </div>
+    <div id="side-body">
     <!-- ① 현재 병목 — 「지금 어디가 막혔나」를 추론하게 두지 않고 한 줄로 적는다.
          눌러서 그 노드로 초점을 옮긴다(그래프 강조 + 병목/처리 로그 필터). -->
     <div id="bneck"><span class="h">현재 병목</span><div class="n">—</div><div class="s">실행을 눌러 시작합니다.</div></div>
@@ -718,7 +828,26 @@
       </div>
       <div class="scroll" id="log-body"></div>
     </section>
+    </div><!-- /#side-body -->
+
+    <!-- 지도 — 같은 시계·같은 실행·같은 활성 계선 집합을 그래프와 공유한다. -->
+    <div id="side-map" hidden>
+      <div id="map-head">
+        <span class="mzoom">
+          <button id="mz-out" title="축소 (또는 휠 아래로)">−</button><button id="mz-in" title="확대 (또는 휠 위로 · 커서 자리를 붙잡고 확대한다)">＋</button><button id="mz-fit" title="전체 보기로 되돌리기">⤢</button>
+        </span>
+        <span id="map-scale"></span>
+        <label title="센서 탐지거리·사수 사거리를 타원으로 그린다 — 「사거리 밖이라 못 쐈다」를 물을 때 켠다"><input type="checkbox" id="map-rings"> 사거리</label>
+        <label title="이 실행의 항적을 축선 진입점에서 착탄점까지 실제 궤적으로 그린다"><input type="checkbox" id="map-threats" checked> 항적</label>
+      </div>
+      <svg id="map" preserveAspectRatio="xMidYMid meet"></svg>
+      <!-- ⚠️ 지우지 말 것. 열 배치일 때는 아무도 실제 위치로 오해하지 않지만, 지도에
+           얹는 순간 실제 배치처럼 읽힌다. 자산 좌표·축선은 **도시 수준 개념좌표**이고,
+           해안선만 실제 지리(Natural Earth, 퍼블릭 도메인)다. -->
+      <div id="map-note">⚠️ 해안선·군사분계선만 실제 지리 — <b>자산 위치·축선은 도시 수준 개념좌표</b>(실제 배치·침투경로 아님)</div>
+    </div>
   </aside>
+  <div id="sidesplit" title="드래그해서 왼쪽 자리의 폭을 조절합니다"></div>
 
   <section id="stage">
     <!-- 계선 범례 — 「이 선이 무엇인가」를 그림 옆에서 바로 확인하는 자리(토글).
@@ -729,6 +858,13 @@
       <div class="lk-h"><span>계선 범례 — 이 선이 무엇인가</span><button id="linekey-close" title="닫기 (매체 강조도 함께 풀린다)">✕</button></div>
       <div id="linekey-body"></div>
     </div>
+    <!-- 계선 그래프와 지도를 **나란히** 둔다(사용자 결정 2026-09-09).
+         왼쪽은 킬체인 순서(C2 절차가 어떻게 흐르는가), 오른쪽은 지리(그 절차가 어디에서
+         벌어지는가). 같은 시계·같은 실행·같은 활성 계선 집합을 공유하므로 두 그림이
+         **항상 같은 순간**을 가리킨다.
+         ⚠️ 사실은 한 곳에서만 계산한다 — 지도는 drawFrameAll/Track이 이미 만든
+            state·hotEdges·doneEdges를 받아 **그리기만** 한다. 두 벌로 계산하면 같은
+            순간에 두 그림이 다른 말을 하게 된다(cylSvg·placeSlots와 같은 규율). -->
     <!-- 신호등 — 「지금 이 항적이 어디서 무엇을 기다리는가」를 추론하게 두지 않고 직접 적는다. -->
     <div id="graph-wrap"><div id="signal" hidden></div><svg id="graph"></svg></div>
     <div id="transport">
@@ -756,7 +892,7 @@
          ⚠️ 접되 **없애지는 않는다** — 색·모양이 뜻하는 바를 모르면 화면을 오독한다.
             접힌 상태에서도 무엇이 들어 있는지 한 줄로 알린다. -->
     <details id="legend-box">
-      <summary>범례(전체) — 색 체계(계선 ↔ 상태) · 계선 활성도 · 전문 묶음 · 노드 배지·큐 막대 · 작업·교신 맥동 · 레인 타임라인 &nbsp;— 계선만 빠르게 보려면 위 [▤ 계선 범례]</summary>
+      <summary>범례(전체) — 색 체계(계선 ↔ 상태) · 계선 활성도 · 전문 묶음 · 노드 배지·큐 막대 · 지도 · 작업·교신 맥동 · 레인 타임라인 &nbsp;— 계선만 빠르게 보려면 위 [▤ 계선 범례]</summary>
       <div id="legend"></div>
     </details>
   </section>
@@ -780,7 +916,8 @@ for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
   '../js/data/nodes.js', '../js/data/links.js', '../js/data/threats.js',
   '../js/data/scenarios.js', '../js/data/axes.js', '../js/config/deployment-adapter.js',
-  '../js/core/rng.js', '../js/core/heap.js', '../js/engine/sim-engine.js'
+  '../js/core/rng.js', '../js/core/heap.js', '../js/engine/sim-engine.js',
+  '../js/ui/geo.js', '../js/data/coastline.js'
 ]) await import(m + V);
 const KJ = globalThis.KJ;
 installIadsKernel(KJ);
@@ -1365,7 +1502,12 @@ function buildTracks(res) {
       //    — 엔진이 103/105 항적에 commanders를 실어 보내는데 화면이 전부 버렸고,
       //    failure.evidence가 빈 누수 항적은 아무 실패 표시 없이 끝났다(실측 2건).
       //    바로 위 failure를 빠뜨렸던 것과 같은 실수의 재판이라, 같은 자리에 같이 적는다.
-      unreached: tr.unreached || [], commanders: tr.commanders || [] };
+      unreached: tr.unreached || [], commanders: tr.commanders || [],
+      // ⚠️ **세 번째 재판이다.** 지도 보기의 항적 위치는 `KJ.axisPosition(axis, (t−spawnT)/
+      //    dwellSec, target)`으로 되짚는데, 이 두 필드를 안 옮겨서 처음 붙였을 때 지도의
+      //    항적이 **한 건도 안 그려졌다**(실측: 토큰 0개). 엔진이 실어 보내는 것을 여기서
+      //    조용히 버리면 화면은 오류 없이 그냥 비어 보인다 — 위 두 주석과 같은 자리에 적는다.
+      dwellSec: tr.dwellSec, target: tr.target || null };
   });
   (res.flowEvents || []).forEach((e) => {
     if (e.k === 'link') { const t = byId[e.th]; if (t) t.flows.push(e); return; }
@@ -2228,13 +2370,402 @@ function renderLineKey() {
 
 /** 고른 매체만 남긴다 — 배치를 다시 세울 때마다 다시 걸어야 한다(DOM이 새로 만들어진다). */
 function applyKeyFocus() {
-  const svg = el('graph');
-  ['.edgeg', '.earrow', '.elabel'].forEach((q) => {
-    svg.querySelectorAll(q).forEach((n) => {
+  [[el('graph'), ['.edgeg', '.earrow', '.elabel']], [el('map'), ['.medge']]].forEach(([svg, qs]) => {
+    if (!svg) return;
+    qs.forEach((q) => svg.querySelectorAll(q).forEach((n) => {
       n.classList.toggle('mtoff', !!keyFocusMt && n.dataset.mt !== keyFocusMt);
-    });
+    }));
   });
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   5-b. 지도 보기 — 계선 그래프와 **나란히** (사용자 결정 2026-09-09)
+   ══════════════════════════════════════════════════════════════════════════
+   왼쪽 계선 그래프는 「C2 절차가 어떤 순서로 흐르는가」를, 오른쪽 지도는 「그 절차가
+   어디에서 벌어지는가」를 말한다. 지금까지 이 화면에는 **공간 축이 없었다** — 음성 협조
+   20초가 잇는 두 지휘소가 실제로 얼마나 떨어져 있는지, 「사거리 밖이라 못 쐈다」가
+   어디를 뜻하는지가 열 배치에서는 보이지 않았다.
+
+   ⚠️ 사실은 한 곳에서만 계산한다. 지도는 drawFrameAll/drawFrameTrack이 이미 만든
+      state(노드 부하)·hotEdges(지금 교신 중)·doneEdges(방금 도착)를 **받아 그리기만**
+      한다. 두 벌로 계산하면 같은 순간에 두 그림이 다른 말을 하게 된다(cylSvg·placeSlots가
+      두 보기에서 한 벌인 것과 같은 규율).
+   ⚠️ 배경 지도(타일)를 쓰지 않는다. 이 화면의 단일본은 인터넷 없이 더블클릭으로 열려야
+      하는데(README [프로토타입]), 타일은 온라인이라 그 약속이 반쪽이 된다. 대신 경위도
+      격자와 축선이 공간 기준을 준다.
+   ⚠️ 좌표는 전부 **도시 수준 개념좌표**다(axes.js 주석·배치 카탈로그 디스클레이머).
+      열 배치일 때는 아무도 실제 위치로 오해하지 않지만 지도에 얹는 순간 실제처럼 읽힌다 —
+      그래서 #map-note 고지를 상시 띄운다. 지우지 말 것.                            */
+
+let mapGeo = null;   // { B, W, H, nodes, edges, edgeByKey, nodeEls }
+// 프레임 계산부가 넘겨 준 활성 집합. 지도는 이것을 **읽기만** 한다.
+let mapHot = new Set(), mapDone = new Set();
+
+/**
+ * 그릴 것이 전부 들어가는 경계. 본 앱과 **같은 기준 상자**(KJ.geo.BOUNDS)에서 출발해,
+ * 밖으로 나가는 좌표가 있으면 그만큼만 넓힌다.
+ * ⚠️ KJ.geo.BOUNDS 자체를 고쳐 넓히면 **본 앱 지도(map-view 폴백)의 배치가 통째로 밀린다** —
+ *    공유 상수는 건드리지 않고 이 화면 안에서만 확장한다. 실제로 남부 축선의 표적권역
+ *    (southcentral 35.87 · southeast 35.18)이 기준 상자의 latMin 36.3 아래에 있다.
+ */
+function mapBounds() {
+  const B = KJ.geo.BOUNDS;
+  let latMin = B.latMin, latMax = B.latMax, lonMin = B.lonMin, lonMax = B.lonMax;
+  const grow = (c) => {
+    if (!c || c.length !== 2) return;
+    latMin = Math.min(latMin, c[0]); latMax = Math.max(latMax, c[0]);
+    lonMin = Math.min(lonMin, c[1]); lonMax = Math.max(lonMax, c[1]);
+  };
+  Object.keys(run.nodes).forEach((id) => grow(run.nodes[id].coord));
+  Object.keys(KJ.AXES).forEach((k) => { grow(KJ.AXES[k].entry); grow(KJ.AXES[k].target); });
+  run.tracks.forEach((t) => grow(t.target));
+  const mLat = (latMax - latMin) * .04, mLon = (lonMax - lonMin) * .04;
+  return { latMin: latMin - mLat, latMax: latMax + mLat, lonMin: lonMin - mLon, lonMax: lonMax + mLon };
+}
+/* ── 확대·이동 (사용자 결정 2026-09-09) ──────────────────────────────────────
+   자산 64개가 서울·중부에 몰려 있어 전체 보기에서는 점 덩어리가 된다. 확대해야 그 안이
+   보인다.
+
+   ⚠️ SVG를 `transform="scale(k)"`로 키우지 **않는다.** 그러면 글자·선 굵기·노드 반지름까지
+      같이 커져(4배 확대 = 4배 글자) 확대할수록 오히려 안 읽힌다. 대신 **경계 상자를
+      좁혀서 다시 그린다** — layoutMap이 상자에서 좌표를 다시 뽑으므로 글자·굵기·노드
+      크기는 설계값 그대로 남고 지리만 커진다. 사거리 타원도 상자 폭으로 계산하므로
+      함께 정확히 커진다(따로 보정할 곳이 없다).
+   ⚠️ viewBox를 **화면 픽셀 크기 그대로** 잡고(W,H = 패널 실측 px) 경계 상자를 그 종횡비에
+      맞춰 넓힌다. 그래야 1 user unit = 1 CSS px이 되어, 확대해도 글자가 커지거나
+      작아지지 않는다(종전 고정 H=640은 창 비율에 따라 글자 크기가 흔들렸다). */
+let mapView = null;      // 확대해 들어간 경계 상자(null이면 전체)
+const MAP_MIN_SPAN = 0.12;   // 최대 확대 — 위도 0.12° ≈ 13km
+
+/** 지금 그릴 경계 상자(확대 중이면 그것, 아니면 전체). */
+function mapExtent() { return mapView || mapBounds(); }
+/** 상자를 화면 종횡비에 맞춰 **넓힌다**(자르지 않는다 — 자르면 보이던 것이 사라진다). */
+function fitBox(B, W, H) {
+  const latSpan = B.latMax - B.latMin, lonSpan = B.lonMax - B.lonMin;
+  const want = W / H, have = lonSpan / latSpan;
+  if (have < want) {
+    const s = latSpan * want, c = (B.lonMin + B.lonMax) / 2;
+    return { latMin: B.latMin, latMax: B.latMax, lonMin: c - s / 2, lonMax: c + s / 2 };
+  }
+  const s = lonSpan / want, c = (B.latMin + B.latMax) / 2;
+  return { latMin: c - s / 2, latMax: c + s / 2, lonMin: B.lonMin, lonMax: B.lonMax };
+}
+/** 화면 좌표 → [위도, 경도]. getScreenCTM으로 되짚으므로 여백·확대와 무관하게 정확하다. */
+function mapClientLatLon(ev) {
+  const svg = el('map');
+  if (!mapGeo || !svg.getScreenCTM) return null;
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return null;
+  const p = svg.createSVGPoint();
+  p.x = ev.clientX; p.y = ev.clientY;
+  const q = p.matrixTransform(ctm.inverse());
+  const B = mapGeo.B;
+  return [B.latMax - q.y / mapGeo.H * (B.latMax - B.latMin),
+          B.lonMin + q.x / mapGeo.W * (B.lonMax - B.lonMin)];
+}
+/**
+ * 확대/축소. anchor([위도,경도])를 화면에서 **제자리에 붙잡고** 배율을 건다 —
+ * 휠 확대에서 커서 밑이 움직이면 어디를 보고 있었는지 놓친다.
+ */
+function mapZoom(factor, anchor) {
+  if (!mapGeo) return;
+  const full = mapBounds(), B = mapGeo.B;
+  let latSpan = (B.latMax - B.latMin) / factor;
+  let lonSpan = (B.lonMax - B.lonMin) / factor;
+  const fullLat = full.latMax - full.latMin;
+  // 다 축소하면 전체 보기로 되돌린다(끝없이 멀어지지 않게)
+  if (latSpan >= fullLat) { mapView = null; layoutMap(); drawFrame(); return; }
+  if (latSpan < MAP_MIN_SPAN) {
+    const k = MAP_MIN_SPAN / latSpan;
+    latSpan *= k; lonSpan *= k;
+  }
+  const a = anchor && anchor.length === 2
+    ? anchor : [(B.latMin + B.latMax) / 2, (B.lonMin + B.lonMax) / 2];
+  const fy = (B.latMax - a[0]) / (B.latMax - B.latMin);
+  const fx = (a[1] - B.lonMin) / (B.lonMax - B.lonMin);
+  const latMax = a[0] + fy * latSpan, lonMin = a[1] - fx * lonSpan;
+  mapView = { latMin: latMax - latSpan, latMax: latMax,
+    lonMin: lonMin, lonMax: lonMin + lonSpan };
+  layoutMap();
+  drawFrame();
+}
+
+/** [lat,lon] → viewBox 좌표. 상자가 KJ.geo.BOUNDS와 같으면 KJ.geo.project와 정확히 같은 값이다
+ *  (등장방형 근사 — 경도 보정을 하지 않는다. 사거리 타원이 그 전제 위에서 계산된다). */
+function mproj(c, g) {
+  return [(c[1] - g.B.lonMin) / (g.B.lonMax - g.B.lonMin) * g.W,
+          (g.B.latMax - c[0]) / (g.B.latMax - g.B.latMin) * g.H];
+}
+/** 시각 at의 위협 위치 — **엔진이 쓰는 바로 그 함수**(KJ.axisPosition)로 되짚는다.
+ *  분모 dwellSec은 관측(threatTrace)에서 읽는다 — 밖에서 다시 짜 맞추면 ADR-091에서
+ *  조용히 어긋난다(엔진 trace 주석 참조). */
+function threatPosAt(tr, at) {
+  if (!tr || !(tr.dwellSec > 0)) return null;
+  if (at < tr.spawnT) return null;
+  if (tr.exitT != null && at > tr.exitT) return null;
+  return KJ.axisPosition(tr.axis, (at - tr.spawnT) / tr.dwellSec, tr.target);
+}
+
+function layoutMap() {
+  const wrap = el('side-map'), svg = el('map');
+  if (!run || wrap.hidden) { mapGeo = null; return; }
+  // viewBox = 패널 실측 픽셀. 1 user unit = 1 CSS px이라 확대해도 글자·굵기가 흔들리지 않는다.
+  const W = Math.max(160, Math.round(svg.clientWidth || wrap.clientWidth || 400));
+  const H = Math.max(160, Math.round(svg.clientHeight || 400));
+  const B = fitBox(mapExtent(), W, H);
+  const g = { B, W, H, nodes: {}, edges: [], edgeByKey: {}, nodeEls: {} };
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  // 좁히면 미니맵: 격자 라벨·MDL 라벨·노드 이름을 뺀다.
+  // ⚠️ 아래 해안선·MDL 블록이 이 값을 읽는다 — 선언이 뒤에 있으면 TDZ로 지도가 통째로
+  //    안 그려진다(실측: layoutMap이 던지고 해안선·계선·노드가 전부 0개).
+  const narrow = wrap.clientWidth < 300;
+
+  // ── 해안선 — 이 지도에서 **실제 지리인 것**(Natural Earth 퍼블릭 도메인, 표시 전용).
+  //    타일을 받지 않고 좌표만 동봉해 그린다 — 단일본이 인터넷 없이 열려야 하기 때문이다.
+  let coast = '';
+  (KJ.COASTLINE || []).forEach((line) => {
+    let d = '';
+    for (let i = 0; i < line.length; i++) {
+      const p = mproj(line[i], g);
+      d += (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1);
+    }
+    coast += `<path class="mcoast" d="${d}"></path>`;
+  });
+  // ── 군사분계선(근사) — geo-mdl.js가 단일 권위. 실제 궤적의 공개 지리 기반 ±3~5km 근사다.
+  //    ⚠️ 이것도 실제 지리 쪽이라 무채색으로 둔다(개념좌표인 축선은 황색).
+  let mdl = '';
+  const mp = KJ.MDL_DEFENSE_POLYLINE || [];
+  if (mp.length > 1) {
+    let d = '';
+    mp.forEach((v, i) => {
+      const p = mproj([v.lat, v.lon], g);
+      d += (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1);
+    });
+    mdl = `<path class="mmdl" d="${d}"><title>${esc('군사분계선(근사) — 실제 육상 궤적의 공개 지리 기반 ±3~5km 근사(js/config/geo-mdl.js)')}</title></path>`;
+    if (!narrow) {
+      const q = mproj([mp[mp.length - 1].lat, mp[mp.length - 1].lon], g);
+      mdl += `<text class="mmdl-lab" x="${(q[0] + 4).toFixed(1)}" y="${(q[1] - 3).toFixed(1)}">MDL(근사)</text>`;
+    }
+  }
+
+  // ── 경위도 격자 — 해안선 위에 얹는 눈금자 ──
+  let grid = '';
+  for (let la = Math.ceil(B.latMin); la <= B.latMax; la++) {
+    const y = mproj([la, B.lonMin], g)[1];
+    grid += `<line class="mgrid" x1="0" y1="${y.toFixed(1)}" x2="${W}" y2="${y.toFixed(1)}"></line>`;
+    if (!narrow) grid += `<text class="mgrid-lab" x="2" y="${(y - 2).toFixed(1)}">${la}°N</text>`;
+  }
+  for (let lo = Math.ceil(B.lonMin); lo <= B.lonMax; lo++) {
+    const x = mproj([B.latMax, lo], g)[0];
+    grid += `<line class="mgrid" x1="${x.toFixed(1)}" y1="0" x2="${x.toFixed(1)}" y2="${H}"></line>`;
+    if (!narrow) grid += `<text class="mgrid-lab" x="${(x + 2).toFixed(1)}" y="${H - 3}">${lo}°E</text>`;
+  }
+
+  // ── 축선 — 위협이 어디서 들어와 어디로 가는가(개념 궤적) ──
+  let axes = '';
+  Object.keys(KJ.AXES).forEach((k) => {
+    const a = KJ.AXES[k], p = mproj(a.entry, g), q = mproj(a.target, g);
+    axes += `<line class="maxis" x1="${p[0].toFixed(1)}" y1="${p[1].toFixed(1)}"` +
+      ` x2="${q[0].toFixed(1)}" y2="${q[1].toFixed(1)}"><title>${esc(a.label +
+        '\n진입 ' + a.entryNote + '\n⚠️ 개념 궤적 — 실제 침투경로가 아니다')}</title></line>` +
+      (narrow ? '' : `<text class="maxis-lab" x="${(p[0] + 3).toFixed(1)}" y="${(p[1] - 3).toFixed(1)}">${esc(a.label)}</text>`);
+  });
+
+  // ── 사거리 링 — 「사거리 밖이라 못 쐈다」를 지도에서 짚는다 ──
+  // 타원 산식은 본 앱 SVG 개념도(js/ui/map-view.js renderFallbackSvg)와 같다: 등장방형
+  // 투영이 경도를 보정하지 않으므로 rx만 cos(위도)로 나눈다.
+  let rings = '';
+  if (el('map-rings').checked) {
+    Object.keys(run.nodes).forEach((id) => {
+      const n = run.nodes[id];
+      if (!n.coord) return;
+      const km = n.category === 'sensor' ? n.rangeKm
+        : (n.category === 'shooter' && n.engage ? n.engage.rangeKm : null);
+      if (!km) return;
+      const p = mproj(n.coord, g), latRad = n.coord[0] * Math.PI / 180;
+      const rx = km / (111.32 * Math.max(0.2, Math.cos(latRad))) / (B.lonMax - B.lonMin) * W;
+      const ry = km / 111.32 / (B.latMax - B.latMin) * H;
+      rings += `<ellipse class="mring ${n.category}" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}"` +
+        ` rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}"></ellipse>`;
+    });
+  }
+
+  // ── 계선 — 키는 계선 그래프와 **같다**(from>to|매체). 그래서 활성 집합을 그대로 쓴다.
+  //    노드 하나가 지도에서는 한 자리뿐이라 ECS 상행/하행이 한 선으로 합쳐진다(지리적으로 옳다).
+  const em = new Map();
+  run.allFlows.forEach((f) => {
+    const k = edgeKey(f);
+    const e = em.get(k);
+    if (e) e.n++; else em.set(k, { key: k, from: f.from, to: f.to, mt: f.mt, kind: f.kind, n: 1 });
+  });
+  if (el('show-alllinks').checked) {
+    (KJ.linksInMode(mode, run.catalog) || []).forEach((l) => {
+      const c = l.comm && l.comm[mode];
+      if (!c) return;
+      const k = l.from + '>' + l.to + '|' + c.type;
+      if (!em.has(k)) em.set(k, { key: k, from: l.from, to: l.to, mt: c.type, kind: l.kind, n: 0, unused: true });
+    });
+  }
+  const par = {};
+  const eList = [...em.values()].filter((e) => run.nodes[e.from] && run.nodes[e.to] &&
+    run.nodes[e.from].coord && run.nodes[e.to].coord);
+  eList.forEach((e) => {
+    const pk = [e.from, e.to].sort().join('>');   // 방향 무관 묶음 — 왕복이 서로 비켜 그려지게
+    (par[pk] = par[pk] || []).push(e);
+  });
+  let edgeSvg = '';
+  eList.forEach((e, i) => {
+    const a = mproj(run.nodes[e.from].coord, g), b = mproj(run.nodes[e.to].coord, g);
+    const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1;
+    const sib = par[[e.from, e.to].sort().join('>')];
+    const off = (sib.indexOf(e) - (sib.length - 1) / 2) * 5;   // 평행 계선 벌림(수직 방향)
+    const ox = -dy / len * off, oy = dx / len * off;
+    const m = media(e.mt);
+    const d = `M${(a[0] + ox).toFixed(1)},${(a[1] + oy).toFixed(1)} L${(b[0] + ox).toFixed(1)},${(b[1] + oy).toFixed(1)}`;
+    e.i = i;
+    edgeSvg += `<path class="medge${e.unused ? ' unused' : ''}" data-ek="${esc(e.key)}" data-mt="${esc(e.mt)}"` +
+      ` d="${d}" stroke="${e.unused ? '#3a4759' : m.color}"` +
+      ` style="--w:${(edgeWidth(m, e.n) * .6).toFixed(2)}"` +
+      (m.dash ? ` stroke-dasharray="${m.dash}"` : '') + `>` +
+      `<title>${esc(nodeName(e.from) + ' → ' + nodeName(e.to) + ' · ' + m.label + ' · 전문 ' + e.n + '건' +
+        (e.unused ? ' (통행 없음)' : ''))}</title></path>`;
+    g.edges.push(e);
+  });
+
+  // ── 노드 ──
+  let nodeSvg = '';
+  Object.keys(run.nodes).forEach((id) => {
+    const n = run.nodes[id];
+    if (!n.coord) return;
+    const p = mproj(n.coord, g);
+    const cat = n.category || 'c2';
+    const r = cat === 'c2' ? 4.2 : 3.2;
+    g.nodes[id] = { id, x: p[0], y: p[1], cat };
+    nodeSvg += `<g class="mnode ${cat}" data-id="${esc(id)}">` +
+      `<circle class="mdot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}"></circle>` +
+      (narrow || !MAP_LABEL[n.typeId] ? '' :
+        `<text class="mnode-lab" x="${(p[0] + r + 2).toFixed(1)}" y="${(p[1] + 3).toFixed(1)}">${esc(nodeShortName(n))}</text>`) +
+      `<title>${esc((n.name || id) + '\n' + nodeTier(n) +
+        '\n개념좌표 ' + n.coord[0].toFixed(2) + '°N ' + n.coord[1].toFixed(2) + '°E' +
+        '\n클릭하면 이 노드를 짚습니다')}</title></g>`;
+  });
+
+  svg.innerHTML = `<g id="m-geo">${coast}${mdl}</g><g id="m-grid">${grid}</g><g id="m-axes">${axes}</g>` +
+    `<g id="m-rings">${rings}</g><g id="m-edges">${edgeSvg}</g>` +
+    `<g id="m-nodes">${nodeSvg}</g><g id="m-dots"></g>`;
+  [...svg.querySelectorAll('#m-edges .medge')].forEach((p, i) => {
+    g.edges[i].el = p; g.edgeByKey[g.edges[i].key] = g.edges[i];
+  });
+  [...svg.querySelectorAll('.mnode')].forEach((el2) => {
+    g.nodeEls[el2.dataset.id] = el2;
+    el2.addEventListener('click', (ev) => { ev.stopPropagation(); toggleFocusNode(el2.dataset.id); });
+  });
+  mapGeo = g;
+  // 축척 — 배경 지도가 없으므로 거리감을 글자로 준다. 확대 중이면 배율도 함께 적는다
+  // (「지금 얼마나 들어와 있나」를 모르면 전체로 되돌릴 판단이 안 선다).
+  const midLat = (B.latMin + B.latMax) / 2 * Math.PI / 180;
+  const wKm = (B.lonMax - B.lonMin) * 111.32 * Math.cos(midLat);
+  const zoom = (mapBounds().latMax - mapBounds().latMin) / (B.latMax - B.latMin);
+  el('map-scale').textContent = `가로 ${wKm.toFixed(0)}km · 격자 1° ≈ 111km` +
+    (zoom > 1.05 ? ` · 확대 ×${zoom.toFixed(1)}` : '');
+  applyKeyFocus();
+}
+
+/**
+ * 지도 갱신. **계산하지 않는다** — 프레임 계산부가 넘겨준 것을 그리기만 한다.
+ * @param state 노드 부하(stateAt) · @param hot 지금 교신 중인 계선키 · @param done 방금 도착한 계선키
+ */
+function paintMap(state, hot, done) {
+  if (!mapGeo) return;
+  const relKeys = (view === 'track' && sel) ? new Set(sel.edges.map((e) => e.key)) : null;
+  // ⚠️ sel.nodeIds 는 **배열**이다(selectTrack: `nodeIds: [...ids]`). layoutGraph도 new Set으로
+  //    감싸 쓴다 — 여기서 .has를 바로 부르면 전 노드가 흐려진다.
+  const relIds = (view === 'track' && sel) ? new Set(sel.nodeIds) : null;
+  mapGeo.edges.forEach((e) => {
+    if (!e.el) return;
+    e.el.classList.toggle('hot', hot.has(e.key));
+    e.el.classList.toggle('done', !hot.has(e.key) && done.has(e.key));
+    e.el.classList.toggle('rel', !!relKeys && relKeys.has(e.key));
+  });
+  Object.keys(mapGeo.nodeEls).forEach((id) => {
+    const g2 = mapGeo.nodeEls[id], n = run.nodes[id];
+    const cap = nodeCap(n), c = cap ? cap.c : null;
+    const st = state[id] || ZERO_ST;
+    const jam = c != null && st.busy >= c && st.q > 0;
+    const full = c != null && st.busy >= c && !jam;
+    g2.classList.toggle('jam', jam);
+    g2.classList.toggle('full', full);
+    g2.classList.toggle('busy', !jam && !full && st.busy > 0);
+    // 「쓰이지 않았다」의 뜻이 보기마다 다르다: 전체 흐름은 이 실행에서 한 번도 안 쓰인 노드,
+    // 개별 보기는 **이 항적이** 안 쓴 노드(계선 그래프의 .idleg와 같은 규율).
+    g2.classList.toggle('idle', view === 'track'
+      ? !(relIds && relIds.has(id))
+      : !(gv && gv.stats[id] && (gv.stats[id].arr || gv.stats[id].touched)));
+    g2.classList.toggle('focus', !!gv && gv.focusNode === id);
+  });
+
+  // ── 항적 — 축선 진입점에서 지금 위치까지의 자국과 현재 위치 ──
+  let out = '';
+  if (el('map-threats').checked) {
+    const selId = sel ? sel.id : null;
+    run.tracks.forEach((t) => {
+      const pos = threatPosAt(t, simT);
+      if (!pos) return;
+      // 개별 보기에서는 **고른 항적만** 또렷하게 — 전 항적을 겹치면 그 항적을 잃는다.
+      const isSel = t.id === selId;
+      if (view === 'track' && !isSel) return;
+      const p = mproj(pos, mapGeo), e0 = mproj(KJ.AXES[t.axis] ? KJ.AXES[t.axis].entry : pos, mapGeo);
+      const col = THREAT_COLOR[t.type] || '#94a3b8';
+      out += `<line class="mtrail" x1="${e0[0].toFixed(1)}" y1="${e0[1].toFixed(1)}"` +
+        ` x2="${p[0].toFixed(1)}" y2="${p[1].toFixed(1)}" stroke="${col}"></line>` +
+        `<circle class="mthreat${isSel ? ' sel' : ''}" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}"` +
+        ` r="${isSel ? 4.6 : 2.8}" fill="${col}"><title>${esc(t.id + ' · ' +
+          (THREAT_LABEL[t.type] || t.type) + ' · ' + (KJ.AXES[t.axis] ? KJ.AXES[t.axis].label : t.axis))}</title></circle>`;
+      if (isSel) {
+        out += `<text class="mthreat-lab" x="${(p[0] + 7).toFixed(1)}" y="${(p[1] - 6).toFixed(1)}">${esc(t.id)}</text>`;
+        if (t.target) {
+          const q = mproj(t.target, mapGeo);
+          out += `<circle class="mimpact" cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="5"></circle>` +
+            `<line class="mimpact" x1="${(q[0] - 4).toFixed(1)}" y1="${(q[1] - 4).toFixed(1)}"` +
+            ` x2="${(q[0] + 4).toFixed(1)}" y2="${(q[1] + 4).toFixed(1)}"></line>`;
+        }
+      }
+    });
+  }
+  el('map').querySelector('#m-dots').innerHTML = out;
+}
+
+/**
+ * 좌측 자리를 패널/지도로 바꾼다. 지도를 처음 열 때만 폭을 한 번 넓혀 준다 —
+ * 340px에서는 지도가 미니맵이라 첫인상이 「뭘 보라는 건지 모르겠다」가 된다.
+ * 사용자가 손잡이로 폭을 정한 뒤에는 건드리지 않는다.
+ */
+let sideWidened = false;
+function setSideView(v) {
+  el('sw-panel').classList.toggle('on', v === 'panel');
+  el('sw-map').classList.toggle('on', v === 'map');
+  el('side-body').hidden = v !== 'panel';
+  el('side-map').hidden = v !== 'map';
+  if (v === 'map' && !sideWidened && el('side').offsetWidth < 460) {
+    sideWidened = true;
+    el('side').style.width = '480px';
+  }
+  relayout();
+}
+
+/** 지도에 이름을 다는 노드 — **대표 C2만**. 배치 64노드 중 ECS 15·ICC 11·센서 19·포대 15가
+ *  중부에 몰려 있어 전부 적으면 이름이 덩어리가 된다(첫 붙임에서 실제로 그랬다).
+ *  나머지는 점으로 두고 이름은 툴팁으로 읽는다 — 지도의 일은 「어디에」이지 「무엇이」가 아니다. */
+const MAP_LABEL = { KAMD_OPS: 1, MCRC: 1, IAOC: 1, ARMY_LOCAL_AD: 1,
+  USFK_THAAD_C2: 1, USFK_PATRIOT_C2: 1 };
+
+/** 위협 유형별 색 — 표시 전용(엔진의 탄도/공기흡입 판정을 흉내 내지 않는다). */
+const THREAT_COLOR = {
+  srbm: '#f472b6', mrl_large: '#fb7185', cruise: '#fbbf24',
+  fighter: '#60a5fa', ac_low: '#38bdf8', heli: '#7dd3fc', uav_small: '#a78bfa'
+};
 
 /** 현재 시각 이후 가장 가까운 사건으로 건너뛴다(없으면 끝으로). */
 function skipToNextEvent() {
@@ -2421,6 +2952,7 @@ function selectTrack(i) {
   });
   lastLogIdx = -2;
   layoutGraph();
+  layoutMap();
   renderLog();
   // 시계는 항적 생성 시각으로 맞춘다 — 전 실행 시간축에서 보면 대부분이 빈 화면이다.
   simT = sel.spawnT;
@@ -2953,8 +3485,8 @@ function openMediaPopover(edge, ev) {
  * 반드시 남아야 조건을 모르고 수치를 읽는 일이 없다.
  */
 function renderOverrides() {
-  if (view === 'all' && geoAll) { layoutAll(); drawFrame(); }
-  else if (sel && geo) { layoutGraph(); drawFrame(); }
+  if (view === 'all' && geoAll) { layoutAll(); layoutMap(); drawFrame(); }
+  else if (sel && geo) { layoutGraph(); layoutMap(); drawFrame(); }
 }
 
 /** 벽시계로 이만큼(초) 전까지의 자취를 꼬리로 남긴다. 배속을 곱해 화면 시간으로 환산한다. */
@@ -3275,6 +3807,10 @@ function toggleFocusNode(id) {
   if (geoAll) Object.keys(geoAll.nodeEls).forEach((k) => {
     geoAll.nodeEls[k].g.classList.toggle('focus', geoAll.nodeEls[k].id === gv.focusNode);
   });
+  // 지도도 같은 노드를 짚는다 — 두 그림이 같은 순간·같은 대상을 가리켜야 나란히 읽힌다.
+  if (mapGeo) Object.keys(mapGeo.nodeEls).forEach((id) => {
+    mapGeo.nodeEls[id].classList.toggle('focus', id === gv.focusNode);
+  });
 }
 
 /**
@@ -3413,6 +3949,7 @@ function drawFrameAll() {
     e.el.classList.toggle('hot', hotEdges.has(e.key));
     e.el.classList.toggle('done', !hotEdges.has(e.key) && doneEdges.has(e.key));
   });
+  mapHot = hotEdges; mapDone = doneEdges;   // 지도는 이 집합을 그대로 쓴다(다시 세지 않는다)
 
   // 계선 입구에 막혀 있는 전문 — 「가야 할 방향은 있는데 못 가는」 그림.
   out += renderBlocks(run.allBlocks, geoAll);
@@ -3486,6 +4023,7 @@ function drawFrameAll() {
   geoAll.prevTalking = talkNow;
   paintLiveCols(geoAll, liveCols);
 
+  paintMap(state, mapHot, mapDone);
   // 패널(병목 카드·부하 순위·활성 교신)은 **재생 중에만** 300ms 스로틀 — 매 프레임 정렬·
   // DOM 재생성은 낭비다. 멈춰 있을 때(스크럽·보기 전환·⏭)는 즉시 반영한다 — 안 그러면
   // 눌러 옮긴 시각과 패널의 수치가 최대 0.3초 어긋난 채로 남는다.
@@ -3953,6 +4491,7 @@ function setView(v) {
   if (v === 'all') {
     el('signal').hidden = true;   // 신호등은 항적 하나를 볼 때만 뜻이 있다
     layoutAll();
+    layoutMap();
     renderAllLog();
     simT = Math.min(Math.max(simT, viewT0()), viewT1());
     el('scrub').disabled = el('play').disabled = el('skip').disabled = false;
@@ -4188,6 +4727,7 @@ function drawFrameTrack() {
     e.el.classList.toggle('hot', hotEdges.has(e.key));
     e.el.classList.toggle('done', !hotEdges.has(e.key) && doneEdges.has(e.key));
   });
+  mapHot = hotEdges; mapDone = doneEdges;
 
   // 이 항적의 작업이 놓인 노드의 열도 밝힌다 — 대기든 처리든 「반응 중」이다.
   // 선 위의 이동만 세면 노드에서 시간을 다 보내는 구간이 통째로 꺼져 보인다.
@@ -4343,6 +4883,7 @@ function drawFrameTrack() {
     });
   });
 
+  paintMap(gstate, mapHot, mapDone);
   // 패널은 재생 중에만 300ms 스로틀 — 전체 보기와 같은 규칙.
   const wall = performance.now();
   if (!playing || wall - lastRankWall > 300) {
@@ -4506,6 +5047,26 @@ el('legend').innerHTML =
   ' <b>병목의 임박은 여기서 먼저 보인다</b>.' +
   ' 자리가 넉넉한 열의 노드는 이름을 <b>세 위계</b>로 세운다:' +
   ' 위 작은 글씨 = 제대·분류, 가운데 큰 글씨 = 부대 이름, 아래 = 현재 상태(또는 선언 용량). ' +
+  // ── 지도
+  '<b>지도</b>(왼쪽 위 [🗺 지도] 스위치) — 왼쪽 자리를 <b>패널과 나눠 쓴다</b>. 수치를 볼 때는' +
+  ' 패널, 공간을 볼 때는 지도(사이 손잡이로 폭 조절). 그래프가 「어떤 순서로」라면' +
+  ' 지도는 <b>「어디에서」</b>다. 같은 시계·같은 실행·<b>같은 활성 계선 집합</b>을 쓰므로,' +
+  ' 그래프에서 살아난 계선이 지도에서도 같이 살아난다(노드를 누르면 양쪽이 같이 짚힌다).' +
+  ' <span style="opacity:.85">· <b>해안선</b>(무채색) = <b>실제 지리</b>' +
+  '(Natural Earth 퍼블릭 도메인을 동봉 — 타일을 받지 않으므로 인터넷 없이도 나온다) ·' +
+  ' <span style="color:#8f7aa8">보라 점선</span> = <b>군사분계선(근사)</b>(geo-mdl.js, ±3~5km) ·' +
+  ' <b>격자</b> 1° ≈ 111km ·' +
+  ' <span style="color:var(--warn)">황색 점선</span> = <b>축선</b>(위협 진입점 → 표적권역) ·' +
+  ' 노드 색은 실린더와 <b>같은 판정</b>(여유 → <span style="color:var(--wait)">가득</span> →' +
+  ' <span style="color:var(--bad)">가득+대기</span>) · 흐린 점 = 이 실행(개별 보기에서는 이 항적)이' +
+  ' 안 쓴 노드 · 위협은 <b>축선 진입점에서 지금 위치까지 자국</b>을 끌고 가고, 고른 항적은' +
+  ' 흰 테두리와 <span style="color:var(--bad)">붉은 착탄 표시</span>가 붙는다 ·' +
+  ' <b>사거리</b>를 켜면 센서 탐지거리(점선)·사수 사거리(실선)가 타원으로 뜬다 —' +
+  ' 「사거리 밖이라 못 쐈다」를 지도에서 짚는 자리다. 폭을 좁히면 미니맵이 된다 ·' +
+  ' <b>확대</b>는 휠(커서 밑을 붙잡는다)·끌어서 이동·[− ＋ ⤢] 단추 —' +
+  ' 경계 상자를 좁혀 다시 그리는 방식이라 <b>확대해도 글자·선 굵기가 그대로다</b>.</span>' +
+  ' <b style="color:var(--warn)">⚠️ 좌표는 전부 도시 수준 개념좌표이고 실제 배치·침투경로가 아니다</b>' +
+  ' — 축선 진입점·표적권역·자산 위치 전부 그렇다(axes.js·배치 카탈로그 디스클레이머). ' +
   // ── 레인 타임라인
   '<b>레인 타임라인</b>(하단) — 「어디에서 시간이 갔는가」를 킬체인 단계별로 편 것이다:' +
   ' 탐지·보고 / MCRC·KAMDOC 처리 / AOC·JAOC·ICC 처리 / ECS 교전통제 / 요격·타격.' +
@@ -4639,6 +5200,71 @@ el('key-toggle').addEventListener('click', () => {
   if (keyFocusMt) { keyFocusMt = null; applyKeyFocus(); if (run) drawFrame(); }
 });
 el('linekey-close').addEventListener('click', () => el('key-toggle').click());
+// 좌측 자리 전환 — 수치를 볼 때는 패널, 공간을 볼 때는 지도.
+el('sw-panel').addEventListener('click', () => setSideView('panel'));
+el('sw-map').addEventListener('click', () => setSideView('map'));
+el('map-rings').addEventListener('change', () => { layoutMap(); drawFrame(); });
+// ── 지도 확대·이동 ──
+el('mz-in').addEventListener('click', () => mapZoom(1.6, null));
+el('mz-out').addEventListener('click', () => mapZoom(1 / 1.6, null));
+el('mz-fit').addEventListener('click', () => { mapView = null; layoutMap(); drawFrame(); });
+// 휠 확대 — **커서 밑을 붙잡고** 확대한다. 붙잡지 않으면 보고 있던 자리를 놓친다.
+// ⚠️ passive:false 로 등록해야 preventDefault가 먹는다(안 그러면 페이지가 같이 스크롤된다).
+el('map').addEventListener('wheel', (ev) => {
+  if (!mapGeo) return;
+  ev.preventDefault();
+  mapZoom(Math.exp(-ev.deltaY * 0.0016), mapClientLatLon(ev));
+}, { passive: false });
+// 끌어서 이동. ⚠️ 움직이지 않은 mousedown/up은 그냥 클릭이라 노드 짚기가 살아 있어야 한다 —
+//    3px 넘게 움직였을 때만 이동으로 친다.
+(() => {
+  let from = null, moved = false;
+  el('map').addEventListener('mousedown', (ev) => {
+    if (!mapGeo || ev.button !== 0) return;
+    from = { ll: mapClientLatLon(ev), x: ev.clientX, y: ev.clientY };
+    moved = false;
+  });
+  window.addEventListener('mousemove', (ev) => {
+    if (!from || !mapGeo) return;
+    if (!moved && Math.hypot(ev.clientX - from.x, ev.clientY - from.y) < 3) return;
+    if (!moved) { moved = true; el('map').classList.add('panning'); }
+    const now = mapClientLatLon(ev);
+    if (!now || !from.ll) return;
+    const dLat = from.ll[0] - now[0], dLon = from.ll[1] - now[1];
+    const B = mapGeo.B;
+    mapView = { latMin: B.latMin + dLat, latMax: B.latMax + dLat,
+      lonMin: B.lonMin + dLon, lonMax: B.lonMax + dLon };
+    layoutMap();
+    drawFrame();
+  });
+  window.addEventListener('mouseup', () => {
+    if (!from) return;
+    from = null;
+    el('map').classList.remove('panning');
+  });
+})();
+el('map-threats').addEventListener('change', () => { if (run) drawFrame(); });
+// 손잡이 드래그로 좌측 자리 폭을 넓힌다(지도를 볼 때 쓴다).
+// ⚠️ 끄는 동안에는 폭만 바꾸고 **놓을 때 한 번만** 다시 세운다 — 매 mousemove마다
+//    251노드 배치를 다시 세우면 화면이 손을 따라오지 못한다.
+(() => {
+  let dragging = false;
+  el('sidesplit').addEventListener('mousedown', (ev) => {
+    dragging = true; el('sidesplit').classList.add('drag'); ev.preventDefault();
+  });
+  window.addEventListener('mousemove', (ev) => {
+    if (!dragging) return;
+    const r = el('side').getBoundingClientRect();
+    sideWidened = true;   // 손으로 정한 폭은 지도 첫 열림 보정이 덮지 않는다
+    el('side').style.width =
+      Math.max(240, Math.min(window.innerWidth - 420, ev.clientX - r.left)).toFixed(0) + 'px';
+  });
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false; el('sidesplit').classList.remove('drag');
+    relayout();
+  });
+})();
 // 고급 모의설정 — 판을 재는 손잡이는 접어 둔다(상단 바를 가볍게).
 el('adv-toggle').addEventListener('click', () => {
   const on = el('adv').hidden;
@@ -4689,8 +5315,8 @@ el('lm-bot').addEventListener('click', () => { if (run && view === 'all') { allL
 el('log-trk-sel').addEventListener('change', (e) => { allLogC2Id = e.target.value; renderAllLog(); });
 /** 그래프 칸의 크기가 바뀌면 다시 세운다 — 창 크기 변경과 패널 접기가 **같은 길**을 쓴다. */
 function relayout() {
-  if (view === 'all' && run) { layoutAll(); drawFrame(); }
-  else if (sel) { layoutGraph(); drawFrame(); }
+  if (view === 'all' && run) { layoutAll(); layoutMap(); drawFrame(); }
+  else if (sel) { layoutGraph(); layoutMap(); drawFrame(); }
 }
 window.addEventListener('resize', relayout);
 
@@ -4710,10 +5336,11 @@ window.addEventListener('resize', relayout);
  */
 function setSide(open) {
   el('side').hidden = !open;
+  el('sidesplit').hidden = !open;
   const b = el('side-toggle');
   b.textContent = open ? '‹ 패널 접기' : '› 패널 펴기';
-  b.title = open ? '왼쪽 패널을 접고 그래프를 넓게 쓴다'
-    : '노드 부하 순위·이벤트 로그를 다시 연다 — 로그 줄이 항적 개별로 내려가는 입구다';
+  b.title = open ? '왼쪽 자리(패널·지도)를 접고 그래프를 넓게 쓴다'
+    : '왼쪽 자리를 다시 연다 — 패널(부하 순위·로그)과 지도를 여기서 바꿔 본다';
   b.classList.toggle('on', !open);
   relayout();
 }

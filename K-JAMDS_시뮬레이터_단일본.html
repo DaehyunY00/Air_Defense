@@ -10040,6 +10040,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       if (this.threatTraces.length < this.traceCap) {
         threat._trace = {
           id: threat.id, type: threat.type, axis: threat.axis,
+          // ADR-064·091이 축선·발사점 연장으로 조정한 **최종** 체공창. 소비처는 위치 재구성이다:
+          // 시각 t의 위협 위치 = KJ.axisPosition(axis, (t - spawnT) / dwellSec, target).
+          // ⚠️ 관측 전용이다 — 이 값은 이미 확정된 threat.dwellSec의 사본이고 동역학에 되먹이지
+          //    않는다. 화면이 이것을 재계산하면 안 되는 이유: 분모는 KJ.axisDwellSec에 더해
+          //    ballisticLaunchAxes의 lx.scale과 **엔진 내부 판정**(iadsThreatCategory —
+          //    공개 대응물이 없다)까지 걸린 값이라, 밖에서 다시 짜 맞추면 그 플래그에서
+          //    조용히 어긋난다(실측: lx ON에서 uav_small·fighter 17건 불일치).
+          dwellSec: threat.dwellSec,
           spawnT: t, exitT: null, outcome: null, stages: [{ name: '생성', t: t }]
         };
         // ADR-063: 산포 ON일 때만 착탄점을 trace에 노출한다(지도 애니메이션·검증용).

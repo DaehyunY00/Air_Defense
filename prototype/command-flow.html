@@ -40,6 +40,14 @@
     체공창(dwellSec)은 관측(threatTrace)에서 읽는다. 화면이 다시 계산하지 않는다.
   · 사거리 링은 기본 꺼짐(34개가 겹치면 지도가 링 그림이 된다). 「사거리 밖이라 못 쐈다」를
     물을 때 켠다. 폭을 좁히면 격자 라벨·이름표가 빠지며 그대로 미니맵이 된다.
+  · **요격**: 요격탄이 사수에서 요격점까지 날아가고, 결과가 그 자리에 튄다 —
+    <span>격추 = 퍼지는 녹색 링 · 명중 실패 = 적색 ✕ · 발사불가 = 사수 자리의 적색 ✕</span>
+    (발사불가는 BDA:MISS와 **다른 사건**이다 — 쏘지도 못했다). 요격점은 **BDA 시각의 위협
+    지상 위치**다: BDA는 발사 + 요격탄 비행시간에 나므로 그 시각의 위협 자리가 곧 도달점이고,
+    좌표를 지어내는 것이 아니라 두 기록 시각과 엔진의 위치 함수로 되짚는 것이다.
+    ⚠️ 발사 마크의 `PIP<N>km`은 **경사거리**(고도 포함)라 평면 지도의 지상거리와 다르다 —
+       교차검증에서 지상 대조는 중앙 1.24km·최대 22km인데 경사로 대조하면 중앙 0.54km,
+       비탄도는 0.04~0.6km로 사실상 일치한다(SC3·1800초·115발).
   · **확대**: 휠(커서 밑을 붙잡는다) · 끌어서 이동 · [− ＋ ⤢] 단추. 자산이 서울·중부에
     몰려 있어 전체 보기에서는 점 덩어리라, 확대해야 그 안이 보인다. 확대는 SVG를 키우는
     것이 아니라 **경계 상자를 좁혀 다시 그리는** 것이라 글자·선 굵기·노드 크기가 그대로다
@@ -418,7 +426,7 @@
   #sidesplit { flex: none; width: 5px; cursor: col-resize; background: var(--line); }
   #sidesplit:hover, #sidesplit.drag { background: var(--accent); }
   #sidesplit[hidden] { display: none; }
-  #map-head { flex: none; display: flex; align-items: center; gap: 9px; padding: 4px 8px;
+  #map-head { flex: none; display: flex; align-items: center; gap: 6px 9px; flex-wrap: wrap; padding: 4px 8px;
     background: var(--panel); border-top: 1px solid var(--line);
     border-bottom: 1px solid var(--line); font-size: 11px; color: var(--dim); }
   #map-head label { display: inline-flex; align-items: center; gap: 3px; }
@@ -478,6 +486,13 @@
   .mthreat-lab { fill: #dbe4f0; font-size: 8px; paint-order: stroke;
     stroke: #080d14; stroke-width: 2.4; pointer-events: none; }
   .mimpact { fill: none; stroke: var(--bad); stroke-width: 1.2; opacity: .55; }
+  /* ── 요격 — 색 체계 그대로: 교전·사격통제는 녹, 실패·발사불가는 적 ── */
+  .mshot { stroke: var(--ok); stroke-width: 1.5; opacity: .85; }
+  .mshot-head { fill: #eafff5; stroke: var(--ok); stroke-width: 1.1; }
+  .mhit { fill: none; stroke: var(--ok); stroke-width: 2.4; }
+  .mmiss line, .mnofire line { stroke: var(--bad); stroke-width: 2.2; stroke-linecap: round; }
+  .mnofire circle { fill: none; stroke: var(--bad); stroke-width: 1.1; }
+  .mshot-lab { font-size: 8px; paint-order: stroke; stroke: #080d14; stroke-width: 2.6; }
   svg#graph { width: 100%; height: auto; display: block; }
   .colhdr { fill: #55637a; font-size: 10px; }
   .colband { fill: #0e1520; }
@@ -839,6 +854,7 @@
         <span id="map-scale"></span>
         <label title="센서 탐지거리·사수 사거리를 타원으로 그린다 — 「사거리 밖이라 못 쐈다」를 물을 때 켠다"><input type="checkbox" id="map-rings"> 사거리</label>
         <label title="이 실행의 항적을 축선 진입점에서 착탄점까지 실제 궤적으로 그린다"><input type="checkbox" id="map-threats" checked> 항적</label>
+        <label title="요격탄이 사수에서 요격점까지 날아가고, 결과가 격추(녹색 링)·명중실패(적색 ✕)·발사불가(적색 ✕ · 사수 자리)로 튄다"><input type="checkbox" id="map-shots" checked> 요격</label>
       </div>
       <svg id="map" preserveAspectRatio="xMidYMid meet"></svg>
       <!-- ⚠️ 지우지 말 것. 열 배치일 때는 아무도 실제 위치로 오해하지 않지만, 지도에
@@ -1524,6 +1540,32 @@ function buildTracks(res) {
     else if (e.k === 'nd') sp.done = e.t;
     else if (e.k === 'nx') { sp.drop = e.t; sp.dropR = e.r; } // r: over(넘침)·ttl(기한)·dead(항적 종결)
   });
+  // ── 요격 이력 — 발사에서 BDA까지를 한 건으로 잇는다(지도의 요격 묘사 재료) ──────
+  //  · 발사      `발사:<사수>/<발사대>/PIP<경사거리>km` · 자위권은 `자위권발사:<사수>`(꼬리 없음)
+  //  · 결과      `BDA:HIT|MISS:<사수>` — 발사 시각 + 요격탄 비행시간(pip.flyout)에 난다
+  //  · 발사불가  `발사불가:<사수>(<사유>)` — **BDA:MISS와 다른 사건이다**(쏘지도 못했다)
+  // 같은 사수의 「아직 결과가 없는 가장 이른 발사」에 BDA를 붙인다 — 연발(살보)에서 한 사수가
+  // 여러 발을 쏘면 결과도 순서대로 온다. 실측(SC3·1800초): 발사 121 · 자위권 4 · BDA 115 ·
+  // 짝지음 115 · **짝 없는 BDA 0건** · 결과 없는 발사 10건(관측 종료 뒤이거나 항적이 먼저 종결).
+  Object.keys(byId).forEach((k) => {
+    const t = byId[k];
+    t.shots = []; t.noFire = [];
+    t.stages.forEach((s) => {
+      let m = s.name.match(/^발사:([^/]+)\/([^/]+)\/PIP([\d.]+)km$/);
+      if (m) { t.shots.push({ t0: s.t, shooter: m[1], launcher: m[2], pipKm: +m[3], t1: null, hit: null }); return; }
+      m = s.name.match(/^자위권발사:(.+)$/);
+      if (m) { t.shots.push({ t0: s.t, shooter: m[1], launcher: null, pipKm: null, t1: null, hit: null, sd: true }); return; }
+      m = s.name.match(/^BDA:(HIT|MISS):(.+)$/);
+      if (m) {
+        const w = t.shots.find((x) => x.shooter === m[2] && x.t1 == null);
+        if (w) { w.t1 = s.t; w.hit = m[1] === 'HIT'; }
+        return;
+      }
+      m = s.name.match(/^발사불가:([^(]+)\(([^)]*)\)$/);
+      if (m) t.noFire.push({ t: s.t, shooter: m[1], reason: m[2] });
+    });
+  });
+
   // 발사 이력 — 「한 항적에 몇 개 계통이 각각 쐈나」(중복교전)를 세려면 필요하다.
   // ⚠️ 이것은 **관측된 발사**이지 엔진의 중복교전 카운터(global.coordination.duplicates)와
   //    같은 정의가 아니다. 엔진은 「협조 실패로 두 계통이 각각 교전」을 세고, 여기서는
@@ -2734,7 +2776,95 @@ function paintMap(state, hot, done) {
       }
     });
   }
+  if (el('map-shots').checked) out += shotsSvg();
   el('map').querySelector('#m-dots').innerHTML = out;
+}
+
+/** 결과 표시가 화면에 남아 있는 시간(초 · 화면 시각). */
+const SHOT_FLASH = 2.2;
+
+/**
+ * 요격을 그린다 — 발사에서 결과까지.
+ *
+ * 요격점 = **BDA 시각의 위협 지상 위치**다. BDA는 발사 시각 + 요격탄 비행시간(pip.flyout)에
+ * 나므로, 그 시각의 위협 위치가 곧 요격탄이 도달한 자리다. 좌표를 지어내는 것이 아니라
+ * 두 기록 시각(발사·BDA)과 엔진의 위치 함수로 되짚는 것이다.
+ *
+ * ⚠️ 발사 마크 꼬리의 `PIP<N>km`은 **경사거리**(고도 포함)라 평면 지도의 지상거리와 다르다.
+ *    교차검증(SC3·1800초·115발): 지상거리로 대조하면 중앙값 1.24km·최대 22km로 벌어지는데,
+ *    고도를 넣어 경사거리로 대조하면 **중앙값 0.54km**로 붕괴한다(비탄도는 0.04~0.6km로
+ *    사실상 일치, 탄도 잔차 ~3km는 발사 시점 예측 요격점과 실제 도달점의 모델 차이).
+ *    즉 지도(평면)에는 **지상 위치**로 그리는 것이 맞고, PIP 숫자는 툴팁에 그대로 적는다.
+ */
+function shotsSvg() {
+  if (!mapGeo) return '';
+  let out = '';
+  const scope = (view === 'track' && sel) ? [sel] : run.tracks;
+  scope.forEach((t) => {
+    (t.shots || []).forEach((sh) => {
+      const n = run.nodes[sh.shooter];
+      if (!n || !n.coord) return;
+      const a = mproj(n.coord, mapGeo);
+      const ip = sh.t1 != null ? threatPosAt(t, sh.t1) : null;
+      const tip = esc(nodeName(sh.shooter) + ' → ' + t.id +
+        (sh.sd ? ' · 자위권발사' : '') +
+        (sh.pipKm != null ? ' · PIP 경사거리 ' + sh.pipKm.toFixed(1) + 'km' : '') +
+        (sh.t1 != null ? '\n발사 ' + fmt(sh.t0) + ' → 결과 ' + fmt(sh.t1) +
+          ' (' + (sh.hit ? '격추' : '명중 실패') + ')'
+          : '\n발사 ' + fmt(sh.t0) + ' — 결과는 관측 종료까지 기록되지 않았다'));
+      // ① 비행 중 — 사수에서 요격점으로 나아간다
+      if (ip && simT >= sh.t0 && simT <= sh.t1) {
+        const b = mproj(ip, mapGeo);
+        const p = (simT - sh.t0) / Math.max(1e-6, sh.t1 - sh.t0);
+        const hx = a[0] + (b[0] - a[0]) * p, hy = a[1] + (b[1] - a[1]) * p;
+        out += `<line class="mshot" x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}"` +
+          ` x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}"><title>${tip}</title></line>` +
+          `<circle class="mshot-head" cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="2.6"></circle>`;
+        return;
+      }
+      // ② 결과 — 격추는 퍼지는 녹색 링, 명중 실패는 적색 ✕
+      if (ip && simT > sh.t1 && simT <= sh.t1 + SHOT_FLASH) {
+        const b = mproj(ip, mapGeo), age = (simT - sh.t1) / SHOT_FLASH, o = (1 - age).toFixed(2);
+        if (sh.hit) {
+          out += `<circle class="mhit" cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}"` +
+            ` r="${(3 + age * 13).toFixed(1)}" opacity="${o}"><title>${tip}</title></circle>` +
+            `<text class="mshot-lab" fill="var(--ok)" x="${(b[0] + 8).toFixed(1)}" y="${(b[1] - 6).toFixed(1)}"` +
+            ` opacity="${o}">격추</text>`;
+        } else {
+          out += `<g class="mmiss" opacity="${o}"><title>${tip}</title>` +
+            `<line x1="${(b[0] - 5).toFixed(1)}" y1="${(b[1] - 5).toFixed(1)}" x2="${(b[0] + 5).toFixed(1)}" y2="${(b[1] + 5).toFixed(1)}"></line>` +
+            `<line x1="${(b[0] - 5).toFixed(1)}" y1="${(b[1] + 5).toFixed(1)}" x2="${(b[0] + 5).toFixed(1)}" y2="${(b[1] - 5).toFixed(1)}"></line></g>` +
+            `<text class="mshot-lab" fill="var(--bad)" x="${(b[0] + 8).toFixed(1)}" y="${(b[1] - 6).toFixed(1)}"` +
+            ` opacity="${o}">명중 실패</text>`;
+        }
+        return;
+      }
+      // ③ 결과가 관측에 없는 발사 — 사수 자리에서 잠깐 튀기만 한다(요격점을 지어내지 않는다)
+      if (!ip && simT >= sh.t0 && simT <= sh.t0 + SHOT_FLASH) {
+        const age = (simT - sh.t0) / SHOT_FLASH;
+        out += `<circle class="mhit" cx="${a[0].toFixed(1)}" cy="${a[1].toFixed(1)}"` +
+          ` r="${(3 + age * 8).toFixed(1)}" opacity="${(1 - age).toFixed(2)}"><title>${tip}</title></circle>`;
+      }
+    });
+    // 발사불가 — **BDA:MISS와 다른 사건**이다(쏘지도 못했다). 사수 자리에서 적색 ✕로 튄다.
+    (t.noFire || []).forEach((nf) => {
+      if (simT < nf.t || simT > nf.t + SHOT_FLASH) return;
+      const n = run.nodes[nf.shooter];
+      if (!n || !n.coord) return;
+      const p = mproj(n.coord, mapGeo), o = (1 - (simT - nf.t) / SHOT_FLASH).toFixed(2);
+      out += `<g class="mnofire" opacity="${o}"><title>${esc(nodeName(nf.shooter) + ' — 발사 못함 · ' +
+        t.id + '\n사유: ' + (LEAK_TAXONOMY_LABEL(nf.reason) || nf.reason))}</title>` +
+        `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="7"></circle>` +
+        `<line x1="${(p[0] - 4).toFixed(1)}" y1="${(p[1] - 4).toFixed(1)}" x2="${(p[0] + 4).toFixed(1)}" y2="${(p[1] + 4).toFixed(1)}"></line>` +
+        `<line x1="${(p[0] - 4).toFixed(1)}" y1="${(p[1] + 4).toFixed(1)}" x2="${(p[0] + 4).toFixed(1)}" y2="${(p[1] - 4).toFixed(1)}"></line></g>`;
+    });
+  });
+  return out;
+}
+/** 발사불가 사유 코드 → 사람 말. 로그가 쓰는 표(leakText)를 그대로 빌린다. */
+function LEAK_TAXONOMY_LABEL(code) {
+  const tx = KJ.leakTaxonomy && KJ.leakTaxonomy(code);
+  return (tx && tx.label) || null;
 }
 
 /**
@@ -5063,6 +5193,11 @@ el('legend').innerHTML =
   ' 흰 테두리와 <span style="color:var(--bad)">붉은 착탄 표시</span>가 붙는다 ·' +
   ' <b>사거리</b>를 켜면 센서 탐지거리(점선)·사수 사거리(실선)가 타원으로 뜬다 —' +
   ' 「사거리 밖이라 못 쐈다」를 지도에서 짚는 자리다. 폭을 좁히면 미니맵이 된다 ·' +
+  ' <b>요격</b>은 사수에서 요격점까지 <span style="color:var(--ok)">녹색 요격탄</span>이 날아가고' +
+  ' 결과가 그 자리에 튄다: <span style="color:var(--ok)">퍼지는 녹색 링 = 격추</span> ·' +
+  ' <span style="color:var(--bad)">적색 ✕ = 명중 실패</span> ·' +
+  ' <span style="color:var(--bad)">사수 자리의 적색 ✕ = 발사불가</span>' +
+  '(<b>명중 실패와 다른 사건</b> — 쏘지도 못했다). 요격점은 <b>BDA 시각의 위협 지상 위치</b>다 ·' +
   ' <b>확대</b>는 휠(커서 밑을 붙잡는다)·끌어서 이동·[− ＋ ⤢] 단추 —' +
   ' 경계 상자를 좁혀 다시 그리는 방식이라 <b>확대해도 글자·선 굵기가 그대로다</b>.</span>' +
   ' <b style="color:var(--warn)">⚠️ 좌표는 전부 도시 수준 개념좌표이고 실제 배치·침투경로가 아니다</b>' +
@@ -5244,6 +5379,7 @@ el('map').addEventListener('wheel', (ev) => {
   });
 })();
 el('map-threats').addEventListener('change', () => { if (run) drawFrame(); });
+el('map-shots').addEventListener('change', () => { if (run) drawFrame(); });
 // 손잡이 드래그로 좌측 자리 폭을 넓힌다(지도를 볼 때 쓴다).
 // ⚠️ 끄는 동안에는 폭만 바꾸고 **놓을 때 한 번만** 다시 세운다 — 매 mousemove마다
 //    251노드 배치를 다시 세우면 화면이 손을 따라오지 못한다.

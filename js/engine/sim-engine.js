@@ -356,6 +356,9 @@
     // 반경은 features.targetSpreadKm로 스윕 가능(기본 THREAT-TARGET-DISP-01 = 15km, 등급 C).
     // ADR-065: 기본 ON — 같은 축선의 모든 위협이 좌표 한 점으로 수렴하는 것은 정당화할 수 없다.
     this.threatTargetDispersion = ff('threatTargetDispersion', true);
+    // ADR-097: 표적 카탈로그 — 탄도탄이 축선 표적 1점이 아니라 조준점 10점(codex 세트)을
+    // 나눠 노린다. **기본 OFF**(재기준선 대상). 배정은 결정론이라 난수 소비가 늘지 않는다.
+    this.threatAimpoints = ff('threatAimpoints', false);
     // ADR-064: 남부 종심 축선(대구·부산) 활성화. 시나리오의 southernMix를 도착 예약에 추가한다.
     // OFF면 남부 축선 위협이 하나도 생성되지 않아 종전과 bit-exact.
     // ADR-065: 기본 ON — 배치 자산의 1/6이 표적 회랑 밖이라 구조적으로 유휴인 상태를 해소한다.
@@ -453,6 +456,8 @@
     if (this.nativeWtaCostAsis) this.features.nativeWtaCostAsis = true;
     this.features.threatTargetDispersion = this.threatTargetDispersion;
     if (this.threatTargetDispersion) this.features.targetSpreadKm = this.targetSpreadKm;
+    // wire shape 규율 — 켜졌을 때만 키가 실린다(OFF 골든 불변).
+    if (this.threatAimpoints) this.features.threatAimpoints = true;
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
     this.features.kvmfLateral = this.kvmfLateral; // ADR-081: 항상 실제 해석값 신고
@@ -3276,9 +3281,14 @@
     this.global.spawned++;
     // ADR-063: 표적권역 산포 — ON일 때만 전용 스트림에서 2개 뽑아 착탄점을 정한다.
     // OFF면 threat.target이 undefined이고 위치 계산은 종전처럼 축선 표적점을 쓴다(bit-exact).
+    // ADR-097: 조준점 — 결정론(threatSeq·유형 상수)이라 **난수를 한 번도 더 쓰지 않는다**.
+    // 산포(ADR-063)는 그 조준점을 중심으로 그대로 걸린다: 난수 소비 순서·횟수 불변 → CRN 유지.
+    var aim = this.threatAimpoints ? KJ.selectAimpoint(entry.type, entry.axis, this.threatSeq) : null;
     var impact = this.threatTargetDispersion
-      ? KJ.axisImpactPoint(entry.axis, this.dispRng.raw(), this.dispRng.raw(), this.targetSpreadKm)
-      : null;
+      ? KJ.axisImpactPoint(entry.axis, this.dispRng.raw(), this.dispRng.raw(), this.targetSpreadKm,
+          aim ? aim.pos : null)
+      // 산포가 꺼져 있어도 조준점은 살아야 한다 — 아니면 켠 보람이 사라진다.
+      : (aim ? [aim.pos[0], aim.pos[1]] : null);
     var threat = {
       id: entry.type + '#' + this.threatSeq, type: entry.type, axis: entry.axis,
       target: impact || undefined,

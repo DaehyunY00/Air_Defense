@@ -42,15 +42,15 @@
     if (name.indexOf('항적융합:') === 0) return '③ ' + name;
     if (name.indexOf('위협우선순위:') === 0 || name.indexOf('위협판단·표적할당준비:') === 0) return '④⑤ ' + name;
     if (name.indexOf('사수선정·표적할당:') === 0) return '⑤ ' + name;
-    if (name.indexOf('자체교전승인:') === 0) return '⑥⑦ ' + name;
+    if (name.indexOf('자체교전승인:') === 0) return '⑥⑦ 자체 교전결정(협조 불요): ' + name.slice(7); // ADR-098 용어
     if (name.indexOf('교전현황') === 0 || name.indexOf('사격직전중복해소:') === 0 ||
         name.indexOf('교전중복해소:') === 0) return '⑦ ' + name;
     if (name === '융합경유') return '③ JAMDC2 융합 경유';
     if (name === '융합처리완료') return '④⑤ 융합·AI식별·WTA (JAMDC2)';
     if (name.indexOf('협조개시:') === 0) return '⑥⑦ 결심·교전협조 (' + name.slice(5) + ')';
-    if (name.indexOf('승인완료:') === 0) return '⑥ 교전승인 (' + name.slice(5) + ')';
+    if (name.indexOf('승인완료:') === 0) return '⑥ 교전 협조 완료 (' + name.slice(5) + ')';
     if (name.indexOf('권한위임:') === 0) return '⑦ 동적 권한위임 → 분권 교전 (' + name.slice(5) + ' 포화)';
-    if (name.indexOf('감독승인개시:') === 0) return '⑥ 감독하 자동교전 승인 (' + name.slice(7) + ')';
+    if (name.indexOf('감독승인개시:') === 0) return '⑥ 감독하 자동교전 협조 개시 (' + name.slice(7) + ')';
     if (name.indexOf('교전명령#') === 0) return '⑧ ' + name;
     if (name.indexOf('격추성공#') === 0) return '⑨ BDA: 격추 ✔';
     if (name.indexOf('교전실패#') === 0) return '⑨ BDA: ' + name;
@@ -207,7 +207,7 @@
   function contextLabel(cfg) {
     return KJ.scenarioById(cfg.sc).name + ' · ' +
       (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형') +
-      ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 승인계선 ON' : '') + (cfg.disp === '1' ? ' · 표적산포 ON' : '') + (cfg.south === '1' ? ' · 남부축선 ON' : '') +
+      ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 협조계선 ON' : '') + (cfg.disp === '1' ? ' · 표적산포 ON' : '') + (cfg.south === '1' ? ' · 남부축선 ON' : '') +
       // ADR-066: 기본 ON이라 해제했을 때만 표시한다 — 구 링크 의미론 실행임을 놓치지 않게.
       (cfg.linkv2 === '0' ? ' · 구 링크의미론(OFF)' : '') + (cfg.rp === '0' ? ' · 보고주기 비대칭(OFF)' : '') + (cfg.cop === '0' ? ' · 교전현황 공유 OFF' : '') + (cfg.saw === '0' ? ' · 톱니 OFF' : '') + (cfg.sdf === '0' ? ' · 자위권 OFF' : '') + (cfg.eor === '1' ? ' · 원격 교전 ON(실험)' : '') +
       ' · 강도 ×' + Number(cfg.x).toFixed(1) + ' · seed ' + cfg.seed;

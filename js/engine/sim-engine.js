@@ -11,7 +11,8 @@
  *   3 식별(Identify)       ┐
  *   4 위협평가(TE)         ├ C2 서버 처리(서비스시간) — To-Be는 JAMDC2 융합 노드에서 수행
  *   5 무기-표적할당(WTA)   ┘
- *   6 결심(Decision)       : 교전승인권자 — As-Is는 상위 제대 승인 필요
+ *   6 결심(Decision)       : 교전권 보유 C2와의 협조 — As-Is 국지방공 축은 MCRC와 교전 협조 필요
+ *                            (⚠️ 상하 관계가 아닌 협조 관계다 — ADR-098. 코드의 approval/승인 표기는 내부 식별자)
  *   7 교전협조/권한위임    : 육↔공 coord 경유(As-Is 음성 지연·중복교전의 원천)
  *   8 교전/요격명령(Engage): 명령 링크 지연 후 무기 교전채널(M/M/c) 처리
  *   9 BDA                  : 요격확률 판정 → 실패 시 재교전 피드백(폐루프, 상한 내)
@@ -260,6 +261,8 @@
     // 16개 생기며(통합 C2가 포대 내부 링크를 느리게 만드는 셈), (3) As-Is를 실제보다 나쁘게
     // 모델링해 To-Be 개선폭을 과대평가한다. 셋 다 기본값으로 둘 이유가 없다.
     this.linkSemanticsV2 = ff('linkSemanticsV2', true);
+    // 용어(ADR-098): 군단 AOC↔MCRC는 **협조 관계**다(상하 관계 아님). `approvalChain`·kind 'approval'·
+    // 마크 '승인완료:' 등은 내부 식별자로 유지하고, 화면·문서 표현은 「교전 협조」로 쓴다.
     // ADR-058: 승인 계선 이식 — As-Is LOCAL_AD 축(군단 AOC)의 교전이 승인권자(KAOC→MCRC)
     // 협조 단계 + 승인 서비스(kind='approval')를 거친다. 동적 권한위임(DELEG_QUEUE_MULT)·
     // automation 3단계 차등 포함. approvalChainTobe는 반증 전용 — To-Be에도 As-Is 계선 강제.
@@ -359,6 +362,10 @@
     // ADR-097: 표적 카탈로그 — 탄도탄이 축선 표적 1점이 아니라 조준점 10점(codex 세트)을
     // 나눠 노린다. **기본 OFF**(재기준선 대상). 배정은 결정론이라 난수 소비가 늘지 않는다.
     this.threatAimpoints = ff('threatAimpoints', false);
+    // ADR-099: C2 결심 시간 동일화 — To-Be 결심 노드(IAOC)의 운용자 판단 시간을 As-Is 결심 노드
+    // (KAMDOC·MCRC)와 같게. 효과는 카탈로그(deployment-adapter)에서 나고 엔진은 wire shape 신고만
+    // 한다. codex 정합(IAOC 자동화 + 결심은 사람 15/30/50초). 기본 OFF(재기준선 대상).
+    this.c2DecisionTimeParity = ff('c2DecisionTimeParity', false);
     // ADR-064: 남부 종심 축선(대구·부산) 활성화. 시나리오의 southernMix를 도착 예약에 추가한다.
     // OFF면 남부 축선 위협이 하나도 생성되지 않아 종전과 bit-exact.
     // ADR-065: 기본 ON — 배치 자산의 1/6이 표적 회랑 밖이라 구조적으로 유휴인 상태를 해소한다.
@@ -458,6 +465,7 @@
     if (this.threatTargetDispersion) this.features.targetSpreadKm = this.targetSpreadKm;
     // wire shape 규율 — 켜졌을 때만 키가 실린다(OFF 골든 불변).
     if (this.threatAimpoints) this.features.threatAimpoints = true;
+    if (this.c2DecisionTimeParity) this.features.c2DecisionTimeParity = true; // ADR-099
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
     this.features.kvmfLateral = this.kvmfLateral; // ADR-081: 항상 실제 해석값 신고

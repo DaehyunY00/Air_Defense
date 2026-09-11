@@ -133,18 +133,33 @@
    * 종전 c2Service는 둘을 평균 하나로 접어 엔진이 지수분포 한 번으로 뽑았고, 그 결과 MCRC 승인이
    * 0.4초에 끝나는 표본이 생겼다. 엔진은 `c2ServiceFloor` ON에서 이 성분을 따로 뽑는다.
    */
-  function c2ServiceParts(type, operatorLevel) {
+  // ADR-099 (c2DecisionTimeParity): To-Be 결심 노드(IAOC, tier 'killweb_central')의 **운용자 판단**
+  // 성분을 As-Is 결심 노드(KAMD_OPS·MCRC — 두 값이 같다)의 운용자 표로 바꾼다. 체계 성분([1,2]초 —
+  // 융합·중계 자동화)은 그대로 둔다. codex c2-timing-policy가 킬웹을 IAOC='automated'(체계만) +
+  // EOC='decision'(사람 15/30/50초 — As-Is와 같은 표)로 두는 것과 같은 판정이다. 사용자 결정
+  // 2026-09-11: "구조가 변하는 것이지 사람이 판단하는 시간이 바뀌는 것이 아니다 — codex와 동일하게".
+  // 기본 OFF(불변 규칙 1 — 골든 불변). 운용 수준(high/mid/low)은 양쪽에 같은 키를 적용한다.
+  function decisionParityOperator(type, operatorLevel, parity) {
+    if (!parity || type.tier !== 'killweb_central') return null;
+    var ref = KJ.C2_TYPES && KJ.C2_TYPES.KAMD_OPS;
+    if (!ref || !ref.processing || !ref.processing.operator) return null;
+    var op = ref.processing.operator[operatorLevel || 'mid'];
+    return typeof op === 'number' ? op : ref.processing.operator.mid;
+  }
+
+  function c2ServiceParts(type, operatorLevel, parity) {
     var p = type.processing;
     var op = p.operator[operatorLevel || 'mid'];
+    var par = decisionParityOperator(type, operatorLevel, parity);
     return {
       systemSec: [p.system[0], p.system[1]],
-      operatorSec: typeof op === 'number' ? op : p.operator.mid
+      operatorSec: par != null ? par : (typeof op === 'number' ? op : p.operator.mid)
     };
   }
 
   /** 평균 처리 시간 = 체계 구간 중점 + 운용자 평균. c2ServiceParts와 같은 수에서 나온다(갈라지지 않게). */
-  function c2Service(type, operatorLevel) {
-    var parts = c2ServiceParts(type, operatorLevel);
+  function c2Service(type, operatorLevel, parity) {
+    var parts = c2ServiceParts(type, operatorLevel, parity);
     return (parts.systemSec[0] + parts.systemSec[1]) / 2 + parts.operatorSec;
   }
 
@@ -188,9 +203,10 @@
     // 연합 항적 공유 반사실(ADR-085). false(기본)면 계선을 한 가닥도 만들지 않는다 —
     // 캐시 키에 들어가므로 OFF 카탈로그는 종전과 물리적으로 같은 객체다.
     var usfkShare = (opts && opts.usfkTrackSharing) || null;
+    var decParity = !!(opts && opts.c2DecisionTimeParity); // ADR-099 (옵트인 — 캐시 키 분리)
     var cacheKey = id + (v2 ? '|linkV2' : '') + (appr ? '|appr' : '') +
       (southern ? '|south' : '') + (parity ? '|rp' : '') + (opLevel ? '|op:' + opLevel : '') +
-      (kvmf ? '|kvmf' : '') + (usfkShare ? '|usfkshare:' + usfkShare : '');
+      (kvmf ? '|kvmf' : '') + (usfkShare ? '|usfkshare:' + usfkShare : '') + (decParity ? '|decpar' : '');
     if (cache[cacheKey]) return cache[cacheKey];
     var deployment = KJ.deploymentById(id);
     if (!deployment) throw new Error('Unknown high-resolution deployment: ' + id);
@@ -203,7 +219,7 @@
       var type = KJ.C2_TYPES[decl.typeId];
       if (!type) throw new Error(id + ': unknown C2 type ' + decl.typeId);
       var pos = positions[decl.posKey];
-      var svc = c2Service(type, opLevel);
+      var svc = c2Service(type, opLevel, decParity);
       var node = {
         id: decl.id, instanceId: decl.id, typeId: decl.typeId,
         name: decl.instanceLabel || type.name,
@@ -215,7 +231,7 @@
           servers: type.simultaneousCapacity,
           serviceTimeSec: { asis: svc, tobe: svc },
           // ADR-092: 성분 분리(체계 구간 + 운용자 평균). 중점+평균 = serviceTimeSec 와 항등.
-          serviceParts: c2ServiceParts(type, opLevel),
+          serviceParts: c2ServiceParts(type, opLevel, decParity),
           capacity: c2Capacity(type), paramRef: type.paramRef
         },
         c2Axis: decl.c2Axis || null, forceOwner: decl.forceOwner || 'ROK',
@@ -643,7 +659,9 @@
         usfkTrackSharing: features.usfkTrackSharing || null,
         // ADR-058 동반 스윕: 운용자 처리시간 high/mid/low (기본 mid — 종전 동일)
         c2OperatorLevel: features.c2OperatorLevel === 'high' || features.c2OperatorLevel === 'low'
-          ? features.c2OperatorLevel : null });
+          ? features.c2OperatorLevel : null,
+        // ADR-099: To-Be 결심 노드 운용자 시간 = As-Is 결심 노드 — 반사실(명시적으로 켤 때만).
+        c2DecisionTimeParity: features.c2DecisionTimeParity === true });
   };
   KJ.resolveRoleId = function (id, catalog) {
     catalog = catalog || buildDeploymentCatalog('HANBANDO_LEGACY_NORMAL', {});

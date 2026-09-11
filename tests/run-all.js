@@ -85,6 +85,7 @@ var suites = [
   ,['ballistic-launch-axes.test.mjs', 'ADR-091 탄도 발사점 연장 (OFF 골든·탄도만 연장·연장량 표·탐지 선착 역전·결정론·관측 배선)']
   ,['threat-aimpoints.test.mjs', 'ADR-097 표적 카탈로그 (OFF 골든·난수 소비 불변·codex 좌표 대조·탄도만·사거리 게이트·결정론·산포 중심)']
   ,['c2-service-floor.test.mjs', 'ADR-092 C2 처리 시간 바닥 (OFF 골든 bit-exact·성분 항등·바닥 위반 0·평균 항등·mult 배율·배선)']
+  ,['c2-decision-time-parity.test.mjs', 'ADR-099 C2 결심 시간 동일화 (OFF 골든·As-Is bit-exact·IAOC 운용자=KAMD_OPS·To-Be 결심지연 증가·배선)']
   ,['approval-pipeline-realism.test.mjs', 'ADR-093 승인 파이프라인 현실화 (OFF 골든·To-Be bit-exact·요청 시 실행가능·회신 역방향·C2A 회신 큐·마크 순서·wire shape)']
   ,['icc-relay-authorization.test.mjs', 'ADR-094 ICC 중계 인가 (OFF 골든·To-Be 동역학 불변·ICC 큐 작업·전송 분할·인가/재배정/반송·손잡이)']
   ,['ecs-execution-time.test.mjs', 'ADR-095 ECS 실행 시간 ADSIM 정합 (OFF 골든·실효 10초·kind 한정·양 모드 공통·손잡이·바닥 합성)']

@@ -1808,9 +1808,9 @@ li.chk-fail { background: #43140f; }
       <p class="ctl-advanced-note">아래 <b>여덟 항목</b>은 <b>이 시뮬레이션의 기본 동작</b>입니다(전부 켜짐).
         끄면 각각의 구 동작이 재현되며 <b>반증·감사 목적으로만</b> 씁니다 — 끈 상태의 수치를 결과로 인용하면 안 됩니다.
         딥링크로도 끌 수 있습니다: <code>#appr=0&amp;disp=0&amp;south=0&amp;linkv2=0&amp;rp=0&amp;cop=0&amp;saw=0&amp;sdf=0</code></p>
-    <label class="ctl-check" title="As-Is 승인 계선(군단·수방사 AOC→MCRC 협조 단계 + 승인 대기 + 동적 위임)을 모델에 포함합니다(ADR-058). 끄면 ⑥⑦ 승인·협조 지표는 0이 아니라 '미측정'으로 표시됩니다.">
+    <label class="ctl-check" title="As-Is 교전 협조 계선(군단·수방사 AOC↔MCRC 협조 단계 + 협조 회신 대기 + 동적 위임 — 상하 관계가 아닌 협조 관계, ADR-058·098)을 모델에 포함합니다. 끄면 ⑥⑦ 교전 협조 지표는 0이 아니라 '미측정'으로 표시됩니다.">
       <input type="checkbox" id="approval-chain-toggle" checked>
-      승인 계선 모델 (ADR-058)
+      교전 협조 계선 모델 (ADR-058)
     </label>
     <label class="ctl-check" title="위협의 착탄점을 표적권역(반경 15km 개념) 안에서 위협마다 다르게 추첨합니다(ADR-063). 끄면 같은 축선의 모든 위협이 정확히 같은 한 점으로 향합니다. 표적권역 내부만 다양해질 뿐 새 표적(부산·대구 등)이 생기지는 않습니다.">
       <input type="checkbox" id="target-dispersion-toggle" checked>
@@ -4858,18 +4858,33 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
    * 종전 c2Service는 둘을 평균 하나로 접어 엔진이 지수분포 한 번으로 뽑았고, 그 결과 MCRC 승인이
    * 0.4초에 끝나는 표본이 생겼다. 엔진은 `c2ServiceFloor` ON에서 이 성분을 따로 뽑는다.
    */
-  function c2ServiceParts(type, operatorLevel) {
+  // ADR-099 (c2DecisionTimeParity): To-Be 결심 노드(IAOC, tier 'killweb_central')의 **운용자 판단**
+  // 성분을 As-Is 결심 노드(KAMD_OPS·MCRC — 두 값이 같다)의 운용자 표로 바꾼다. 체계 성분([1,2]초 —
+  // 융합·중계 자동화)은 그대로 둔다. codex c2-timing-policy가 킬웹을 IAOC='automated'(체계만) +
+  // EOC='decision'(사람 15/30/50초 — As-Is와 같은 표)로 두는 것과 같은 판정이다. 사용자 결정
+  // 2026-09-11: "구조가 변하는 것이지 사람이 판단하는 시간이 바뀌는 것이 아니다 — codex와 동일하게".
+  // 기본 OFF(불변 규칙 1 — 골든 불변). 운용 수준(high/mid/low)은 양쪽에 같은 키를 적용한다.
+  function decisionParityOperator(type, operatorLevel, parity) {
+    if (!parity || type.tier !== 'killweb_central') return null;
+    var ref = KJ.C2_TYPES && KJ.C2_TYPES.KAMD_OPS;
+    if (!ref || !ref.processing || !ref.processing.operator) return null;
+    var op = ref.processing.operator[operatorLevel || 'mid'];
+    return typeof op === 'number' ? op : ref.processing.operator.mid;
+  }
+
+  function c2ServiceParts(type, operatorLevel, parity) {
     var p = type.processing;
     var op = p.operator[operatorLevel || 'mid'];
+    var par = decisionParityOperator(type, operatorLevel, parity);
     return {
       systemSec: [p.system[0], p.system[1]],
-      operatorSec: typeof op === 'number' ? op : p.operator.mid
+      operatorSec: par != null ? par : (typeof op === 'number' ? op : p.operator.mid)
     };
   }
 
   /** 평균 처리 시간 = 체계 구간 중점 + 운용자 평균. c2ServiceParts와 같은 수에서 나온다(갈라지지 않게). */
-  function c2Service(type, operatorLevel) {
-    var parts = c2ServiceParts(type, operatorLevel);
+  function c2Service(type, operatorLevel, parity) {
+    var parts = c2ServiceParts(type, operatorLevel, parity);
     return (parts.systemSec[0] + parts.systemSec[1]) / 2 + parts.operatorSec;
   }
 
@@ -4913,9 +4928,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 연합 항적 공유 반사실(ADR-085). false(기본)면 계선을 한 가닥도 만들지 않는다 —
     // 캐시 키에 들어가므로 OFF 카탈로그는 종전과 물리적으로 같은 객체다.
     var usfkShare = (opts && opts.usfkTrackSharing) || null;
+    var decParity = !!(opts && opts.c2DecisionTimeParity); // ADR-099 (옵트인 — 캐시 키 분리)
     var cacheKey = id + (v2 ? '|linkV2' : '') + (appr ? '|appr' : '') +
       (southern ? '|south' : '') + (parity ? '|rp' : '') + (opLevel ? '|op:' + opLevel : '') +
-      (kvmf ? '|kvmf' : '') + (usfkShare ? '|usfkshare:' + usfkShare : '');
+      (kvmf ? '|kvmf' : '') + (usfkShare ? '|usfkshare:' + usfkShare : '') + (decParity ? '|decpar' : '');
     if (cache[cacheKey]) return cache[cacheKey];
     var deployment = KJ.deploymentById(id);
     if (!deployment) throw new Error('Unknown high-resolution deployment: ' + id);
@@ -4928,7 +4944,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       var type = KJ.C2_TYPES[decl.typeId];
       if (!type) throw new Error(id + ': unknown C2 type ' + decl.typeId);
       var pos = positions[decl.posKey];
-      var svc = c2Service(type, opLevel);
+      var svc = c2Service(type, opLevel, decParity);
       var node = {
         id: decl.id, instanceId: decl.id, typeId: decl.typeId,
         name: decl.instanceLabel || type.name,
@@ -4940,7 +4956,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
           servers: type.simultaneousCapacity,
           serviceTimeSec: { asis: svc, tobe: svc },
           // ADR-092: 성분 분리(체계 구간 + 운용자 평균). 중점+평균 = serviceTimeSec 와 항등.
-          serviceParts: c2ServiceParts(type, opLevel),
+          serviceParts: c2ServiceParts(type, opLevel, decParity),
           capacity: c2Capacity(type), paramRef: type.paramRef
         },
         c2Axis: decl.c2Axis || null, forceOwner: decl.forceOwner || 'ROK',
@@ -5368,7 +5384,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         usfkTrackSharing: features.usfkTrackSharing || null,
         // ADR-058 동반 스윕: 운용자 처리시간 high/mid/low (기본 mid — 종전 동일)
         c2OperatorLevel: features.c2OperatorLevel === 'high' || features.c2OperatorLevel === 'low'
-          ? features.c2OperatorLevel : null });
+          ? features.c2OperatorLevel : null,
+        // ADR-099: To-Be 결심 노드 운용자 시간 = As-Is 결심 노드 — 반사실(명시적으로 켤 때만).
+        c2DecisionTimeParity: features.c2DecisionTimeParity === true });
   };
   KJ.resolveRoleId = function (id, catalog) {
     catalog = catalog || buildDeploymentCatalog('HANBANDO_LEGACY_NORMAL', {});
@@ -6820,7 +6838,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
  *   3 식별(Identify)       ┐
  *   4 위협평가(TE)         ├ C2 서버 처리(서비스시간) — To-Be는 JAMDC2 융합 노드에서 수행
  *   5 무기-표적할당(WTA)   ┘
- *   6 결심(Decision)       : 교전승인권자 — As-Is는 상위 제대 승인 필요
+ *   6 결심(Decision)       : 교전권 보유 C2와의 협조 — As-Is 국지방공 축은 MCRC와 교전 협조 필요
+ *                            (⚠️ 상하 관계가 아닌 협조 관계다 — ADR-098. 코드의 approval/승인 표기는 내부 식별자)
  *   7 교전협조/권한위임    : 육↔공 coord 경유(As-Is 음성 지연·중복교전의 원천)
  *   8 교전/요격명령(Engage): 명령 링크 지연 후 무기 교전채널(M/M/c) 처리
  *   9 BDA                  : 요격확률 판정 → 실패 시 재교전 피드백(폐루프, 상한 내)
@@ -7069,6 +7088,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 16개 생기며(통합 C2가 포대 내부 링크를 느리게 만드는 셈), (3) As-Is를 실제보다 나쁘게
     // 모델링해 To-Be 개선폭을 과대평가한다. 셋 다 기본값으로 둘 이유가 없다.
     this.linkSemanticsV2 = ff('linkSemanticsV2', true);
+    // 용어(ADR-098): 군단 AOC↔MCRC는 **협조 관계**다(상하 관계 아님). `approvalChain`·kind 'approval'·
+    // 마크 '승인완료:' 등은 내부 식별자로 유지하고, 화면·문서 표현은 「교전 협조」로 쓴다.
     // ADR-058: 승인 계선 이식 — As-Is LOCAL_AD 축(군단 AOC)의 교전이 승인권자(KAOC→MCRC)
     // 협조 단계 + 승인 서비스(kind='approval')를 거친다. 동적 권한위임(DELEG_QUEUE_MULT)·
     // automation 3단계 차등 포함. approvalChainTobe는 반증 전용 — To-Be에도 As-Is 계선 강제.
@@ -7168,6 +7189,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // ADR-097: 표적 카탈로그 — 탄도탄이 축선 표적 1점이 아니라 조준점 10점(codex 세트)을
     // 나눠 노린다. **기본 OFF**(재기준선 대상). 배정은 결정론이라 난수 소비가 늘지 않는다.
     this.threatAimpoints = ff('threatAimpoints', false);
+    // ADR-099: C2 결심 시간 동일화 — To-Be 결심 노드(IAOC)의 운용자 판단 시간을 As-Is 결심 노드
+    // (KAMDOC·MCRC)와 같게. 효과는 카탈로그(deployment-adapter)에서 나고 엔진은 wire shape 신고만
+    // 한다. codex 정합(IAOC 자동화 + 결심은 사람 15/30/50초). 기본 OFF(재기준선 대상).
+    this.c2DecisionTimeParity = ff('c2DecisionTimeParity', false);
     // ADR-064: 남부 종심 축선(대구·부산) 활성화. 시나리오의 southernMix를 도착 예약에 추가한다.
     // OFF면 남부 축선 위협이 하나도 생성되지 않아 종전과 bit-exact.
     // ADR-065: 기본 ON — 배치 자산의 1/6이 표적 회랑 밖이라 구조적으로 유휴인 상태를 해소한다.
@@ -7267,6 +7292,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (this.threatTargetDispersion) this.features.targetSpreadKm = this.targetSpreadKm;
     // wire shape 규율 — 켜졌을 때만 키가 실린다(OFF 골든 불변).
     if (this.threatAimpoints) this.features.threatAimpoints = true;
+    if (this.c2DecisionTimeParity) this.features.c2DecisionTimeParity = true; // ADR-099
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
     this.features.kvmfLateral = this.kvmfLateral; // ADR-081: 항상 실제 해석값 신고
@@ -12602,7 +12628,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     }
     if (r.approvalJobs > 0 && decide != null) {
       marks += '<div class="dc-appr" style="left:' + decide.toFixed(2) +
-        '%" title="협조 연락·승인 절차 ' + r.approvalJobs + '건">◆</div>';
+        '%" title="교전 협조 절차 ' + r.approvalJobs + '건">◆</div>';
     }
     if (decide != null) {
       marks += '<div class="dc-decide" style="left:' + decide.toFixed(2) +
@@ -12817,8 +12843,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       label: '② 융합 → 식별·할당준비', tag: 'C2 처리', badge: 'bd-c2',
       why: 'C2 노드 큐 대기 + 서비스(M/M/c/K) — 식별확정·위협판단이 여기서 끝난다' },
     { key: 'appr', approval: true, reach: null,
-      label: '③ 승인 · 협조', tag: 'C2 구조', badge: 'bd-struct', primary: true,
-      why: 'As-Is에서 사람 채널(음성 협조·상급 승인)이 개입하는 유일 구간. 자기승인 축·권한위임은 0초' },
+      label: '③ 교전 협조', tag: 'C2 구조', badge: 'bd-struct', primary: true,
+      why: 'As-Is에서 사람 채널(국지방공 AOC↔MCRC 음성 교전 협조 — 상하 관계 아님, ADR-098)이 개입하는 유일 구간. 협조 불요 축·권한위임은 0초' },
     { key: 'fc', residual: true, from: 'prep', to: 'assign', reach: 'assign',
       label: '④ 교전 가능 상태 대기', tag: '대기 요인', badge: 'bd-phys',
       why: '쏠 수 있는 포대가 생길 때까지 — 이 동안에도 WTA는 후보를 계속 평가한다. 요격점 미성립·MFR 사격통제가 대부분이고, 탄약·동시교전 한도와 교전중복해소 대기가 섞인다' },
@@ -13384,11 +13410,11 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         '계속 평가하지만, 대기의 대부분(실측 89~95%)은 요격점 미성립·MFR 사격통제라는 비행 기하·센서 ' +
         '물리이고 나머지는 탄약·동시교전 한도(무기체계 자원)입니다. ' +
         '그래서 ④가 늘어난 것을 "To-Be가 느려졌다"로 읽으면 안 됩니다.<br>' +
-        '<b>③ 승인·협조</b>는 <b>사람이 개입하는 유일한 구간</b>입니다 — 마크가 없는 항적(자기승인 축 ' +
+        '<b>③ 교전 협조</b>는 <b>사람이 개입하는 유일한 구간</b>입니다 — 마크가 없는 항적(협조 불요 축 ' +
         'KAMDOC·MCRC, 동적 권한위임)은 제외가 아니라 <b>0초</b>로 셉니다. 코호트 ' + total.n +
-        '건 중 실제로 승인 계선을 경유한 항적은 <b>As-Is ' + rows.approvedN.a + '건 → To-Be ' +
+        '건 중 실제로 협조 계선을 경유한 항적은 <b>As-Is ' + rows.approvedN.a + '건 → To-Be ' +
         rows.approvedN.b + '건</b>입니다.<br>' +
-        '⚠️ <b>④에는 승인 외 조율 대기도 섞여 있습니다</b> — 교전중복해소(MCRC·COP) 대기가 그것이며, ' +
+        '⚠️ <b>④에는 교전 협조 외 조율 대기도 섞여 있습니다</b> — 교전중복해소(MCRC·COP) 대기가 그것이며, ' +
         '해당 마크를 가진 항적은 코호트 안에서 <b>As-Is ' + rows.dedupN.a + '건 · To-Be ' +
         rows.dedupN.b + '건</b>입니다. ④를 통째로 "물리"라고만 읽지 마십시오.<br>' +
         '소요시간은 <b>양 체계에서 탐지~발사 전 관문을 통과한 항적 ' + total.n + '건</b>(단일 코호트)으로 ' +
@@ -13398,7 +13424,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         '대신 <b>사수 선정까지는 갔지만 발사에 못 간 항적</b>은 이 표에서 빠집니다 — 그 탈락은 ' +
         '「여기까지 온 항적」 열과 아래 ③ 항적 로그가 담당합니다. ' +
         '시간표는 각 관문의 <b>최초 시각</b>만 쓰므로 <b>첫 발사까지</b>만 잽니다 — BDA 후 재교전은 ' +
-        '승인 재취득 없이 ④로 복귀하며(승인 상태는 항적·지휘관별로 유지됨), 2발째 이후는 시간표가 ' +
+        '협조 재취득 없이 ④로 복귀하며(협조 상태는 항적·지휘관별로 유지됨), 2발째 이후는 시간표가 ' +
         '아니라 격추·요격탄 소모 등 임무 지표가 담당합니다.<br>' +
         '<b>「여기까지 온 항적」</b>은 시간과 달리 <b>짝지은 전 항적</b> 기준입니다. 시간표는 끝까지 간 ' +
         '항적만 세므로 중간 탈락이 보이지 않는데, 그 탈락이야말로 두 구조의 큰 차이입니다.' +
@@ -13630,15 +13656,15 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (name.indexOf('항적융합:') === 0) return '③ ' + name;
     if (name.indexOf('위협우선순위:') === 0 || name.indexOf('위협판단·표적할당준비:') === 0) return '④⑤ ' + name;
     if (name.indexOf('사수선정·표적할당:') === 0) return '⑤ ' + name;
-    if (name.indexOf('자체교전승인:') === 0) return '⑥⑦ ' + name;
+    if (name.indexOf('자체교전승인:') === 0) return '⑥⑦ 자체 교전결정(협조 불요): ' + name.slice(7); // ADR-098 용어
     if (name.indexOf('교전현황') === 0 || name.indexOf('사격직전중복해소:') === 0 ||
         name.indexOf('교전중복해소:') === 0) return '⑦ ' + name;
     if (name === '융합경유') return '③ JAMDC2 융합 경유';
     if (name === '융합처리완료') return '④⑤ 융합·AI식별·WTA (JAMDC2)';
     if (name.indexOf('협조개시:') === 0) return '⑥⑦ 결심·교전협조 (' + name.slice(5) + ')';
-    if (name.indexOf('승인완료:') === 0) return '⑥ 교전승인 (' + name.slice(5) + ')';
+    if (name.indexOf('승인완료:') === 0) return '⑥ 교전 협조 완료 (' + name.slice(5) + ')';
     if (name.indexOf('권한위임:') === 0) return '⑦ 동적 권한위임 → 분권 교전 (' + name.slice(5) + ' 포화)';
-    if (name.indexOf('감독승인개시:') === 0) return '⑥ 감독하 자동교전 승인 (' + name.slice(7) + ')';
+    if (name.indexOf('감독승인개시:') === 0) return '⑥ 감독하 자동교전 협조 개시 (' + name.slice(7) + ')';
     if (name.indexOf('교전명령#') === 0) return '⑧ ' + name;
     if (name.indexOf('격추성공#') === 0) return '⑨ BDA: 격추 ✔';
     if (name.indexOf('교전실패#') === 0) return '⑨ BDA: ' + name;
@@ -13795,7 +13821,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   function contextLabel(cfg) {
     return KJ.scenarioById(cfg.sc).name + ' · ' +
       (cfg.mode === 'asis' ? 'As-Is 분절형' : 'To-Be 통합형') +
-      ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 승인계선 ON' : '') + (cfg.disp === '1' ? ' · 표적산포 ON' : '') + (cfg.south === '1' ? ' · 남부축선 ON' : '') +
+      ' · ' + cfg.dep + ' · IADS_C2 물리' + (cfg.appr === '1' ? ' · 협조계선 ON' : '') + (cfg.disp === '1' ? ' · 표적산포 ON' : '') + (cfg.south === '1' ? ' · 남부축선 ON' : '') +
       // ADR-066: 기본 ON이라 해제했을 때만 표시한다 — 구 링크 의미론 실행임을 놓치지 않게.
       (cfg.linkv2 === '0' ? ' · 구 링크의미론(OFF)' : '') + (cfg.rp === '0' ? ' · 보고주기 비대칭(OFF)' : '') + (cfg.cop === '0' ? ' · 교전현황 공유 OFF' : '') + (cfg.saw === '0' ? ' · 톱니 OFF' : '') + (cfg.sdf === '0' ? ' · 자위권 OFF' : '') + (cfg.eor === '1' ? ' · 원격 교전 ON(실험)' : '') +
       ' · 강도 ×' + Number(cfg.x).toFixed(1) + ' · seed ' + cfg.seed;

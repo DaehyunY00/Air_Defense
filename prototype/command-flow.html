@@ -84,7 +84,7 @@
     센서 보고(report-cycle)는 세지 않는다. 열 띠(밝아진 열)는 히스테리시스를 두어
     깜빡이지 않는다 — **깜빡임은 노드의 몫, 띠는 배경**이다(사용자 결정 2026-08-30).
   · **화살촉** — 점이 지나가지 않는 동안에도 계선의 방향이 보인다. 붉은 화살촉은
-    역방향(승인 협조·교전명령 하달)이다.
+    역방향(교전 협조 회신·교전명령 하달)이다.
   · **밝아진 열 · 킬체인 프론티어** — 지금 일이 벌어지는 단계가 밝아지고, 항적 개별
     보기에서는 계선이 도달한 가장 오른쪽 열에 파란 점선이 선다. 시간이 흐르면 밝은
     띠와 점선이 왼쪽에서 오른쪽으로 옮겨 간다 — 그것이 「항적이 움직이니 C2가
@@ -999,7 +999,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20260902c';
+const V = '?v=20260911a';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -1058,7 +1058,7 @@ function edgeWidth(m, n) {
  */
 const LINK_KIND = {
   report:  { label: '항적보고', hint: '센서·하급이 올리는 상황' },
-  coord:   { label: '협조',     hint: '승인 요청·회신, 상급↔권역 조정' },
+  coord:   { label: '협조',     hint: '교전 협조 요청·회신(국지방공 AOC↔MCRC, 상하 관계 아님) · 권역 조정' },
   command: { label: '명령',     hint: '체계 내부 발사 지시' },
   status:  { label: '교전현황', hint: '누가 무엇에 교전 중인가' }
 };
@@ -1383,6 +1383,7 @@ function features() {
     earlyWarningReport: P.ew,    // ADR-090 — 엔진 기본 OFF (이 화면도 같다 — 아래 PARAMS 주석)
     ballisticLaunchAxes: P.lx,   // ADR-091 — 〃
     threatAimpoints: P.aim,      // ADR-097 — 〃 (이 화면만 기본 켜짐)
+    c2DecisionTimeParity: P.par, // ADR-099 — 〃 (이 화면만 기본 켜짐 · codex 정합)
     c2ServiceFloor: P.floor,     // ADR-092 — 〃 (C2 처리 로그의 「처리 0초」가 이 화면에서 드러난 문제)
     approvalPipelineRealism: P.pipe,  // ADR-093 — 〃 (같은 항적 승인 2건·AOC 카운트 부재가 이 화면에서 드러난 문제)
     iccRelayAuthorization: P.icc,     // ADR-094 — 〃 (ICC가 「1초 홉」으로만 보이던 문제)
@@ -1443,7 +1444,7 @@ const PARAMS = [
   { k: 'dur',   d: 600,     t: 'num',  h: '관측 시간(초)' },
   // 위협 강도는 **×1 고정**이다(사용자 결정). 배율을 바꾸면 같은 화면이 다른 부하의
   // 결과를 같은 모양으로 보여주게 되고, 본 앱 기본값과도 어긋난다. 파라미터를 두지 않는다.
-  { k: 'appr',  d: 1,       t: 'bool', h: '승인 계선 (ADR-058·065)' },
+  { k: 'appr',  d: 1,       t: 'bool', h: '교전 협조 계선 — 국지방공 AOC↔MCRC 협조 (ADR-058·065·098)' },
   { k: 'cop',   d: 1,       t: 'bool', h: '교전현황 공유 COP (ADR-068 · To-Be 전용 효과)' },
   { k: 'sdf',   d: 1,       t: 'bool', h: '자위권 발사 (ADR-071·072)' },
   { k: 'eor',   d: 0,       t: 'bool', h: '원격 교전 (ADR-070 · 기본 꺼짐)' },
@@ -1487,7 +1488,7 @@ const PARAMS = [
   //    C2 처리 로그로 결심 파이프라인을 읽는 것인데, OFF에서는 AOC·JAOC에 「승인 회신 처리」 줄이
   //    구조적으로 생기지 않아 화면이 없는 절차를 없는 것처럼 보인다. 엔진 기본(OFF)과 다르므로
   //    켜진 동안 상태줄 칩으로 상시 표기한다. 끄려면 ?pipe=0.
-  { k: 'pipe',  d: 1,       t: 'bool', h: '승인 파이프라인 현실화 — 실행가능 사수 있을 때만 승인 요청 · 회신은 협조 계선 역방향 · C2A 회신 처리 큐 (ADR-093 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  { k: 'pipe',  d: 1,       t: 'bool', h: '협조 파이프라인 현실화 — 실행가능 사수 있을 때만 협조 요청 · 회신은 협조 계선 역방향 · C2A 회신 처리 큐 (ADR-093 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   // ⚠️ icc도 pipe와 같은 예외다 — 이 화면에서 ICC는 OFF면 도착 0건의 통과점이라 계선 위 점만
   //    지나갈 뿐 「무엇을 하는 제대인가」가 보이지 않는다. 켜진 동안 칩으로 상시 표기한다.
   { k: 'icc',   d: 1,       t: 'bool', h: 'ICC 중계 인가 — 교전명령을 ICC가 접수·인가하고 권역 내 재배정/반송 (ADR-094 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
@@ -1513,6 +1514,13 @@ const PARAMS = [
   //    ⚠️ 배정은 결정론이라 난수 소비가 늘지 않는다(CRN 쌍대 유지). 탄도탄만 받는다.
   //    엔진 기본은 OFF(재기준선 대상) — 켜진 동안 칩으로 상시 표기. 끄려면 ?aim=0.
   { k: 'aim',   d: 1,       t: 'bool', h: '표적 카탈로그 — 탄도탄이 조준점 10점을 나눠 노린다 (ADR-097 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  // ── ADR-099 결심 시간 동일화 — **이 화면만 기본 ON**(엔진 기본 OFF, pipe·icc·lx·aim과 같은 예외).
+  //    To-Be 결심 노드(IAOC)의 운용자 판단 시간이 0.5/1/1.5초로 As-Is 결심 노드(15/30/50초)의
+  //    1/30이었고, 그 값 차이가 To-Be 우위의 절반 이상을 만들었다(세션 실측·ADR-058 codex 비판).
+  //    사용자 결정(2026-09-11): 구조가 바뀌는 것이지 사람의 판단 시간이 바뀌는 것이 아니다 —
+  //    codex(IAOC 자동화 + EOC 결심 사람 15/30/50초)와 같게 둔다. 켜진 동안 칩으로 상시 표기.
+  //    끄면(?par=0) 종전 값(IAOC 1초)으로 돌아가 「값의 몫」을 반사실로 잴 수 있다.
+  { k: 'par',   d: 1,       t: 'bool', h: 'C2 결심 시간 동일화 — To-Be 결심 노드(IAOC) 운용자 판단 시간을 As-Is 결심 노드(KAMDOC·MCRC)와 같게 (ADR-099 · codex 정합 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   { k: 'issue', d: 0,       t: 'bool', h: '교전명령 발령 작업 — 결심 노드가 명령을 낼 때마다 큐를 탄다 (ADR-096 · 기본 꺼짐: ADSIM에는 없는 비용)' },
   { k: 'issuesec', d: -1,   t: 'num',  h: '발령 시간(초) 민감도 — 미지정(-1)이면 노드 체계 성분(KAMDOC 7.5·IAOC 1.5초) (ADR-096)' }
 ];
@@ -1538,7 +1546,7 @@ console.info('[지휘 흐름] 실험 조건은 URL 파라미터로만 줍니다:
 /** 기본값과 다른 조건만 골라 상태줄에 붙일 칩 문자열. 숨긴 조건이 조용히 섞이지 않게 한다. */
 function activeConfigChips() {
   const out = [];
-  if (!P.appr) out.push('승인계선 OFF');
+  if (!P.appr) out.push('협조계선 OFF');
   if (!P.cop) out.push('COP OFF');
   if (!P.sdf) out.push('자위권 OFF');
   if (P.eor) out.push('원격교전 ON');
@@ -1548,9 +1556,10 @@ function activeConfigChips() {
   if (P.ew) out.push('조기경보 보고 ON');
   if (P.lx) out.push('발사점 연장 ON');
   if (P.aim) out.push('표적 카탈로그 ON');
+  if (P.par) out.push('결심 시간 동일화 ON');
   if (P.floor) out.push('처리 바닥 ON');
   // pipe는 이 화면만 기본 ON(엔진 기본 OFF) — 기본이라도 켜져 있는 동안은 항상 표기한다(PARAMS 주석).
-  if (P.pipe) out.push('승인 파이프라인 현실화 ON');
+  if (P.pipe) out.push('협조 파이프라인 현실화 ON');
   if (P.icc) out.push('ICC 중계 인가 ON' + (P.iccsec >= 0 ? ` (${P.iccsec}초)` : ''));
   if (P.ecs) out.push('ECS 실행 ' + (P.ecssec >= 0 ? `${P.ecssec}초` : '10초'));
   if (P.issue) out.push('명령 발령 ON' + (P.issuesec >= 0 ? ` (${P.issuesec}초)` : ''));
@@ -2024,7 +2033,7 @@ const LEAK_LABEL = {
   'self_defense_failed': '자위권 사격 실패',
   'correlation_failed': '항적 상관 실패',
   'no_report_path': '보고 경로 없음',
-  'approval_dropped': '승인 단계 드롭',
+  'approval_dropped': '협조 단계 드롭',
   'no_command_path': '명령 경로 없음(계선 부재)',
   'no_coordination_path': '협조 경로 없음(계선 부재)',
   'commander_unreached': '책임 C2 — 보고가 닿지 못함'
@@ -2549,7 +2558,7 @@ function renderLineKey() {
       `${kcnt[k] ? kcnt[k] + '건' : '—'}</span>`).join('') + '</div>' +
     '<div class="lk-sec">방향 · 상태</div>' +
     '<div class="lk-note">▸ <b>화살촉</b> = 흐르는 방향 · ' +
-    '<span style="color:var(--bad)">붉은 화살촉</span> = <b>역방향</b>(승인 협조·교전명령 하달)<br>' +
+    '<span style="color:var(--bad)">붉은 화살촉</span> = <b>역방향</b>(교전 협조 회신·교전명령 하달)<br>' +
     '▸ <b>굵고 밝은 선</b> = 지금 교신 중 · ' +
     '<span style="color:var(--ok)">녹색</span> = 방금 도착(1.5초) · ' +
     '<span style="opacity:.55">거의 안 보임</span> = 지금 안 쓰는 계선<br>' +
@@ -3329,7 +3338,7 @@ function nodeCap(n) {
   if (!n || n.category === 'sensor') return null;
   // unit — C2 「석」(결심 슬롯)·포대 「발」(동시교전 채널). 실린더 숫자 옆과 툴팁에 붙는다.
   if (n.queue && n.queue.servers) {
-    return { c: n.queue.servers, K: n.queue.capacity, what: '항적·승인 처리', unit: '석' };
+    return { c: n.queue.servers, K: n.queue.capacity, what: '항적·협조 처리', unit: '석' };
   }
   if (n.engage && n.engage.channels) {
     return { c: n.engage.channels, K: n.engage.channels * 2, what: '동시교전 채널', unit: '발' };
@@ -4569,14 +4578,16 @@ function renderAllLog() {
  */
 const OUTCOME_RULES = [
   { re: /^사수선정·표적할당:[^→]*→(\S+)/, cls: 'ok', txt: (m) => `사수선정·표적할당 → ${nodeName(m[1])}` },
-  { re: /^자체교전승인:/, cls: 'ok', txt: () => '자체 교전승인' },
+  // 용어(ADR-098): 엔진 마크 「승인완료:」「자체교전승인:」 등은 내부 식별자다. 국지방공 AOC↔MCRC는
+  // 상하 관계가 아닌 협조 관계이므로 **화면 표현은 「협조」**로 쓴다. 마크 문자열은 바꾸지 않는다.
+  { re: /^자체교전승인:/, cls: 'ok', txt: () => '자체 교전결정(협조 불요)' },
   { re: /^교전명령발령:[^→]*→(\S+)/, cls: 'ok', txt: (m) => `발령 → ${nodeName(m[1])}` },
   { re: /^교전명령재배정:[^→]*→([^(]+)\(([^)]*)\)/, cls: 'warn',
     txt: (m) => `권역 내 재배정 → ${nodeName(m[1].trim())} (${leakText(m[2])})` },
   { re: /^교전명령반송:[^(]*\(([^)]*)\)/, cls: 'bad', txt: (m) => `상급으로 반송 — ${leakText(m[1])}` },
   { re: /^교전명령인가:/, cls: 'ok', txt: () => '인가 → 포대로 하달' },
-  { re: /^승인회신처리완료:/, cls: 'ok', txt: () => '승인 회신 처리 → 사수 확정' },
-  { re: /^승인완료:/, cls: 'ok', txt: () => '교전 승인' },
+  { re: /^승인회신처리완료:/, cls: 'ok', txt: () => '협조 회신 처리 → 사수 확정' },
+  { re: /^승인완료:/, cls: 'ok', txt: () => '교전 협조 완료' },
   { re: /^발사:([^/]+)/, cls: 'ok', txt: (m) => `발사 — ${nodeName(m[1])}` },
   // 명령은 닿았는데 **못 쏜** 순간 — 발사 실패(명중 실패)와 다른 사건이다.
   { re: /^발사불가:([^(]+)\(([^)]*)\)/, cls: 'bad',
@@ -4614,7 +4625,7 @@ function spanOutcome(s) {
       const g = /→(\S+)/.exec(later.name);
       // 그 시점에 함께 난 승인도 같이 적는다 — 빼면 「승인 없이 쐈나」로 읽힌다.
       const appr = ms.some((m) => Math.abs(m.t - later.t) < 0.002 && /^자체교전승인:/.test(m.name))
-        ? ' · 자체 교전승인' : '';
+        ? ' · 자체 교전결정' : '';
       return { cls: 'warn',
         txt: `교전창 대기 ${(later.t - s.done).toFixed(0)}초 → 사수선정·표적할당 → ${g ? nodeName(g[1]) : ''}${appr}` };
     }
@@ -4906,8 +4917,8 @@ function jobLabel(jk) {
 /** 노드 작업 종류 → 「무엇을 하려는 중인가」. 큐에 선 작업의 **다음 할 일**을 말해 준다. */
 const JOB_LABEL = {
   iads_track: '위협판단·표적할당 준비',
-  approval: '교전 승인',
-  approval_return: '승인 회신 처리·교전명령',   // ADR-093 — C2A가 승인 회신을 접수해 사수 확정·명령을 내는 작업
+  approval: '교전 협조 처리',
+  approval_return: '협조 회신 처리·교전명령',   // ADR-093 — C2A가 승인 회신을 접수해 사수 확정·명령을 내는 작업
   directive_issue: '교전명령 발령',            // ADR-096 — 결심 노드가 명령을 작성해 계선에 올리는 작업
   directive_relay: 'ICC 중계 인가',            // ADR-094 — ICC가 교전명령을 접수·인가(필요시 권역 내 재배정)하는 작업
   directive_reception: '교전명령 접수',
@@ -5478,7 +5489,7 @@ el('legend').innerHTML =
   ' 주기 = 그 전문의 전송 시간(같은 클립 규칙). 처리 중이면 작업 맥동이 우선하고,' +
   ' 센서 보고(주기 보고)는 세지 않는다.</span>' +
   ' <span style="opacity:.85">· <b>화살촉</b> — 계선이 흐르는 방향. ' +
-  '<span style="color:var(--bad)">붉은 화살촉</span>은 <b>역방향</b>(승인 협조·교전명령 하달처럼 계선을 되돌아간다).</span>' +
+  '<span style="color:var(--bad)">붉은 화살촉</span>은 <b>역방향</b>(교전 협조 회신·교전명령 하달처럼 계선을 되돌아간다).</span>' +
   ' <span style="opacity:.85">· <b>밝아진 열</b> — 지금 이동·처리·대기가 벌어지는 단계.' +
   ' 시간이 흐르면 밝은 띠가 왼쪽에서 오른쪽으로 옮겨 간다' +
   ' · 항적 개별 보기의 <span style="color:var(--accent)">파란 점선</span>은 <b>킬체인 프론티어</b>' +

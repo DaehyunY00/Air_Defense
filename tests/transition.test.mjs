@@ -25,6 +25,28 @@ installIadsKernel(KJ);
 
 var fail = 0;
 function assert(c, m) { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fail++; }
+function near(a, b) { return Math.abs(a - b) < 1e-12; }
+function checkSummary(result, label) {
+  assert(result.points.every(function (p) {
+    return [p.asis, p.tobe].every(function (arm) {
+      return [arm.leakRate, arm.killRate, arm.maxC2Rho].every(function (n) { return Number.isFinite(n) && n >= 0 && n <= 1 + 1e-9; }) &&
+        arm.leakRate + arm.killRate <= 1 + 1e-9 && Number.isFinite(arm.leakCI) && arm.leakCI >= 0;
+    }) && near(p.gap, p.asis.leakRate - p.tobe.leakRate);
+  }), label + ': 전 구간 비율·CI 유효, 격차=As-Is−To-Be (방향 제한 없음)');
+  var crossing = result.points.find(function (p) { return p.asis.maxC2Rho >= result.rhoCrit; });
+  assert(result.rho09CrossX === (crossing ? crossing.x : null),
+    label + ': 임계 전환점은 관측 ρ가 기준 이상인 최초 지점, 없으면 null');
+  var before = result.points.filter(function (p) { return !crossing || p.x < crossing.x; });
+  var after = result.points.filter(function (p) { return crossing && p.x >= crossing.x; });
+  function matchesMean(actual, points) {
+    return points.length ? near(actual, points.reduce(function (sum, p) { return sum + p.gap; }, 0) / points.length) : actual === null;
+  }
+  assert(matchesMean(result.preGapMean, before) && matchesMean(result.postGapMean, after),
+    label + ': 임계 전·후 격차는 해당 점의 평균, 빈 구간은 null');
+  var maxPoint = result.points.reduce(function (best, p) { return p.gap > best.gap ? p : best; }, result.points[0]);
+  assert(result.maxGapX === maxPoint.x && near(result.maxGap, maxPoint.gap),
+    label + ': 최대 격차 지점·값을 실제 스윕에서 도출 (음수도 보존)');
+}
 
 // ADR-061: iads-c2 단일 충실도의 실행 비용(sc3 1800초 1회 ≈ 10초)이 legacy의 수십 배라,
 // 회귀 게이트가 감당 가능한 크기로 복제수·관측창을 줄였다(검증 대상 성질은 동일).
@@ -41,39 +63,43 @@ var r = KJ.analyzeTransition(KJ.scenarioById('sc3'), { reps: 3, seed: 12345, end
 var elPerf = Date.now() - tPerf;
 assert(r.points.length === 11, '스윕 점 개수 = 11 (0.5~3.0, step 0.25 — 부동소수 누적오차 없음)');
 assert(r.points.every(function (p, i) { return i === 0 || p.x > r.points[i - 1].x; }), '강도 오름차순');
-assert(r.rho09CrossX !== null, 'As-Is C2 최대 ρ의 0.9 임계 돌파 강도 존재 (' + r.rho09CrossX + ')');
-assert(r.points.every(function (p) { return p.gap > 0; }), '전 구간에서 To-Be 누수율 < As-Is (gap>0)');
-var prePoints = r.points.filter(function (p) { return p.x < r.rho09CrossX; });
-var postPoints = r.points.filter(function (p) { return p.x >= r.rho09CrossX; });
-var preMean = prePoints.reduce(function (s, p) { return s + p.gap; }, 0) / prePoints.length;
-var postMean = postPoints.reduce(function (s, p) { return s + p.gap; }, 0) / postPoints.length;
-assert(Number.isFinite(r.preGapMean) && Number.isFinite(r.postGapMean) &&
-  Math.abs(r.preGapMean - preMean) < 1e-12 && Math.abs(r.postGapMean - postMean) < 1e-12,
-  '임계 전·후 개선폭 요약이 스윕 점 평균과 정확히 일치 (' +
-  (r.preGapMean * 100).toFixed(1) + '%p / ' + (r.postGapMean * 100).toFixed(1) + '%p)');
-var maxPoint = r.points.reduce(function (best, p) { return p.gap > best.gap ? p : best; }, r.points[0]);
-assert(r.maxGapX === maxPoint.x && Math.abs(r.maxGap - maxPoint.gap) < 1e-12,
-  '최대 격차 지점·값이 스윕 결과에서 정확히 도출 (×' + r.maxGapX + ')');
+checkSummary(r, 'SC3');
 
-// As-Is C2 최대 ρ는 강도에 대해 약단조 증가 (표본 노이즈 허용 오차 0.05)
-var rhoMono = r.points.every(function (p, i) {
-  return i === 0 || p.asis.maxC2Rho >= r.points[i - 1].asis.maxC2Rho - 0.05;
-});
-assert(rhoMono, 'As-Is C2 최대 ρ 강도에 대해 약단조 증가');
-
-// 전환점은 시나리오의 함수다.
-// [ADR-061 관측 변경 — 정직 기록] legacy 경로에서는 SC1도 고강도에서 임계를 돌파했고, 그
-// 원인은 legacy 전용 **중복항적 팬아웃**(각 군 C2가 같은 항적을 중복 접수해 부하가 배가되던
-// 경로)이었다. 그 경로가 ADR-061로 삭제되면서 native SC1은 전 스윕 구간에서 C2 최대 ρ가
-// 0.3 언저리에 머물러 임계를 넘지 않는다(실측 reps 3·step 0.5 — 600초: ρ 0.04→0.32,
-// 1800초: 0.06→0.33. 같은 조건에서 SC3는 각각 ×2·×1.5에서 돌파). 따라서 대조 방식을 "SC3보다 늦게 돌파"에서 **"SC3는 돌파·SC1은 미돌파"**로 되돌린다
-// — 두 모델의 절대값을 비교하지 말라는 원칙(모의논리서 §7)의 사례이기도 하다.
-console.log('# 전환점의 시나리오 의존성: SC3는 돌파, SC1(경계 침투)은 미돌파');
+console.log('# SC1 전환점·격차도 같은 관측 산식 사용');
 var r5 = KJ.analyzeTransition(KJ.scenarioById('sc1'), { reps: 3, seed: 12345, endTimeSec: 600 });
-var sc1MaxRho = r5.points.reduce(function (m, p) { return Math.max(m, p.asis.maxC2Rho); }, 0);
-assert(r.rho09CrossX !== null && r5.rho09CrossX === null && sc1MaxRho < 0.9,
-  'SC3는 ×' + r.rho09CrossX + '에서 임계 돌파 · SC1은 전 스윕(×0.5~3.0) 미돌파(최대 ρ ' +
-  sc1MaxRho.toFixed(2) + ') — 전환점은 시나리오의 함수(고정 아님)');
+checkSummary(r5, 'SC1');
+
+// 전환점 미발생·첫 지점 발생·후속 지점 발생과 0/음수 격차를 통제 입력으로 확인한다.
+// DES를 바꾸지 않고 분석 함수의 입력 경계만 대체하며, 실제 스윕 검사는 위에 유지한다.
+console.log('# 전환점 경계 fixture — 빈 구간·불리한 결과 보존');
+var realRunDES = KJ.runDES;
+try {
+  [
+    { name: '미돌파·0 격차', rhos: [0.2, 0.4, 0.3], extraLeak: 0, crossing: null },
+    { name: '첫 지점 돌파·음수 격차', rhos: [0.95, 0.95, 0.95], extraLeak: 10, crossing: 0.5 },
+    { name: '중간 돌파 후 하락·음수 격차', rhos: [0.2, 0.95, 0.4], extraLeak: 10, crossing: 1 }
+  ].forEach(function (fixture) {
+    var calls = [];
+    KJ.runDES = function (config) {
+      calls.push({ x: config.intensity, seed: config.seed, mode: config.mode });
+      var leaked = 20 + (config.mode === 'tobe' ? fixture.extraLeak : 0);
+      return { global: { spawned: 100, leaked: leaked, killed: 60 - leaked, meanTimeToKillSec: 5 },
+        nodes: [{ category: 'c2', rho: fixture.rhos[Math.round((config.intensity - 0.5) / 0.5)] }] };
+    };
+    var probe = KJ.analyzeTransition(KJ.scenarioById('sc3'), {
+      reps: 2, seed: 7, xMin: 0.5, xMax: 1.5, xStep: 0.5, endTimeSec: 10
+    });
+    checkSummary(probe, fixture.name);
+    assert(probe.rho09CrossX === fixture.crossing && probe.points.every(function (p) {
+      return near(p.gap, -fixture.extraLeak / 100);
+    }), fixture.name + ': 전환점과 격차가 지정한 입력을 보존');
+    assert(calls.length === 12 && [0.5, 1, 1.5].every(function (x) {
+      var asisSeeds = calls.filter(function (c) { return c.x === x && c.mode === 'asis'; }).map(function (c) { return c.seed; });
+      var tobeSeeds = calls.filter(function (c) { return c.x === x && c.mode === 'tobe'; }).map(function (c) { return c.seed; });
+      return asisSeeds.length === 2 && asisSeeds[0] !== asisSeeds[1] && JSON.stringify(asisSeeds) === JSON.stringify(tobeSeeds);
+    }), fixture.name + ': 매 강도의 두 모드가 동일한 서로 다른 복제 seed를 사용');
+  });
+} finally { KJ.runDES = realRunDES; }
 
 console.log('# 성능');
 // 별도 재실행 대신 위 구조적 스윕의 실측 시간을 상한 검증(native 비용 — ADR-061 재조정).

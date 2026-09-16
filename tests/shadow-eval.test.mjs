@@ -1,13 +1,13 @@
 /**
  * ADR-074 — 그림자 평가(전역 최적) · 교전창 계측 회귀.
  *
- *  1) OFF bit-exact — 신규 플래그 OFF에서 Phase A 종료 시점(ADR-062)과 SHA-256 일치
+ *  1) OFF 동치 — 생략/명시 OFF의 전체 결과 일치, ON에서도 계측 이외 결과 불변
  *  2) RNG 불변(핵심) — 그림자 평가 ON에서도 난수 소비 **횟수**가 OFF와 동일
  *  3) regret 건전성 — 항상 ≥ 0, 전역최적=실제선택이면 정확히 0
  *  4) USFK 독립 축 — ADR-036에 따라 그림자 반사실에서 제외(미측정으로 남김)
  *  5) 교전창 원장 — window_audit이 위협 전수와 1:1 (놓침률 분모의 생존 편향 제거)
  *  6) 교차검증 — 창 마감 뒤 결심은 0건. `window_lost_due_to_c2`와의 잔여 차이를 공시
- *  7) 방향 관측 — 실측된 것만 어서션하고, 방향이 없는 것은 NOTE로 남긴다
+ *  7) 방향 관측 — 우열은 NOTE로 남기고, 계측 분모·경계는 통제 입력으로 검증한다
  */
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -49,18 +49,20 @@ KJ.IADS = Object.assign({}, KJ.IADS, {
 });
 
 const CASES = ['sc1|asis', 'sc1|tobe', 'sc3|asis', 'sc3|tobe'];
-// ADR-073 종료 시점(`decisionAudit`만 ON)의 지문 — Phase B 신규 플래그가 OFF면 여기서
-// 한 발도 안 움직여야 한다. 전 플래그 OFF 지문은 `decision-audit.test.mjs`가 따로 잠근다.
-// ADR-076 재산출 — 교전창 캐시 키 결함 수정으로 실제 경로의 값이 바뀌었다. 같은 커밋에서
-// `_engagementWindowOf`의 전용 빈 캐시 격리 장치도 걷어냈다(키가 순수해져 불필요해졌다).
-// 그 제거가 결과 중립임은 전 케이스 bit-exact로 실증했다 — 아래 지문은 제거 후 값이다.
-const AUDIT_ONLY_SHA = {
-  'sc1|asis': '36a05aaf162eb48b7c567d3d751c1473e20519d4f70daefefb90b93dabf1448c',
-  // ADR-077 재고정: To-Be ABT 승인권자 MCRC → IAOC. As-Is 2케이스는 지문 불변.
-  'sc1|tobe': '4ffadc1b4ad137369654ddbe1906b85425173a5eaa0711341ff1330807a50b92',
-  'sc3|asis': '6deb4897d4cc645eb04c00aad1f55ce5469fd3c8faaba97f1cd97fe3ef94bcfb',
-  'sc3|tobe': 'c38b4f2caf3bfd51b4b25e4cc83ce531aae29bb241ec643e8b22ec67b69cd69a'
-};
+// ADR-100: 과거 기본값의 지문은 계측 비간섭성을 검증하지 못한다. 동일한 현행 조건에서
+// 생략/명시 OFF를 비교하고, ON/OFF에서는 아래에 열거한 계측 전용 필드만 제외한다.
+// 고정 조건의 수치 지문은 hires-baseline.test.mjs에서 별도로 유지한다.
+function behavior(result) {
+  const copy = JSON.parse(JSON.stringify(result));
+  delete copy.global.decisionAudit;
+  ['decisionAudit', 'shadowEval', 'shadowEvalIncludeUsfk', 'windowMargin'].forEach(function (key) {
+    delete copy.global.features[key];
+  });
+  copy.c2Events = copy.c2Events.filter(function (e) {
+    return e.type !== 'decision_audit' && e.type !== 'window_audit';
+  });
+  return JSON.stringify(copy);
+}
 
 function run(key, features, deploymentId) {
   const [sc, mode] = key.split('|');
@@ -122,8 +124,12 @@ CASES.forEach(function (key) {
   const ledger = auditOnly[key].result.global.decisionAudit;
   assert(ledger.shadowEval === undefined && ledger.windowMargin === undefined,
     key + ' 신규 플래그 OFF에서 원장 wire shape 불변');
-  assert(auditOnly[key].sha256 === AUDIT_ONLY_SHA[key],
-    key + ' 신규 플래그 OFF SHA-256 = Phase A(ADR-073) 종료 시점과 일치');
+  const explicitOff = run(key, {
+    decisionAudit: true, shadowEval: false, shadowEvalIncludeUsfk: false, windowMargin: false
+  });
+  assert(auditOnly[key].sha256 === explicitOff.sha256 &&
+    auditOnly[key].rngCalls === explicitOff.rngCalls,
+    key + ' 신규 플래그 생략/명시 OFF의 전체 결과·난수 소비 동일');
 });
 
 console.log('\n== 2) ON — RNG 소비 횟수 불변 (핵심) ==');
@@ -133,6 +139,9 @@ CASES.forEach(function (key) {
     key + ' 그림자 평가·교전창 계측 ON에서도 난수 소비 동일 (' + off[key].rngCalls + ')');
   assert(on[key].rngCalls === auditOnly[key].rngCalls,
     key + ' audit만 ON일 때와도 동일');
+  assert(behavior(on[key].result) === behavior(off[key].result) &&
+    behavior(on[key].result) === behavior(auditOnly[key].result),
+    key + ' 계측 전용 필드 이외 전체 결과·이벤트 순서 불변');
   assert(on[key].result.global.killed === off[key].result.global.killed &&
          on[key].result.global.leaked === off[key].result.global.leaked,
     key + ' 격추/누수 불변 (killed=' + on[key].result.global.killed +
@@ -229,6 +238,26 @@ CASES.forEach(function (key) {
 });
 
 console.log('\n== 7) 방향 관측 (seed 12345 단일 실행 — 주장은 분포로) ==');
+{
+  const fixture = {
+    audits: [
+      { threatId: 'early', t: 4 }, { threatId: 'early', t: 8 },
+      { threatId: 'late', t: 12 }, { threatId: 'no-window', t: 1 },
+      { threatId: 'boundary', t: 10 }
+    ],
+    windows: ['early', 'late', 'undecided', 'boundary'].map(function (threatId) {
+      return { threatId, windowCloseT: 10 };
+    }).concat({ threatId: 'no-window', windowCloseT: null })
+  };
+  const m = missRate(fixture);
+  assert(m.total === 4 && m.missed === 2 && m.undecided === 1 && m.rate === 0.5,
+    '놓침률 분모는 창 보유 위협 전수: 최초 결심·마감 경계·미결심·창 없음 처리');
+  const o = optimalRate({ audits: [{ regret: 0 }, { regret: 2 }, { regret: null }, {}] });
+  assert(o.n === 2 && o.opt === 1 && o.rate === 0.5,
+    '최적일치율 분모는 regret 측정 표본만 포함');
+  assert(missRate({ audits: [], windows: [] }).rate === null &&
+    optimalRate({ audits: [] }).rate === null, '빈 분모는 0%가 아닌 미측정(null)');
+}
 CASES.forEach(function (key) {
   const m = missRate(on[key]), o = optimalRate(on[key]);
   note(key + ' 교전창 놓침률 ' + pct(m.missed, m.total) + ' (미결심 ' + m.undecided + '/' + m.total +
@@ -236,23 +265,19 @@ CASES.forEach(function (key) {
 });
 {
   const missA = missRate(on['sc3|asis']), missB = missRate(on['sc3|tobe']);
-  assert(missA.rate > missB.rate,
-    'SC3 교전창 놓침률 As-Is > To-Be (' + pct(missA.missed, missA.total) + ' > ' +
-    pct(missB.missed, missB.total) + ')');
+  note('SC3 교전창 놓침률 As-Is ' + pct(missA.missed, missA.total) + ' / To-Be ' +
+    pct(missB.missed, missB.total) + ' — 방향은 회귀 통과 조건이 아님');
   const m1a = missRate(on['sc1|asis']), m1b = missRate(on['sc1|tobe']);
   note('SC1 놓침률은 As-Is ' + pct(m1a.missed, m1a.total) + ' / To-Be ' + pct(m1b.missed, m1b.total) +
     ' — 부하가 낮아 C2가 병목이 아니므로 방향성 없음. 어서션하지 않는다.');
 
-  // 전역최적 일치율: SC1은 격차가 커(30시드 88.9%→95.7%) 단일 seed에서도 방향이 안정적이다.
-  // SC3은 30시드 격차가 1.3%p(95.9%→97.2%)에 불과해 **단일 seed에서 뒤집힌다** — 어서션하지
-  // 않고 관측만 한다. 유리한 seed를 골라 어서션을 세우면 그것은 측정이 아니라 연출이다.
+  // 어느 모드가 우세한지는 모형·입력의 관측이며 구현의 통과 조건이 아니다.
   {
     const a1 = optimalRate(on['sc1|asis']), b1 = optimalRate(on['sc1|tobe']);
-    assert(b1.rate >= a1.rate,
-      'SC1 전역최적 일치율 To-Be ≥ As-Is (' + pct(b1.opt, b1.n) + ' ≥ ' + pct(a1.opt, a1.n) + ')');
+    note('SC1 전역최적 일치율 As-Is ' + pct(a1.opt, a1.n) + ' / To-Be ' + pct(b1.opt, b1.n));
     const a3 = optimalRate(on['sc3|asis']), b3 = optimalRate(on['sc3|tobe']);
     note('SC3 전역최적 일치율 As-Is ' + pct(a3.opt, a3.n) + ' / To-Be ' + pct(b3.opt, b3.n) +
-      ' — 30시드 격차가 1.3%p뿐이라 단일 seed에서는 뒤집힐 수 있다(ADR-074 §결론 영향). 어서션하지 않는다.');
+      ' — 단일 seed의 관측');
   }
 
   // 원인 귀속: As-Is의 선택 손실이 어느 축에서 나오는가.
@@ -269,7 +294,7 @@ CASES.forEach(function (key) {
       return k + ' ' + pct(byAxis[k].opt, byAxis[k].n) + '(' + byAxis[k].n + ')';
     }).join(' · '));
   });
-  // 실측 원인: 선택 손실은 자기 포대만 보는 LOCAL_AD 축에 몰린다(주축은 양 모드 동일 풀 — ADR-062).
+  // 축별 계측 표본을 분리하되 어느 축에 손실이 몰리는지는 고정하지 않는다.
   const localAd = function (key) {
     const a = on[key].audits.filter(function (e) {
       return e.commanderAxis === 'LOCAL_AD' && e.regret != null;
@@ -283,16 +308,11 @@ CASES.forEach(function (key) {
     return { n: a.length, opt: a.filter(function (e) { return e.regret === 0; }).length };
   };
   const la = localAd('sc3|asis'), oa = other('sc3|asis');
-  // ADR-080 갱신: 「선택 손실이 LOCAL_AD 축에 집중된다」(ADR-074 관측)는 이 셀에서 더는
-  // 성립하지 않는다 — 국지 그림의 MCRC 유래 출처가 문자 전파(45초+)로 늦어지자 LOCAL_AD의
-  // regret 측정 표본이 8건으로 쪼그라들었고 그 8건은 전부 최적이었다(100% vs 주축 95.2%).
-  // 표본이 준 것 자체가 ADR-080의 관측이다: **국지축 결심 기회가 늦은 상황그림에 잠식된다.**
-  // 방향 주장 대신 그 사실을 잠근다 — LOCAL_AD 표본이 주축의 1/5 이하로 희소하고,
-  // regret 계측은 양 축 모두 살아 있다(0이 아니라 측정 중이라는 뜻 — ADR-062 구분).
-  assert(la.n > 0 && oa.n > 0 && la.n * 5 <= oa.n,
-    'SC3 As-Is LOCAL_AD regret 표본 희소(' + la.n + '건 ≤ 주축 ' + oa.n + '건의 1/5) — ' +
-    '늦은 국지 상황그림이 국지축 결심 기회를 잠식(ADR-080) · 일치율 ' +
-    pct(la.opt, la.n) + ' vs 주축 ' + pct(oa.opt, oa.n));
+  const all = optimalRate(on['sc3|asis']);
+  assert(la.n > 0 && oa.n > 0 && la.n + oa.n === all.n && la.opt + oa.opt === all.opt,
+    'SC3 As-Is 축별 표본·최적일치 건수 합계가 전수 계정과 일치');
+  note('SC3 As-Is LOCAL_AD ' + la.n + '건 / 타 축 ' + oa.n + '건 · 일치율 ' +
+    pct(la.opt, la.n) + ' / ' + pct(oa.opt, oa.n));
 }
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');

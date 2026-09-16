@@ -1,0 +1,55 @@
+{
+  "inlineBlocks": 15,
+  "results": [
+    {
+      "explicitURLPar1": false,
+      "parValue": 1,
+      "parType": "number",
+      "iaocQueue": {
+        "servers": 20,
+        "serviceTimeSec": {
+          "asis": 2.5,
+          "tobe": 2.5
+        },
+        "serviceParts": {
+          "systemSec": [
+            1,
+            2
+          ],
+          "operatorSec": 1
+        },
+        "capacity": 40,
+        "paramRef": "IADS-C2-COMPAT-01"
+      },
+      "spawned": 89,
+      "killed": 30,
+      "leaked": 27,
+      "unresolved": 32
+    },
+    {
+      "explicitURLPar1": true,
+      "parValue": true,
+      "parType": "boolean",
+      "iaocQueue": {
+        "servers": 20,
+        "serviceTimeSec": {
+          "asis": 31.5,
+          "tobe": 31.5
+        },
+        "serviceParts": {
+          "systemSec": [
+            1,
+            2
+          ],
+          "operatorSec": 30
+        },
+        "capacity": 40,
+        "paramRef": "IADS-C2-COMPAT-01"
+      },
+      "spawned": 89,
+      "killed": 29,
+      "leaked": 28,
+      "unresolved": 32
+    }
+  ]
+}

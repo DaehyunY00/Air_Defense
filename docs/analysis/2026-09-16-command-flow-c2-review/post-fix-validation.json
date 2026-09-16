@@ -1,0 +1,337 @@
+{
+  "date": "2026-09-16",
+  "baseCommit": "12d14e0c251ca8f89750ba279e77eeec217062cd",
+  "branch": "codex/c2-structural-integrity-20260916",
+  "node": "v22.18.0",
+  "method": "All unique suites registered by tests/run-all.js, executed in bounded parallel batches with targeted reruns after test-contract repairs. Not a completed sequential run-all invocation.",
+  "sourceSyntax": {
+    "files": 41,
+    "exitCode": 0
+  },
+  "suiteCount": 52,
+  "passed": 52,
+  "artifacts": [
+    {
+      "file": "K-JAMDS_지휘흐름_단일본.html",
+      "sha256": "bf0d84bc98c615843660d890ced1455759983ca94b03e3d33f4a0c72c9ce18e8"
+    },
+    {
+      "file": "K-JAMDS_시뮬레이터_단일본.html",
+      "sha256": "4aec51ac00242a273eaabe9b71bd0250b40da02c367a593a360a578c3c3b774d"
+    }
+  ],
+  "suites": [
+    {
+      "suite": "engine.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 141,
+      "validation": "contract batch"
+    },
+    {
+      "suite": "mc.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 46,
+      "validation": "contract batch"
+    },
+    {
+      "suite": "overlap.test.js",
+      "exitCode": 0,
+      "checksPassed": 16,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "transition.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 30,
+      "validation": "contract batch"
+    },
+    {
+      "suite": "constraints.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 44,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "hires-baseline.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 12,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "deployment.test.js",
+      "exitCode": 0,
+      "checksPassed": 60,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "deployment-adapter.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 57,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "high-resolution-connection.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 3,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "iads-native-pipeline.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 12,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "c2a-asis.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 11,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "iads-failure-realism.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 8,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "failure-classification.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 9,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "ui-performance.test.js",
+      "exitCode": 0,
+      "checksPassed": 37,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "map-visualization.test.js",
+      "exitCode": 0,
+      "checksPassed": 15,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "vendor-leaflet.test.js",
+      "exitCode": 0,
+      "checksPassed": 46,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "overlap-performance.test.js",
+      "exitCode": 0,
+      "checksPassed": 4,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "iads-kernel.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 36,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "c2-analysis.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 25,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "metrics-accounting.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 21,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "legacy-hires-deployment.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 26,
+      "validation": "contract batch"
+    },
+    {
+      "suite": "engagement-state-unification.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 40,
+      "validation": "targeted rerun after contract repair"
+    },
+    {
+      "suite": "link-semantics.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 37,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "approval-chain.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 17,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "native-wta.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 15,
+      "validation": "targeted rerun after contract repair"
+    },
+    {
+      "suite": "analysis-metric-honesty.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 17,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "target-dispersion.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 26,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "southern-axes.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 51,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "sensor-report-parity.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 33,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "codex-alignment.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 62,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "threat-log-pairing.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 41,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "decision-audit.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 76,
+      "validation": "targeted rerun after contract repair"
+    },
+    {
+      "suite": "shadow-eval.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 90,
+      "validation": "targeted rerun after contract repair"
+    },
+    {
+      "suite": "decision-comparison.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 85,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "geometry-window-cache.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 31,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "approval-authority.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 42,
+      "validation": "targeted rerun after contract repair"
+    },
+    {
+      "suite": "c2-echelon-hierarchy.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 45,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "c2-state-integrity.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 14,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "analysis-pipeline-table.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 54,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "flow-trace.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 71,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "usfk-track-sharing.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 27,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "command-flow-single.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 29,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "command-flow-config.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 4,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "prototype-readability.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 42,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "ballistic-launch-axes.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 30,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "threat-aimpoints.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 31,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "c2-service-floor.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 24,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "c2-decision-time-parity.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 20,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "approval-pipeline-realism.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 28,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "icc-relay-authorization.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 28,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "ecs-execution-time.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 21,
+      "validation": "independent suite batch"
+    },
+    {
+      "suite": "directive-issue-time.test.mjs",
+      "exitCode": 0,
+      "checksPassed": 26,
+      "validation": "independent suite batch"
+    }
+  ]
+}

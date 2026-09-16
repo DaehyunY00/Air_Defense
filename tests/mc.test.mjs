@@ -3,7 +3,7 @@
  * 실행:  node tests/mc.test.js   (저장소 루트에서)
  *
  * 검증: Welford 정확성(나이브 대비), 분포 샘플러의 이론값 수렴, CI 축소, MC 재현성·수렴,
- *       민감도 스윕 단조성, 성능 상한.
+ *       쌍대 차이·민감도 스윕 산식과 입력 배선, 성능 상한.
  */
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -74,12 +74,11 @@ assert(!mc1.converged || mc1.metrics.leakRate.ci <= 0.01 + 1e-9, '수렴 시 누
 console.log('    → leakRate=' + (mc1.metrics.leakRate.mean * 100).toFixed(1) + '% ±' +
   (mc1.metrics.leakRate.ci * 100).toFixed(2) + '%p, reps=' + mc1.reps + ', converged=' + mc1.converged);
 
-console.log('# CI 축소 (반복수↑ → CI↓)');
+console.log('# CI 산식과 동일 σ에서의 반복수 스케일링');
 var few = KJ.runMonteCarlo(cfg, { minReps: 10, maxReps: 10, tol: 0 });   // 강제 10회
 var many = KJ.runMonteCarlo(cfg, { minReps: 90, maxReps: 90, tol: 0 }); // 강제 90회
-assert(many.metrics.leakRate.ci < few.metrics.leakRate.ci,
-  'reps 10→90: CI 반폭 감소 (' + (few.metrics.leakRate.ci * 100).toFixed(2) + '%p → ' +
-  (many.metrics.leakRate.ci * 100).toFixed(2) + '%p)');
+assert(few.reps === 10 && many.reps === 90 && few.metrics.leakRate.n === 10 && many.metrics.leakRate.n === 90,
+  '고정 반복수 10/90을 정확히 실행·집계 (표본분산 변화 때문에 CI 감소 자체는 강제하지 않음)');
 // √n 스케일링. 종전에는 두 표본의 CI를 직접 나눴는데, 그 비율은 **두 표본이 같은 σ를
 // 추정한다**는 전제에 의존한다. n=10의 σ̂는 자유도 9라 잡음이 커서(실측: seed 2024는 σ̂ 3.43%p
 // vs 90회 5.92%p, 비율 0.576 / seed 7은 6.05 vs 6.42, 비율 0.354) 이 전제가 seed에 따라
@@ -99,14 +98,51 @@ assert(Math.abs(pooledRatio - Math.sqrt(10 / 90)) < 1e-12,
 // σ̂ 추정 자체도 표본이 늘수록 참값에 수렴해야 한다 — 방향만 고정(크기는 seed 의존).
 assert(many.metrics.leakRate.std > 0 && few.metrics.leakRate.std > 0, '양 표본 모두 유효한 산포 추정');
 
-console.log('# As-Is vs To-Be 통계적 유의성');
+console.log('# As-Is/To-Be 통계 요약 정합');
 var a = KJ.runMonteCarlo({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 2, seed: 55, endTimeSec: 600 }, { minReps: 30, maxReps: 30, tol: 0 });
 var b = KJ.runMonteCarlo({ scenario: KJ.scenarioById('sc3'), mode: 'tobe', intensity: 2, seed: 55, endTimeSec: 600 }, { minReps: 30, maxReps: 30, tol: 0 });
-var overlap = a.metrics.leakRate.lo <= b.metrics.leakRate.hi && b.metrics.leakRate.lo <= a.metrics.leakRate.hi;
-assert(a.metrics.leakRate.mean > b.metrics.leakRate.mean && !overlap,
-  'To-Be 누수율 유의하게 낮음 (As-Is ' + (a.metrics.leakRate.mean * 100).toFixed(1) + '±' +
-  (a.metrics.leakRate.ci * 100).toFixed(2) + ' vs To-Be ' + (b.metrics.leakRate.mean * 100).toFixed(1) +
-  '±' + (b.metrics.leakRate.ci * 100).toFixed(2) + ', CI 비중첩)');
+[a, b].forEach(function (arm) {
+  ['leakRate', 'leakRateSpawn', 'killRateSpawn', 'censoredRate'].forEach(function (key) {
+    var m = arm.metrics[key];
+    assert(m.n === 30 && m.mean >= 0 && m.mean <= 1 &&
+      near(m.ci, ciOf(m.std, m.n), 1e-12) && near(m.lo, m.mean - m.ci, 1e-12) && near(m.hi, m.mean + m.ci, 1e-12),
+    arm.config.mode + ' ' + key + ': 같은 30개 표본의 평균·산포·CI 경계 정합');
+  });
+  assert(near(arm.metrics.leakRateSpawn.mean + arm.metrics.killRateSpawn.mean + arm.metrics.censoredRate.mean, 1, 1e-12),
+    arm.config.mode + ': 전체 생성 분모의 평균 격추+누수+미해결률=1');
+});
+
+// 모드 우열을 가정하지 않고 쌍대 통계 자체를 검증한다. 공통 표본이 크게 움직여도
+// 차이의 CI는 seed별 차이의 분산으로 계산되어야 한다. 양·음·0 및 0을 가로지르는
+// 차이를 모두 입력한다. 실제 DES 결과는 위 통합 검사와 성능 검사에서 계속 사용한다.
+console.log('# 쌍대 차이 fixture — 양·음·0 모두 허용');
+function measuredResult(leaked) {
+  return { global: { spawned: 100, killed: 80 - leaked, leaked: leaked, censoredRaw: 20,
+    detected: 100, everEngaged: 80, killRate: (80 - leaked) / 80, leakRate: leaked / 80,
+    meanTimeToEngageSec: 10, meanTimeToKillSec: 20 }, bottlenecks: [] };
+}
+var realRunDES = KJ.runDES;
+try {
+  [[-0.1, -0.1, -0.1, -0.1], [0.1, 0.1, 0.1, 0.1], [0, 0, 0, 0], [0, 0.05, -0.05, 0]].forEach(function (deltas) {
+    var seenSeeds = new Map(), calls = [];
+    KJ.runDES = function (config) {
+      if (!seenSeeds.has(config.seed)) seenSeeds.set(config.seed, seenSeeds.size);
+      var index = seenSeeds.get(config.seed);
+      calls.push({ seed: config.seed, mode: config.mode });
+      return measuredResult(15 + index * 10 + (config.mode === 'tobe' ? deltas[index] * 100 : 0));
+    };
+    var paired = KJ.runPairedMonteCarlo(cfg, { minReps: 4, maxReps: 4, tol: 0, primary: 'leakRateSpawn' });
+    var mean = deltas.reduce(function (sum, d) { return sum + d; }, 0) / deltas.length;
+    var variance = deltas.reduce(function (sum, d) { return sum + (d - mean) * (d - mean); }, 0) / 3;
+    var ci = Z * Math.sqrt(variance) / 2, metric = paired.delta.leakRateSpawn;
+    assert(calls.length === 8 && seenSeeds.size === 4 && calls.every(function (call, index) {
+      return index % 2 === 0 ? call.mode === 'asis' : call.mode === 'tobe' && call.seed === calls[index - 1].seed;
+    }), '쌍대 fixture [' + deltas.join(',') + ']: 각 seed를 양 모드에 정확히 한 번 전달');
+    assert(metric.n === 4 && near(metric.mean, mean, 1e-12) && near(metric.std, Math.sqrt(variance), 1e-12) &&
+      near(metric.ci, ci, 1e-12) && near(metric.lo, mean - ci, 1e-12) && near(metric.hi, mean + ci, 1e-12),
+    '쌍대 fixture [' + deltas.join(',') + ']: Δ(To-Be−As-Is) 평균·표본분산·95% CI가 직접 계산과 일치');
+  });
+} finally { KJ.runDES = realRunDES; }
 
 console.log('# 민감도 스윕');
 var sw = KJ.sensitivitySweep({ scenario: KJ.scenarioById('sc3'), mode: 'asis', intensity: 1.5, seed: 7, endTimeSec: 600 }, { reps: 8, deltaPct: 0.2 });
@@ -114,31 +150,41 @@ sw.rows.forEach(function (r) {
   console.log('    ' + r.label + ': ' + (r.low * 100).toFixed(1) + '% ↔ ' + (r.high * 100).toFixed(1) +
     '% (스윙 ' + (r.swing * 100).toFixed(1) + '%p)');
 });
-assert(sw.rows.length === 5 && sw.rows[0].swing >= sw.rows[4].swing, '민감도 인자 스윙 내림차순 정렬');
-var intensityRow = sw.rows.find(function (r) { return r.factor === 'intensity'; });
-// legacy 분산 포대 확장 뒤에는 1800초 절단 시 미해결(censoredRaw)이 증가한다. 이때
-// global.leakRate는 해결분(killed+leaked) 기준이라 강도와 단조 관계를 보장하지 않는다.
-// 방향을 강제하면 평가 분모 편향을 회귀 규칙으로 굳히므로, 유한하고 실질적인 민감도만 고정한다.
-assert(Number.isFinite(intensityRow.low) && Number.isFinite(intensityRow.high) && intensityRow.swing > 0.01,
-  '위협 강도 변화가 전체 생성 기준 누수율에 유한·실질적 영향');
-var serviceRow = sw.rows.find(function (r) { return r.factor === 'service'; });
-assert(Number.isFinite(serviceRow.low) && Number.isFinite(serviceRow.high) && serviceRow.swing > 0.01,
-  '처리시간 변화가 전체 생성 기준 누수율에 유한·실질적 영향');
-// 포화(SC3)에서 탐지확률은 병목이 아니므로 영향 미미 — 그 자체가 유의미한 인사이트.
-// SC2(무인기 동시 남파)의 결정적 제약은 요격확률이다: uav 체공 900s ≫ 스캔 10s라 시행횟수
-// N=dwell/10이 커서 센서 Pd 융합(feat/sensor-pd-fusion) 이후에도 누적 탐지는 As-Is·To-Be
-// 모두 ~1.0으로 포화한다(융합 효과는 탐지 '율'이 아니라 per-scan 확률·탐지 '시점'에 나타남 —
-// detect.test.js 참조). 따라서 누수를 지배하는 것은 여전히 2022.12.26 실패의 본질인 저요격확률
-// (pk 삼각 0.1/0.3/0.5)이다 — pk↑→누수↓ 단조성으로 검증. 탐지확률 민감도(mult.detect)의
-// 누수 영향이 처리시간보다 작다는 아래 어서션은 이 포화 구조 때문에 방향이 유지된다.
-// ⚠️ SC2 관측창은 1800초를 유지해야 한다(복제수만 축소). 900초 창에서는 무인기가 아직
-// 표적에 도달하지 않아 전 인자 누수율이 0.0%로 눌리고, 민감도 자체가 관측 불가가 된다
-// (ADR-061 재조정 중 실측: reps 12·900초 → 전 인자 swing 0.0, reps 12·1800초 → pk 6.2→0.2).
+function checkSweep(sweep, label) {
+  assert(sweep.rows.map(function (r) { return r.factor; }).sort().join('|') === 'delay|detect|intensity|pk|service' &&
+    sweep.rows.every(function (r, index) { return index === 0 || sweep.rows[index - 1].swing >= r.swing; }),
+  label + ': 인자 5개를 중복 없이 포함하고 전체 스윙을 내림차순 정렬');
+  assert(sweep.rows.every(function (r) {
+    return [r.low, r.high, r.base].every(function (n) { return Number.isFinite(n) && n >= 0 && n <= 1; }) &&
+      near(r.swing, Math.abs(r.high - r.low), 1e-12) && near(r.base, sweep.base, 1e-12);
+  }), label + ': 각 인자의 스윙=|high−low|, 기준값·전체 생성 분모 비율 정합');
+}
+checkSweep(sw, 'SC3');
+// 기존 SC2 관측창·복제수를 유지해 무인기 시나리오의 실제 민감도 집계도 검사한다.
 var swU = KJ.sensitivitySweep({ scenario: KJ.scenarioById('sc2'), mode: 'asis', intensity: 1, seed: 7, endTimeSec: 1800 }, { reps: 12, deltaPct: 0.2 });
-var pkRow = swU.rows.find(function (r) { return r.factor === 'pk'; });
-assert(pkRow.high < pkRow.low, 'SC2(무인기): 요격확률↑ → 누수율↓ (단조 정합 — 격추실패가 지배 제약)');
-var swS3Detect = sw.rows.find(function (r) { return r.factor === 'detect'; });
-assert(swS3Detect.swing < serviceRow.swing, 'SC3(포화): 탐지확률 영향 < 처리시간 영향 (병목은 처리용량)');
+checkSweep(swU, 'SC2');
+
+console.log('# 민감도 입력 배선 fixture — 증가·감소·무효과');
+var probeConfig = Object.assign({}, cfg, { intensity: 2, mult: { service: 2, delay: 3, detect: 0.5, pk: 1.2 } });
+var originalConfig = JSON.stringify(probeConfig);
+var coefficients = { service: 0.05, delay: -0.1, detect: 0, pk: 0.15, intensity: -0.2 };
+try {
+  KJ.runDES = function (config) {
+    var rate = 0.5;
+    Object.keys(coefficients).forEach(function (factor) {
+      var ratio = factor === 'intensity' ? config.intensity / probeConfig.intensity : config.mult[factor] / probeConfig.mult[factor];
+      rate += coefficients[factor] * (ratio - 1);
+    });
+    return measuredResult(rate * 100);
+  };
+  var probe = KJ.sensitivitySweep(probeConfig, { reps: 2, deltaPct: 0.2 });
+  checkSweep(probe, '통제 입력');
+  assert(probe.rows.every(function (r) {
+    return near(r.low, 0.5 - coefficients[r.factor] * 0.2, 1e-12) &&
+      near(r.high, 0.5 + coefficients[r.factor] * 0.2, 1e-12);
+  }), '스윕은 기존 배수에 ±20%를 곱하고 해당 인자만 변경 (증가·감소·0 응답 그대로 보존)');
+  assert(JSON.stringify(probeConfig) === originalConfig, '민감도 스윕이 입력 설정을 변형하지 않음');
+} finally { KJ.runDES = realRunDES; }
 
 console.log('# 성능');
 // native(iads-c2) 복제당 비용은 legacy(~40ms)의 수십 배 — 상한을 native 기준으로 재설정(ADR-061).

@@ -81,9 +81,9 @@
   // ADR-078 — To-Be 도메인 제대. IAOC(조율층) 아래에서 자기 도메인을 집행하는 C2다.
   //   MCRC     : 공군 관제레이더 plot 융합 · 우군기/민항기 식별 (공중 도메인)
   //   KAMD_OPS : 그린파인 BMD 항적 처리 · 패트리엇/천궁-II/L-SAM 사격통제 (BMD 도메인)
-  // 항적은 이 제대를 거쳐 IAOC로 올라가고, IAOC가 표적할당한 교전지시는 다시 이 제대를
-  // 거쳐 ECS로 내려간다. 두 방향 모두 **큐 서비스**가 붙는다 — 링크 지연만 더하면 제대가
-  // 부하 0의 유령 노드가 되어 "역할이 있다"는 그림과 수치가 어긋난다.
+  // 현 모델은 IAOC와 병렬로 통보를 접수해 도메인 처리 부하만 관측한다.
+  // 이 큐의 처리 결과는 IAOC의 결심/명령을 승인하거나 제한하지 않는다.
+  // 따라서 제대의 부하를 도메인 권한·식별 판단이 결심에 반영된 증거로 해석하지 않는다.
   var DOMAIN_ECHELON_TYPES = { MCRC: 1, KAMD_OPS: 1 };
   // 저가 포화위협 부분집합(무인기·방사포) — exchangeSat 분자·분모 계정용 (ADR-002)
   var SAT_THREATS = { uav_small: true, mrl_large: true };
@@ -915,7 +915,10 @@
       // Native IADS may have several mutually unaware ICC/USFK branches for the
       // same real threat.  Saturating one branch must not kill the other branch.
       var branchLocalFailure = job.kind === 'iads_track' || job.kind === 'directive_reception' ||
-        (job.kind === 'approval' && this.nativeIads); // ADR-058: native 다계통 — 한 축의 승인 드롭이 전 계통을 죽이지 않는다
+        (this.nativeIads && (job.kind === 'approval' || job.kind === 'approval_return' ||
+          job.kind === 'directive_relay' || job.kind === 'directive_issue'));
+      // Native callers finalize the failed approval/order and schedule any existing retry.
+      // Only the affected branch loses this job; other branches retain the shared threat.
       if (!branchLocalFailure) job.threat.pipelineDead = true;
       if (!branchLocalFailure && !job.threat.leakReason) job.threat.leakReason = 'overflow:' + nsId;
       disposition = 'dropped';
@@ -1971,6 +1974,8 @@
     if (this.iadsSensorPhysics) {
       plan = KJ.IADS.createEngagementOrder(id, commander, shooterId, t, {
         threatId: threat && threat.id,
+        issuedByC2Id: options.issuedByC2Id,
+        parentDirectiveId: options.parentDirectiveId,
         targetEcsId: options.targetEcsId,
         authorityLevel: commander && commander.typeId,
         delegationLevel: options.delegationLevel,
@@ -1984,7 +1989,8 @@
       plan = {
         id: id, directiveId: id, threatId: threat && threat.id,
         commander: commander, shooterId: shooterId, createdAt: t,
-        issuedByC2Id: commander && commander.id,
+        issuedByC2Id: options.issuedByC2Id || (commander && commander.id),
+        parentDirectiveId: options.parentDirectiveId || null,
         targetEcsId: options.targetEcsId || null,
         authorityLevel: commander && commander.typeId,
         delegationLevel: options.delegationLevel || null,
@@ -1999,7 +2005,8 @@
     if (this.commandLifecycle) {
       this._metricEvent('DIRECTIVE_CREATED', t, threat, {
         directiveId: plan.directiveId, directiveType: 'ENGAGE',
-        issuedByC2Id: commander && commander.id, targetEcsId: plan.targetEcsId || null,
+        issuedByC2Id: plan.issuedByC2Id, parentDirectiveId: plan.parentDirectiveId || null,
+        targetEcsId: plan.targetEcsId || null,
         targetBatteryId: shooterId, authorityLevel: plan.authorityLevel || (commander && commander.typeId),
         delegationLevel: plan.delegationLevel || null, cause: plan.launchCause,
         validUntil: plan.validUntil, engagementId: plan.engagementId
@@ -2032,6 +2039,7 @@
         this._metricEvent(eventType, t, { id: plan.threatId }, {
           directiveId: plan.directiveId, directiveType: plan.directiveType || 'ENGAGE',
           issuedByC2Id: plan.issuedByC2Id || (plan.commander && plan.commander.id),
+          parentDirectiveId: plan.parentDirectiveId || null,
           targetEcsId: plan.targetEcsId || null, targetBatteryId: plan.shooterId,
           authorityLevel: plan.authorityLevel || (plan.commander && plan.commander.typeId),
           delegationLevel: plan.delegationLevel || null, cause: plan.launchCause,
@@ -2071,7 +2079,8 @@
     var states = threat._engagementStatusBySender || {}, best = null;
     Object.keys(states).forEach(function (id) {
       var s = states[id];
-      if ((s.phase !== 'assigned' && s.phase !== 'fired') || s.freshUntil < t) return;
+      if ((s.phase !== 'assigned' && s.phase !== 'fired') ||
+          !Number.isFinite(s.freshUntil) || s.freshUntil < t) return;
       if (!best || s.receivedAt > best.receivedAt) best = s;
     });
     return best;
@@ -2102,7 +2111,13 @@
     var upperId = this._iadsUpperEchelonId();
     var channel = this.iadsStatusChannels[commander.id + '>' + upperId];
     if (!channel) return;
-    var msg = { threat: threat, from: commander.id, to: upperId, phase: phase, createdAt: t };
+    // Source order distinguishes updates created at the same simulation time. It is
+    // independent of observation tracing and does not consume random numbers.
+    threat._engagementStatusSeqBySender = threat._engagementStatusSeqBySender || {};
+    var sequence = (threat._engagementStatusSeqBySender[commander.id] || 0) + 1;
+    threat._engagementStatusSeqBySender[commander.id] = sequence;
+    var msg = { threat: threat, from: commander.id, to: upperId, phase: phase, createdAt: t,
+      sequence: sequence };
     this.global.statusSharing.sent++;
     // flowTrace: **가려다 못 간 전문**을 남기기 위한 식별자. 종전 관측은 실제로 출발한
     // 전문만 기록해(`_recordLink`), 채널 용량에 막혀 대기하거나 버려진 전문은 흔적조차
@@ -2132,14 +2147,25 @@
     channel.busy = Math.max(0, channel.busy - 1);
     this.global.statusSharing.delivered++;
     var age = t - msg.createdAt;
-    if (age > channel.freshnessSec) this.global.statusSharing.stale++;
+    var stale = !Number.isFinite(msg.createdAt) || age > channel.freshnessSec;
+    if (stale) this.global.statusSharing.stale++;
     msg.threat._engagementStatusBySender = msg.threat._engagementStatusBySender || {};
-    msg.threat._engagementStatusBySender[msg.from] = {
-      from: msg.from, phase: msg.phase, createdAt: msg.createdAt, receivedAt: t,
-      freshUntil: t + channel.freshnessSec, ageAtReceipt: age
-    };
+    var previous = msg.threat._engagementStatusBySender[msg.from];
+    var olderOrDuplicate = previous && (msg.createdAt < previous.createdAt ||
+      (msg.createdAt === previous.createdAt &&
+        (!Number.isFinite(msg.sequence) || !Number.isFinite(previous.sequence) ||
+          msg.sequence <= previous.sequence)));
+    var accepted = !stale && !olderOrDuplicate;
+    if (accepted) {
+      msg.threat._engagementStatusBySender[msg.from] = {
+        from: msg.from, phase: msg.phase, createdAt: msg.createdAt, receivedAt: t,
+        sequence: msg.sequence, freshUntil: msg.createdAt + channel.freshnessSec, ageAtReceipt: age
+      };
+    }
     this._mark(msg.threat, '교전현황수신:' + msg.to + '←' + msg.from + '/' + msg.phase, t);
-    if (msg.phase === 'released' && msg.threat.alive) {
+    if (!accepted) this._mark(msg.threat, '교전현황미채택:' + msg.from + '/' +
+      (stale ? 'stale' : 'out_of_order'), t);
+    if (accepted && msg.phase === 'released' && msg.threat.alive) {
       var commander = msg.threat._iadsCommandersById && msg.threat._iadsCommandersById[msg.to];
       // ADR-056에서 이 폴백이 필요했던 이유는 **수신 노드가 책임 C2가 아니었기** 때문이다
       // (To-Be 교전현황이 MCRC 앞으로 갔다). ADR-078이 수신처를 조율층(IAOC = KILL_WEB 책임
@@ -2631,6 +2657,7 @@
           (self.global.c2Orders.expiryByReason.issue_queue_deadline || 0) + 1;
         self._recordFailureEvidence(threat, 'window_lost_due_to_c2',
           { commanderId: d.commander.id, shooterId: d.shooterId, phase: 'issue-queue' });
+        self._sendIadsStatus(threat, d.commander, 'released', at);
         self._scheduleIadsRetry(threat, d.commander, at + 0.5);
       }
     }, function (done) {
@@ -2646,6 +2673,7 @@
         (this.global.c2Orders.expiryByReason.issue_queue_capacity || 0) + 1;
       this._recordFailureEvidence(threat, 'capacity_full',
         { commanderId: d.commander.id, shooterId: d.shooterId, phase: 'issue-queue' });
+      this._sendIadsStatus(threat, d.commander, 'released', t);
       this._scheduleIadsRetry(threat, d.commander, t + 0.5);
     }
   };
@@ -2764,6 +2792,8 @@
     }
     var window2 = this._iadsGeometryWindow(alt.shooter, threat);
     var plan2 = this._iadsCreatePlan(d.commander, alt.shooter.id, t, threat, {
+      issuedByC2Id: d.iccId,
+      parentDirectiveId: plan.directiveId,
       targetEcsId: alt.shooter.ecsC2Id || null,
       delegationLevel: 'ICC',
       launchCause: plan.launchCause || 'commanded',

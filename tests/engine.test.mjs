@@ -49,47 +49,57 @@ assert(rSat.nodes.every(function (n) { return n.rho <= 1.0000001; }), '포화: �
 assert(rSat.nodes.some(function (n) { return n.drops > 0; }) && rSat.global.leaked > 0, '포화: 드롭·누수 발생');
 assert(rSat.bottlenecks.length > 0, '포화: 병목 도출');
 
-console.log('# 시나리오 기반 병목 (고정 아님) — KJADS 문제 상황 1·2·3');
-var sig = {};
+// 병목 위치·개수·모드 우열은 연구 결과다. 회귀 계약은 관측 계정에서 표시를 빠짐없이
+// 도출하는지이며, IAOC를 포함해 어떤 C2 노드도 병목이 될 수 있다.
+function checkBottleneckEvidence(result, label) {
+  function ids(rows) { return rows.map(function (row) { return row.id; }).sort().join('|'); }
+  var expectedNodes = result.nodes.filter(function (n) {
+    return n.arrivals > 0 && (n.drops > 0 || n.rho >= 0.9);
+  });
+  assert(ids(result.bottlenecks.filter(function (b) { return b.kind === 'node'; })) === ids(expectedNodes),
+    label + ': 노드 병목은 실제 도착이 있고 드롭 또는 ρ≥0.9인 노드와 정확히 일치');
+  var expectedLinks = result.links.filter(function (l) {
+    return l.delaySec >= 60 && l.count * l.delaySec / result.config.endTimeSec >= 1;
+  }).map(function (l) { return { id: l.from + '→' + l.to }; });
+  assert(ids(result.bottlenecks.filter(function (b) { return b.kind === 'link'; })) === ids(expectedLinks),
+    label + ': 통신 병목은 관측 전송량·지연 임계로 도출');
+  var reasons = result.global.leakReasons || {};
+  var expectedGaps = Object.keys(reasons).filter(function (code) { return KJ.leakTaxonomy(code).structural; });
+  var gaps = result.bottlenecks.filter(function (b) { return b.kind === 'gap'; });
+  assert(ids(gaps) === expectedGaps.sort().join('|') && gaps.every(function (b) {
+    var count = /누수 (\d+)건/.exec(b.detail);
+    return count && Number(count[1]) === reasons[b.id];
+  }), label + ': 구조적 공백의 종류·표시 건수가 누수 원장과 일치');
+}
+
+console.log('# 시나리오별 병목 증거 대사 — KJADS 문제 상황 1·2·3');
+var observed = {};
 ['sc1', 'sc2', 'sc3'].forEach(function (id) {
   [1, 2.5].forEach(function (x) {
     ['asis', 'tobe'].forEach(function (mode) {
       var r = run(id, mode, x, 100);
-      sig[id + '/' + mode + '/' + x] = r.bottlenecks.map(function (b) { return b.kind + ':' + b.id; }).sort().join(',');
+      var key = id + '/' + mode + '/' + x;
+      observed[key] = r;
+      checkBottleneckEvidence(r, key);
     });
   });
 });
-assert(new Set(Object.values(sig)).size > 3, '시나리오·강도·모드별 병목 다양 (' + new Set(Object.values(sig)).size + '종)');
-// legacy ICC 확장 후에도 저강도에서 처리 노드는 포화되지 않아야 한다.
-// [2026-07 C2-VOICE-COORD-01 실험 변경] 음성협조가 180s 삼각분포 → 10~30s 균등분포로
-// 단축되어, 종전 "메시지 1건 체류만으로 통신병목 기준 충족"이던 ICC→MCRC 링크 신호가
-// 저강도에서 소멸한다. 원 파라미터(Triangular 90/180/270)로 되돌리면 이 어서션도
-// some(...) 존재 검사로 복원할 것.
 var sc1Low = run('sc1', 'asis', 0.5, 5);
-assert(sc1Low.bottlenecks.filter(function (b) { return b.kind === 'node'; }).length === 0,
-  'SC1 저강도(0.5×): 처리 노드 용량 병목 0');
-assert(!sc1Low.bottlenecks.some(function (b) {
-  return b.kind === 'link' && /^ICC-[WCE]\d→MCRC$/.test(b.id);
-}), 'SC1 저강도(0.5×): 10~30s 음성협조에서는 ICC→MCRC 통신병목 신호 소멸 (실험 변경 정본)');
-// ADR-066: SC2는 이 단조성을 담을 수 있는 신호가 아니다 — 실측상 SC2의 병목 목록은 거의 항상
-// 비어 있고, 37개 위협 중 **1개**가 교전창을 놓친 범주형 gap 1건으로만 채워졌다가 강도를 올리면
-// 그 1건이 재현되지 않아 0이 된다(x1: gap 1건 → x2.5: 0건). 임계를 느슨하게 하는 대신 SC2는
-// **지배 메커니즘**을 직접 어서션한다: SC2의 누수는 어느 강도에서도 사격통제 부족이 지배하며
-// 부하와 함께 증가한다(no_fire_control x1 9건 → x2.5 19건). "무인기 문제는 C2 통합이 아니라
-// 교전 수단의 한계"라는 G6 관측과 같은 방향이다.
-var sc2Low = run('sc2', 'asis', 1, 100), sc2High = run('sc2', 'asis', 2.5, 100);
-function leaks(r, code) { return (r.global.leakReasons || {})[code] || 0; }
-assert(leaks(sc2Low, 'no_fire_control') > 0 && leaks(sc2High, 'no_fire_control') > leaks(sc2Low, 'no_fire_control'),
-  'SC2: 지배 누수 사유가 no_fire_control이고 부하와 함께 증가 (' +
-  leaks(sc2Low, 'no_fire_control') + ' → ' + leaks(sc2High, 'no_fire_control') + '건)');
-assert(leaks(sc2High, 'no_fire_control') >
-  Object.keys(sc2High.global.leakReasons || {}).reduce(function (m, k) {
-    return k === 'no_fire_control' ? m : m + sc2High.global.leakReasons[k];
-  }, 0), 'SC2 고강도: 사격통제 부족이 나머지 누수 사유 합보다 큼 — C2가 아니라 교전 수단의 한계');
-['sc3'].forEach(function (id) {
-  assert(run(id, 'asis', 2.5, 100).bottlenecks.length >= run(id, 'asis', 1, 100).bottlenecks.length,
-    id + ': 강도↑ 병목 비감소');
+checkBottleneckEvidence(sc1Low, 'SC1 저강도');
+Object.keys(observed).forEach(function (key) {
+  var r = observed[key], reasons = r.global.leakReasons || {};
+  assert(Object.values(reasons).every(function (n) { return Number.isInteger(n) && n >= 0; }) &&
+    Object.values(reasons).reduce(function (sum, n) { return sum + n; }, 0) === r.global.leaked,
+  key + ': 모든 확정 누수는 주원인 원장에 정확히 한 번 계상');
 });
+
+// 관측 상태를 통제한 집계 fixture: 통합축의 포화도 숨겨지지 않아야 한다.
+var fixture = new KJ.Simulation({ scenario: empty, mode: 'tobe', seed: 1, endTimeSec: 100 });
+var iaocId = fixture.catalog.roles.IAOC, iaoc = fixture.nodeState[iaocId];
+iaoc.arrivals = 1;
+iaoc.busyTime = iaoc.c * 95;
+assert(fixture._results().bottlenecks.some(function (bn) { return bn.kind === 'node' && bn.id === iaocId; }),
+  '통제된 IAOC ρ=0.95도 다른 C2와 동일하게 병목으로 표시');
 
 console.log('# burst 동시 다발 (SC2 무인기 1차 8대 + 2차 남파)');
 var rB = run('sc2', 'asis', 1, 77);
@@ -102,31 +112,17 @@ assert(rB.global.spawned >= burstTotal, 'SC2: 생성 위협 ≥ 총 burst ' + bu
 assert(run('sc2', 'asis', 0, 77).global.spawned === 0, 'SC2 강도 0: burst 포함 생성 0');
 assert(JSON.stringify(run('sc2', 'asis', 1, 77)) === JSON.stringify(rB), 'SC2 burst 포함 재현성 유지');
 
-console.log('# To-Be 개선');
+console.log('# As-Is/To-Be 비교의 입력·집계 계약');
 var a = run('sc3', 'asis', 1.5, 9), b = run('sc3', 'tobe', 1.5, 9);
-assert(b.global.leakRate < a.global.leakRate, 'To-Be 누수율 < As-Is (' +
-  (a.global.leakRate * 100).toFixed(0) + '% → ' + (b.global.leakRate * 100).toFixed(0) + '%)');
-// ADR-078·079 이후 「병목 개수 ≤」 비교는 성격이 다른 것을 한 저울에 올린다:
-// ① To-Be KAMDOC 병목은 병렬 통보(도메인 상황인식) 부하다 — 교전을 gate하지 않는다(ADR-078).
-// ② To-Be 포대 용량차단 증가는 더 많이 쏘는 결과다(처리량이지 기능부전이 아니다).
-// 원래 재려던 것은 「C2가 늦어 교전창을 놓친 누수」이므로 그것을 직접 잠근다.
-function gapLeaks(r, id) {
-  var g = r.bottlenecks.find(function (x) { return x.id === id; });
-  var m = g && /누수 (\d+)건/.exec(g.detail);
-  return m ? +m[1] : 0;
-}
-assert(gapLeaks(b, 'window_lost_due_to_c2') < gapLeaks(a, 'window_lost_due_to_c2'),
-  'C2 지연 기인 교전창 상실 누수: To-Be < As-Is (' +
-  gapLeaks(a, 'window_lost_due_to_c2') + '건 → ' + gapLeaks(b, 'window_lost_due_to_c2') + '건)');
-// To-Be에서 새로 생기는 노드 병목은 포대(교전량 증가) 또는 도메인 제대(ADR-078 병렬 통보 부하)뿐
-// 이어야 한다 — C2 결심 계선에 새 병목이 생기면 통합이 제 일을 못 하는 것이다.
-var extraBn = b.bottlenecks.filter(function (x) {
-  return x.kind === 'node' && !a.bottlenecks.some(function (y) { return y.id === x.id; });
+assert(a.global.spawned === b.global.spawned && a.config.seed === b.config.seed &&
+  a.config.endTimeSec === b.config.endTimeSec,
+  '동일 seed·관측창의 모드 비교는 동일 생성 위협 수를 사용');
+[a, b].forEach(function (r) {
+  checkBottleneckEvidence(r, r.config.mode);
+  var resolved = r.global.killed + r.global.leaked;
+  assert(Math.abs(r.global.leakRate - (resolved ? r.global.leaked / resolved : 0)) < 1e-12,
+    r.config.mode + ': 해결분 누수율은 해결된 위협만을 분모로 계산');
 });
-assert(extraBn.every(function (x) {
-  return /^BATTERY_/.test(x.id) || x.id === 'C2_KAMD_OPS_KAMD_OPS' || x.id === 'C2_MCRC_MCRC';
-}), 'To-Be 신규 병목은 포대(교전량 증가) 또는 도메인 제대(상황인식 부하)뿐 (' +
-  (extraBn.map(function (x) { return x.id; }).join(', ') || '없음') + ')');
 
 console.log('# 제약·보존');
 // 탄도탄 단독 구성(검증용 인라인 시나리오) — SHORAD 교전 불가 제약의 행위 검증
@@ -139,7 +135,8 @@ var rBal = KJ.runDES({ scenario: balScn, mode: 'asis', intensity: 2, seed: 3, en
 assert(rBal.nodes.filter(function (n) { return n.id.indexOf('SHORAD') === 0 && n.arrivals > 0; }).length === 0,
   '탄도탄 단독 구성: 신궁·천마 교전투입 0 (제약)');
 [a, b, rSat].forEach(function (r, i) {
-  assert(r.global.spawned - r.global.killed - r.global.leaked >= 0, 'run' + i + ': 생성 ≥ 격추+누수 (보존)');
+  assert(r.global.spawned === r.global.killed + r.global.leaked + r.global.censoredRaw,
+    'run' + i + ': 생성 = 격추+누수+관측 종료 미해결 (보존)');
 });
 
 console.log('# 흐름 카운터 (Sankey/funnel용, trace 무관 항상 제공)');

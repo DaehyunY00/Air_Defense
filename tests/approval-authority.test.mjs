@@ -129,17 +129,21 @@ console.log('\n# 3 — 실행 흔적: To-Be ABT 승인은 조율층이 받는다
     'As-Is에는 조율층 승인 0건 (IAOC는 As-Is 편성에 없다)');
 }
 
-console.log('\n# 4 — 이득의 출처를 밝혀 둔다 (인용 시 함께 밝혀야 하는 파라미터)');
+console.log('\n# 4 — 승인권자 카탈로그 설정과 결심시간 동일화 계약');
 {
-  // 격추 개선의 대부분은 조율층 "위상"이 아니라 승인권자 노드의 **서비스시간**에서 온다.
-  // 이 수치가 조용히 바뀌면 ADR-077의 결론 문장도 같이 바뀌어야 하므로 여기 고정한다.
+  // ADR-088의 MCRC 8→10 이후에도 8을 요구하던 오래된 기대값을 정정한다.
+  // 시간·용량은 실행 설정이며, 특정 임무 성과의 개선을 요구하는 조건이 아니다.
   const iaoc = catalog.nodeMap[catalog.roles.IAOC];
   const mcrc = catalog.nodeMap[catalog.roles.MCRC];
   assert(iaoc.queue.serviceTimeSec.tobe === 2.5 && iaoc.queue.servers === 20,
     'IAOC 승인 처리 2.5초 × 20서버');
-  assert(mcrc.queue.serviceTimeSec.tobe === 37.5 && mcrc.queue.servers === 8,
-    'MCRC 승인 처리 37.5초 × 8서버');
-  note('승인 1건당 15배 차이 — ADR-077 §이득의 출처. 이 값이 바뀌면 ADR 결론도 갱신할 것.');
+  assert(mcrc.queue.serviceTimeSec.tobe === 37.5 && mcrc.queue.servers === 10,
+    'MCRC 승인 처리 37.5초 × 10서버 (ADR-088)');
+  const parity = KJ.resolveModelCatalog({ deploymentId: DEPLOY, features: { c2DecisionTimeParity: true } });
+  const parityIaoc = parity.nodeMap[parity.roles.IAOC];
+  assert(parityIaoc.queue.serviceParts.operatorSec === mcrc.queue.serviceParts.operatorSec &&
+    parityIaoc.queue.servers === iaoc.queue.servers,
+    '결심시간 동일화는 운용자 성분을 맞추며 IAOC 서버 수를 바꾸지 않는다');
 }
 
 console.log(fail === 0 ? '\nOK — 전체 통과' : '\nFAILED — ' + fail + '건');

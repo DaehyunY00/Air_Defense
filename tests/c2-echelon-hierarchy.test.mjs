@@ -7,12 +7,16 @@
  * — 그림이 코드보다 앞서 있었고, 그 그림과 함께 수치를 제시하면 근거 없는 인상을 준다.
  *
  * 이 파일이 잠그는 것:
- *  1) 두 제대가 To-Be에서 **실제 부하**를 갖는다 (0이면 즉시 실패)
+ *  1) 두 제대가 To-Be에서 **통보 처리 부하**를 갖는다 (0이면 즉시 실패)
  *  2) 도메인 분담이 As-Is 책임 분담과 같다 — 공중=MCRC, 탄도=KAMDOC
  *  3) 병렬 통보다 — 제대 처리가 조율층 결심을 **gate하지 않는다**
  *  4) 군단 AOC 교전현황이 조율층으로 간다 (도착 0건 노드의 사서함이 아니라)
  *  5) As-Is 음성 협조 직결선은 To-Be에 없다 (구조 변화가 그림에서 대비된다)
- *  6) As-Is는 전부 불변
+ *  6) As-Is 책임 C2는 위협 도메인별로 배정되고 IAOC를 사용하지 않는다
+ *
+ * 도메인 통보 완료는 승인·식별 결과를 조율층에 되돌려 주지 않는다. 여기서 검증하는
+ * 관계는 통보·부하와 책임 배정이며, 도메인별 결정권을 보존한 합동 지휘의 검증은 아니다.
+ * 특정 seed의 격추 수나 "KAMDOC은 항상 포화" 같은 경험적 결과는 계약으로 고정하지 않는다.
  */
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -40,25 +44,26 @@ const catalog = KJ.buildDeploymentCatalog(DEPLOY, {});
 const MCRC = catalog.roles.MCRC, KAMDOC = catalog.roles.KAMDOC, IAOC = catalog.roles.IAOC;
 const AOCS = catalog.roles.corpsAocs;
 
-function run(mode, opts) {
-  return KJ.runDES(Object.assign({
+function config(mode, opts) {
+  return Object.assign({
     scenario: KJ.scenarioById('sc3'), mode, intensity: 1.5, seed: 12345, endTimeSec: 900,
     deploymentId: DEPLOY, modelFidelity: 'iads-c2',
     features: { highResolutionDeployment: true }
-  }, opts || {}));
+  }, opts || {});
 }
+function run(mode, opts) { return KJ.runDES(config(mode, opts)); }
 function node(r, id) { return (r.nodes || []).find(function (n) { return n.id === id; }) || null; }
 
 const asis = run('asis'), tobe = run('tobe');
 
-console.log('# 1 — To-Be에서 두 도메인 제대가 실제 부하를 갖는다 (대체가 아니라 하위 제대)');
+console.log('# 1 — To-Be에서 두 도메인 제대가 통보 처리 부하를 갖는다');
 {
   const m = node(tobe, MCRC), k = node(tobe, KAMDOC), i = node(tobe, IAOC);
   note('To-Be 도착: MCRC ' + m.arrivals + '(ρ' + m.rho.toFixed(3) + ') · KAMDOC ' +
     k.arrivals + '(ρ' + k.rho.toFixed(3) + ') · IAOC ' + i.arrivals + '(ρ' + i.rho.toFixed(3) + ')');
   assert(m.arrivals > 0, 'MCRC가 To-Be에서 항적을 처리한다 (종전 0건 — 역할 소멸이 결함이었다)');
   assert(k.arrivals > 0, 'KAMDOC이 To-Be에서 항적을 처리한다 (종전 0건)');
-  assert(i.arrivals > 0, 'IAOC도 처리한다 — 상위 제대이지 우회로가 아니다');
+  assert(i.arrivals > 0, '책임 C2인 IAOC도 항적을 처리한다');
   assert(m.arrivalsByKind.iads_track > 0 && k.arrivalsByKind.iads_track > 0,
     '두 제대의 부하가 항적 처리(iads_track)다 — 자기 도메인 plot/항적 업무');
 }
@@ -84,15 +89,52 @@ console.log('\n# 2 — 도메인 분담이 As-Is 책임 분담과 같다 (공중
 
 console.log('\n# 3 — 병렬 통보다: 제대 처리가 조율층 결심을 gate하지 않는다');
 {
-  // 직렬이면 제대 큐 대기가 조율층 도착에 얹혀 IAOC의 Wq/처리시각이 제대에 종속된다.
-  // KAMDOC은 포화(ρ≈0.97·드롭 발생) 상태인데도 IAOC가 막히지 않아야 한다.
-  const k = node(tobe, KAMDOC), i = node(tobe, IAOC);
-  note('KAMDOC 포화: ρ=' + k.rho.toFixed(3) + ' 드롭=' + k.drops + ' Wq=' + k.Wq.toFixed(1) +
-    ' / IAOC Wq=' + i.Wq.toFixed(1) + ' 드롭=' + i.drops);
-  assert(i.drops === 0 && i.Wq < 1,
-    '도메인 제대가 포화여도 조율층은 대기 없이 결심한다 (병렬 통보 — "거치되 시간은 그대로")');
-  assert(k.drops > 0,
-    'KAMDOC 포화는 실재한다 — 통합해도 제대 용량은 늘지 않는다(상황인식 손실로 계상)');
+  // ADR-088에서 KAMDOC 용량이 3→6으로 바뀌어 종전 SC3 표본은 더 이상 포화가 아니다.
+  // 통보의 비차단 계약은 용량·seed와 분리된 대조 조건에서 검증한다. 서비스 추첨만 평균값으로
+  // 고정하고 실제 fanout/도착/큐/완료 경로를 실행한다. 결심 경계에서 기록을 끝낸다.
+  function probe(type, saturated) {
+    const sim = new KJ.Simulation(config('tobe', { flowTrace: true }));
+    const echelonId = sim._iadsDomainEchelonFor({ type });
+    const domain = sim.nodeState[echelonId], upper = sim.nodeState[IAOC];
+    domain.c = domain.K = 1;
+    domain.mean = 100;
+    upper.mean = 1;
+    sim.c2ServiceFloor = false;
+    sim.rng.exponential = (mean) => mean;
+    const decisions = [];
+    sim._iadsDecide = (threat, at, commander) => decisions.push({ id: threat.id, at, commanderId: commander.id });
+    if (saturated) {
+      sim._nodeArrive(echelonId, 0, {
+        kind: 'iads_track', threat: { id: 'occupant', alive: true }, priority: 0
+      }, () => {});
+    }
+    const threat = { id: 'probe_' + type, type, alive: true, spawnT: 0, dwellSec: 1000 };
+    const commander = { id: IAOC, typeId: 'IAOC', axis: 'KILL_WEB' };
+    const track = { priority: 1, freshUntil: 1000, sources: [{ sensorId: 'probe_sensor', lastUpdateAt: 5 }] };
+    sim._fanoutDomainEchelon(threat, commander, track, 5);
+    sim._onIadsC2Arrive(5, { threat, commander, track });
+    while (sim.heap.size() > 0) {
+      const event = sim.heap.pop();
+      sim.now = event.t;
+      sim._dispatch(event);
+    }
+    return { sim, domain, upper, threat, decisions };
+  }
+  ['fighter', 'srbm'].forEach((type) => {
+    const free = probe(type, false), full = probe(type, true);
+    assert(free.decisions.length === 1 && free.decisions[0].at === 6 &&
+      JSON.stringify(full.decisions) === JSON.stringify(free.decisions),
+    type + ': 제대 통보가 처리되거나 드롭되어도 IAOC 결심은 자체 처리 완료(6초)에서 한 번 발생');
+    assert(free.domain.drops === 0 && full.domain.drops === 1 && full.upper.drops === 0 &&
+      full.sim.global.trackQuality.domainEchelonDropped === 1,
+    type + ': 강제 포화한 제대에만 통보 드롭 1건이 계상되고 IAOC에는 전파되지 않는다');
+    assert(full.threat.alive && !full.threat.pipelineDead && !full.threat.leakReason,
+      type + ': 통보 손실은 항적 전체의 처리 중단이나 누수로 바뀌지 않는다');
+    const fanout = full.sim.flowEvents.filter((event) => event.k === 'link' && event.mt === 'fanout');
+    assert(fanout.length === 1 && fanout[0].from === IAOC && fanout[0].to === full.domain.node.id &&
+      fanout[0].t0 === 5 && fanout[0].t1 === 5,
+    type + ': 통보 간선은 IAOC 도착과 같은 시각의 전달(0초)로 관측된다');
+  });
 }
 
 console.log('\n# 4 — 군단 AOC 교전현황은 To-Be에서 조율층이 받는다');
@@ -117,14 +159,16 @@ console.log('\n# 4 — 군단 AOC 교전현황은 To-Be에서 조율층이 받�
   const aTo = statusRecipients('asis'), bTo = statusRecipients('tobe');
   note('As-Is 교전현황 수신처: ' + JSON.stringify(aTo));
   note('To-Be 교전현황 수신처: ' + JSON.stringify(bTo));
-  // As-Is는 60건 중 4건만 도달해(음성/VTC 드롭 49) 항적 마크 표본이 비는 실행이 있다.
+  // As-Is는 도착 전에 항적이 종결되어 항적 마크 표본이 비는 실행이 있다.
   // 그래서 As-Is 쪽은 "조율층이 받는 일은 없다"는 부재로 잠근다 — 계선 자체는 #5가 본다.
   assert(a.delivered > 0 && !aTo[IAOC],
     'As-Is 교전현황이 조율층으로 가는 일은 없다 (As-Is 편성에 IAOC가 없다 · 도달 ' + a.delivered + '건)');
   assert(Object.keys(bTo).length === 1 && bTo[IAOC] > 0,
     'To-Be 교전현황은 조율층(IAOC)이 받는다 — 도착 0건 노드의 사서함이 아니다');
-  assert(b.delivered > a.delivered && b.dropped < a.dropped,
-    '데이터링크 전환으로 손실이 줄었다 (' + a.delivered + '/' + a.sent + ' → ' + b.delivered + '/' + b.sent + ')');
+  [a, b].forEach((sharing, index) => {
+    assert(sharing.sent >= sharing.delivered + sharing.dropped && sharing.delivered >= 0 && sharing.dropped >= 0,
+      ['As-Is', 'To-Be'][index] + ': 수신·채널 드롭 합계가 발신 수를 넘지 않는다 (미도착은 종료 시점에 남을 수 있음)');
+  });
 }
 
 console.log('\n# 5 — As-Is 음성 협조 직결선은 To-Be 그림에 없다');
@@ -145,24 +189,21 @@ console.log('\n# 5 — As-Is 음성 협조 직결선은 To-Be 그림에 없다')
     'As-Is 편성에는 조율층이 없다 (그림 대비의 전제)');
 }
 
-console.log('\n# 6 — As-Is 기준값 고정');
+console.log('\n# 6 — As-Is 책임 C2의 도메인 배정 계약');
 {
-  // ADR-078 시점에는 여기가 "As-Is 불변" 하드 체크였다(변경이 To-Be에만 닿았다는 증거).
-  // ADR-079가 As-Is 육↔공 항적 중계를 데이터링크 1초 → 문자(서버 채팅) 45초로 바꾸면서
-  // As-Is가 **의도적으로** 움직였다(격추 64→57). 그래서 이 절은 불변 주장이 아니라
-  // 현행 As-Is 기준값 고정으로 역할이 바뀐다 — To-Be 불변 쪽은 #1·#3이 계속 잠근다.
-  // ADR-081이 방공C2A 사이 상급 경유 계선(KVMF 30초)을 깔면서 As-Is가 다시 움직였다
-  // (격추 64→59 · MCRC 도착 139→145). ⚠️ 이 방향을 효과로 읽지 말 것 — 30 seed
-  // As-Is 자기쌍체에서 Δ격추 −0.57 [−2.57, +1.44]로 **임무 지표는 유의하지 않다**.
-  // 단일 seed 값은 항적 도착 순서 재배열의 결과이며 기준값 고정 용도로만 쓴다.
-  // ADR-082가 육↔공 세 채널의 분포를 정규화하며 As-Is가 다시 움직였다
-  // (격추 59→65 · MCRC 도착 145→148). ⚠️ 방향을 효과로 읽지 말 것 — As-Is
-  // 자기쌍체 12 seed에서 Δ격추 +0.83 [−3.09, +4.75]로 **유의하지 않다.**
-  assert(asis.global.killed === 65 && asis.global.leaked === 106,
-    'SC3 As-Is 격추 65 · 누수 106 (ADR-082 육↔공 분포 정규화 반영)');
-  const m = node(asis, MCRC), k = node(asis, KAMDOC);
-  assert(m.arrivals === 148 && k.arrivals === 145,
-    'As-Is MCRC 148 · KAMDOC 145 (문자·VTC 정규분포 전환 후)');
+  // 정확한 결과 지문은 hires-baseline 스위트가 별도로 담당한다. 계층 검사는 카탈로그의
+  // 정상 배치에서 누가 책임을 갖는지 검증하며 특정 시나리오의 임무 성과를 고정하지 않는다.
+  const sim = new KJ.Simulation(config('asis'));
+  ['fighter', 'cruise', 'uav_small', 'heli', 'ac_low', 'srbm', 'mrl_large'].forEach((type) => {
+    const threat = { id: 'routing_' + type, type, axis: 'NW', spawnT: 0, dwellSec: 600 };
+    const expected = type === 'srbm' || type === 'mrl_large' ? KAMDOC : MCRC;
+    const commanders = sim._resolveIadsCommanders(threat);
+    const primary = commanders.filter((commander) => commander.axis === 'MCRC' || commander.axis === 'KAMD');
+    assert(primary.length === 1 && primary[0].id === expected && primary[0].batteryIds.length > 0,
+      type + ': 정상 배치의 책임 C2가 ' + expected + '이며 담당 자산이 있다');
+    assert(commanders.every((commander) => commander.id !== IAOC) && sim._iadsDomainEchelonFor(threat) === null,
+      type + ': As-Is에는 IAOC 책임 배정이나 To-Be 도메인 통보가 없다');
+  });
   assert(!node(asis, IAOC), 'As-Is에는 IAOC 노드 자체가 없다');
 }
 

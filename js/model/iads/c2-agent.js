@@ -15,7 +15,10 @@ export function createEngagementOrder(id, commander, shooterId, at, options = {}
     threatId: options.threatId ?? null,
     directiveType: options.directiveType ?? 'ENGAGE',
     commander,
-    issuedByC2Id: commander?.id ?? null,
+    // The controlling commander can delegate a replacement to an intermediate
+    // issuer. Preserve both identities and the original order for audit.
+    issuedByC2Id: options.issuedByC2Id ?? commander?.id ?? null,
+    parentDirectiveId: options.parentDirectiveId ?? null,
     targetEcsId: options.targetEcsId ?? null,
     targetBatteryId: shooterId,
     shooterId,

@@ -98,8 +98,15 @@ assert(normal.ARMY_LOCAL_AD > 0, '국지방공(군단·수방사 AOC) 축이 실
 var tobe = run('HANBANDO_LEGACY_NORMAL', 'tobe', 'iads-c2');
 assert(tobe.global.commanderAssignments.IAOC > 0,
   'To-Be 한국군 책임 C2가 IAOC(융합 허브)로 통합');
-assert(tobe.global.leaked / tobe.global.spawned <= physics.global.leaked / physics.global.spawned,
-  'To-Be 누출률이 As-Is 이하(방향성 face validity)');
+assert(tobe.global.spawned === physics.global.spawned,
+  '동일 seed·관측창의 배치 비교는 양 모드에 동일 생성 위협 수 사용');
+[physics, tobe].forEach(function (result) {
+  var g = result.global, resolved = g.killed + g.leaked;
+  assert(g.spawned === resolved + g.censoredRaw &&
+    Math.abs(g.leakRate - (resolved ? g.leaked / resolved : 0)) < 1e-12 &&
+    Math.abs(g.killRate - (resolved ? g.killed / resolved : 0)) < 1e-12,
+  result.config.mode + ': 생성=격추+누수+미해결, 해결분 격추율·누수율 분모 정합');
+});
 
 // ── 7. legacy 폐기 확인 (ADR-061) ──
 console.log('# legacy·compat 폐기 확인');

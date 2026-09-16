@@ -1,0 +1,377 @@
+## flow-trace
+
+
+-- asis --
+  PASS asis: flowTrace OFF에서는 관측 키가 결과에 실리지 않는다
+  PASS asis: flowTrace ON/OFF 결과 SHA-256 일치 (관측이 모델을 바꾸지 않는다)
+  PASS asis: trace+flowTrace 조합에서도 항적 trace가 동일하다
+  PASS asis: 관측 이벤트가 실린다 (1767건)
+  PASS asis: 기본 상한(60000) 안에서 절삭되지 않는다
+  PASS asis: 링크 통과 사건 863건
+  PASS asis: 모든 링크 사건이 t1 = t0 + d (d ≥ 0)를 만족한다
+  PASS asis: 카탈로그에 없는 간선을 지나지 않는다
+  PASS asis: 관측 매체가 그 간선에 선언된 매체 중 하나다
+  PASS asis: 같은 두 노드를 잇는 성격이 다른 병렬 계선이 존재한다 (5쌍)
+  PASS asis: 병렬 통보(fanout)는 지연 0으로만 기록된다 (0건)
+  PASS asis: fanout은 결과 links 집계에 섞이지 않는다
+  PASS asis: 노드 체류 308건
+  PASS asis: 모든 체류가 도착 ≤ 개시 ≤ 완료 순서를 지킨다
+  PASS asis: 도착 없는 개시·완료 사건이 없다
+  PASS asis: 모든 이탈(nx)에 사유가 실린다
+  PASS asis: 전 노드 장부 대사 일치 (도착·완료·드롭 = 엔진 카운터)
+  PASS asis: 점유 재구성 불변식 (q≥0 · busy≤c)
+  PASS asis: 최대 재실(busy+q) 재구성이 엔진 maxInSystem과 일치
+  PASS asis: 완료와 이탈을 동시에 가진 체류가 없다
+  PASS asis: 교전현황 채널 계정이 결과에 있다
+  PASS asis: 대기 진입(cq) 2 = statusSharing.queued 2
+  PASS asis: 용량 드롭(cx) 0 = statusSharing.dropped 0
+  PASS asis: 즉시출발 1 + 대기 2 + 드롭 0 = 보냄 3
+  PASS asis: 모든 채널 사건이 양 끝을 갖는다
+  PASS asis: 대기 후 출발이 대기 시작보다 앞서지 않는다
+  PASS asis: 한 전문이 대기와 드롭을 동시에 갖지 않는다
+  PASS asis: 상한 초과 시 절삭 사실이 결과에 남는다
+  PASS asis: 상한을 걸어도 동역학은 그대로다
+
+-- tobe --
+  PASS tobe: flowTrace OFF에서는 관측 키가 결과에 실리지 않는다
+  PASS tobe: flowTrace ON/OFF 결과 SHA-256 일치 (관측이 모델을 바꾸지 않는다)
+  PASS tobe: trace+flowTrace 조합에서도 항적 trace가 동일하다
+  PASS tobe: 관측 이벤트가 실린다 (1768건)
+  PASS tobe: 기본 상한(60000) 안에서 절삭되지 않는다
+  PASS tobe: 링크 통과 사건 618건
+  PASS tobe: 모든 링크 사건이 t1 = t0 + d (d ≥ 0)를 만족한다
+  PASS tobe: 카탈로그에 없는 간선을 지나지 않는다
+  PASS tobe: 관측 매체가 그 간선에 선언된 매체 중 하나다
+  PASS tobe: 병렬 통보(fanout)는 지연 0으로만 기록된다 (71건)
+  PASS tobe: fanout은 결과 links 집계에 섞이지 않는다
+  PASS tobe: 노드 체류 388건
+  PASS tobe: 모든 체류가 도착 ≤ 개시 ≤ 완료 순서를 지킨다
+  PASS tobe: 도착 없는 개시·완료 사건이 없다
+  PASS tobe: 모든 이탈(nx)에 사유가 실린다
+  PASS tobe: 전 노드 장부 대사 일치 (도착·완료·드롭 = 엔진 카운터)
+  PASS tobe: 점유 재구성 불변식 (q≥0 · busy≤c)
+  PASS tobe: 최대 재실(busy+q) 재구성이 엔진 maxInSystem과 일치
+  PASS tobe: 완료와 이탈을 동시에 가진 체류가 없다
+  PASS tobe: 교전현황 채널 계정이 결과에 있다
+  PASS tobe: 대기 진입(cq) 0 = statusSharing.queued 0
+  PASS tobe: 용량 드롭(cx) 0 = statusSharing.dropped 0
+  PASS tobe: 즉시출발 3 + 대기 0 + 드롭 0 = 보냄 3
+  PASS tobe: 모든 채널 사건이 양 끝을 갖는다
+  PASS tobe: 대기 후 출발이 대기 시작보다 앞서지 않는다
+  PASS tobe: 한 전문이 대기와 드롭을 동시에 갖지 않는다
+  PASS tobe: 상한 초과 시 절삭 사실이 결과에 남는다
+  PASS tobe: 상한을 걸어도 동역학은 그대로다
+
+-- 고강도(×3) 스트레스 대사 --
+  PASS ×3에서 대기실 초과 드롭(over)이 실제로 발생한다 (21건)
+  PASS ×3에서도 관측 상한(60000) 안이다 — 절삭되면 아래 대사가 무의미하다
+  PASS ×3 스트레스에서도 전 노드 장부 대사 일치
+  PASS ×3에서 채널 용량 드롭(cx)이 실제로 발생한다 (3건)
+  PASS ×3 채널 대사 일치 — 대기 5/5 · 드롭 3/3
+  PASS ×3 보낸 전문의 향방이 남김없이 갈린다 — 즉시 1 + 대기 5 + 드롭 3 = 9
+  · ×3 교전현황: 보냄 9 → 도착 2 (드롭 3 · 대기 5)
+
+-- 계선 매체 반사실 --
+  PASS 반사실 실행은 결과에 적용 원장을 싣는다
+  PASS 원장이 chat → datalink 교체를 기록한다 ([{"from":"C2_MCRC_MCRC","to":"C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD","kind":"report","was":"chat","now":"datalink"}])
+  PASS 못 맞춘 키가 unmatched에 남는다 — 오타가 조용히 사라지지 않는다
+  PASS 교체된 계선의 관측 매체가 실제로 datalink다 (54건)
+  PASS 오버라이드 없는 실행에는 원장 키가 없다
+  PASS 카탈로그에 없는 매체는 예외로 거부한다 — 근거 없는 수치를 만들 수 없다
+
+-- 모드별 매체 --
+  As-Is: chat, datalink, internal, kvmf-relay, report-cycle, voice, voice-vtc
+  To-Be: fanout, ifcn, internal, report-cycle
+  PASS As-Is는 사람 매개 채널(음성·문자·VTC)을 실제로 지난다
+  PASS To-Be는 사람 매개 채널을 지나지 않는다
+
+OK — 전체 통과
+
+
+## approval-chain
+
+# 1 — 카탈로그 wire shape
+  PASS OFF: 승인 coord 링크 없음 (wire shape 불변)
+  PASS ON: 군단AOC→MCRC coord는 As-Is 음성 20초(절차 지연) 전용 — To-Be엔 없다
+  PASS ON+v2: As-Is 음성 20초 불변 (협조 절차 — v2 대칭화 비대상)
+  PASS ON+v2: To-Be 승인 협조는 조율층 경유 IFCN 1초 (30개 계선) — 절차가 옮겨간 자리
+  PASS 교전현황(status) 채널은 승인 채널과 분리 유지
+  PASS 교전현황도 모드별로 갈렸다 — As-Is 군단AOC→MCRC 음성 · To-Be 군단AOC→조율층
+# 2 — ON As-Is 관측 (수용 기준)
+  PASS As-Is meanCoordDelaySec > 0 (실측 22.8초)
+  PASS As-Is kind='approval' 도착 > 0 (실측 56건)
+  PASS 포화(SC3 ×3)에서 동적 권한위임 발동 (실측 26건)
+  PASS ON 보존법칙
+  PASS ON 결정론
+# 3 — ON To-Be (automation 차등)
+  PASS To-Be 협조 단계 없음 (on-loop는 경유 생략)
+  PASS To-Be on-loop 승인 서비스는 발생 (실측 31건)
+  PASS auto-preauth만 있는 SC2 To-Be: ON==OFF (에코 제외 bit-exact)
+# 4 — USFK 축 불변 (ADR-036)
+  PASS USFK C2 노드에 approval 도착 0건
+  PASS FULL에서도 한국군 승인 서비스는 발생 (실측 36건)
+# 5 — 반증 플래그 (approvalChainTobe)
+  PASS 반증 ON: To-Be에도 As-Is 승인 단계가 생김 (실측 3.5초)
+
+OK — 전체 통과
+
+
+## approval-pipeline-realism
+
+# 1) OFF bit-exact (ADR-092 골든 지문 = 변경 전 소스)
+  PASS SC3 As-Is OFF = 골든 (94ad09ff…)
+  PASS SC3 To-Be OFF = 골든 (6429f951…)
+  PASS 명시 false = 미지정
+# 2) To-Be — IAOC 감독승인 유형에 (a)(c) 적용, 회신은 0초
+  PASS To-Be ON은 OFF와 다르다 (IAOC 감독승인 유형이 존재)
+  PASS IAOC 승인 도착 13 → 5 (실행가능 사수 없는 요청 제거)
+  PASS To-Be C2A approval_return 도착 5건
+  PASS To-Be 회신 지연 0초 (요청이 계선을 타지 않음): 5건, 위반 0
+# 3) (a) 승인 요청은 실행가능 사수가 있을 때만
+  PASS OFF: 승인 요청 58건 중 요청 시점 실행가능 사수 0인 것 58건 (문제의 실재)
+  PASS ON: 승인 요청 18건 전부 요청 시점에 실행가능 사수 ≥ 1
+  PASS ON 요청 수(18) < OFF 요청 수(58)
+  PASS MCRC 승인 도착 57 → 16
+# 4) (b) 회신은 협조 계선 역방향(MCRC→C2A)
+  PASS 회신 링크 MCRC→C2A 14건 (요청 링크 30건)
+  PASS 회신 지연 전부 > 0, 평균 20.9초 (음성 협조와 같은 매체)
+  PASS 회신 매체 = 요청 매체 (voice)
+  PASS OFF에는 MCRC→C2A coord 링크가 없다
+# 5) (c) C2A 큐의 approval_return 작업과 마크 순서
+  PASS C2A approval_return 도착 4건 (승인 요청 18건 — 회신 전 소멸한 항적은 큐에 넣지 않음)
+  PASS approval_return 작업은 전부 C2A(AOC·JAOC) 노드에 도착
+  PASS 마크 순서 협조개시<승인완료≤회신발신<회신접수≤회신처리완료≤사수선정: 4/4 (위반 0)
+  PASS 승인을 요청한 C2A는 회신 처리 완료 전에 사수선정을 내지 않는다
+# 6) wire shape
+  PASS OFF 노드 통계에 approval_return 키 없음
+  PASS ON 노드 통계에는 approval_return 키 있음
+  PASS global.features wire shape 불변
+# 7) 배선
+  PASS 프로토타입 features()에 approvalPipelineRealism: P.pipe
+  PASS 프로토타입 ?pipe= 파라미터 (이 화면만 기본 1 — 엔진 기본 OFF, 칩 상시 표기)
+  PASS 켜진 동안 상태줄 칩
+  PASS JOB_LABEL approval_return
+  PASS 엔진 기본 OFF
+  PASS kindKeys는 ON에서만 확장
+
+전체 통과
+
+
+## icc-relay-authorization
+
+# 1) OFF bit-exact (골든 지문)
+  PASS SC3 As-Is OFF = 골든 (94ad09ff…)
+  PASS SC3 To-Be OFF = 골든 (6429f951…)
+  PASS 명시 false = 미지정
+  PASS global.features wire shape 불변
+# 2) To-Be — 경로에 ICC가 없어 동역학 불변
+  PASS To-Be 중계 도착 0건 (IAOC→ECS 직결이 최단)
+  PASS To-Be 임무 지표 동일 (격추 53 · 누수 26 · 발사 71)
+  PASS To-Be — kind 키를 빼면 결과 bit-exact
+# 3) As-Is — directive_relay 작업이 ICC에 도착
+  PASS ICC 중계 도착 68건 (OFF는 ICC 도착 0건)
+  PASS directive_relay 작업은 전부 ICC 노드에 도착
+  PASS OFF에서는 ICC 도착 0건 (종전 통과점)
+  PASS 마크 순서 사수선정 ≤ 중계접수 ≤ 인가/재배정/반송 ≤ 교전명령접수: 61건, 위반 0
+# 4) 전송 분할 — 하행 간선은 인가 이후에 기록된다
+  PASS 인가 완료 68건
+  PASS 같은 항적의 ICC→ECS 하행 간선 51건이 전부 인가 완료 이후 (이전 0건)
+# 5) 인가 · 재배정 · 반송
+  PASS 인가 46건
+  PASS 반송 17건 — ECS 큐에 닿기 전에 상급으로 되돌린다
+  PASS 중계 68건 = 인가 46 + 재배정 3 + 반송 17 + 큐드롭 0 + 처리중 항적종결 2 (설명 안 되는 것 0건)
+  PASS 재배정 대상은 전부 같은 ICC 권역 (위반 0건, 재배정 3건)
+# 6) iccRelaySec 손잡이
+  PASS iccRelaySec=0: 접수 시각 == 인가 시각 74건 (위반 0)
+  PASS 인가 시간 0초면 반송이 준다 17 → 1 (반송은 대부분 인가 지연 동안 창이 닫혀 생긴다)
+# 7) wire shape
+  PASS OFF에 directive_relay 키 없음
+  PASS ON에만 directive_relay 키 있음
+# 8) 배선
+  PASS 프로토타입 features()에 iccRelayAuthorization: P.icc
+  PASS 프로토타입 ?icc= (이 화면만 기본 1)
+  PASS 프로토타입 ?iccsec= 민감도 손잡이 (기본 -1 = 미지정)
+  PASS 켜진 동안 상태줄 칩
+  PASS JOB_LABEL directive_relay
+  PASS 엔진 기본 OFF
+  PASS kindKeys는 ON에서만 확장
+
+전체 통과
+
+
+## c2-decision-time-parity
+
+# 1) OFF bit-exact
+  PASS As-Is OFF = 골든
+  PASS To-Be OFF = 골든
+  PASS OFF wire shape에 키 없음
+  PASS 명시 false = 미지정
+# 2) As-Is 불변
+  PASS ON wire shape 신고
+  PASS As-Is 결과 bit-exact(features 제외)
+# 3) 카탈로그
+  PASS IAOC 운용자 = KAMD_OPS 운용자 (30초)
+  PASS IAOC 체계 성분 불변
+  PASS OFF 운용자 1초 < ON 30초
+  PASS IAOC 석수 불변
+  PASS KAMD_OPS 큐 불변
+  PASS MCRC 큐 불변
+  PASS 캐시 키 분리(다른 객체)
+  PASS 운용 수준 high도 같은 키로 적용
+# 4) 동역학
+  PASS To-Be 평균 결심지연 OFF 63.1초 < ON 69.6초
+  PASS To-Be 결과가 달라진다
+# 5) 배선
+  PASS 프로토타입 파라미터 par 기본 1
+  PASS features() 배선
+  PASS 켜진 동안 상태줄 칩
+  PASS 엔진 기본 OFF
+
+ALL PASS
+
+
+## c2-echelon-hierarchy
+
+# 1 — To-Be에서 두 도메인 제대가 실제 부하를 갖는다 (대체가 아니라 하위 제대)
+  NOTE To-Be 도착: MCRC 60(ρ0.274) · KAMDOC 145(ρ0.882) · IAOC 231(ρ0.036)
+  PASS MCRC가 To-Be에서 항적을 처리한다 (종전 0건 — 역할 소멸이 결함이었다)
+  PASS KAMDOC이 To-Be에서 항적을 처리한다 (종전 0건)
+  PASS IAOC도 처리한다 — 상위 제대이지 우회로가 아니다
+  PASS 두 제대의 부하가 항적 처리(iads_track)다 — 자기 도메인 plot/항적 업무
+
+# 2 — 도메인 분담이 As-Is 책임 분담과 같다 (공중=MCRC · 탄도=KAMDOC)
+  NOTE MCRC 처리 유형: {"uav_small":37,"fighter":18,"cruise":5}
+  NOTE KAMDOC 처리 유형: {"mrl_large":84,"srbm":61}
+  PASS MCRC는 공중(ABT) 위협만 처리한다
+  PASS KAMDOC은 탄도 위협만 처리한다
+
+# 3 — 병렬 통보다: 제대 처리가 조율층 결심을 gate하지 않는다
+  NOTE KAMDOC 포화: ρ=0.882 드롭=0 Wq=10.6 / IAOC Wq=0.0 드롭=0
+  PASS 도메인 제대가 포화여도 조율층은 대기 없이 결심한다 (병렬 통보 — "거치되 시간은 그대로")
+  FAIL KAMDOC 포화는 실재한다 — 통합해도 제대 용량은 늘지 않는다(상황인식 손실로 계상)
+
+# 4 — 군단 AOC 교전현황은 To-Be에서 조율층이 받는다
+  NOTE As-Is 발신/도달/드롭 = 37/5/25  To-Be = 60/60/0
+  NOTE As-Is 교전현황 수신처: {}
+  NOTE To-Be 교전현황 수신처: {"C2_IAOC_IAOC":45}
+  PASS As-Is 교전현황이 조율층으로 가는 일은 없다 (As-Is 편성에 IAOC가 없다 · 도달 5건)
+  PASS To-Be 교전현황은 조율층(IAOC)이 받는다 — 도착 0건 노드의 사서함이 아니다
+  PASS 데이터링크 전환으로 손실이 줄었다 (5/37 → 60/60)
+
+# 5 — As-Is 음성 협조 직결선은 To-Be 그림에 없다
+  PASS As-Is: 군단 AOC → MCRC 교전현황 직결선 존재
+  PASS To-Be: 군단 AOC → MCRC 직결선 제거 (조율층 재편이 [C2 구조] 그림에서 대비된다)
+  PASS To-Be: 군단 AOC → IAOC 교전현황 계선 존재
+  PASS To-Be: MCRC → 군단 AOC 항적 직결선 제거
+  PASS As-Is: 군단 AOC → MCRC 교전현황 직결선 존재
+  PASS To-Be: 군단 AOC → MCRC 직결선 제거 (조율층 재편이 [C2 구조] 그림에서 대비된다)
+  PASS To-Be: 군단 AOC → IAOC 교전현황 계선 존재
+  PASS To-Be: MCRC → 군단 AOC 항적 직결선 제거
+  PASS As-Is 편성에는 조율층이 없다 (그림 대비의 전제)
+
+# 6 — As-Is 기준값 고정
+  FAIL SC3 As-Is 격추 65 · 누수 106 (ADR-082 육↔공 분포 정규화 반영)
+  FAIL As-Is MCRC 148 · KAMDOC 145 (문자·VTC 정규분포 전환 후)
+  PASS As-Is에는 IAOC 노드 자체가 없다
+
+# 7 — 두 도메인 제대의 C2 흐름은 대칭이다 (다른 건 위협·자산뿐)
+  NOTE MCRC   : ←ICC(coord) · ←도메인감시레이더(report) · ←조율층(coord) · →ICC(coord) · →조율층(coord) · →조율층(report)
+  NOTE KAMDOC : ←ICC(coord) · ←도메인감시레이더(report) · ←조율층(coord) · →ICC(coord) · →조율층(coord) · →조율층(report)
+  PASS 두 제대의 C2 관계 종류가 동일하다 (조율층 상행 report/coord · 하행 coord · ICC 양방향 · 도메인 레이더 수신)
+  NOTE 자산 차이(정당): MCRC 10서버 vs KAMDOC 6서버
+  PASS 용량은 다르다 — 흐름 대칭과 자산 비대칭은 별개다
+  PASS 두 제대 모두 항적 처리(iads_track) 한 종류로만 부하를 받는다 — 처리 경로도 대칭
+
+FAILED — 3건
+
+
+## prototype-readability
+
+# 1) 로그는 화면 — 결정은 움직이지 않는다
+  PASS SC3 As-Is 골든 지문 불변
+  PASS SC3 To-Be 골든 지문 불변
+# 2) 엔진 마크가 markView의 갈래에 걸린다
+  PASS 마크 표본 6018건
+  PASS 「누수」 갈래에 걸린 마크 34건
+  PASS 「BDA」 갈래에 걸린 마크 37건
+  PASS 「발사불가」 갈래에 걸린 마크 7건
+  PASS 「발사」 갈래에 걸린 마크 42건
+  PASS 「센서」 갈래에 걸린 마크 3186건
+  PASS 「위협우선순위」 갈래에 걸린 마크 121건
+  PASS 갈래 밖으로 샌 마크 없음
+  PASS 발사 마크 40건 전부 PIP 거리를 문다
+# 3) 누수마다 마크와 failure 기록이 있다
+  PASS 누수 34건
+  PASS 전건에 누수 마크
+  PASS 전건에 주원인
+  PASS 전건에 계열·구조성
+  PASS 기여원인 24건 전부 evidence에 횟수가 있다
+# 4) 누수는 「쏘고 놓쳤나 / 쏘지도 못했나」로 갈린다
+  PASS 두 갈래가 모두 나온다
+  PASS 누수 34건 중 29건은 발사에 이르지 못함 — 「요격 실패」로 뭉뚱그리면 안 되는 이유
+  PASS missed 누수는 전부 발사 이력이 있다
+# 5) taxonomy 전 코드에 한글 라벨
+  PASS taxonomy 24종
+  PASS 한글 라벨 없는 코드 없음
+  PASS 계열 7종 전부 LEAK_FAMILY에 있음
+  PASS 구조성 전부 LEAK_STRUCT에 있음
+# 6) 프로토타입 배선
+  PASS markView 존재
+  PASS buildLogRows가 markView를 탄다
+  PASS 원문(raw) 보존 — 인용·대조는 코드로 한다
+  PASS 센서 판정은 **원문**으로 — 화면 문구로 재면 그래프의 거르는 기준과 어긋난다
+  PASS 둘째 줄(.res) 렌더 배선
+  PASS 로그 머리에 「쐈는가」
+  PASS outcomeInfo.fired
+  PASS 접두사 없는 지휘소 약칭 치환
+  PASS 노드 ID → 배치 이름 치환
+  PASS .ev .x 는 줄바꿈한다 (nowrap+ellipsis 회귀 시 사유가 화면에서 사라진다)
+  PASS 계열의 뜻(FAMILY_HINT) — 툴팁
+# 7) 배치 — 대표 C2가 화면 위 모서리에 붙지 않는다
+  PASS placeSlots 한 벌
+  PASS layoutAll·layoutTrack이 같은 placeSlots를 부른다
+  PASS 짧은 열은 줄 간격을 벌린다 (최대 두 배)
+  PASS 짧은 열은 남는 높이의 1/4(최대 세 줄)만큼 내려 선다
+  PASS 내림값·간격이 실제 y에 들어간다
+  PASS 어떤 열 조합에서도 캔버스 아래로 넘치지 않는다
+  PASS 대표 C2 두 노드 간격 108px — 기본 줄 간격 54px보다 확실히 넓다
+  PASS 가장 긴 열은 기본 줄 간격 그대로 (밀집 열이 늘어나지 않는다)
+
+전체 통과
+
+
+## metrics-accounting
+
+# F1 — native 고가유도탄 보존율
+    native: interceptM=405.6 highValueInterceptM=192.0 preservation=0.5266 shots=112
+  PASS native 실행에서 요격탄 비용이 계상됨
+  PASS native 실행에서 고가유도탄(L-SAM $8M) 소모액이 계상됨 (수정 전 항상 0)
+  PASS native 보존율이 100% 고정에서 벗어남 (수정 전 항상 1.0)
+  PASS 보존율 = 1 − 고가소모/전체소모 항등 성립
+  PASS 기본 실행에서도 고가탄 계상 유지  [pres=0.5604]
+# F3 — ghost 중복교전 발사 귀속
+    엔진 duplicates=18 · ENGAGEMENT_FIRED=120 (threatId null=0, duplicate 플래그=0) · 리포트 duplicateThreats=19 concurrent=18
+  PASS 이 설정에서 As-Is 중복교전이 실제로 발생(검증 전제)
+  PASS 발사 이벤트에 threatId 누락이 없음 (수정 전 ghost 발사가 null)
+  PASS native에는 ghost 발사가 없음 — 중복교전도 실제 발사(ADR-061)
+  PASS C2 리포트가 중복교전 위협을 집계함 (수정 전 0으로 누락)
+    byCause={"mcrc_commanded":69,"autonomous":51} 합=120 · c2Command.total=120 · engagementGap.preFire n=91
+  PASS 원인 분포는 주 계통 발사만 집계(ghost 제외) — unattributed 부풀림 없음
+  PASS ghost 유입으로 인한 unattributed 발사가 없음
+# F4 — MC 시간지표 0-포함 편향
+    reps=12 · meanTimeToKillSec n=0 mean=— · leakRateSpawn n=12
+  PASS 비율 지표는 전 복제를 누산(n=reps)
+  PASS 시간지표 표본 수가 복제 수를 넘지 않음
+  PASS 누산된 평균 격추시간이 0이 아님 (수정 전 격추 0건 복제의 0이 섞임)
+    paired: Δ meanTTK n=0 · asis n=0 · tobe n=0
+  PASS Δ 표본 수 ≤ 양팔 표본 수의 최솟값 (쌍대 교집합)
+# F7 — native C2 부하 kind 분해 노출
+    native 노드 최대 ρ=0.665 · track만=0.000 · track+iads_track=0.665
+  PASS 고해상도 실행에서 C2 노드가 실제로 부하를 받음(검증 전제)
+  PASS iads_track 포함 시 ③④⑤ 분해값이 실제 부하를 표시 (수정 전 0.000)
+  PASS 분해값이 노드 전체 ρ와 같은 자릿수 (승인 단계가 없는 native는 항적처리가 부하의 대부분)
+  PASS 고해상도 결과는 native kind 키를 노출
+  PASS 기본 실행도 native kind 키를 노출(ADR-061: legacy 경로 부재)
+  PASS 기본 실행 == 명시 고해상도 실행 (동일 기본 배치 HANBANDO_LEGACY_NORMAL)
+
+OK — 수정 검증 전체 통과

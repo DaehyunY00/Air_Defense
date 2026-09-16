@@ -2,7 +2,7 @@
  * ADR-073 — 결심 감사 로깅(decisionAudit) 회귀.
  *
  * 계측 계층이 물리·결심·RNG를 건드리지 않았음을 증명한다.
- *  1) OFF bit-exact — 계측 도입 직전(v4 tip 2a91eeb, 기본값 ADR-065~072 반영) SHA-256 4케이스와 일치
+ *  1) 기본 OFF == 명시적 OFF, 감사 전용 필드·이벤트를 제외한 ON/OFF 전체 결과 동일
  *  2) RNG 불변 — ON/OFF에서 난수 소비 **횟수**가 동일 (이벤트 수가 아니라 카운터로 확인)
  *  3) 완결성 — decision_audit 이벤트가 COMMAND_DECIDED와 1:1
  *  4) 정합성 — chosenUnitId는 항상 최고점 후보이며 candidates는 점수 내림차순
@@ -55,20 +55,11 @@ KJ.IADS = Object.assign({}, KJ.IADS, {
 
 // 주 분석 배치 × 충실도 iads-c2 × seed 12345 × 900초.
 const CASES = ['sc1|asis', 'sc1|tobe', 'sc3|asis', 'sc3|tobe'];
-// 계측 도입 직전 상태(v4 기본값 — ADR-065~072로 승인계선·링크v2·산포·남부축선·보고주기
-// 대칭·COP·톱니·자위권이 전부 기본 ON인 상태)의 지문. c2Analysis:true 포함 — 계측이 실제로
-// 흐르는 경로다. ⚠️ 이 값들은 v4 기본값에 묶여 있다. 기본값이 또 바뀌면 함께 재측정해야 한다.
-// ADR-076 재산출 — 교전창 캐시 키 결함(착탄점 누락)을 고치면서 실제 경로의 값이 바뀌었다.
-// 이 지문이 잠그는 명제는 종전과 같다("계측 OFF면 계측 도입 전과 한 발도 다르지 않다").
-// 바뀐 것은 비교 대상 기준선이지 명제가 아니다.
-const OFF_SHA = {
-  'sc1|asis': '636cbb9543222407b384f407b214ca44b8d4694d6bb0e66a244166be3fe51ae5',
-  // ADR-077 재고정: To-Be ABT 승인권자 MCRC → IAOC. As-Is 2케이스는 손대지 않았고
-  // 실제로 지문도 불변이다(이 대비가 변경 범위의 하드 체크다).
-  'sc1|tobe': 'c5c631016d24cbab653ec73480d53c17ce64de238b3cbdaecc3372afe549ac66',
-  'sc3|asis': '3ace8059c739b0e86ab6489395c569e836d2b3ff6d9ea0a99f48b770be3ad964',
-  'sc3|tobe': 'f6cb49c6c2f1ae47160450ad8928442402851d553d4fdacb85001800dae0da40'
-};
+// ADR-100: 변경 전 12d14e0 스냅샷에서도 과거 v4 OFF 지문 4개가 모두 실패한다.
+// 아카이브 해시를 새 수치로 덮지 않고 같은 모델의 감사 ON/OFF 결과 전체를 비교한다.
+// parentDirectiveId 등 명령 감사 스키마는 양쪽에 유지한다. 감사 로깅 자체가 추가한
+// 세 영역만 제거하므로 노드·링크·명령 이벤트·집계의 변화는 이 검사에 잡힌다.
+// 별도의 엔진 고정 기준선은 hires-baseline.test.mjs가 담당한다.
 
 function run(key, features) {
   const [sc, mode] = key.split('|');
@@ -85,6 +76,13 @@ function run(key, features) {
     decided: result.c2Events.filter(function (e) { return e.type === 'COMMAND_DECIDED'; })
   };
 }
+function withoutDecisionAudit(result) {
+  const copy = JSON.parse(JSON.stringify(result));
+  delete copy.global.decisionAudit;
+  delete copy.global.features.decisionAudit;
+  copy.c2Events = copy.c2Events.filter((event) => event.type !== 'decision_audit');
+  return crypto.createHash('sha256').update(JSON.stringify(copy)).digest('hex');
+}
 function median(values) {
   const a = values.filter(function (v) { return typeof v === 'number' && isFinite(v); })
     .slice().sort(function (x, y) { return x - y; });
@@ -93,11 +91,13 @@ function median(values) {
   return (a[Math.floor(m)] + a[Math.ceil(m)]) / 2;
 }
 
-console.log('== 1) OFF bit-exact · RNG 기준 ==');
+console.log('== 1) 기본 OFF == 명시적 OFF · RNG 기준 ==');
 const off = {};
 CASES.forEach(function (key) {
   off[key] = run(key);
-  assert(off[key].sha256 === OFF_SHA[key], key + ' OFF SHA-256 = 계측 도입 직전(v4 기본값)과 일치');
+  const explicitOff = run(key, { decisionAudit: false });
+  assert(off[key].sha256 === explicitOff.sha256, key + ' 기본 OFF == 명시적 OFF 전체 결과');
+  assert(off[key].rngCalls === explicitOff.rngCalls, key + ' 기본 OFF == 명시적 OFF 난수 소비');
   assert(off[key].audits.length === 0, key + ' OFF에서 decision_audit 0건');
   assert(off[key].result.global.decisionAudit === undefined,
     key + ' OFF wire shape 불변(global.decisionAudit 미노출)');
@@ -111,6 +111,8 @@ CASES.forEach(function (key) {
   on[key] = run(key, { decisionAudit: true });
   assert(on[key].rngCalls === off[key].rngCalls,
     key + ' 난수 소비 횟수 동일 (' + off[key].rngCalls + ')');
+  assert(withoutDecisionAudit(on[key].result) === withoutDecisionAudit(off[key].result),
+    key + ' 감사 전용 필드·이벤트만 제외하면 ON/OFF 전체 결과 동일');
   assert(on[key].result.global.killed === off[key].result.global.killed &&
          on[key].result.global.leaked === off[key].result.global.leaked,
     key + ' 격추/누수 불변 (killed=' + on[key].result.global.killed +
@@ -180,6 +182,8 @@ console.log('\n== 5) 상한·표본 규칙 (결정론) ==');
     return a.candidateCount === on['sc3|tobe'].audits[i].candidateCount;
   }), '상한은 candidateCount(실제 후보 수)를 왜곡하지 않음');
   assert(capped.rngCalls === off['sc3|tobe'].rngCalls, '상한 적용에서도 RNG 불변');
+  assert(withoutDecisionAudit(capped.result) === withoutDecisionAudit(off['sc3|tobe'].result),
+    '후보 상한 적용에서도 감사 외 전체 결과 불변');
 
   const limited = run('sc3|tobe', { decisionAudit: true, decisionAuditMaxEvents: 5 });
   const led = limited.result.global.decisionAudit;
@@ -187,6 +191,8 @@ console.log('\n== 5) 상한·표본 규칙 (결정론) ==');
     '이벤트 상한 5 → 5건만 기록 (logged=' + led.logged + ')');
   assert(led.truncated === true && led.dropped > 0,
     '초과분은 0으로 위장하지 않고 truncated·dropped로 공시 (dropped=' + led.dropped + ')');
+  assert(withoutDecisionAudit(limited.result) === withoutDecisionAudit(off['sc3|tobe'].result),
+    '이벤트 상한 적용에서도 감사 외 전체 결과 불변');
 
   const half = run('sc3|tobe', { decisionAudit: true, decisionAuditSampleRate: 0.5 });
   const halfAgain = run('sc3|tobe', { decisionAudit: true, decisionAuditSampleRate: 0.5 });
@@ -198,6 +204,8 @@ console.log('\n== 5) 상한·표본 규칙 (결정론) ==');
   assert(half.audits.every(function (a) { return full.has(a.threatId); }),
     '표본은 전수 위협집합의 부분집합(위협 단위 채택)');
   assert(half.rngCalls === off['sc3|tobe'].rngCalls, '표본추출에서도 RNG 불변');
+  assert(withoutDecisionAudit(half.result) === withoutDecisionAudit(off['sc3|tobe'].result),
+    '표본추출에서도 감사 외 전체 결과 불변');
 }
 
 console.log('\n== 6) 후보 명단 폭 실측 — ⚠️ 기대와 반대 (ADR-073 §발견) ==');

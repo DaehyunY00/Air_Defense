@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>지휘 흐름 — 케파·병목과 항적별 전문 이동 (프로토타입) — 단일본</title>
+<title>표시 개선본 · 지휘 흐름 — 케파·병목과 항적별 전문 이동 (프로토타입) — 단일본</title>
 <!--
   무엇을 보는 화면인가
   ────────────────────
@@ -835,6 +835,75 @@
   .empty { padding: 24px 14px; color: var(--dim); text-align: center; line-height: 1.7; font-size: 12px; }
   .note { padding: 6px 10px; color: var(--dim); font-size: 11px; border-top: 1px solid var(--line); }
   code { background: #16202e; padding: 0 3px; border-radius: 3px; font-size: 11px; }
+
+  /* 표시 개선: 실제 교신/사건과 집계된 검토 근거를 분리한다. */
+  #record-panel { flex:none; border-top:1px solid #334155; background:var(--panel); min-width:0; }
+  .record-head { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:7px 10px; }
+  .record-head strong { font-size:13px; }
+  .record-head label { display:flex; align-items:center; gap:6px; min-width:0; }
+  #record-track { max-width:280px; min-width:150px; font-size:12px; }
+  #record-current { margin-left:auto; font-size:12px; color:var(--accent); }
+  .record-layout { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); }
+  .record-column { min-width:0; }
+  .record-column + .record-column { border-left:1px solid var(--line); }
+  .record-column h3 { margin:0; padding:4px 10px; font-size:11px; font-weight:500; color:#aab8ca; background:var(--panel2); }
+  .record-scroll { height:166px; overflow:auto; overscroll-behavior:contain; padding:3px 0; }
+  .record-row { display:grid; grid-template-columns:59px minmax(0,1fr); gap:8px; width:100%; border:0;
+    border-left:3px solid transparent; border-bottom:1px solid var(--line); border-radius:0;
+    background:transparent; padding:5px 8px; text-align:left; font-size:12px; line-height:1.5; }
+  .record-row:hover { background:#17293f; }
+  .record-row.current { border-left-color:var(--accent); background:#17293f; }
+  .record-row.future { color:#9aabc1; }
+  .record-row .rt { color:#aab8ca; font-variant-numeric:tabular-nums; font-size:11px; }
+  .record-row .rd { display:block; color:#aab8ca; font-size:11px; overflow-wrap:anywhere; }
+  .record-row .rk { display:inline-block; margin-right:6px; color:var(--accent); font-size:11px; }
+  .record-row.warn .rk { color:var(--warn); }
+  .record-row.fail .rk { color:var(--bad); }
+  .record-row.hit .rk { color:var(--ok); }
+  .record-evidence { padding:6px 10px; border-bottom:1px solid var(--line); font-size:12px; overflow-wrap:anywhere; }
+  .record-evidence .re-detail { color:#aab8ca; font-size:11px; margin-top:2px; }
+  .record-note { padding:5px 10px; color:#aab8ca; font-size:11px; line-height:1.45; }
+  .record-placeholder { padding:14px 10px; color:#aab8ca; font-size:12px; }
+  #record-step { display:flex; gap:4px; }
+  #record-step button { font-size:11px; padding:3px 7px; }
+  @media (max-width:850px) {
+    .record-layout { grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); }
+    #record-current { margin-left:0; }
+    .record-scroll { height:144px; }
+    #record-track { max-width:220px; }
+  }
+
+
+  #track-explanation { flex:none; padding:7px 12px; background:#101b2a; border-bottom:1px solid #334155; font-size:12px; line-height:1.5; }
+  #track-explanation[hidden] { display:none; }
+  #track-explanation strong { display:block; margin-bottom:2px; color:var(--fg); }
+  #track-explanation.review { border-left:3px solid var(--warn); }
+  #track-explanation.stop { border-left:3px solid var(--bad); }
+  #track-explanation .trace-route { color:#aab8ca; margin-top:3px; font-size:11px; }
+  #track-explanation details { display:inline-block; margin-left:10px; }
+  #track-explanation details[open] { display:block; max-height:90px; overflow:auto; margin-left:0; }
+  #track-explanation summary { cursor:pointer; }
+  .edge.recorded-route { opacity:.95; stroke-width:3; }
+  .diagnosis-marker { pointer-events:none; }
+  .diagnosis-marker text { paint-order:stroke; stroke:var(--bg); stroke-width:3px; stroke-linejoin:round; }
+  #track-explanation .node-review { display:block; margin:5px 0; max-height:160px; overflow:auto; }
+  .node-review-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:4px; }
+  .node-review-cell { min-width:0; border:1px solid #334155; border-radius:4px; padding:5px 7px; }
+  .node-review-cell>b { color:#b8c9df; }
+  .node-review-item { margin-top:4px; font-size:11px; overflow-wrap:anywhere; }
+  #track-explanation .node-review-item strong { display:inline; color:#e2e8f0; font-size:11px; }
+  .role-context { margin-top:6px; }
+  .role-context-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:5px 0; }
+  .role-context-card { min-width:0; position:relative; padding:5px 8px; border:1px dashed #64748b; border-radius:5px; background:#162233; font-size:11px; overflow-wrap:anywhere; }
+  .role-context-card+.role-context-card:before { content:''; position:absolute; left:-13px; top:45%; width:12px; border-top:1px dashed #94a3b8; }
+  #track-explanation .role-context-card strong { margin:2px 0; font-size:12px; }
+  .role-context-state { color:#aab8ca; margin-top:3px; }
+  .role-context-state.has-record { color:#93c5fd; }
+  .role-context-overlay { pointer-events:none; }
+  .role-context-link { fill:none; stroke:#94a3b8; stroke-width:1.5; stroke-dasharray:4 6; opacity:.65; }
+  .role-context-node { fill:none; stroke:#94a3b8; stroke-width:1.5; stroke-dasharray:4 6; }
+  .role-context-label { fill:#cbd5e1; font-size:10px; paint-order:stroke; stroke:var(--bg); stroke-width:3px; }
+
 </style>
 </head>
 <body>
@@ -955,7 +1024,24 @@
             state·hotEdges·doneEdges를 받아 **그리기만** 한다. 두 벌로 계산하면 같은
             순간에 두 그림이 다른 말을 하게 된다(cylSvg·placeSlots와 같은 규율). -->
     <!-- 신호등 — 「지금 이 항적이 어디서 무엇을 기다리는가」를 추론하게 두지 않고 직접 적는다. -->
+    <div id="track-explanation" role="status" hidden></div>
     <div id="graph-wrap"><div id="signal" hidden></div><svg id="graph"></svg></div>
+    <section id="record-panel" aria-label="교신과 후보 검토 기록">
+      <div class="record-head">
+        <strong>교신·선정·발사 기록</strong>
+        <label>항적 <select id="record-track" aria-label="기록을 볼 항적" disabled><option>실행 후 선택</option></select></label>
+        <span id="record-step"><button id="record-prev" type="button" disabled>‹ 이전 기록</button><button id="record-next" type="button" disabled>다음 기록 ›</button></span>
+        <span id="record-current" aria-live="polite">실행을 기다리는 중</span>
+      </div>
+      <div class="record-layout">
+        <div class="record-column"><h3>시간순 기록 · 클릭하면 해당 시각으로 이동</h3>
+          <div class="record-scroll" id="record-events"><div class="record-placeholder">항적을 선택하면 기록된 교신과 사건이 표시됩니다.</div></div>
+        </div>
+        <div class="record-column"><h3>실행 전체의 검토·실패 요약 · 교신 경로와 별도</h3>
+          <div class="record-scroll" id="record-evidence"><div class="record-placeholder">후보 검토만으로 자산에 명령 연결선을 그리지 않습니다.</div></div>
+        </div>
+      </div>
+    </section>
     <div id="transport">
       <div id="tp-ctl">
         <button id="play" disabled>▶</button>
@@ -8600,13 +8686,13 @@ const edgeKey = (f) => f.from + '>' + f.to + '|' + f.mt;
  */
 const COLS = [
   { key: 'sensor',  label: '센서',          hint: '탐지·추적' },
-  { key: 'ecsUp',   label: '포대 교전통제',  hint: 'ECS · 보고 ↑' },
-  { key: 'iccUp',   label: '권역 교전통제',  hint: 'ICC · 보고 ↑' },
+  { key: 'ecsUp',   label: '포대통제 · 보고', hint: 'ECS · 보고 ↑' },
+  { key: 'iccUp',   label: '권역통제 · 보고', hint: 'ICC · 보고 ↑' },
   { key: 'coord',   label: '조율층',        hint: 'IAOC — To-Be 신설' },
   { key: 'upper',   label: '상급 C2',       hint: 'MCRC · KAMDOC · 미군' },
   { key: 'local',   label: '국지방공 C2',   hint: '방공C2A(군단·수방사)' },
-  { key: 'iccDn',   label: '권역 교전통제',  hint: 'ICC · 명령 ↓' },
-  { key: 'ecsDn',   label: '포대 교전통제',  hint: 'ECS · 교전명령 ↓' },
+  { key: 'iccDn',   label: '권역통제 · 명령', hint: 'ICC · 명령 ↓' },
+  { key: 'ecsDn',   label: '포대통제 · 명령', hint: 'ECS · 명령 ↓' },
   { key: 'shooter', label: '요격부대',      hint: '발사' }
 ];
 const COL_INDEX = {}; COLS.forEach((c, i) => { COL_INDEX[c.key] = i; });
@@ -9089,6 +9175,7 @@ function doRun() {
     run = { res, cfg, catalog, nodes, tracks: built.tracks,
       allFlows: built.allFlows, allSpans: built.allSpans, allBlocks: built.allBlocks };
     gv = buildGlobal(run);
+    refreshRecordPicker();
     el('run').disabled = false;
     el('dirty').hidden = true;
     const ovr = res.linkMediaOverrides;
@@ -10513,6 +10600,8 @@ function shotsSvg() {
   if (!mapGeo) return '';
   let out = '';
   const scope = (view === 'track' && sel) ? [sel] : run.tracks;
+  const keepResult = view === 'track';
+  const flashSpan = SHOT_FLASH * Math.max(1, speed);
   scope.forEach((t) => {
     (t.shots || []).forEach((sh) => {
       const n = run.nodes[sh.shooter];
@@ -10536,8 +10625,8 @@ function shotsSvg() {
         return;
       }
       // ② 결과 — 격추는 퍼지는 녹색 링, 명중 실패는 적색 ✕
-      if (ip && simT > sh.t1 && simT <= sh.t1 + SHOT_FLASH) {
-        const b = mproj(ip, mapGeo), age = (simT - sh.t1) / SHOT_FLASH, o = (1 - age).toFixed(2);
+      if (ip && simT >= sh.t1 && (keepResult || simT <= sh.t1 + flashSpan)) {
+        const b = mproj(ip, mapGeo), age = keepResult ? 0.15 : (simT - sh.t1) / flashSpan, o = (1 - age).toFixed(2);
         if (sh.hit) {
           out += `<circle class="mhit" cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}"` +
             ` r="${(3 + age * 13).toFixed(1)}" opacity="${o}"><title>${tip}</title></circle>` +
@@ -10553,18 +10642,18 @@ function shotsSvg() {
         return;
       }
       // ③ 결과가 관측에 없는 발사 — 사수 자리에서 잠깐 튀기만 한다(요격점을 지어내지 않는다)
-      if (!ip && simT >= sh.t0 && simT <= sh.t0 + SHOT_FLASH) {
-        const age = (simT - sh.t0) / SHOT_FLASH;
+      if (!ip && simT >= sh.t0 && simT <= sh.t0 + flashSpan) {
+        const age = (simT - sh.t0) / flashSpan;
         out += `<circle class="mhit" cx="${a[0].toFixed(1)}" cy="${a[1].toFixed(1)}"` +
           ` r="${(3 + age * 8).toFixed(1)}" opacity="${(1 - age).toFixed(2)}"><title>${tip}</title></circle>`;
       }
     });
     // 발사불가 — **BDA:MISS와 다른 사건**이다(쏘지도 못했다). 사수 자리에서 적색 ✕로 튄다.
     (t.noFire || []).forEach((nf) => {
-      if (simT < nf.t || simT > nf.t + SHOT_FLASH) return;
+      if (simT < nf.t || (!keepResult && simT > nf.t + flashSpan)) return;
       const n = run.nodes[nf.shooter];
       if (!n || !n.coord) return;
-      const p = mproj(n.coord, mapGeo), o = (1 - (simT - nf.t) / SHOT_FLASH).toFixed(2);
+      const p = mproj(n.coord, mapGeo), o = keepResult ? "0.85" : (1 - (simT - nf.t) / flashSpan).toFixed(2);
       out += `<g class="mnofire" opacity="${o}"><title>${esc(nodeName(nf.shooter) + ' — 발사 못함 · ' +
         t.id + '\n사유: ' + (LEAK_TAXONOMY_LABEL(nf.reason) || nf.reason))}</title>` +
         `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="7"></circle>` +
@@ -10750,30 +10839,8 @@ function selectTrack(i) {
     ids.add(m[2]);
   });
 
-  // ── 「가야 했으나 닿지 못한」 노드 (사용자 결정: 실패한 항적은 원래 갔어야 할 곳이 보여야 한다)
-  //    엔진 실패 관측에서 재구성한다 — failure.evidence(누수)·trace.evidence(격추 — 승인까지
-  //    받고 못 쏜 축의 사유), trace.unreached(경로 부재로 끊긴 계선), trace.commanders(책임 C2 명단).
-  //    ⚠️ 새 사실을 만들지 않는다 — 엔진이 남긴 id·시각을 그대로 옮겨 그릴 뿐이다.
-  //    방문한 노드는 제외한다: 이미 계선·체류로 그려져 있고, 문제는 「한 번도 닿지 못함」이다.
-  const oc0 = outcomeInfo(t);
-  const ghost = new Map();   // toId → { to, from, t, items: [{code, n}] }
-  const addGhost = (to, from, t0, code, n) => {
-    if (!to || ids.has(to) || !run.nodes[to]) return;
-    let g = ghost.get(to);
-    if (!g) ghost.set(to, g = { to: to, from: null, t: t0 != null ? t0 : t.spawnT, items: [] });
-    if (from && !g.from) g.from = from;
-    if (t0 != null) g.t = Math.min(g.t, t0);
-    g.items.push({ code: code, n: n || 1 });
-  };
-  const evd = (t.failure && t.failure.evidence) || t.evidence || {};
-  Object.keys(evd).forEach((code) => {
-    const d = evd[code].detail || {};
-    addGhost(d.shooterId || d.approvalId, d.commanderId, evd[code].firstT, code, evd[code].count);
-  });
-  (t.unreached || []).forEach((u) => addGhost(u.to, u.from, u.t, u.why, 1));
-  // 책임 C2인데 보고가 한 번도 닿지 못한 경우 — 누수 항적에서만 표시(격추 항적에서는 소음).
-  if (oc0.leaked) (t.commanders || []).forEach((c) => addGhost(c.id, null, t.spawnT, 'commander_unreached', 1));
-  ghost.forEach((g, id) => ids.add(id));
+  // 표시 개선: 후보 평가·실패 요약은 실제 전문의 발신/수신 기록이 아니다.
+  // 이 정보로 직접 연결선을 만들지 않는다. 별도 검토 요약에 원문 근거를 보존한다.
 
   // 간선 = (from, to, **매체**) 유일 조합.
   // ⚠️ (from,to)로만 묶으면 안 된다. 방공C2A ↔ MCRC 사이에는 성격이 다른 계선이 **세 가닥**
@@ -10789,11 +10856,12 @@ function selectTrack(i) {
 
   sel = Object.assign({}, t, {
     index: i, nodeIds: [...ids], edges: [...edges.values()],
-    ghosts: [...ghost.values()], ghostIds: new Set(ghost.keys()),
+    ghosts: [], ghostIds: new Set(), // 후보·경로실패 요약에서 교신선을 추정하지 않음
     sensorStates: sensorStates,
     logRows: buildLogRows(t), logEls: null
   });
   lastLogIdx = -2;
+  renderRecordPanel(sel);
   layoutGraph();
   layoutMap();
   renderLog();
@@ -11950,17 +12018,9 @@ function renderLive(byEdge, geoRef) {
     (keyFocusMt ? (rows.length ? ' · ' : '') + media(keyFocusMt).label + '만' : '');
   let head = '';
   if (view === 'track' && sel) {
-    const oc = outcomeInfo(sel);
-    const who = esc(sel.id + ' · ' + (THREAT_LABEL[sel.type] || sel.type));
-    head = oc.open
-      ? `<div class="lvsum"><b>진행 중</b><span class="sub">${who}</span></div>`
-      : oc.leaked
-        ? `<div class="lvsum leak"><b>누수 — ${esc(oc.text)}</b><span class="sub">` +
-          `${esc(oc.fired ? '발사 후 실패' : '발사 못함')}` +
-          `${oc.family ? ' · ' + esc(oc.family) + ' 계열' : ''}` +
-          `${oc.struct ? ' · ' + esc(oc.struct) : ''} · ${who}</span></div>`
-        : `<div class="lvsum kill"><b>격추${sel.exitT != null ? ' ' + esc(fmt(sel.exitT)) : ''}</b>` +
-          `<span class="sub">${who}</span></div>`;
+    const current = recordCurrentState(sel);
+    head = `<div class="lvsum ${current.cls || ''}"><b>현재 · ${esc(current.text)}</b>` +
+      `<span class="sub">${esc(sel.id)} · ${esc(fmt(simT))} 기준</span></div>`;
   }
   box.innerHTML = head + (rows.length ? rows.slice(0, 14).map((r) => {
     const m = media(r.e.mt);
@@ -12357,6 +12417,8 @@ function drawFrame() {
   if (view === 'all') { drawFrameAll(); }
   else { drawFrameTrack(); }
   followFlow();
+  paintRecordPanel();
+  paintTrackExplanation();
 }
 
 /**
@@ -12491,9 +12553,9 @@ function trackSignals(t) {
 
   // ④ 아무것도 없으면 — 공백. C2가 막은 게 아니라는 것을 분명히 적는다.
   if (!out.length) {
-    out.push({ cls: 'idle',
-      text: '교전 가능 상태 대기',
-      sub: '어느 계통도 처리 중이 아님 — 사격통제·체공창을 기다리는 구간' });
+    const d = buildTrackDiagnosis(sel, t);
+    out.push({ cls: d.tone === 'stop' ? 'stop' : d.tone === 'review' ? 'wait' : 'idle',
+      text: d.title, sub: '현재 진행 중인 교신·처리 없음 · 위의 기록 설명 참조' });
   }
   return out;
 }
@@ -12572,6 +12634,7 @@ function drawFrameTrack() {
     if (!e.el) return;
     e.el.classList.toggle('hot', hotEdges.has(e.key));
     e.el.classList.toggle('done', !hotEdges.has(e.key) && doneEdges.has(e.key));
+    e.el.classList.toggle('recorded-route', sel.flows.some(f => edgeKey(f) === e.key && f.t1 <= simT));
   });
   mapHot = hotEdges; mapDone = doneEdges;
 
@@ -12595,7 +12658,7 @@ function drawFrameTrack() {
     const fy = 40;   // 열 머리글(18·30) 바로 아래에서 시작해 그래프 바닥까지
     out += `<line class="frontier" x1="${fx.toFixed(1)}" y1="${fy.toFixed(1)}" x2="${fx.toFixed(1)}" y2="${geo.H}"></line>` +
       `<text class="frontier-lab" x="${(fx - 5).toFixed(1)}" y="${(fy + 11).toFixed(1)}" text-anchor="end">` +
-      `킬체인 진행 ▸ ${esc(COLS[frontier].label)}</text>`;
+      `교신 도착 범위 ▸ ${esc(COLS[frontier].label)}</text>`;
   }
 
   // 이 항적의 전문 중 계선 입구에서 막힌 것 — 개별 보기에서도 같은 규칙으로 그린다.
@@ -12659,6 +12722,7 @@ function drawFrameTrack() {
     }
   }
 
+  out += diagnosisMarkersSvg();
   dots.innerHTML = out;
 
   // 노드 케파 — **전역 부하**를 그리고, 그 위에 이 항적의 작업이 몇 번째인지 표시한다.
@@ -13029,10 +13093,10 @@ el('legend').innerHTML =
   ' <span style="color:#22d3ee">탐지</span> → <span style="color:#4da3ff">추적</span> →' +
   ' <span style="color:var(--ok)">사통(사격통제)</span>. 여러 센서가 동시에 켜질 수 있고,' +
   ' 켜져 있어도 보고 계선이 안 흐르면 그 센서의 그림은 C2에 닿지 않은 것이다</span>' +
-  ' <span style="opacity:.85">· <b>닿지 못한 노드</b>(항적 개별 보기) —' +
-  ' <span style="color:var(--bad)">붉은 점선 원과 점선 계선 끝의 ✕</span>는 실패 증거가 가리키는' +
-  ' 「가야 했으나 전문이 한 번도 닿지 못한」 자리(사유·횟수는 툴팁).' +
-  ' 실패가 시작된 시각을 지나면 또렷해진다</span>';
+  ' <span style="opacity:.85">· <b>교신과 후보 검토</b> — 연결선은 기록된 전문의 경로다.' +
+  ' 후보 검토·탄약 부족 등 실패 요약으로 직접 연결선을 만들지 않는다.' +
+  ' 그래프 아래에서 실제 교신·선정·발사 기록과 검토 요약을 따로 읽을 수 있다.' +
+  ' 검토 요약의 자산명은 동일 사유의 최초 사례이며, 지정 자산이나 전체 후보 목록을 뜻하지 않는다.</span>';
 
 el('run').addEventListener('click', doRun);
 el('m-asis').addEventListener('click', () => setMode('asis'));
@@ -13273,7 +13337,562 @@ el('graph').addEventListener('click', (ev) => {
   drillToTrack(dot.dataset.th, simT);
 }, true);
 
-el('status').textContent = '커널 로딩 완료 — [실행]을 누르세요.';
+/* Presentation only: recorded events are listed, never used to invent a route or decision. */
+function buildRecordEvents(t) {
+  const rows = [];
+  const phaseNames = {
+    assigned: '할당 상태', fired: '발사 상태', released: '할당 해제 상태',
+    resolved_hit: '격추 확인 상태'
+  };
+  const phaseName = (p) => phaseNames[p] || p;
+  const add = (s, kind, title, detail) => rows.push({
+    t: s.t, kind: kind, title: title, detail: detail || '',
+    raw: s.name, axis: s.axis || null
+  });
+  (t.flows || []).forEach((f) => {
+    if (f.kind !== 'command' && f.kind !== 'status') return;
+    rows.push({ t: f.t0, kind: 'transfer',
+      title: (f.kind === 'status' ? '교전현황 교신' : '명령 교신') + ' — ' +
+        nodeName(f.from) + ' → ' + nodeName(f.to),
+      detail: '기록된 전송 구간 · 출발 ' + fmt(f.t0) + ' · 도착 예정 ' + fmt(f.t1) +
+        (f.kind === 'status' ? ' · 상태 내용은 별도 수신 기록에서 확인' : ''),
+      raw: 'link:' + f.kind + ':' + f.from + '→' + f.to,
+      axis: null, flow: f });
+  });
+  (t.stages || []).forEach((s) => {
+    const name = String(s.name || '');
+    let m;
+    if ((m = /^사수선정·표적할당:([^→]+)→(.+)$/.exec(name))) {
+      const commanderId = String(s.axis || '').split('|')[1];
+      add(s, 'selection', '선정 기록 — ' + nodeName(m[2]),
+        (commanderId ? nodeName(commanderId) : m[1]) + '의 선정 · 교신 구간이나 후보 순위 표시는 아님');
+    } else if ((m = /^교전명령발령:([^→]+)→(.+)$/.exec(name))) {
+      add(s, 'directive', '명령 발령 기록 — ' + nodeName(m[2]),
+        '발령 주체: ' + nodeName(m[1]) + ' · 실제 전달 경로는 교신 기록으로 표시');
+    } else if ((m = /^교전명령재배정:([^→]+)→([^(]+)\(([^)]*)\)$/.exec(name))) {
+      add(s, 'reassignment', '명시적 재배정 — ' + nodeName(m[2].trim()),
+        nodeName(m[1]) + ' · 기록 사유: ' + leakText(m[3]) + ' · 후보 순위 미기록');
+    } else if ((m = /^교전명령반송:([^(]+)\(([^)]*)\)$/.exec(name))) {
+      add(s, 'rejection', '명령 반송 기록 — ' + nodeName(m[1]),
+        '기록 사유: ' + leakText(m[2]) + ' · 반송 단계 기록이며 교신 경로를 뜻하지 않음');
+    } else if ((m = /^(교전명령중계접수|교전명령인가|교전명령접수):(.+)$/.exec(name))) {
+      const title = { 교전명령중계접수: '중계 접수 기록', 교전명령인가: '명령 인가 기록',
+        교전명령접수: '명령 접수 기록' }[m[1]];
+      add(s, 'directive', title + ' — ' + nodeName(m[2]), '해당 노드에서 기록된 처리 단계');
+    } else if ((m = /^교전현황수신:([^←]+)←([^/]+)\/(.+)$/.exec(name))) {
+      add(s, 'status', '교전현황 수신 — ' + phaseName(m[3]),
+        nodeName(m[2]) + ' → ' + nodeName(m[1]) + ' · 수신만으로 채택 여부를 확정하지 않음');
+    } else if ((m = /^교전현황드롭:([^→]+)→([^/]+)\/(.+)$/.exec(name))) {
+      add(s, 'status-drop', '교전현황 전송 불가 — ' + phaseName(m[3]),
+        nodeName(m[1]) + ' → ' + nodeName(m[2]) + ' · 기록된 드롭');
+    } else if (/^교전현황미채택:/.test(name)) {
+      const view = markView(name, t, s.axis);
+      add(s, 'status-rejected', view.text, view.sub || '');
+    } else if (/^발사불가:/.test(name)) {
+      const view = markView(name, t, s.axis);
+      add(s, 'no-fire', view.text, '발사 전 중단 기록 · 명중 실패와 구분');
+    } else if (/^(발사|자위권발사):/.test(name)) {
+      const view = markView(name, t, s.axis);
+      add(s, 'launch', view.text, '실제 발사 단계 기록');
+    } else if (/^BDA:(HIT|MISS):/.test(name)) {
+      const view = markView(name, t, s.axis);
+      add(s, 'result', view.text, '발사 후 결과 기록');
+    } else if (/^누수:/.test(name)) {
+      const reason = name.slice('누수:'.length);
+      const launched = (t.stages || []).some((stage) =>
+        stage.t <= s.t && /^(발사|자위권발사):/.test(stage.name));
+      add(s, 'exit', '항적 종결 — ' + leakText(reason),
+        launched ? '발사 기록 있음 · 항적을 막지 못한 결과' : '발사 기록 없음 · 미발사와 명중 실패를 구분');
+    } else if (/^관측종료/.test(name)) {
+      add(s, 'observation-end', '관측 종료 · 결과 미확정', '현재 관측 기록 범위에서 종결 결과가 없음');
+    }
+  });
+  buildEvidenceRows(t).forEach(e => {
+    if(e.firstT == null)return;
+    rows.push({t:e.firstT,kind:'review-evidence',title:e.label+' · 최초 관측',
+      detail:e.phaseLabel+(e.assetId?' · '+nodeName(e.assetId):'')+
+        ' · 최초 사례이며 명령 전달 기록을 뜻하지 않음',raw:'evidence:'+e.code,axis:null});
+  });
+  return rows.sort((a, b) => a.t - b.t);
+}
+
+/* Each detail and phase belongs to the first retained example, not the whole count. */
+function buildEvidenceRows(t) {
+  const evidence = (t.failure && t.failure.evidence) || t.evidence || {};
+  const phases = {
+    'fire-command': '발사 직전 재검증',
+    'relay-authorization': '중계 인가 시 재검증',
+    'issue-queue': '명령 발령 처리',
+    'relay-queue': '명령 중계 처리',
+    'directive-queue': 'ECS 명령 접수 처리',
+    'directive-arrival': '명령 도착 시 유효시간 확인'
+  };
+  const candidateCodes = new Set(['ammo_depleted', 'no_feasible_pip', 'capacity_full',
+    'no_fire_control', 'too_early', 'not_operational', 'no_missile_for_threat']);
+  return Object.keys(evidence).map((code) => {
+    const e = evidence[code] || {}, d = e.detail || {};
+    let phaseLabel = phases[d.phase] || (d.phase ? '기록 단계: ' + d.phase : '관측 단계 미기록');
+    if (!d.phase && d.commanderId && d.shooterId && candidateCodes.has(code)) {
+      phaseLabel = '후보 검토';
+    }
+    return { code: code, label: leakText(code),
+      firstT: Number.isFinite(e.firstT) ? e.firstT : null,
+      lastT: Number.isFinite(e.lastT) ? e.lastT : null,
+      count: Number.isFinite(e.count) ? e.count : null,
+      assetId: d.shooterId || d.approvalId || null,
+      commanderId: d.commanderId || null,
+      phaseLabel: '최초 사례 · ' + phaseLabel };
+  }).sort((a, b) => (a.firstT == null ? Infinity : a.firstT) -
+    (b.firstT == null ? Infinity : b.firstT) || a.code.localeCompare(b.code));
+}
+
+/* UI-only record reader. No simulation state, routing, or selection is changed. */
+let recordRows = [];
+let recordTrackId = null;
+let recordPaintKey = '';
+
+function recordCurrentState(t) {
+  if (!t || simT < t.spawnT) return { text: '항적 생성 전', cls: '' };
+  const stages = (t.stages || []).filter(s => s.t <= simT);
+  const fired = stages.filter(s => /^(발사|자위권발사):/.test(s.name)).length;
+  if (t.exitT != null && simT >= t.exitT) {
+    if (t.outcome === 'killed') return { text: '격추 · 발사 ' + fired + '회', cls: 'kill' };
+    if (String(t.outcome || '').startsWith('leaked:')) {
+      return { text: '항적 종결 · ' + (fired ? '발사 ' + fired + '회' : '발사 기록 없음') +
+        ' · ' + outcomeInfo(t).text, cls: 'leak' };
+    }
+  }
+  if (run && simT >= run.cfg.endTimeSec && t.exitT == null) {
+    return { text: '관측 종료 · 결과 미확정', cls: '' };
+  }
+  const marks = stages.filter(s => /^(발사|자위권발사|발사불가|BDA|사수선정·표적할당|교전명령)/.test(s.name));
+  const last = marks[marks.length - 1];
+  if (!last) {
+    const d = buildTrackDiagnosis(t, simT);
+    return { text: d.title, cls: d.tone === 'stop' ? 'leak' : '' };
+  }
+  if (/^BDA:HIT:/.test(last.name)) return { text: '격추 결과 기록', cls: 'kill' };
+  if (/^BDA:MISS:/.test(last.name)) return { text: '명중 실패 기록 · 후속 기록 확인', cls: 'leak' };
+  if (/^발사불가:/.test(last.name)) return { text: '발사 불가 기록 · 후속 기록 확인', cls: 'leak' };
+  if (/^(발사|자위권발사):/.test(last.name)) return { text: '발사 완료 · 결과 대기', cls: '' };
+  return { text: '선정·명령 처리 기록 · 발사 ' + fired + '회', cls: '' };
+}
+
+function refreshRecordPicker() {
+  const picker = el('record-track');
+  picker.disabled = !run || !run.tracks.length;
+  picker.innerHTML = '<option value="">항적 선택</option>' + (run ? run.tracks.map((t,i) =>
+    `<option value="${i}">${esc(t.id)}${t.failure ? ' · 최종: ' + esc(leakText(t.failure.primaryCause)) : ''}</option>`).join('') : '');
+  recordTrackId = null; recordRows = []; recordPaintKey = '';
+  el('record-events').innerHTML = '<div class="record-placeholder">항적을 선택하면 실제 교신·선정·발사 기록을 볼 수 있습니다.</div>';
+  el('record-evidence').innerHTML = '<div class="record-placeholder">후보 검토는 교신선과 분리해 표시합니다.</div>';
+}
+
+function recordKindName(row) {
+  return ({ 'review-evidence':'관측', transfer:'교신', selection:'선정', directive:'명령 처리', reassignment:'재배정',
+    rejection:'반송', status:'상태 수신', 'status-drop':'교신 중단', 'status-rejected':'상태 미채택',
+    'no-fire':'미발사', launch:'발사', result:'결과', exit:'항적 종결', 'observation-end':'관측 종료' })[row.kind] || '기록';
+}
+
+function renderRecordPanel(t) {
+  recordTrackId = t ? t.id : null;
+  recordRows = t ? buildRecordEvents(t) : [];
+  recordPaintKey = '';
+  if (!t) return;
+  el('record-track').value = String(run.tracks.findIndex(x => x.id === t.id));
+  el('record-events').innerHTML = recordRows.length ? recordRows.map((r,i) => {
+    const outside = r.t < t.spawnT || r.t > t.endT;
+    const cls = r.kind === 'no-fire' || /MISS/.test(r.raw) ? 'fail' :
+      /BDA:HIT/.test(r.raw) ? 'hit' : /rejection|status-drop/.test(r.kind) ? 'warn' : '';
+    const axis = r.axis ? laneTag(r.axis) : null;
+    return `<button type="button" class="record-row ${cls}" data-record="${i}" data-t="${r.t}"${outside ? ' disabled' : ''}` +
+      ` title="${esc('원문: ' + r.raw)}"><span class="rt">${fmt(r.t)}</span><span>` +
+      `<span class="rk">${recordKindName(r)}</span>${esc(r.title)}` +
+      `<span class="rd">${esc(r.detail)}${axis ? ' · 계통: ' + esc(axis) : ''}${outside ? ' · 재생구간 밖: 시각 기록만 표시' : ''}</span></span></button>`;
+  }).join('') : '<div class="record-placeholder">이 항적의 명령·선정·발사 기록이 없습니다. 전체 교신은 이벤트 로그에서 확인할 수 있습니다.</div>';
+  const evidence = buildEvidenceRows(t);
+  let summary = '<div class="record-note">동일 사유의 누적 요약입니다. 자산명은 최초 사례이며, 지정 자산·전체 후보 목록·현재 재고를 뜻하지 않습니다.</div>';
+  summary += evidence.map(e => `<div class="record-evidence"><b>${esc(e.label)}</b>` +
+    (e.count != null ? ` · 관측 ${e.count}회` : '') +
+    `<div class="re-detail">${esc(e.phaseLabel)}` + (e.assetId ? ' · ' + esc(nodeName(e.assetId)) : '') +
+    `${e.commanderId ? '<br>검토·처리 주체: ' + esc(nodeName(e.commanderId)) : ''}` +
+    `${e.firstT != null ? '<br>최초 ' + fmt(e.firstT) : ''}${e.lastT != null ? ' · 마지막 ' + fmt(e.lastT) : ''}</div></div>`).join('');
+  (t.unreached || []).forEach(u => {
+    summary += `<div class="record-evidence"><b>경로 탐색 실패 · ${esc(leakText(u.why))}</b>` +
+      `<div class="re-detail">${esc(nodeName(u.from))} / ${esc(nodeName(u.to))} · ${fmt(u.t)}<br>경로 실패 기록이며 실제 전문 이동을 뜻하지 않습니다.</div></div>`;
+  });
+  if (!evidence.length && !(t.unreached || []).length) summary += '<div class="record-placeholder">검토·경로 실패 요약이 없습니다.</div>';
+  const statusFlows = (t.flows || []).filter(f => f.kind === 'status');
+  const ecsStatus = statusFlows.some(f => (run.nodes[f.from] || {}).typeId === 'ECS' || (run.nodes[f.to] || {}).typeId === 'ECS');
+  const selections = recordRows.filter(r => r.kind === 'selection').length;
+  const reassignments = recordRows.filter(r => r.kind === 'reassignment').length;
+  summary += `<div class="record-note">선정 기록 ${selections}건 · 명시적 재배정 ${reassignments}건.<br>` +
+    '시간순 배열은 인과관계나 후보 순위를 뜻하지 않습니다.' +
+    (!ecsStatus && evidence.some(e => e.code === 'ammo_depleted')
+      ? '<br>ECS 경유 상태 교신은 이 항적의 관측 기록에서 확인되지 않습니다.' : '') + '</div>';
+  el('record-evidence').innerHTML = summary;
+}
+
+function paintRecordPanel() {
+  const active = view === 'track' && sel && recordTrackId === sel.id;
+  if (!active) {
+    el('record-prev').disabled = el('record-next').disabled = true;
+    el('record-current').textContent = run ? '항적 선택 후 확인' : '실행을 기다리는 중';
+    if (recordTrackId) {
+      recordTrackId = null; recordRows = []; recordPaintKey = '';
+      el('record-track').value = '';
+      el('record-events').innerHTML = '<div class="record-placeholder">위에서 항적을 선택하면 해당 항적의 기록이 표시됩니다.</div>';
+      el('record-evidence').innerHTML = '<div class="record-placeholder">후보 검토만으로 실제 명령 경로를 추정하지 않습니다.</div>';
+    }
+    return;
+  }
+  let current = -1;
+  recordRows.forEach((r,i) => { if (r.t <= simT + 1e-6) current = i; });
+  const navigable = recordRows.filter(r => r.t >= viewT0() && r.t <= viewT1());
+  el('record-prev').disabled = !navigable.some(r => r.t < simT - 1e-6);
+  el('record-next').disabled = !navigable.some(r => r.t > simT + 1e-6);
+  const status = recordCurrentState(sel);
+  const currentText = '현재 · ' + status.text;
+  if (el('record-current').textContent !== currentText) el('record-current').textContent = currentText;
+  const key = sel.id + '|' + current;
+  if (key === recordPaintKey) return;
+  recordPaintKey = key;
+  el('record-events').querySelectorAll('.record-row').forEach((row,i) => {
+    row.classList.toggle('current', i === current);
+    row.classList.toggle('future', i > current);
+    if (i === current) row.setAttribute('aria-current', 'true'); else row.removeAttribute('aria-current');
+  });
+}
+
+function seekRecord(t) {
+  setPlaying(false);
+  // Recorded messages can extend beyond the selected track's terminal instant.
+  // Keep the playhead on its existing axis; the row still retains exact times.
+  simT = Math.max(viewT0(), Math.min(viewT1(), t));
+  drawFrame();
+}
+el('record-track').addEventListener('change', ev => {
+  if (!run) return;
+  if (ev.target.value === '') {
+    if (sel && view === 'track') ev.target.value = String(run.tracks.findIndex(t => t.id === sel.id));
+    return;
+  }
+  setPlaying(false); renderTrackList(); selectTrack(Number(ev.target.value)); drawFrame();
+});
+el('record-events').addEventListener('click', ev => {
+  const row = ev.target.closest('button[data-record]');
+  if (row && recordRows[Number(row.dataset.record)]) seekRecord(recordRows[Number(row.dataset.record)].t);
+});
+el('record-prev').addEventListener('click', () => {
+  const prior = recordRows.filter(r => r.t >= viewT0() && r.t < simT - 1e-6);
+  if (prior.length) seekRecord(prior[prior.length - 1].t);
+});
+el('record-next').addEventListener('click', () => {
+  const next = recordRows.find(r => r.t <= viewT1() && r.t > simT + 1e-6);
+  if (next) seekRecord(next.t);
+});
+
+/* Catalog associations explain roles; they never become recorded transmissions. */
+function buildRoleContext(track, at) {
+  const stages=(track.stages||[]).filter(s=>s.t<=at);
+  const nodes=run.nodes||{};
+  let chosen=null;
+  stages.forEach(s=>{
+    let m;
+    if((m=/^사수선정·표적할당:[^→]+→(.+)$/.exec(s.name)))
+      chosen={id:m[1],t:s.t,basis:'선정 기록의 자산'};
+    else if((m=/^교전명령재배정:[^→]+→([^ (]+)\(/.exec(s.name)))
+      chosen={id:m[1],t:s.t,basis:'재배정 기록의 자산'};
+    else if((m=/^발사불가:([^ (]+)\(/.exec(s.name)))
+      chosen={id:m[1],t:s.t,basis:'발사 불가 기록의 자산'};
+    else if((m=/^(?:발사|자위권발사):([^/]+)/.exec(s.name)))
+      chosen={id:m[1],t:s.t,basis:'발사 기록의 자산'};
+  });
+  if(!chosen){
+    const evidence=(track.failure||{}).evidence||track.evidence||{};
+    const available=Object.entries(evidence).filter(([code,e])=>e&&Number.isFinite(e.firstT)&&
+      e.firstT<=at&&e.detail&&e.detail.shooterId);
+    available.sort((a,b)=>(b[0]==='ammo_depleted')-(a[0]==='ammo_depleted')||b[1].firstT-a[1].firstT);
+    if(available.length){
+      const [code,e]=available[0];
+      chosen={id:e.detail.shooterId,t:e.firstT,basis:leakText(code)+' 최초 관측 자산',candidate:true};
+    }
+  }
+  if(!chosen||!nodes[chosen.id])return null;
+  const asset=nodes[chosen.id];
+  const roles=[
+    {kind:'ICC',label:'권역통제 ICC',id:asset.iccC2Id||null,role:'명령 중계·인가'},
+    {kind:'ECS',label:'포대통제 ECS',id:asset.ecsC2Id||null,role:'포대 명령 접수·처리'},
+    {kind:'shooter',label:'요격부대',id:chosen.id,role:'사격 실행'}
+  ].map(role=>{
+    const id=role.id;
+    let state='명령 접수 기록 없음',active=false;
+    if(!id||!nodes[id])state='구성 정보 없음';
+    else if(role.kind==='shooter'){
+      const actions=stages.filter(s=>s.name.startsWith('발사불가:'+id+'(')||
+        s.name==='발사:'+id||s.name.startsWith('발사:'+id+'/')||s.name==='자위권발사:'+id);
+      const last=actions[actions.length-1];
+      if(last){state=last.name.startsWith('발사불가:')?'발사 불가 기록 있음':'발사 기록 있음';active=true;}
+      else if((track.flows||[]).some(f=>f.kind==='command'&&f.to===id&&f.t1<=at)){
+        state='발사지시 교신 도착 · 발사 기록 없음';active=true;
+      } else state='발사지시·발사 기록 없음';
+    } else {
+      const receipts=stages.filter(s=>s.name===(role.kind==='ICC'?'교전명령중계접수:':'교전명령접수:')+id||
+        (role.kind==='ICC'&&s.name==='교전명령인가:'+id));
+      const relayResult=role.kind==='ICC'&&stages.some(s=>s.name.startsWith('교전명령반송:'+id+'(')||
+        s.name.startsWith('교전명령재배정:'+id+'→'));
+      if(receipts.length||relayResult){state='명령 접수·처리 기록 있음';active=true;}
+    }
+    return {...role,name:id&&nodes[id]?nodeName(id):'연결 노드 미기록',state,active};
+  });
+  const links=[];
+  for(let i=0;i<roles.length-1;i++){
+    const a=roles[i],b=roles[i+1];
+    if(a.id&&b.id&&nodes[a.id]&&nodes[b.id]&&a.id!==b.id)links.push({from:a.id,to:b.id});
+  }
+  return {assetId:chosen.id,basis:chosen.basis,candidate:!!chosen.candidate,sourceT:chosen.t,roles,links};
+}
+
+function roleContextHtml(context){
+  if(!context)return '<div class="trace-route">자산 관련 기록 시각에 도달하면 구성상 ICC·ECS·요격부대 연결이 표시됩니다.</div>';
+  return '<div class="role-context"><b>구성상 역할 연결</b> <span class="trace-route">'+esc(context.basis)+' 기준 · 모델상 역할</span>'+
+    '<div class="role-context-grid">'+context.roles.map(r=>
+      '<div class="role-context-card"><span class="trace-route">'+esc(r.label)+'</span><strong>'+esc(r.name)+'</strong>'+
+      '<div>'+esc(r.role)+'</div><div class="role-context-state'+(r.active?' has-record':'')+'">'+esc(r.state)+'</div></div>').join('')+'</div>'+
+    '<div class="trace-route">회색 점선은 배치에 선언된 역할 관계이며 실제 명령 전송·접수를 뜻하지 않습니다. 상태는 현재 시각까지의 노드별 항적 이력이며, 동일 명령의 연속 경유를 뜻하지 않습니다.'+
+    (context.candidate?' 표시 자산은 최초 관측 사례이며 지정 자산을 뜻하지 않습니다.':'')+'</div></div>';
+}
+
+function roleContextSvg(context){
+  if(!context||!geo)return '';
+  let out='<g class="role-context-overlay">';
+  context.links.forEach(l=>{
+    const a=slotPos(geo,l.from,'dn'),b=slotPos(geo,l.to,'dn');
+    if(!a||!b)return;
+    const mx=(a.x+b.x)/2;
+    out+=`<path class="role-context-link" d="M${a.x},${a.y} C${mx},${a.y} ${mx},${b.y} ${b.x},${b.y}">`+
+      `<title>${esc(nodeName(l.from)+' — '+nodeName(l.to)+' · 구성 관계 · 실제 전송선 아님')}</title></path>`;
+  });
+  context.roles.forEach(r=>{
+    if(!r.id)return;
+    const p=slotPos(geo,r.id,'dn');if(!p)return;
+    out+=`<circle class="role-context-node" cx="${p.x}" cy="${p.y}" r="21"></circle>`;
+    if(!el('show-idle').checked&&!(sel.nodeIds||[]).includes(r.id))
+      out+=`<text class="role-context-label" x="${p.x}" y="${p.y+30}" text-anchor="middle">${esc(r.name)}</text>`;
+  });
+  return out+'</g>';
+}
+
+/* Read-only projection of recorded node participation; no route inference. */
+function buildNodeReview(track, at) {
+  const stages=(track.stages||[]).filter(s=>s.t<=at);
+  const facts=new Map(), markers=new Map(), iccFailures=[];
+  const nodes=run.nodes||{};
+  const add=(id,key,text,t,basis)=>{
+    if(!id)return;
+    if(!facts.has(id))facts.set(id,new Map());
+    const old=facts.get(id).get(key);
+    if(!old||old.t<=t)facts.get(id).set(key,{text,t,basis});
+  };
+  const mark=(id,label,role,priority)=>{
+    if(!id)return;
+    const old=markers.get(id);
+    if(!old||old.priority<=priority)markers.set(id,{id,label,role,priority});
+  };
+  (track.flows||[]).forEach(f=>{
+    const report=f.kind==='report'||f.mt==='report-cycle';
+    if(f.t0<=at)add(f.from,'communication',report?'보고 교신 참여':'교신 참여',f.t0,'전송 기록');
+    if(f.t1<=at)add(f.to,'communication',report?'보고 교신 도착':'교신 도착',f.t1,'전송 구간의 도착 시각');
+    if(f.t1<=at && f.kind==='command')add(f.to,'order-link','발사지시 교신 도착',f.t1,'명령 유형으로 기록된 전송 구간');
+  });
+  stages.forEach(s=>{
+    let m;
+    if((m=/^(교전명령중계접수|교전명령접수|교전명령인가):(.+)$/.exec(s.name))) {
+      const label=m[1]==='교전명령인가'?'명령 인가':'명령 접수';
+      add(m[2],'receipt',label,s.t,s.name);mark(m[2],label+' 이력','receipt',30);
+    } else if((m=/^교전명령반송:([^(]+)\(([^)]*)\)$/.exec(s.name)) ||
+              (m=/^교전명령재배정:([^→]+)→[^(]+\(([^)]*)\)$/.exec(s.name))) {
+      const reassigned=s.name.startsWith('교전명령재배정:');
+      const label=reassigned?'명령 재배정':'명령 반송';
+      add(m[1],'relay-result',label+' · '+leakText(m[2]),s.t,s.name);
+      if(m[2]==='ammo_depleted'){
+        iccFailures.push({id:m[1],t:s.t,action:label});
+        mark(m[1],'탄약 고갈 이력','stop',80);
+      }
+    } else if((m=/^발사불가:([^(]+)\(([^)]*)\)$/.exec(s.name))) {
+      add(m[1],'no-fire','발사 불가 · '+leakText(m[2]),s.t,s.name);
+      mark(m[1],m[2]==='ammo_depleted'?'탄약 고갈 이력':'발사 불가 이력','stop',80);
+      // Only connect an ECS processing record when its exact completion time
+      // and associated battery are unambiguous in this track's records.
+      const ecs=(nodes[m[1]]||{}).ecsC2Id;
+      const sameTime=stages.filter(x=>Math.abs(x.t-s.t)<1e-6 && /^발사불가:/.test(x.name));
+      const completions=(track.spans||[]).filter(x=>x.at===ecs && x.jk==='directive_reception' &&
+        Number.isFinite(x.done) && Math.abs(x.done-s.t)<1e-6);
+      const received=stages.some(x=>x.name==='교전명령접수:'+ecs && x.t<=s.t && x.axis===s.axis);
+      if(ecs && received && completions.length===1 && sameTime.length===1){
+        add(ecs,'post-reception','접수 처리 후 '+nodeName(m[1])+' 발사 불가 · '+leakText(m[2]),s.t,
+          '해당 ECS 처리 완료와 포대 발사불가의 시각 일치. 탄약 보고 전문을 뜻하지 않음');
+        mark(ecs,m[2]==='ammo_depleted'?'접수 후 고갈 이력':'접수 후 미발사 이력','review',70);
+      }
+    } else if((m=/^(발사|자위권발사):([^/]+)/.exec(s.name))) {
+      add(m[2],'launch','발사 기록',s.t,s.name);
+    }
+  });
+  const ammo=((track.failure||{}).evidence||track.evidence||{}).ammo_depleted;
+  if(ammo && Number.isFinite(ammo.firstT) && ammo.firstT<=at){
+    const d=ammo.detail||{};
+    if(!d.phase && d.commanderId && d.shooterId){
+      add(d.commanderId,'review','후보 검토에서 탄약 고갈 확인 · 최초 사례',ammo.firstT,'후보 검토 근거');
+      add(d.shooterId,'candidate','내부 자원 조회 대상 · 최초 탄약 부족 사례',ammo.firstT,'검토 주체의 내부 상태 조회. 이 근거는 문의·응답 기록이 아님');
+      mark(d.commanderId,'탄약 검토 이력','review',40);
+      mark(d.shooterId,'검토 대상','review',20);
+    } else if(d.phase==='relay-authorization') {
+      // The evidence retains the original issuer, not the actual relay ICC.
+      // Resolve only a unique explicit relay result at that same time and axis.
+      const matches=stages.map(s=>({s,m:/^교전명령(?:반송|재배정):([^→(]+)/.exec(s.name)}))
+        .filter(x=>x.m && Math.abs(x.s.t-ammo.firstT)<1e-6 &&
+          (!d.commanderId || String(x.s.axis||'').split('|')[1]===d.commanderId));
+      if(matches.length===1){
+        const id=matches[0].m[1];
+        if(nodes[id]&&nodes[id].typeId==='ICC'){
+          add(id,'review','중계 인가 재검증에서 탄약 고갈 · 최초 사례',ammo.firstT,'동시각·동일 계통 중계 결과와 연결');
+          mark(id,'탄약 고갈 이력','stop',70);
+          if(!iccFailures.some(f=>f.id===id && f.t===ammo.firstT))iccFailures.push({id,t:ammo.firstT,action:'중계 처리 결과 기록'});
+        }
+      }
+    }
+  }
+  const groups=[{type:'ICC',label:'권역통제 ICC'},{type:'ECS',label:'포대통제 ECS'},{type:'shooter',label:'요격부대'}];
+  const layers=groups.map(g=>({label:g.label,items:[...facts].filter(([id])=>
+    g.type==='shooter'?(nodes[id]||{}).category==='shooter':(nodes[id]||{}).typeId===g.type)
+    .map(([id,items])=>({id,entries:[...items].map(([key,f])=>({key,...f}))}))}));
+  return {layers,markers:[...markers.values()],iccFailures:iccFailures.sort((a,b)=>a.t-b.t)};
+}
+
+function nodeReviewHtml(review){
+  return '<details class="node-review"><summary>실제 관여 기록 펼치기 · 현재 시각까지</summary><div class="node-review-grid">'+
+    review.layers.map(layer=>'<div class="node-review-cell"><b>'+esc(layer.label)+'</b>'+
+      (layer.items.length?layer.items.map(item=>'<div class="node-review-item"><strong>'+esc(nodeName(item.id))+'</strong>'+
+        item.entries.filter(e=>e.key!=='communication'||item.entries.length===1).map(e=>
+          '<div title="'+esc(e.basis)+'">'+esc(e.text)+' <span class="trace-route">'+esc(fmt(e.t))+'</span></div>').join('')+
+        (item.entries.some(e=>e.key==='candidate')?'<div class="trace-route">조회 대상 표시는 문의·응답 기록을 뜻하지 않음</div>':'')+
+        (item.entries.every(e=>e.key==='communication')?'<div class="trace-route">명령 접수·탄약 확인 기록 없음</div>':'')+'</div>').join(''):
+        '<div class="trace-route">해당 노드의 관여 기록 없음</div>')+'</div>').join('')+'</div></details>';
+}
+
+/* Retrospective record explanation only. Does not add routes or model events. */
+function buildTrackDiagnosis(track, at) {
+  const stages = (track.stages || []).filter(s => s.t <= at);
+  const command = (track.flows || []).filter(f => f.kind === 'command' && f.t0 <= at);
+  const receipts = stages.filter(s => /^(교전명령중계접수|교전명령접수):/.test(s.name));
+  const directives = stages.filter(s => /^(사수선정·표적할당|교전명령발령|교전명령중계접수|교전명령인가|교전명령접수|교전명령재배정|교전명령반송):/.test(s.name));
+  const launches = stages.filter(s => /^(발사|자위권발사):/.test(s.name));
+  const noFire = stages.map(s => ({s, m:/^발사불가:([^(]+)\(([^)]*)\)$/.exec(s.name)})).filter(x => x.m);
+  const allEvidence = (track.failure && track.failure.evidence) || track.evidence || {};
+  const ammo = allEvidence.ammo_depleted;
+  const ammoKnown = ammo && Number.isFinite(ammo.firstT) && ammo.firstT <= at;
+  const routePairs = [];
+  const seen = new Set();
+  command.forEach(f => {
+    const key=f.from+'>'+f.to;
+    if(!seen.has(key)){seen.add(key);routePairs.push({from:f.from,to:f.to});}
+  });
+  const summary = { commandCount:command.length, receiptCount:receipts.length, launchCount:launches.length,
+    directiveCount:directives.length, noFireCount:noFire.length, routePairs, markers:[], tone:'neutral', title:'기록된 진행 단계', detail:'' };
+  if(noFire.length) {
+    const x=noFire[noFire.length-1];
+    const laterLaunch=launches.some(s=>s.t>x.s.t);
+    summary.tone=laterLaunch?'neutral':'stop';
+    summary.title=laterLaunch?'발사 불가 이력 이후 발사 기록 있음':'발사 단계에서 중단된 기록';
+    summary.detail=nodeName(x.m[1])+' · '+leakText(x.m[2])+' · '+fmt(x.s.t)+
+      '에 발사 불가 기록. 앞선 전달 구간은 아래 교신 기록을 따릅니다.';
+    summary.markers=[{id:x.m[1],label:laterLaunch?'발사 불가 이력':'발사 불가',role:'stop'}];
+  } else if(ammoKnown) {
+    const d=ammo.detail||{};
+    const candidate=!d.phase && d.commanderId && d.shooterId;
+    summary.tone='review';
+    summary.title=candidate ? '후보 검토에서 탄약 부족이 관측됨' : '탄약 부족 관측 기록';
+    summary.detail=(candidate && d.commanderId ? nodeName(d.commanderId)+'의 ' : '')+
+      (candidate ? '후보 검토 · ' : '탄약 부족 근거 · ')+
+      (d.shooterId ? '최초 관측 자산: '+nodeName(d.shooterId)+' · ' : '')+
+      fmt(ammo.firstT)+'에 최초 관측. '+(candidate?'이 기록만으로 지정 자산을 뜻하지는 않습니다.':'최초 사례만 표시합니다.');
+    if(!command.length && !directives.length && !launches.length) summary.detail+=' 이 시각까지 선정·명령 발령·접수·발사 기록이 없습니다.';
+    if(launches.length) summary.title+=' · 발사 이력도 있음';
+    if(d.commanderId) summary.markers.push({id:d.commanderId,label:candidate?'검토 기록':'처리 기록',role:'review'});
+    if(d.shooterId) summary.markers.push({id:d.shooterId,label:'탄약 부족 관측',role:'review'});
+  } else if(launches.length) {
+    summary.title='실제 발사 기록 있음';
+    summary.detail='발사 '+launches.length+'회 · 결과는 발사 후 결과 기록에서 확인할 수 있습니다.';
+  } else if(command.length || directives.length) {
+    summary.title='선정·명령 처리 기록 있음';
+    summary.detail='중계/ECS 접수 '+receipts.length+'건 · 아직 발사 기록 없음. 실제 도착 노드는 접수 기록에서 확인할 수 있습니다.';
+  } else {
+    summary.title='선정·명령 발령·접수 기록 없음';
+    summary.detail='실제 교신선과 회색 점선의 구성 관계를 구분해 표시합니다. ICC/ECS의 교전명령 접수 여부는 노드별 기록에서 확인하세요.';
+  }
+  const nodeReview=buildNodeReview(track,at);
+  summary.nodeReview=nodeReview;
+  summary.roleContext=buildRoleContext(track,at);
+  summary.markers=nodeReview.markers;
+  const lastIcc=nodeReview.iccFailures[nodeReview.iccFailures.length-1];
+  const lastNoFire=noFire.length?noFire[noFire.length-1].s.t:-Infinity;
+  if(lastIcc && lastIcc.t>=lastNoFire){
+    summary.title='ICC에서 탄약 고갈 확인 · '+lastIcc.action;
+    summary.detail=nodeName(lastIcc.id)+' · '+fmt(lastIcc.t)+'의 처리 기록. 이후 ECS 접수 여부는 아래 관여 기록에서 확인하세요.';
+    summary.tone='review';
+    if(launches.some(s=>s.t>lastIcc.t))summary.title+=' · 이후 발사 기록 있음';
+  }
+  if(track.exitT != null && at >= track.exitT && track.outcome === 'killed') {
+    summary.title='격추 완료 · 발사 '+launches.length+'회';summary.tone='neutral';
+    summary.detail='최종 격추 기록. '+summary.detail;
+  }
+  if(at < track.spawnT) {
+    summary.title='항적 생성 전';summary.detail='아직 이 항적의 기록 시각에 도달하지 않았습니다.';
+  } else if(track.exitT == null && run && at >= run.cfg.endTimeSec) {
+    summary.title='관측 종료 · 항적 결과 미확정';
+    summary.detail='관측 종료를 요격 실패나 탄약 고갈로 해석하지 않습니다. '+summary.detail;
+  }
+  return summary;
+}
+
+let trackExplanationKey='';
+function paintTrackExplanation() {
+  const box=el('track-explanation');
+  if(view!=='track'||!sel){box.hidden=true;trackExplanationKey='';return;}
+  box.hidden=false;
+  const d=buildTrackDiagnosis(sel,simT);
+  const key=sel.id+'|'+JSON.stringify(d);
+  if(key===trackExplanationKey)return;
+  trackExplanationKey=key;
+  const reviewOpen=!!box.querySelector?.('.node-review')?.open;
+  box.className=d.tone;
+  const pairs=d.routePairs.map(p=>nodeName(p.from)+' → '+nodeName(p.to));
+  box.innerHTML=`<strong>${esc(sel.id)} · ${esc(d.title)}</strong>`+
+    `<div>${esc(d.detail)}</div>`+
+    `<div class="trace-route">선정·명령 처리 ${d.directiveCount}건 · 중계/ECS 접수 ${d.receiptCount}건 · 발사 불가 ${d.noFireCount}건 · 발사 ${d.launchCount}회`+
+    (pairs.length ? `<details><summary>명령 유형으로 기록된 교신 ${d.commandCount}건</summary><div>명령 중계가 협조 유형으로 기록된 구간은 이 목록에 포함되지 않습니다. 전체 경로는 그래프와 접수 기록을 함께 확인하세요.</div>${pairs.map(p=>`<div>${esc(p)}</div>`).join('')}</details>` : '')+'</div>'+
+    roleContextHtml(d.roleContext)+nodeReviewHtml(d.nodeReview)+
+    '<div class="trace-route">굵은 선: 도착 시각이 지난 교신 · 파란 원: 명령 접수·인가 · 노란 점선 원: 검토·처리 근거 · 빨간 원: 탄약 고갈·발사 불가 이력</div>';
+  const review=box.querySelector?.('.node-review');if(review)review.open=reviewOpen;
+}
+
+function diagnosisMarkersSvg() {
+  if(!sel||!geo)return '';
+  const d=buildTrackDiagnosis(sel,simT);
+  return roleContextSvg(d.roleContext)+d.markers.map(m=>{
+    const p=slotPos(geo,m.id);
+    if(!p)return '';
+    const color=m.role==='stop'?'var(--bad)':m.role==='receipt'?'#60a5fa':'var(--warn)';
+    const missingLabel=!el('show-idle').checked && !(sel.nodeIds||[]).includes(m.id) &&
+      !(d.roleContext&&d.roleContext.roles.some(r=>r.id===m.id));
+    return `<g class="diagnosis-marker"><title>${esc(nodeName(m.id)+' · '+m.label+' · 실제 명령 전달 여부는 교신 기록에서 확인')}</title>`+
+      `<circle cx="${p.x}" cy="${p.y}" r="17" fill="none" stroke="${color}" stroke-width="2"${m.role==='review'?' stroke-dasharray="3 3"':''}></circle>`+
+      `<text x="${p.x}" y="${p.y-23}" text-anchor="middle" fill="${color}" font-size="10">${esc(m.label)}</text>`+
+      (missingLabel?`<text x="${p.x}" y="${p.y+29}" text-anchor="middle" fill="${color}" font-size="10">${esc(nodeName(m.id))}</text>`:'')+'</g>';
+  }).join('');
+}
+
+el('status').textContent = '표시 개선본 · 커널 로딩 완료 — [실행]을 누르세요.';
 </script>
 </body>
 </html>

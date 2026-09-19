@@ -1,32 +1,32 @@
 {
-  "checkedAt": "2026-09-19T07:24:54.194Z",
+  "checkedAt": "2026-09-19T09:51:06.573Z",
   "imageDir": "/tmp/kjamds-pdf-qa",
   "artifacts": [
     {
       "filename": "K-JAMDS_분석_방법과_결과.pdf",
-      "sha256": "63aa4fad7b537b290d21d873a137b8baa71ca0e81ae20a8a5ea350104895384a",
+      "sha256": "cfaa1513e3fc0120bd801f473d5d68a5c9ad6ba81052185860ecd7dc3daebd22",
       "pageCount": 20,
       "pageTextCharacters": [
-        923,
-        881,
+        1087,
+        882,
         848,
-        1072,
-        927,
+        1631,
         940,
-        1036,
-        594,
-        1032,
-        1064,
-        1056,
-        723,
-        1323,
-        1336,
-        1491,
-        1460,
-        1561,
-        1320,
-        1138,
-        1386
+        953,
+        1068,
+        835,
+        1142,
+        1088,
+        1135,
+        740,
+        1324,
+        1338,
+        1494,
+        1463,
+        1563,
+        1325,
+        1181,
+        1474
       ],
       "replacementGlyphs": 0,
       "unresolvedValues": 0,
@@ -34,83 +34,83 @@
       "pngs": [
         {
           "path": "/tmp/kjamds-pdf-qa/report-01.png",
-          "sha256": "d9efb0a0b398e09ead53889a8c565dcb38713abb14f8be51dd5067f75aa6d64e"
+          "sha256": "f6fa71dcb1c181d86b2a3ee9162d2cade7d074db2df47da16bfe939690104389"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-02.png",
-          "sha256": "7ca34aaf2fd47a10561c8d53bb6046e12c13095cb13488684b1d71b6123c26f7"
+          "sha256": "46ae7b83e19a9f35badb74e5bdf6cfda0d51d5af3b958738a52742b7265ec64e"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-03.png",
-          "sha256": "0928f2877748c143b0b17b0440ab5746e3e0b1e45f097ed176eddd0582d20291"
+          "sha256": "9b74d6deb57dff5320e99d791af25f1e8910ecbc14d856d4a7c9eb6b91b6427d"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-04.png",
-          "sha256": "15f5f68ab1b5d93e2e79888a14fe1c127ec43d3396f1c4a6482147f6436f2016"
+          "sha256": "80fbfa0097c3f10cfc31cadab81ed0360240e627c37def49bcf079f993bfe471"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-05.png",
-          "sha256": "07f75407484b79e9f5fb1c20c40fa021fdb70c83883194d77adafc681e9c8ac4"
+          "sha256": "bc07f97aa3a217fedf7f1089b2e1233b5e101ebced0d46d2d87d4212bd9dc7a3"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-06.png",
-          "sha256": "c33dcce5d0566801f1c024ee11aa993a512dc5bb0e2117158abddd4b3113cc1f"
+          "sha256": "41d08c4d9dce290c30ac5247b2190e787a21c1e247980b0c4aa1e5c0dc097524"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-07.png",
-          "sha256": "3ad116ac17dcf378e64f40440db0ef9c984db56dae7c4511452221c055178ac1"
+          "sha256": "e62fa029064bf20bba4dd42b96cf8f9b371bb610a12c174740ad1f0386275e93"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-08.png",
-          "sha256": "eaef931db5c2e1778c3e429cc3dc0af327dad80f1d2de3bdf6094dcd6256f988"
+          "sha256": "3e33a3a1ab00299da2e8bcdd18d2dd031016f921b19d21eb3b5966ed6a310949"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-09.png",
-          "sha256": "d797c9e6f3f4cc14a443e76c54f050f81c76b267fbc17d2776445c99411e77a5"
+          "sha256": "2561d54fa5ed8e0e04ef234d76a28b17a598ec862bb1187182594705fff803be"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-10.png",
-          "sha256": "b6bdbcd72f60cb924b66c7dd9ceab068bafcebd5966547d424a60aa0d250eb2c"
+          "sha256": "3ae278ef0e786acf1b7fb2721b137db3c6d51055418204db9af79e763d9984ff"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-11.png",
-          "sha256": "39af9e99415185d56d8908b9b0e2a6b610a3b6e53c949a0331c1419a6c6953be"
+          "sha256": "574429f15711be1260a7f9215267d66d7ec3b9651f59131d05409283a49cec5c"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-12.png",
-          "sha256": "f5ac3b1146a963b4842b1c526555ba42a58bf4d14990a46f9361618277864ab9"
+          "sha256": "b99db2d4c23a23f0efad5f9755cb04b223d80bec5cf72a5e64e503b50b139dcc"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-13.png",
-          "sha256": "883ac886b313d4adc7b833adb3647b63a5e0c6574878ace4043a8adc88243ae8"
+          "sha256": "40b218172a1493d6c92e016eabe84912575ff8f7dd217333581fe7cae8dbc935"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-14.png",
-          "sha256": "1c2dc2f225fca42df6aa8efcb2f7b02a5743fa9860a687b2bb06e51e4c067376"
+          "sha256": "44a662c66beb093a0d21c0a4ebdb2e706ee956da187257ecf4d1e432150e340d"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-15.png",
-          "sha256": "f252c8a57b55e6a450d05302e3fd150076364e5a061cf03fc78c87bf537096e4"
+          "sha256": "1162146a629409f22daa1a653609b038b5e8d9b7751c3701db56d3c51cbdf70a"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-16.png",
-          "sha256": "67e39d99dc99a9a0ceb5e06a62166db3873f288f8e2fdc87f3c32e4e36e2eddf"
+          "sha256": "1c6801501344ccc452832ea12476b2089875b7e11e247b38e06b5ca5ea472b09"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-17.png",
-          "sha256": "509179e7d199a5ff734b0800dd5c0d9c62b61161d832e822856666d731dd2b1d"
+          "sha256": "a0cf7b0bbae1e742c43382b029b59040a46714c876babcc99fe462147eef4d95"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-18.png",
-          "sha256": "c004aaac54cc62cefc4695b35daec552ba36bac4091ea45827d1f2f611855974"
+          "sha256": "b041a8115dea48d0bf9e83cbc8d3ff3646ab716eed1d93e1adf4964971a04ec2"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-19.png",
-          "sha256": "e1e8e44077a4578c82f56756f03c2fb880356814ffebc6b2e9ac8179765a52a2"
+          "sha256": "92ea041f3466f2c2d86d95682a5a0abb244b678c7b6ae1c600712a5d73305089"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-20.png",
-          "sha256": "25d2f81b436ad16852912e661d9c31a924490f151684bb9a1b3c008f35e5d6b3"
+          "sha256": "0c8f3f401323d3fcac2c02d59bd5a243cfe5dd01d82cd9727177788ce7c38e17"
         }
       ],
       "visualInspection": "Must inspect every generated PNG; see QA.md for the signed-off scope."

@@ -5,7 +5,9 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { loadEngine } from '../../../scripts/experiment-lib.mjs';
-import { HERE, BASE, DEPLOYMENTS, config, metadata, stats } from './report-common.mjs';
+import { HERE, BASE, DEPLOYMENTS, UI, config, metadata, stats } from './report-common.mjs';
+// ADR-101: the observation window follows the screen default (1800 s) instead of a fixed 600 s.
+const DUR = UI.values.dur;
 
 export const SEGMENTS = ['report', 'process', 'coord', 'wait', 'deliver'];
 const EPS = 1e-7;
@@ -160,7 +162,7 @@ function selfTest() {
 
 async function main() {
   if (process.argv.includes('--self-test')) { selfTest(); return; }
-  const KJ = loadEngine(), out = { meta: { ...metadata(), sc: 'sc3', seed: 29, dur: 600,
+  const KJ = loadEngine(), out = { meta: { ...metadata(), sc: 'sc3', seed: 29, dur: DUR,
     observation: { traceCap: 5000, flowTraceCap: 500000, c2EventCap: 500000 },
     definitions: { timing: 'first actual ENGAGEMENT_FIRED -> directive ancestry -> COMMAND_DECIDED -> same node/trackReceivedAt/jobId; same branch approval interval union',
       nodes: 'canonical catalog IDs with actual node events, sent source, arrived destination, or actual launch; excludes candidate/evidence/role-only nodes',
@@ -168,13 +170,13 @@ async function main() {
       wait: 'residual time from track processing to linked decision after same-branch approval intervals; no physical/procedural causal attribution',
       caps: 'timing disabled if any trace/flow/C2 channel truncates; population outcomes remain global' } }, runs: {} };
   for (const dep of DEPLOYMENTS) for (const mode of ['asis', 'tobe']) {
-    const cfg = config(KJ, { dep, mode, sc: 'sc3', seed: 29, dur: 600, trace: true, traceCap: 5000,
+    const cfg = config(KJ, { dep, mode, sc: 'sc3', seed: 29, dur: DUR, trace: true, traceCap: 5000,
       flowTrace: true, flowTraceCap: 500000, c2Analysis: true, c2EventCap: 500000 });
     const r = KJ.runDES(cfg), catalog = KJ.resolveModelCatalog(cfg), nodeMap = new Map(catalog.nodes.map(n => [n.id, n]));
     const flows = group(r.flowEvents, e => e.th), metrics = group(r.c2Events, e => e.threatId);
     const complete = !r.traceTruncated && !r.flowTruncated && !r.c2EventsTruncated;
-    const threats = r.threatTraces.map(t => analyzeTrace(t, flows.get(t.id) || [], metrics.get(t.id) || [], nodeMap, 600, complete));
-    const comm = communication(r.flowEvents, nodeMap, 600); delete comm.rows;
+    const threats = r.threatTraces.map(t => analyzeTrace(t, flows.get(t.id) || [], metrics.get(t.id) || [], nodeMap, DUR, complete));
+    const comm = communication(r.flowEvents, nodeMap, DUR); delete comm.rows;
     const run = { dep, mode, config: r.config, global: { spawned: r.global.spawned, killed: r.global.killed, leaked: r.global.leaked,
       censoredRaw: r.global.censoredRaw, shotsFired: r.global.shotsFired, everEngaged: r.global.everEngaged },
       coverage: { traces: r.threatTraces.length, flowEvents: r.flowEvents.length, c2Events: r.c2Events.length,

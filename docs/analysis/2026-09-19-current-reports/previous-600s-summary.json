@@ -1,0 +1,285 @@
+{
+  "note": "Summary of the previous edition of this report (observation window 600 s). Extracted from analysis-out.json at commit 56f135e; engine and adapter hashes are identical to the current run. Used only for the 600 s vs 1800 s comparison table.",
+  "sourceCommit": "d3982156ff9403cb9d54f2087bb2b6ed13d257e1",
+  "engineSha256": "45f61c3b18a7d3a93339461d878443adeb1889db8f098f1fac0f4121088f660c",
+  "adapterSha256": "c4fc34a9015f3318abe0e2204d882ff0427d936dfe4ad278ebe4d47a88672cdf",
+  "dur": 600,
+  "seeds": [
+    29,
+    36,
+    43,
+    50,
+    57,
+    64,
+    71,
+    78,
+    85,
+    92,
+    99,
+    106,
+    113,
+    120,
+    127,
+    134,
+    141,
+    148,
+    155,
+    162
+  ],
+  "baseline": [
+    {
+      "dep": "HANBANDO_LEGACY_NORMAL",
+      "mode": "asis",
+      "spawned": 89,
+      "killed": 27,
+      "leaked": 29,
+      "censored": 33,
+      "dup": 1,
+      "shots": 31,
+      "dec": 168.1049858016901,
+      "decN": 29,
+      "leakRateSpawn": 0.3258426966292135,
+      "censoredRate": 0.3707865168539326,
+      "reasons": {
+        "engagement_geometry_gap": 23,
+        "timeout:c2": 1,
+        "window_lost_due_to_c2": 2,
+        "timeout:engage": 1,
+        "correlation_failed": 1,
+        "capacity_full": 1
+      }
+    },
+    {
+      "dep": "HANBANDO_LEGACY_NORMAL",
+      "mode": "tobe",
+      "spawned": 89,
+      "killed": 29,
+      "leaked": 28,
+      "censored": 32,
+      "dup": 0,
+      "shots": 38,
+      "dec": 150.98383779566367,
+      "decN": 36,
+      "leakRateSpawn": 0.3146067415730337,
+      "censoredRate": 0.3595505617977528,
+      "reasons": {
+        "engagement_geometry_gap": 23,
+        "timeout:engage": 4,
+        "correlation_failed": 1
+      }
+    },
+    {
+      "dep": "HANBANDO_FULL_NORMAL",
+      "mode": "asis",
+      "spawned": 89,
+      "killed": 62,
+      "leaked": 4,
+      "censored": 23,
+      "dup": 9,
+      "shots": 80,
+      "dec": 107.29235736781457,
+      "decN": 68,
+      "leakRateSpawn": 0.0449438202247191,
+      "censoredRate": 0.25842696629213485,
+      "reasons": {
+        "timeout:engage": 2,
+        "no_fire_control": 2
+      }
+    },
+    {
+      "dep": "HANBANDO_FULL_NORMAL",
+      "mode": "tobe",
+      "spawned": 89,
+      "killed": 62,
+      "leaked": 5,
+      "censored": 22,
+      "dup": 13,
+      "shots": 93,
+      "dec": 92.79948452009693,
+      "decN": 73,
+      "leakRateSpawn": 0.056179775280898875,
+      "censoredRate": 0.24719101123595505,
+      "reasons": {
+        "missed": 3,
+        "correlation_failed": 1,
+        "no_fire_control": 1
+      }
+    }
+  ],
+  "paired": {
+    "HANBANDO_LEGACY_NORMAL": {
+      "leaked": {
+        "n": 20,
+        "mean": -1.45,
+        "median": -1,
+        "sd": 1.820208200931103,
+        "lo": -2.301883660553254,
+        "hi": -0.5981163394467461,
+        "min": -5,
+        "max": 2
+      },
+      "killed": {
+        "n": 20,
+        "mean": 2.45,
+        "median": 2,
+        "sd": 2.394621165511528,
+        "lo": 1.3292827968411767,
+        "hi": 3.5707172031588237,
+        "min": -1,
+        "max": 6
+      },
+      "censored": {
+        "n": 20,
+        "mean": -1,
+        "median": -1,
+        "sd": 1.2139539573337679,
+        "lo": -1.568147940651841,
+        "hi": -0.43185205934815896,
+        "min": -3,
+        "max": 1
+      },
+      "leakRateSpawn": {
+        "n": 20,
+        "mean": -0.017841086088789055,
+        "median": -0.012690763052208842,
+        "sd": 0.02338913809260322,
+        "lo": -0.02878753966773684,
+        "hi": -0.006894632509841271,
+        "min": -0.07142857142857145,
+        "max": 0.025316455696202528
+      },
+      "killRateSpawn": {
+        "n": 20,
+        "mean": 0.030021690676269797,
+        "median": 0.02259959141981613,
+        "sd": 0.030150670912015315,
+        "lo": 0.01591074232897339,
+        "hi": 0.044132639023566206,
+        "min": -0.012658227848101278,
+        "max": 0.07999999999999999
+      },
+      "censoredRate": {
+        "n": 20,
+        "mean": -0.012180604587480756,
+        "median": -0.011052760136785522,
+        "sd": 0.015193549059415452,
+        "lo": -0.019291404430547825,
+        "hi": -0.005069804744413686,
+        "min": -0.040000000000000036,
+        "max": 0.013333333333333364
+      },
+      "dup": {
+        "n": 20,
+        "mean": -0.65,
+        "median": 0,
+        "sd": 0.9880869341680841,
+        "lo": -1.1124389198957412,
+        "hi": -0.18756108010425893,
+        "min": -4,
+        "max": 0
+      },
+      "shots": {
+        "n": 20,
+        "mean": 5.25,
+        "median": 5,
+        "sd": 2.613225472174388,
+        "lo": 4.026972832037479,
+        "hi": 6.473027167962521,
+        "min": 0,
+        "max": 10
+      },
+      "direction": {
+        "lowerLeak": 14,
+        "tie": 4,
+        "higherLeak": 2
+      }
+    },
+    "HANBANDO_FULL_NORMAL": {
+      "leaked": {
+        "n": 20,
+        "mean": -1.8,
+        "median": -1,
+        "sd": 3.205258836744127,
+        "lo": -3.300107311608363,
+        "hi": -0.2998926883916375,
+        "min": -7,
+        "max": 3
+      },
+      "killed": {
+        "n": 20,
+        "mean": 3,
+        "median": 2,
+        "sd": 3.178877656956105,
+        "lo": 1.512239460588377,
+        "hi": 4.487760539411623,
+        "min": -2,
+        "max": 9
+      },
+      "censored": {
+        "n": 20,
+        "mean": -1.2,
+        "median": -1,
+        "sd": 1.9628121608924702,
+        "lo": -2.1186243682146833,
+        "hi": -0.28137563178531677,
+        "min": -7,
+        "max": 1
+      },
+      "leakRateSpawn": {
+        "n": 20,
+        "mean": -0.02136001592309989,
+        "median": -0.012690763052208833,
+        "sd": 0.03995592725695359,
+        "lo": -0.040059965497572514,
+        "hi": -0.0026600663486272685,
+        "min": -0.09210526315789473,
+        "max": 0.042857142857142864
+      },
+      "killRateSpawn": {
+        "n": 20,
+        "mean": 0.03629702608957629,
+        "median": 0.02402186421173763,
+        "sd": 0.0392996275561586,
+        "lo": 0.017904234229944884,
+        "hi": 0.054689817949207686,
+        "min": -0.02857142857142858,
+        "max": 0.11842105263157887
+      },
+      "censoredRate": {
+        "n": 20,
+        "mean": -0.014937010166476392,
+        "median": -0.012121657361151894,
+        "sd": 0.023552804764427462,
+        "lo": -0.02596006210567378,
+        "hi": -0.003913958227279003,
+        "min": -0.08139534883720934,
+        "max": 0.013333333333333364
+      },
+      "dup": {
+        "n": 20,
+        "mean": 1.15,
+        "median": 1.5,
+        "sd": 2.007223796297028,
+        "lo": 0.21059034660736942,
+        "hi": 2.0894096533926305,
+        "min": -3,
+        "max": 4
+      },
+      "shots": {
+        "n": 20,
+        "mean": 5.65,
+        "median": 6.5,
+        "sd": 4.380278770268299,
+        "lo": 3.5999664317790296,
+        "hi": 7.700033568220971,
+        "min": -3,
+        "max": 13
+      },
+      "direction": {
+        "lowerLeak": 12,
+        "tie": 3,
+        "higherLeak": 5
+      }
+    }
+  }
+}

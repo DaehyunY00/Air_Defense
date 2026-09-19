@@ -1,0 +1,113 @@
+{
+  "status": "PASS",
+  "sheet_count": 13,
+  "source_check": [
+    {
+      "sheet": "안내",
+      "checked_cells": 16,
+      "formulas": 0,
+      "rows": 16,
+      "changed_cells": 13,
+      "changed_rows": 13
+    },
+    {
+      "sheet": "기본설정",
+      "checked_cells": 270,
+      "formulas": 0,
+      "rows": 90,
+      "changed_cells": 229,
+      "changed_rows": 79
+    },
+    {
+      "sheet": "아군자산_LEGACY",
+      "checked_cells": 1716,
+      "formulas": 0,
+      "rows": 66,
+      "changed_cells": 3,
+      "changed_rows": 1
+    },
+    {
+      "sheet": "아군자산_FULL",
+      "checked_cells": 6578,
+      "formulas": 0,
+      "rows": 253,
+      "changed_cells": 3,
+      "changed_rows": 1
+    },
+    {
+      "sheet": "자산제원_센서",
+      "checked_cells": 162,
+      "formulas": 0,
+      "rows": 9,
+      "changed_cells": 12,
+      "changed_rows": 3
+    },
+    {
+      "sheet": "자산제원_포대",
+      "checked_cells": 240,
+      "formulas": 0,
+      "rows": 10,
+      "changed_cells": 0,
+      "changed_rows": 0
+    },
+    {
+      "sheet": "자산제원_C2",
+      "checked_cells": 135,
+      "formulas": 0,
+      "rows": 9,
+      "changed_cells": 5,
+      "changed_rows": 5
+    },
+    {
+      "sheet": "위협제원",
+      "checked_cells": 152,
+      "formulas": 0,
+      "rows": 8,
+      "changed_cells": 0,
+      "changed_rows": 0
+    },
+    {
+      "sheet": "공격경로",
+      "checked_cells": 98,
+      "formulas": 0,
+      "rows": 7,
+      "changed_cells": 0,
+      "changed_rows": 0
+    },
+    {
+      "sheet": "조준점",
+      "checked_cells": 66,
+      "formulas": 0,
+      "rows": 11,
+      "changed_cells": 0,
+      "changed_rows": 0
+    },
+    {
+      "sheet": "시나리오",
+      "checked_cells": 340,
+      "formulas": 0,
+      "rows": 34,
+      "changed_cells": 75,
+      "changed_rows": 33
+    },
+    {
+      "sheet": "통신계선_LEGACY",
+      "checked_cells": 3808,
+      "formulas": 0,
+      "rows": 238,
+      "changed_cells": 163,
+      "changed_rows": 79
+    },
+    {
+      "sheet": "통신계선_FULL",
+      "checked_cells": 11552,
+      "formulas": 0,
+      "rows": 722,
+      "changed_cells": 393,
+      "changed_rows": 191
+    }
+  ],
+  "source_cells": 25133,
+  "formulas": 0,
+  "changed_cells": 896
+}

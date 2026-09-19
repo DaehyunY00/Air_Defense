@@ -838,6 +838,13 @@
 
   /* 표시 개선: 실제 교신/사건과 집계된 검토 근거를 분리한다. */
   #record-panel { flex:none; border-top:1px solid #334155; background:var(--panel); min-width:0; }
+  #record-panel > summary { display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:7px 10px; cursor:pointer; list-style:none; font-size:13px; }
+  #record-panel > summary::-webkit-details-marker { display:none; }
+  #record-panel > summary:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+  .record-toggle-label { color:var(--accent); font-size:11px; font-weight:400; }
+  #record-panel .record-close-label, #record-panel[open] .record-open-label { display:none; }
+  #record-panel[open] .record-close-label { display:inline; }
   .record-head { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:7px 10px; }
   .record-head strong { font-size:13px; }
   .record-head label { display:flex; align-items:center; gap:6px; min-width:0; }
@@ -883,7 +890,7 @@
   #track-explanation details { display:inline-block; margin-left:10px; }
   #track-explanation details[open] { display:block; max-height:90px; overflow:auto; margin-left:0; }
   #track-explanation summary { cursor:pointer; }
-  .edge.recorded-route { opacity:.95; stroke-width:3; }
+  .edge.recorded-route:not(.hot) { opacity:.95; stroke-width:3; }
   .diagnosis-marker { pointer-events:none; }
   .diagnosis-marker text { paint-order:stroke; stroke:var(--bg); stroke-width:3px; stroke-linejoin:round; }
   #track-explanation .node-review { display:block; margin:5px 0; max-height:160px; overflow:auto; }
@@ -1026,9 +1033,11 @@
     <!-- 신호등 — 「지금 이 항적이 어디서 무엇을 기다리는가」를 추론하게 두지 않고 직접 적는다. -->
     <div id="track-explanation" role="status" hidden></div>
     <div id="graph-wrap"><div id="signal" hidden></div><svg id="graph"></svg></div>
-    <section id="record-panel" aria-label="교신과 후보 검토 기록">
+    <details id="record-panel" aria-label="교신과 후보 검토 기록" open>
+      <summary><strong>교신·선정·발사 기록</strong><span class="record-toggle-label">
+        <span class="record-open-label">▸ 기록 열기</span><span class="record-close-label">▾ 기록 닫기</span>
+      </span></summary>
       <div class="record-head">
-        <strong>교신·선정·발사 기록</strong>
         <label>항적 <select id="record-track" aria-label="기록을 볼 항적" disabled><option>실행 후 선택</option></select></label>
         <span id="record-step"><button id="record-prev" type="button" disabled>‹ 이전 기록</button><button id="record-next" type="button" disabled>다음 기록 ›</button></span>
         <span id="record-current" aria-live="polite">실행을 기다리는 중</span>
@@ -1041,7 +1050,7 @@
           <div class="record-scroll" id="record-evidence"><div class="record-placeholder">후보 검토만으로 자산에 명령 연결선을 그리지 않습니다.</div></div>
         </div>
       </div>
-    </section>
+    </details>
     <div id="transport">
       <div id="tp-ctl">
         <button id="play" disabled>▶</button>
@@ -1085,7 +1094,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20260911a';
+const V = '?v=20260919a';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -3158,7 +3167,7 @@ function shotsSvg() {
           ' (' + (sh.hit ? '격추' : '명중 실패') + ')'
           : '\n발사 ' + fmt(sh.t0) + ' — 결과는 관측 종료까지 기록되지 않았다'));
       // ① 비행 중 — 사수에서 요격점으로 나아간다
-      if (ip && simT >= sh.t0 && simT <= sh.t1) {
+      if (ip && simT >= sh.t0 && simT < sh.t1) {
         const b = mproj(ip, mapGeo);
         const p = (simT - sh.t0) / Math.max(1e-6, sh.t1 - sh.t0);
         const hx = a[0] + (b[0] - a[0]) * p, hy = a[1] + (b[1] - a[1]) * p;
@@ -5827,6 +5836,7 @@ function relayout() {
   if (view === 'all' && run) { layoutAll(); layoutMap(); drawFrame(); }
   else if (sel) { layoutGraph(); layoutMap(); drawFrame(); }
 }
+el('record-panel').addEventListener('toggle', relayout);
 window.addEventListener('resize', relayout);
 
 /**

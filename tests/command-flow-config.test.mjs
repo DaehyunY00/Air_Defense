@@ -1,4 +1,4 @@
-/** Execute the browser's real configuration and observation code, without duplicating its parser. */
+/** Execute the browser's configuration, observation, and result rendering without copying their logic. */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -112,4 +112,45 @@ test('long-run display keeps 455 global threats separate from 300 detailed recor
   assert.equal(summary.multiFireLabel, '복수 사수 발사 2건 · 300개 표본 기준');
   assert.equal(summary.trackCountLabel, '300/455개 표본');
   assert.ok(summary.mapScope.includes('300/455개 표본 기준'));
+});
+
+test('recorded routes retain active communication stroke emphasis', () => {
+  const recordedRule = source.match(/(\.edge\.recorded-route[^{}]*)\{([^}]+)\}/);
+  assert.ok(recordedRule, 'completed-route style exists');
+  assert.ok(recordedRule[1].includes(':not(.hot)'),
+    'completed-route styling must exclude active edges regardless of stylesheet order');
+  const activeRule = source.match(/\.edge\.hot\s*\{([^}]+)\}/);
+  assert.ok(activeRule && /stroke-width:\s*calc\(var\(--w,\s*2\)\s*\*\s*2\.1\)/.test(activeRule[1]),
+    'active edges retain their traffic-dependent width multiplier');
+});
+
+test('BDA result replaces flight at the exact recorded result time and remains visible at track end', () => {
+  const shotsCode = section('function shotsSvg() {', '/** 발사불가 사유 코드');
+  const flashDeclaration = source.match(/const SHOT_FLASH = [^;]+;/);
+  assert.ok(flashDeclaration, 'browser flash duration exists');
+  for (const hit of [true, false]) {
+    const track = { id: 'BOUNDARY', endT: 10, exitT: hit ? 10 : null,
+      shots: [{ shooter: 'BATTERY', t0: 2, t1: 10, hit }], noFire: [] };
+    const ctx = vm.createContext({
+      mapGeo: {}, view: 'track', sel: track, speed: 1, simT: 0,
+      run: { tracks: [track], nodes: { BATTERY: { coord: [0, 0] } } },
+      // Geometry and text helpers are independent of the result-time boundary.
+      mproj: (pos) => pos, threatPosAt: () => [1, 1],
+      nodeName: (id) => id, fmt: (time) => String(time), esc: (text) => String(text)
+    });
+    vm.runInContext(flashDeclaration[0] + shotsCode, ctx);
+    const renderAt = (at) => { ctx.simT = at; return vm.runInContext('shotsSvg()', ctx); };
+    assert.equal(renderAt(1), '', 'no shot is drawn before launch');
+    assert.match(renderAt(9.999), /class="mshot"/, 'flight is visible immediately before BDA');
+    const atResult = renderAt(track.endT);
+    assert.doesNotMatch(atResult, /class="mshot"/, 'flight ends at BDA, including the final playback instant');
+    assert.match(atResult, hit ? /class="mhit"/ : /class="mmiss"/,
+      'the recorded HIT or MISS marker is visible at the exact BDA timestamp');
+    assert.match(renderAt(30), hit ? /class="mhit"/ : /class="mmiss"/,
+      'individual-track result remains visible after the result time');
+    ctx.view = 'all';
+    assert.match(renderAt(10), hit ? /class="mhit"/ : /class="mmiss"/,
+      'overview also starts its result flash at BDA');
+    assert.equal(renderAt(30), '', 'overview result still disappears after its flash interval');
+  }
 });

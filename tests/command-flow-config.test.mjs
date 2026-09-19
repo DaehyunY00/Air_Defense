@@ -54,7 +54,9 @@ test('omitted, empty, and explicit default URL flags produce the same typed feat
     assert.equal(browserConfig(`?par=${enabled}`).features.c2DecisionTimeParity, true);
     assert.equal(browserConfig(`?par=${disabled}`).features.c2DecisionTimeParity, false);
   }
-  assert.equal(browserConfig('?dur=invalid').values.dur, 600);
+  assert.equal(browserConfig('').values.dur, 1800);
+  assert.equal(browserConfig('?dur=invalid').values.dur, 1800);
+  assert.equal(browserConfig('?dur=600').values.dur, 600);
 });
 
 test('default browser features reach the catalog as parity ON, matching explicit ?par=1', () => {

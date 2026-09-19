@@ -916,7 +916,7 @@
   <button id="adv-toggle" title="배치·seed·관측시간 — 판을 재는 조건. 접혀 있어도 기본값이 아닌 조건은 상태줄에 뜬다">⚙ 고급 모의설정</button>
   <span id="adv" hidden>
     <label>seed <input id="seed" class="mono" type="number" value="29" style="width:78px"></label>
-    <label>관측 <input id="dur" class="mono" type="number" value="600" step="60" style="width:64px">초</label>
+    <label>관측 <input id="dur" class="mono" type="number" value="1800" step="60" style="width:64px">초</label>
   </span>
   <button id="side-toggle" title="왼쪽 자리(패널·지도)를 접고 그래프를 넓게 쓴다">‹ 패널 접기</button>
   <span id="dirty" hidden>⟳ 조건이 바뀌었습니다 — [실행]</span>
@@ -8974,7 +8974,10 @@ const PARAMS = [
   // 그대로다 — 두 화면의 항적 번호는 서로 다른 위협을 가리킨다.
   // ADR-100: 선정 이후 기본 모델이 바뀌었다. 현재 조건의 통계적 대표성을 뜻하지 않는 재현용 예시다.
   { k: 'seed',  d: 29,      t: 'num',  h: '재현용 난수 seed (기본 29 — 과거 조건에서 선정한 예시, 현행 평균 성능을 뜻하지 않음)' },
-  { k: 'dur',   d: 600,     t: 'num',  h: '관측 시간(초)' },
+  // 기본 1800초(사용자 결정, 2026-09-19). 600초에서는 SC3 항적의 3분의 1 이상이 「종료 미해결」로 남아
+  // 확정 결과보다 관측창이 먼저 끝났다. 분석 보고서도 같은 기본값으로 다시 돌린다.
+  // ⚠️ seed 29는 600초 조건에서 고른 재현 예시다(위 주석) — 1800초의 대표 표본이라는 뜻이 아니다.
+  { k: 'dur',   d: 1800,    t: 'num',  h: '관측 시간(초 · 기본 1800)' },
   // 위협 강도는 **×1 고정**이다(사용자 결정). 배율을 바꾸면 같은 화면이 다른 부하의
   // 결과를 같은 모양으로 보여주게 되고, 본 앱 기본값과도 어긋난다. 파라미터를 두지 않는다.
   { k: 'appr',  d: 1,       t: 'bool', h: '교전 협조 계선 — 국지방공 AOC↔MCRC 협조 (ADR-058·065·098)' },
@@ -9135,7 +9138,7 @@ function doRun() {
     // 지원하는 값이라 여기서 새 의미를 지어내는 것이 아니다.
     intensity: INTENSITY,
     seed: Math.max(0, Math.floor(+el('seed').value || 0)),
-    endTimeSec: Math.min(7200, Math.max(60, Math.floor(+el('dur').value || 600))),
+    endTimeSec: Math.min(7200, Math.max(60, Math.floor(+el('dur').value || 1800))),
     deploymentId: DEPLOYMENT, modelFidelity: 'iads-c2',
     trace: true, traceCap: 300, flowTrace: true, features: features()
   };
@@ -13119,7 +13122,7 @@ function setMode(m) {
 // 상단 바에 남은 컨트롤만 재실행 대상이다(나머지 조건은 URL이라 새로고침으로 바뀐다).
 ['sc', 'seed', 'dur'].forEach((id) => {
   el(id).addEventListener('change', () => {
-    if (id === 'dur') { P.dur = Math.min(7200, Math.max(60, Math.floor(+el('dur').value || 600))); renderDep(); }
+    if (id === 'dur') { P.dur = Math.min(7200, Math.max(60, Math.floor(+el('dur').value || 1800))); renderDep(); }
     markDirty();
   });
 });

@@ -547,6 +547,8 @@
   .mthreat.sel { stroke: #fff; stroke-width: 1.8; }
   .mthreat-lab { fill: #dbe4f0; font-size: 8px; paint-order: stroke;
     stroke: #080d14; stroke-width: 2.4; pointer-events: none; }
+  /* 고르지 않은 항적의 이름 — 점을 가리지 않게 더 작고 흐리게. 고른 항적만 또렷하다. */
+  .mthreat-lab.minor { font-size: 6.5px; opacity: .72; stroke-width: 2; }
   .mimpact { fill: none; stroke: var(--bad); stroke-width: 1.2; opacity: .55; }
   /* 조준점(ADR-097) — 적이 노리는 곳. 축선과 같은 「적의 계획」 계열이라 같은 황색을 쓴다
      (실제 지리는 무채색 · 개념은 유채색이라는 이 지도의 규율 그대로). */
@@ -881,31 +883,9 @@
   }
 
 
-  #track-explanation { flex:none; padding:7px 12px; background:#101b2a; border-bottom:1px solid #334155; font-size:12px; line-height:1.5; }
-  #track-explanation[hidden] { display:none; }
-  #track-explanation strong { display:block; margin-bottom:2px; color:var(--fg); }
-  #track-explanation.review { border-left:3px solid var(--warn); }
-  #track-explanation.stop { border-left:3px solid var(--bad); }
-  #track-explanation .trace-route { color:#aab8ca; margin-top:3px; font-size:11px; }
-  #track-explanation details { display:inline-block; margin-left:10px; }
-  #track-explanation details[open] { display:block; max-height:90px; overflow:auto; margin-left:0; }
-  #track-explanation summary { cursor:pointer; }
   .edge.recorded-route:not(.hot) { opacity:.95; stroke-width:3; }
   .diagnosis-marker { pointer-events:none; }
   .diagnosis-marker text { paint-order:stroke; stroke:var(--bg); stroke-width:3px; stroke-linejoin:round; }
-  #track-explanation .node-review { display:block; margin:5px 0; max-height:160px; overflow:auto; }
-  .node-review-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:4px; }
-  .node-review-cell { min-width:0; border:1px solid #334155; border-radius:4px; padding:5px 7px; }
-  .node-review-cell>b { color:#b8c9df; }
-  .node-review-item { margin-top:4px; font-size:11px; overflow-wrap:anywhere; }
-  #track-explanation .node-review-item strong { display:inline; color:#e2e8f0; font-size:11px; }
-  .role-context { margin-top:6px; }
-  .role-context-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:5px 0; }
-  .role-context-card { min-width:0; position:relative; padding:5px 8px; border:1px dashed #64748b; border-radius:5px; background:#162233; font-size:11px; overflow-wrap:anywhere; }
-  .role-context-card+.role-context-card:before { content:''; position:absolute; left:-13px; top:45%; width:12px; border-top:1px dashed #94a3b8; }
-  #track-explanation .role-context-card strong { margin:2px 0; font-size:12px; }
-  .role-context-state { color:#aab8ca; margin-top:3px; }
-  .role-context-state.has-record { color:#93c5fd; }
   .role-context-overlay { pointer-events:none; }
   .role-context-link { fill:none; stroke:#94a3b8; stroke-width:1.5; stroke-dasharray:4 6; opacity:.65; }
   .role-context-node { fill:none; stroke:#94a3b8; stroke-width:1.5; stroke-dasharray:4 6; }
@@ -1003,6 +983,7 @@
         <span id="map-scale"></span>
         <label title="센서 탐지거리·사수 사거리를 타원으로 그린다 — 「사거리 밖이라 못 쐈다」를 물을 때 켠다"><input type="checkbox" id="map-rings"> 사거리</label>
         <label title="이 실행의 항적을 축선 진입점에서 착탄점까지 실제 궤적으로 그린다"><input type="checkbox" id="map-threats" checked> 항적</label>
+        <label title="움직이는 항적 옆에 항적 이름을 작게 붙인다 — 항적이 몰려 글자가 겹치면 끈다"><input type="checkbox" id="map-threat-names" checked> 이름</label>
         <label title="요격탄이 사수에서 요격점까지 날아가고, 결과가 격추(녹색 링)·명중실패(적색 ✕)·발사불가(적색 ✕ · 사수 자리)로 튄다"><input type="checkbox" id="map-shots" checked> 요격</label>
       </div>
       <svg id="map" preserveAspectRatio="xMidYMid meet"></svg>
@@ -1031,7 +1012,6 @@
             state·hotEdges·doneEdges를 받아 **그리기만** 한다. 두 벌로 계산하면 같은
             순간에 두 그림이 다른 말을 하게 된다(cylSvg·placeSlots와 같은 규율). -->
     <!-- 신호등 — 「지금 이 항적이 어디서 무엇을 기다리는가」를 추론하게 두지 않고 직접 적는다. -->
-    <div id="track-explanation" role="status" hidden></div>
     <div id="graph-wrap"><div id="signal" hidden></div><svg id="graph"></svg></div>
     <details id="record-panel" aria-label="교신과 후보 검토 기록" open>
       <summary><strong>교신·선정·발사 기록</strong><span class="record-toggle-label">
@@ -3101,6 +3081,7 @@ function paintMap(state, hot, done) {
   let out = '';
   if (el('map-threats').checked) {
     const selId = sel ? sel.id : null;
+    const showNames = el('map-threat-names').checked;
     run.tracks.forEach((t) => {
       const pos = threatPosAt(t, simT);
       if (!pos) return;
@@ -3117,8 +3098,13 @@ function paintMap(state, hot, done) {
         `<circle class="mthreat${isSel ? ' sel' : ''}" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}"` +
         ` r="${isSel ? 4.6 : 2.8}" fill="${col}"><title>${esc(t.id + ' · ' +
           (THREAT_LABEL[t.type] || t.type) + ' · ' + (KJ.AXES[t.axis] ? KJ.AXES[t.axis].label : t.axis))}</title></circle>`;
+      // 이름은 항적과 함께 움직인다. 고른 항적은 늘 적고, 나머지는 「이름」을 켰을 때만 작게 적는다.
       if (isSel) {
         out += `<text class="mthreat-lab" x="${(p[0] + 7).toFixed(1)}" y="${(p[1] - 6).toFixed(1)}">${esc(t.id)}</text>`;
+      } else if (showNames) {
+        out += `<text class="mthreat-lab minor" x="${(p[0] + 5).toFixed(1)}" y="${(p[1] - 4).toFixed(1)}">${esc(t.id)}</text>`;
+      }
+      if (isSel) {
         if (t.target) {
           const q = mproj(t.target, mapGeo);
           out += `<circle class="mimpact" cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="5"></circle>` +
@@ -4970,7 +4956,6 @@ function drawFrame() {
   else { drawFrameTrack(); }
   followFlow();
   paintRecordPanel();
-  paintTrackExplanation();
 }
 
 /**
@@ -5107,7 +5092,7 @@ function trackSignals(t) {
   if (!out.length) {
     const d = buildTrackDiagnosis(sel, t);
     out.push({ cls: d.tone === 'stop' ? 'stop' : d.tone === 'review' ? 'wait' : 'idle',
-      text: d.title, sub: '현재 진행 중인 교신·처리 없음 · 위의 기록 설명 참조' });
+      text: d.title, sub: '현재 진행 중인 교신·처리 없음 · 아래 교신·선정·발사 기록 참조' });
   }
   return out;
 }
@@ -5575,6 +5560,14 @@ el('legend').innerHTML =
   ' 경계 상자를 좁혀 다시 그리는 방식이라 <b>확대해도 글자·선 굵기가 그대로다</b>.</span>' +
   ' <b style="color:var(--warn)">⚠️ 좌표는 전부 도시 수준 개념좌표이고 실제 배치·침투경로가 아니다</b>' +
   ' — 축선 진입점·표적권역·자산 위치 전부 그렇다(axes.js·배치 카탈로그 디스클레이머). ' +
+  // ── 항적 개별 표식 — 상단 설명 영역을 없애면서 그 범례를 여기로 옮겼다(기록은 하단 패널 하나만 둔다).
+  '<b>항적 개별 표식</b> — 그래프 위 표식은 고른 항적의 <b>현재 시각까지의 기록</b>만 말한다:' +
+  ' <b>굵은 선 = 도착 시각이 지난 교신</b> ·' +
+  ' <span style="color:#93c5fd">파란 원 = 명령 접수·인가</span> ·' +
+  ' <span style="color:var(--warn)">노란 점선 원 = 검토·처리 근거</span> ·' +
+  ' <span style="color:var(--bad)">빨간 원 = 탄약 고갈·발사 불가 이력</span> ·' +
+  ' <span style="opacity:.7">회색 점선 = 배치에 선언된 ICC·ECS·요격부대의 역할 관계</span>' +
+  ' — <b>실제 명령 전송·접수를 뜻하지 않는다</b>. 실제 교신·선정·발사는 하단 「교신·선정·발사 기록」에서 확인한다. ' +
   // ── 레인 타임라인
   '<b>레인 타임라인</b>(하단) — 「어디에서 시간이 갔는가」를 킬체인 단계별로 편 것이다:' +
   ' 탐지·보고 / MCRC·KAMDOC 처리 / AOC·JAOC·ICC 처리 / ECS 교전통제 / 요격·타격.' +
@@ -5761,6 +5754,7 @@ el('map').addEventListener('wheel', (ev) => {
   });
 })();
 el('map-threats').addEventListener('change', () => mapRefresh());
+el('map-threat-names').addEventListener('change', () => mapRefresh());
 el('map-shots').addEventListener('change', () => mapRefresh());
 // 손잡이 드래그로 좌측 자리 폭을 넓힌다(지도를 볼 때 쓴다).
 // ⚠️ 끄는 동안에는 폭만 바꾸고 **놓을 때 한 번만** 다시 세운다 — 매 mousemove마다
@@ -6206,16 +6200,6 @@ function buildRoleContext(track, at) {
   return {assetId:chosen.id,basis:chosen.basis,candidate:!!chosen.candidate,sourceT:chosen.t,roles,links};
 }
 
-function roleContextHtml(context){
-  if(!context)return '<div class="trace-route">자산 관련 기록 시각에 도달하면 구성상 ICC·ECS·요격부대 연결이 표시됩니다.</div>';
-  return '<div class="role-context"><b>구성상 역할 연결</b> <span class="trace-route">'+esc(context.basis)+' 기준 · 모델상 역할</span>'+
-    '<div class="role-context-grid">'+context.roles.map(r=>
-      '<div class="role-context-card"><span class="trace-route">'+esc(r.label)+'</span><strong>'+esc(r.name)+'</strong>'+
-      '<div>'+esc(r.role)+'</div><div class="role-context-state'+(r.active?' has-record':'')+'">'+esc(r.state)+'</div></div>').join('')+'</div>'+
-    '<div class="trace-route">회색 점선은 배치에 선언된 역할 관계이며 실제 명령 전송·접수를 뜻하지 않습니다. 상태는 현재 시각까지의 노드별 항적 이력이며, 동일 명령의 연속 경유를 뜻하지 않습니다.'+
-    (context.candidate?' 표시 자산은 최초 관측 사례이며 지정 자산을 뜻하지 않습니다.':'')+'</div></div>';
-}
-
 function roleContextSvg(context){
   if(!context||!geo)return '';
   let out='<g class="role-context-overlay">';
@@ -6322,17 +6306,6 @@ function buildNodeReview(track, at) {
   return {layers,markers:[...markers.values()],iccFailures:iccFailures.sort((a,b)=>a.t-b.t)};
 }
 
-function nodeReviewHtml(review){
-  return '<details class="node-review"><summary>실제 관여 기록 펼치기 · 현재 시각까지</summary><div class="node-review-grid">'+
-    review.layers.map(layer=>'<div class="node-review-cell"><b>'+esc(layer.label)+'</b>'+
-      (layer.items.length?layer.items.map(item=>'<div class="node-review-item"><strong>'+esc(nodeName(item.id))+'</strong>'+
-        item.entries.filter(e=>e.key!=='communication'||item.entries.length===1).map(e=>
-          '<div title="'+esc(e.basis)+'">'+esc(e.text)+' <span class="trace-route">'+esc(fmt(e.t))+'</span></div>').join('')+
-        (item.entries.some(e=>e.key==='candidate')?'<div class="trace-route">조회 대상 표시는 문의·응답 기록을 뜻하지 않음</div>':'')+
-        (item.entries.every(e=>e.key==='communication')?'<div class="trace-route">명령 접수·탄약 확인 기록 없음</div>':'')+'</div>').join(''):
-        '<div class="trace-route">해당 노드의 관여 기록 없음</div>')+'</div>').join('')+'</div></details>';
-}
-
 /* Retrospective record explanation only. Does not add routes or model events. */
 function buildTrackDiagnosis(track, at) {
   const stages = (track.stages || []).filter(s => s.t <= at);
@@ -6406,27 +6379,6 @@ function buildTrackDiagnosis(track, at) {
     summary.detail='관측 종료를 요격 실패나 탄약 고갈로 해석하지 않습니다. '+summary.detail;
   }
   return summary;
-}
-
-let trackExplanationKey='';
-function paintTrackExplanation() {
-  const box=el('track-explanation');
-  if(view!=='track'||!sel){box.hidden=true;trackExplanationKey='';return;}
-  box.hidden=false;
-  const d=buildTrackDiagnosis(sel,simT);
-  const key=sel.id+'|'+JSON.stringify(d);
-  if(key===trackExplanationKey)return;
-  trackExplanationKey=key;
-  const reviewOpen=!!box.querySelector?.('.node-review')?.open;
-  box.className=d.tone;
-  const pairs=d.routePairs.map(p=>nodeName(p.from)+' → '+nodeName(p.to));
-  box.innerHTML=`<strong>${esc(sel.id)} · ${esc(d.title)}</strong>`+
-    `<div>${esc(d.detail)}</div>`+
-    `<div class="trace-route">선정·명령 처리 ${d.directiveCount}건 · 중계/ECS 접수 ${d.receiptCount}건 · 발사 불가 ${d.noFireCount}건 · 발사 ${d.launchCount}회`+
-    (pairs.length ? `<details><summary>명령 유형으로 기록된 교신 ${d.commandCount}건</summary><div>명령 중계가 협조 유형으로 기록된 구간은 이 목록에 포함되지 않습니다. 전체 경로는 그래프와 접수 기록을 함께 확인하세요.</div>${pairs.map(p=>`<div>${esc(p)}</div>`).join('')}</details>` : '')+'</div>'+
-    roleContextHtml(d.roleContext)+nodeReviewHtml(d.nodeReview)+
-    '<div class="trace-route">굵은 선: 도착 시각이 지난 교신 · 파란 원: 명령 접수·인가 · 노란 점선 원: 검토·처리 근거 · 빨간 원: 탄약 고갈·발사 불가 이력</div>';
-  const review=box.querySelector?.('.node-review');if(review)review.open=reviewOpen;
 }
 
 function diagnosisMarkersSvg() {

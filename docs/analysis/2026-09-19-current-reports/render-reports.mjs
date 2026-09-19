@@ -16,8 +16,9 @@ const executablePath=process.env.CHROME_PATH||[
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium'
 ].find(p=>fs.existsSync(p));
 if(!executablePath)throw new Error('Chrome unavailable; set CHROME_PATH');
-const outputs=[['report.html','K-JAMDS_분석_방법과_결과.pdf'],['c2-report.html','K-JAMDS_C2_분석결과.pdf']];
-const selected=process.argv.includes('--general-only')?outputs.slice(0,1):process.argv.includes('--c2-only')?outputs.slice(1):outputs;
+// One integrated document since 2026-09-19 (the separate C2 report was merged into it).
+const outputs=[['report.html','K-JAMDS_분석_방법과_결과.pdf']];
+const selected=outputs;
 const browser=await chromium.launch({headless:true,executablePath});
 const audits=[];
 try {
@@ -44,6 +45,6 @@ try {
 } finally {await browser.close();}
 const auditPath=path.join(HERE,'render-qa.json');
 const prior=fs.existsSync(auditPath)?JSON.parse(fs.readFileSync(auditPath,'utf8')):[];
-const merged=[...prior.filter(p=>!audits.some(a=>a.pdf===p.pdf)),...audits]
-  .sort((a,b)=>outputs.findIndex(o=>o[1]===a.pdf)-outputs.findIndex(o=>o[1]===b.pdf));
+// Drop audits of documents that are no longer produced.
+const merged=[...prior.filter(p=>outputs.some(o=>o[1]===p.pdf)&&!audits.some(a=>a.pdf===p.pdf)),...audits];
 fs.writeFileSync(auditPath,JSON.stringify(merged,null,2));

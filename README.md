@@ -18,8 +18,7 @@ DES(이산사건 시뮬레이션) 엔진이 IADS_C2 계열 물리(SNR/RCS·레�
 
 | 자료 | 범위 |
 |---|---|
-| [분석 방법과 결과](K-JAMDS_분석_방법과_결과.pdf) | 현행 설정으로 재실행한 기준선·기능별 비교·여러 seed의 쌍대 비교·강도·관측시간 분석 |
-| [C2 분석결과](K-JAMDS_C2_분석결과.pdf) | 항적별 실제 기록과 C2 관여·시간 구간·미관측 범위 |
+| [분석 방법과 결과](K-JAMDS_분석_방법과_결과.pdf) | SC3 기준 통합본 — 기준선·기능별 비교·여러 seed의 쌍대 비교·강도·관측시간 분석과, 항적별 실제 기록에 기반한 C2 관여·명령 계보·시간 구간·통신. 종전의 별도 「C2 분석결과」를 합쳤다 |
 | [파라미터 XLSX](K-JAMDS_파라미터.xlsx) | 현행 소스의 카탈로그·기본 설정·적용값을 확인하는 내보내기 파일 |
 | [재현 자료](docs/analysis/2026-09-19-current-reports/) | 실행 설정·소스 버전·원시 결과·보고서 생성 스크립트 |
 
@@ -44,10 +43,10 @@ FULL −2.136%p(−4.006~−0.266)입니다. 분모는 각 실행의 생성 항�
 
 ```bash
 node docs/analysis/2026-09-19-current-reports/analysis-run.mjs --workers 2
-node docs/analysis/2026-09-19-current-reports/report-gen.mjs
 node docs/analysis/2026-09-19-current-reports/c2-analysis-run.mjs
-node docs/analysis/2026-09-19-current-reports/c2-report-gen.mjs
+node docs/analysis/2026-09-19-current-reports/report-gen.mjs      # 두 결과를 한 문서로 (교차 검산 포함)
 node docs/analysis/2026-09-19-current-reports/render-reports.mjs
+node docs/analysis/2026-09-19-current-reports/verify-pdfs.mjs
 node scripts/export-params-xlsx.mjs
 ```
 
@@ -352,8 +351,7 @@ legacy C2 이론은 **정책 계층으로 이식**되었습니다. 본 앱의 �
 index.html                       # 진입점: 탭 구조·컨트롤·디스클레이머
 K-JAMDS_시뮬레이터_단일본.html    # ★ 자기완결 단일본(서버 없이 실행, IIFE 커널 동봉) — build-single.mjs로 재생성
 K-JAMDS_지휘흐름_단일본.html      # ★ [지휘 흐름] 프로토타입의 자기완결 단일본(서버 없이 실행) — build-command-flow-single.mjs로 재생성
-K-JAMDS_분석_방법과_결과.pdf      # 현행 기본 설정의 재실행 결과와 방법
-K-JAMDS_C2_분석결과.pdf           # 실제 기록에 기반한 항적별 C2 분석
+K-JAMDS_분석_방법과_결과.pdf      # 현행 기본 설정의 재실행 결과와 방법 + 항적별 C2 기록 분석 (SC3 기준 통합본)
 K-JAMDS_파라미터.xlsx             # 카탈로그·기본 설정 내보내기 (가져오기 미지원)
 css/style.css                    # 레이아웃·테마
 js/

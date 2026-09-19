@@ -1,139 +1,116 @@
 {
-  "checkedAt": "2026-09-19T01:28:57.397Z",
+  "checkedAt": "2026-09-19T07:24:54.194Z",
   "imageDir": "/tmp/kjamds-pdf-qa",
   "artifacts": [
     {
       "filename": "K-JAMDS_분석_방법과_결과.pdf",
-      "sha256": "266b8c9ba0657b385b5f440ee03a95c355ed497693b9969040c891c00990e564",
-      "pageCount": 10,
+      "sha256": "63aa4fad7b537b290d21d873a137b8baa71ca0e81ae20a8a5ea350104895384a",
+      "pageCount": 20,
       "pageTextCharacters": [
-        662,
-        832,
-        1083,
+        923,
+        881,
+        848,
+        1072,
         927,
         940,
         1036,
         594,
-        785,
-        797,
-        934
+        1032,
+        1064,
+        1056,
+        723,
+        1323,
+        1336,
+        1491,
+        1460,
+        1561,
+        1320,
+        1138,
+        1386
       ],
       "replacementGlyphs": 0,
       "unresolvedValues": 0,
       "footerChecks": true,
       "pngs": [
         {
-          "path": "/tmp/kjamds-pdf-qa/general-01.png",
-          "sha256": "363e6e9b983cefb3ec0c619dbc182f7a05504eefa121ae674fa2d744e979d987"
+          "path": "/tmp/kjamds-pdf-qa/report-01.png",
+          "sha256": "d9efb0a0b398e09ead53889a8c565dcb38713abb14f8be51dd5067f75aa6d64e"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/general-02.png",
-          "sha256": "6c3f01e3f98543106ba41de46caf73fb48021b9fa981d918f1e9a2a5dec4970e"
+          "path": "/tmp/kjamds-pdf-qa/report-02.png",
+          "sha256": "7ca34aaf2fd47a10561c8d53bb6046e12c13095cb13488684b1d71b6123c26f7"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/general-03.png",
-          "sha256": "047a58e661ad41fef760733c9fc6f384b9a0544e846248c80130a1c524b945df"
+          "path": "/tmp/kjamds-pdf-qa/report-03.png",
+          "sha256": "0928f2877748c143b0b17b0440ab5746e3e0b1e45f097ed176eddd0582d20291"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/general-04.png",
-          "sha256": "353513334fd5dffdb6a99ece47d4753d3cf1fd6a0c248d9b9b800e1f68126d3e"
+          "path": "/tmp/kjamds-pdf-qa/report-04.png",
+          "sha256": "15f5f68ab1b5d93e2e79888a14fe1c127ec43d3396f1c4a6482147f6436f2016"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/general-05.png",
-          "sha256": "ea9400443f62ba591c948c2a5c17ab241c684dfb631621407126354d35061fd5"
+          "path": "/tmp/kjamds-pdf-qa/report-05.png",
+          "sha256": "07f75407484b79e9f5fb1c20c40fa021fdb70c83883194d77adafc681e9c8ac4"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/general-06.png",
-          "sha256": "e619a567693c2e60237115eff9ddcd5c8847ac3b0150032e0b3b958561f2a334"
+          "path": "/tmp/kjamds-pdf-qa/report-06.png",
+          "sha256": "c33dcce5d0566801f1c024ee11aa993a512dc5bb0e2117158abddd4b3113cc1f"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/general-07.png",
-          "sha256": "120a35ebbdf0ad238bf5ac39daaca2d8e07407add5b264650bac00f32729a21a"
+          "path": "/tmp/kjamds-pdf-qa/report-07.png",
+          "sha256": "3ad116ac17dcf378e64f40440db0ef9c984db56dae7c4511452221c055178ac1"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/general-08.png",
-          "sha256": "0c6c436ac0183e9dd27839b41f1591b8d7e5c9ab6aa8554d7f368a976c7333be"
+          "path": "/tmp/kjamds-pdf-qa/report-08.png",
+          "sha256": "eaef931db5c2e1778c3e429cc3dc0af327dad80f1d2de3bdf6094dcd6256f988"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/general-09.png",
-          "sha256": "abcc97ea74e4108473246037199ca99c642ebe69c73a5cac70bd4ea3855e659a"
+          "path": "/tmp/kjamds-pdf-qa/report-09.png",
+          "sha256": "d797c9e6f3f4cc14a443e76c54f050f81c76b267fbc17d2776445c99411e77a5"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/general-10.png",
-          "sha256": "eca3187094440df0dda6af0b984d0b4026a1b97d65eb92ea9598a6f8dbf4c97d"
-        }
-      ],
-      "visualInspection": "Must inspect every generated PNG; see QA.md for the signed-off scope."
-    },
-    {
-      "filename": "K-JAMDS_C2_분석결과.pdf",
-      "sha256": "46451c1a70d6d2d795b381896158f972accd2423d3c970a20e1ce0ea517d1660",
-      "pageCount": 12,
-      "pageTextCharacters": [
-        884,
-        855,
-        1087,
-        1079,
-        735,
-        1345,
-        1358,
-        1513,
-        1482,
-        1584,
-        811,
-        1765
-      ],
-      "replacementGlyphs": 0,
-      "unresolvedValues": 0,
-      "footerChecks": true,
-      "pngs": [
-        {
-          "path": "/tmp/kjamds-pdf-qa/c2-01.png",
-          "sha256": "e8cc83f1372895294cb11c5173887251ec3567ce034396b4cf94ee1e6755e502"
+          "path": "/tmp/kjamds-pdf-qa/report-10.png",
+          "sha256": "b6bdbcd72f60cb924b66c7dd9ceab068bafcebd5966547d424a60aa0d250eb2c"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/c2-02.png",
-          "sha256": "c3d1b481dbbe749ea2d147351b6094fea75413a3bff9131aab07bd70bd6eec46"
+          "path": "/tmp/kjamds-pdf-qa/report-11.png",
+          "sha256": "39af9e99415185d56d8908b9b0e2a6b610a3b6e53c949a0331c1419a6c6953be"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/c2-03.png",
-          "sha256": "7526eefaf31433a80721dee48f337e5b468741ccad30207dfba481fba29e049d"
+          "path": "/tmp/kjamds-pdf-qa/report-12.png",
+          "sha256": "f5ac3b1146a963b4842b1c526555ba42a58bf4d14990a46f9361618277864ab9"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/c2-04.png",
-          "sha256": "0363ea7233ef834cd027f9a7c59317e4bea01d70b3ba247c05a59ad417763b43"
+          "path": "/tmp/kjamds-pdf-qa/report-13.png",
+          "sha256": "883ac886b313d4adc7b833adb3647b63a5e0c6574878ace4043a8adc88243ae8"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/c2-05.png",
-          "sha256": "5ad0e8037c71887c6e7a5784d7100cf0d32ca263484bc7fcc52455de30d414d6"
+          "path": "/tmp/kjamds-pdf-qa/report-14.png",
+          "sha256": "1c2dc2f225fca42df6aa8efcb2f7b02a5743fa9860a687b2bb06e51e4c067376"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/c2-06.png",
-          "sha256": "7b8f981612e25617bfcf73e7d20f288956f3b2d3a85bd82f26e053fe912153ba"
+          "path": "/tmp/kjamds-pdf-qa/report-15.png",
+          "sha256": "f252c8a57b55e6a450d05302e3fd150076364e5a061cf03fc78c87bf537096e4"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/c2-07.png",
-          "sha256": "93958b5688a559952e44aa9390552587428c04a082c0ec7c8f62d0b085dc2f31"
+          "path": "/tmp/kjamds-pdf-qa/report-16.png",
+          "sha256": "67e39d99dc99a9a0ceb5e06a62166db3873f288f8e2fdc87f3c32e4e36e2eddf"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/c2-08.png",
-          "sha256": "e1e7e9c666c55a5361b782579b291394217ddab0feba25beae2effa02ebdc617"
+          "path": "/tmp/kjamds-pdf-qa/report-17.png",
+          "sha256": "509179e7d199a5ff734b0800dd5c0d9c62b61161d832e822856666d731dd2b1d"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/c2-09.png",
-          "sha256": "05f4f1b3c91153a6fcebbcb6ebeb53f8506e6c206f305f9b366cef4159407838"
+          "path": "/tmp/kjamds-pdf-qa/report-18.png",
+          "sha256": "c004aaac54cc62cefc4695b35daec552ba36bac4091ea45827d1f2f611855974"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/c2-10.png",
-          "sha256": "90004cb091430ff1e5c403962061492f726a3d3a6a1f4a4b835fab98050518de"
+          "path": "/tmp/kjamds-pdf-qa/report-19.png",
+          "sha256": "e1e8e44077a4578c82f56756f03c2fb880356814ffebc6b2e9ac8179765a52a2"
         },
         {
-          "path": "/tmp/kjamds-pdf-qa/c2-11.png",
-          "sha256": "816869730b046674ae7b6f33b1e2a43e6afa5ccac853de801609355eccf53ef0"
-        },
-        {
-          "path": "/tmp/kjamds-pdf-qa/c2-12.png",
-          "sha256": "f68478b5492e19627e981dc2310a82e95e87ec283a4483940811dc3925560481"
+          "path": "/tmp/kjamds-pdf-qa/report-20.png",
+          "sha256": "25d2f81b436ad16852912e661d9c31a924490f151684bb9a1b3c008f35e5d6b3"
         }
       ],
       "visualInspection": "Must inspect every generated PNG; see QA.md for the signed-off scope."

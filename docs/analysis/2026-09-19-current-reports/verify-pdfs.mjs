@@ -9,10 +9,10 @@ import { HERE, ROOT } from './report-common.mjs';
 
 const imageDir = path.resolve(process.argv[2] || path.join(os.tmpdir(), 'kjamds-pdf-qa'));
 fs.mkdirSync(imageDir, { recursive: true });
-const artifacts = [
-  ['K-JAMDS_분석_방법과_결과.pdf', 'general', 10],
-  ['K-JAMDS_C2_분석결과.pdf', 'c2', 12]
-];
+// Expected page count comes from the render audit of the same HTML, not from a hard-coded number.
+const rendered = JSON.parse(fs.readFileSync(path.join(HERE, 'render-qa.json'), 'utf8'));
+const artifacts = rendered.map(a => [a.pdf, 'report', a.pages.length]);
+for (const stale of fs.readdirSync(imageDir).filter(f => /^(report|general|c2)-\d+\.png$/.test(f))) fs.unlinkSync(path.join(imageDir, stale));
 const sha256 = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const audit = { checkedAt: new Date().toISOString(), imageDir, artifacts: [] };
 for (const [filename, prefix, expectedPages] of artifacts) {

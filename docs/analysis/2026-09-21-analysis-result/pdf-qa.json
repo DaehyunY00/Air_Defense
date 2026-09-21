@@ -1,0 +1,79 @@
+{
+  "checkedAt": "2026-09-21T13:11:14.334Z",
+  "imageDir": "/tmp/kjamds-pdf-qa",
+  "artifacts": [
+    {
+      "filename": "K-JAMDS_지휘흐름_분석결과.pdf",
+      "sha256": "2aa36c0b242c0613a0ead2079e294a1f11f77d353f0652c963d0931f94e62bcc",
+      "pageCount": 12,
+      "pageTextCharacters": [
+        560,
+        915,
+        777,
+        832,
+        830,
+        442,
+        638,
+        706,
+        498,
+        517,
+        523,
+        771
+      ],
+      "replacementGlyphs": 0,
+      "unresolvedValues": 0,
+      "footerChecks": true,
+      "pngs": [
+        {
+          "path": "/tmp/kjamds-pdf-qa/report-01.png",
+          "sha256": "997b979f2c0b3ee27ad3524f569671790cfbd6b897e15257bef15799ae02df1d"
+        },
+        {
+          "path": "/tmp/kjamds-pdf-qa/report-02.png",
+          "sha256": "fa8a1ee783521c6cd98e4195b319d64084bf61b9ae15d4f88888b3be510a3f17"
+        },
+        {
+          "path": "/tmp/kjamds-pdf-qa/report-03.png",
+          "sha256": "1985c94f5698b1745885843199885843d89ffacc553613d36d722a755fd1cc10"
+        },
+        {
+          "path": "/tmp/kjamds-pdf-qa/report-04.png",
+          "sha256": "dace5f9956e071134af0298e11f41626286563ae627b3b2d9e147ef77f920850"
+        },
+        {
+          "path": "/tmp/kjamds-pdf-qa/report-05.png",
+          "sha256": "0140729d88354a80ee7c3c21601a4eb105b29bf03c6c85c4bf8c82971cf8e6f8"
+        },
+        {
+          "path": "/tmp/kjamds-pdf-qa/report-06.png",
+          "sha256": "71a90a7c72baa7613ebb618cb7b0c981cb3f59169a6fa0a101a9953c37cf1469"
+        },
+        {
+          "path": "/tmp/kjamds-pdf-qa/report-07.png",
+          "sha256": "83da099029eab9637b738ca3d8734be8cec248923d9e28f11d8220ee0cd20109"
+        },
+        {
+          "path": "/tmp/kjamds-pdf-qa/report-08.png",
+          "sha256": "2a86d6988a97dbf86162eba99ed74204abbc4b49947fe9f08946d8a68c04797e"
+        },
+        {
+          "path": "/tmp/kjamds-pdf-qa/report-09.png",
+          "sha256": "3f9d456a98107ffa2f8aa4cc6c826c1e1b6c180454d9a44330fecb4e47525777"
+        },
+        {
+          "path": "/tmp/kjamds-pdf-qa/report-10.png",
+          "sha256": "89aa569c296e960bd4adbc1976dee7f14c5f6a6fec6c718ddce91c43d34dbbad"
+        },
+        {
+          "path": "/tmp/kjamds-pdf-qa/report-11.png",
+          "sha256": "b8998ac0419753e1b0424ab65f02e96f0a5ef4b0102565954a4ae0de40aa9388"
+        },
+        {
+          "path": "/tmp/kjamds-pdf-qa/report-12.png",
+          "sha256": "e3628d2463b51889fdd5b0c05656e1bc58593ab90960c183186c70b4389a04be"
+        }
+      ],
+      "visualInspection": "Must inspect every generated PNG; see QA.md for the signed-off scope."
+    }
+  ]
+}

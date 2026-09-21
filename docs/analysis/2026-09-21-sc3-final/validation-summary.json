@@ -1,0 +1,23 @@
+{
+  "sourceSha256": "9b119885ba62d662cea52417b96016b81d1d167a9692258439a3e76e433972e6",
+  "patchSha256": "e4f6bc1da247857e3c91f5db22c739f4d0519e1a296396287155f2ed75ccaad4",
+  "passed": true,
+  "logicalCells": 168,
+  "pairedCohorts": 84,
+  "examinedThreatRows": 43512,
+  "previouslyTerminalRows": 37565,
+  "continuedRows": 5947,
+  "allPreviouslyTerminalUnchanged": true,
+  "checks": [
+    "input birth cutoff 1800",
+    "all threat IDs retained",
+    "all final outcomes resolved",
+    "previously terminal outcome and exitT unchanged",
+    "continued results account exactly for prefix unresolved",
+    "global conservation",
+    "leak reason sum",
+    "full-population rate denominator",
+    "84 mode-paired birth/geometry/endtime hashes",
+    "baseline 1800 event/RNG/counter exact checks"
+  ]
+}

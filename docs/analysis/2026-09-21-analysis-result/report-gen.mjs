@@ -90,7 +90,6 @@ ${table(['배치·구조', '생성', '격추', '막지 못함', '막지 못한 �
 <div class="bars">${four.map(({ dep, mode, b }) => `<div class="bar"><span class="lab">${SHORT[dep]} · ${MOD[mode]}</span><span class="track"><i class="k" style="width:${(100 * b.killed / b.spawned).toFixed(2)}%"></i><i class="l" style="width:${(100 * b.leaked / b.spawned).toFixed(2)}%"></i></span><span class="val">${pct(b.leakRateSpawn)}</span></div>`).join('')}
 <div class="legend"><span><i class="k"></i>격추</span><span><i class="l"></i>막지 못함</span><span class="right">오른쪽 숫자: 막지 못한 비율</span></div></div>
 ${DEPS.map(dep => { const a = base(dep, 'asis'), t = base(dep, 'tobe'); return `<p><b>${DEP[dep]}</b>: To-Be에서 막지 못한 항적은 As-Is보다 ${a.leaked - t.leaked}개 적습니다. 격추 수 차이는 ${sign(t.killed - a.killed)}개입니다.</p>`; }).join('')}
-<div class="box"><b>이번 보고서의 기준</b><p>SC3만 다룹니다. 기본 비교는 난수 시작값 29, 위협 생성 강도 1배입니다. 같은 난수 시작값을 쓴 As-Is와 To-Be에는 같은 항적을 생성했습니다. 모든 비교 조건에서 생성 = 격추 + 막지 못함을 확인했습니다.</p></div>
 <p class="note">지상 방공 지휘통제의 개념 모델에서 나온 결과입니다. 실제 작전 성능이나 피해를 측정한 자료는 아닙니다.</p>`);
 
 // 2

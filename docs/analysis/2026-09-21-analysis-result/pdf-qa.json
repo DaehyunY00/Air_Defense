@@ -1,13 +1,13 @@
 {
-  "checkedAt": "2026-09-22T12:17:11.205Z",
+  "checkedAt": "2026-09-22T13:03:00.312Z",
   "imageDir": "/tmp/kjamds-pdf-qa",
   "artifacts": [
     {
       "filename": "K-JAMDS_지휘흐름_분석결과.pdf",
-      "sha256": "05b81ea916500debc7e7b3a239820f262d16ba2a39297e7e2f23061d259af0bf",
+      "sha256": "1131cdc3f3bc33dc3e974d7c43f35c5eec79eabaf3e4124986699e0e038cc8ee",
       "pageCount": 10,
       "pageTextCharacters": [
-        559,
+        457,
         777,
         663,
         661,
@@ -24,7 +24,7 @@
       "pngs": [
         {
           "path": "/tmp/kjamds-pdf-qa/report-01.png",
-          "sha256": "e4dc8c7b562323100b7a37ea1ec7ad83f3789ab82441e803f89a1bdaae3b0394"
+          "sha256": "d569445a2ac4bf01bca1f4fe4c37fd8b4f322e8cc516dc24de997054bb9f8ae0"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-02.png",

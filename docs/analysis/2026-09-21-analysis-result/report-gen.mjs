@@ -6,7 +6,8 @@
 //   · 시나리오 가정 두 가지(탄도 위협 출발점 연장, 여러 지상 목적지 배정)의 켜기/끄기 비교는 뺀다 — 위협이 어디서 와서
 //     어디로 가는지를 바꾸는 조건이지 지휘 조건이 아니다. 네 값이 모두 0인 조건 행도 뺀다.
 //   · 위협 생성 강도는 1배만 다룬다.
-//   · 기관·부대 수, 탐지→첫 발사 시간 분해, 통신, 항적 사례, 읽을 때 알아둘 점 장은 싣지 않는다.
+//   · 기관·부대 수, 탐지→첫 발사 시간 분해, 통신, 항적 사례, 읽을 때 알아둘 점, 선정부터 발사까지의 사건 수 장은 싣지 않는다.
+//   · 3장 뒤에 조건별 설명 페이지(4장)를 둔다.
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
@@ -126,40 +127,53 @@ for (const [i, dep] of DEPS.entries()) { const c2 = oatRows(dep, C2_FLAGS), tm =
 <p class="note">각 행은 기준 조건에서 한 가지 설정만 바꿨습니다. 아래 수치는 변경한 실행에서 같은 구조의 기준 실행을 뺀 차이입니다. –는 차이가 없었다는 뜻입니다.</p>
 <h3>지휘 절차·권한·정보를 바꾸는 조건</h3>
 ${table(DIFF_HEAD, c2.kept, 'plain', [40, 15, 15, 15, 15])}
-<p class="note">${c2.dropped.length ? `막지 못한 항적 수와 발사 수가 하나도 달라지지 않아 표에서 뺀 조건: ${c2.dropped.map(esc).join(', ')}. ` : ''}무인기 교전의 상급 승인 면제는 국지방공이 소형 무인기를 상급 지휘소의 승인을 기다리지 않고 교전하게 하는 조건이며, 자위권 사격과는 다른 설정입니다. 권역통제의 명령 확인은 ICC가 명령을 받아 확인하는 과정입니다.</p>
+<p class="note">${c2.dropped.length ? `막지 못한 항적 수와 발사 수가 하나도 달라지지 않아 표에서 뺀 조건: ${c2.dropped.map(esc).join(', ')}. ` : ''}각 조건이 무엇을 바꾸는지는 4장에 적었습니다.</p>
 <h3>시간 가정에 얼마나 민감한가</h3>
 ${table(DIFF_HEAD, tm.kept, 'plain', [40, 15, 15, 15, 15])}
-<p class="note">${tm.dropped.length ? `차이가 없어 뺀 조건: ${tm.dropped.map(esc).join(', ')}. ` : ''}절차가 아니라 시간 값을 바꾸는 조건입니다. 포대통제의 추가 처리시간은 ECS에 평균 10초의 작업을 더합니다. 명령을 내리는 작업 추가는 결심한 지휘소가 명령을 낼 때마다 처리 대기열을 한 번 더 거치게 합니다. 통합 지휘소 판단시간 변경은 운용자의 평균 처리시간을 30초에서 1초로 바꿉니다.</p>
+<p class="note">${tm.dropped.length ? `차이가 없어 뺀 조건: ${tm.dropped.map(esc).join(', ')}. ` : ''}절차가 아니라 시간 값을 바꾸는 조건입니다. 뜻은 4장에 적었습니다.</p>
 <div class="box"><b>차이의 해석</b><p>막지 못함 차이가 음수이면 이 실행에서 막지 못한 항적이 줄었다는 뜻입니다. 같은 시작값끼리 비교한 구조 간 차이도 시작값에 따라 5~6개쯤 흔들리므로(2장의 20쌍), 한 번의 실행에서 그보다 작은 차이는 효과로 단정하지 않습니다. 설정 간 상호작용과 실행 경로 차이가 포함됩니다.</p></div>`); }
 
-// 4
-pages.push(`${head('결과', '04', '4. 지휘소의 작업 대기는 어느 정도였나')}
+// 4 — 3장의 조건 하나하나가 엔진에서 무엇을 바꾸는지. 수치는 3장 표의 「막지 못함 차이」(As-Is/To-Be · LEGACY, FULL).
+const cond = (dep, mode, flag) => { const a = oat(dep, mode, flag), b = base(dep, mode); return a.leaked - b.leaked; };
+const cv = flag => DEPS.map(dep => `${SHORT[dep]} ${MODES.map(m => { const v = cond(dep, m, flag); return v === 0 ? '–' : sign(v); }).join('/')}`).join(', ');
+const item = (flag, change, text) => `<div class="cond"><b>${esc(FLAGS[flag])}</b> <span class="chg">${esc(change)}</span><p>${text}</p><p class="val">막지 못함 차이 As-Is/To-Be · ${cv(flag)}</p></div>`;
+pages.push(`${head('결과', '04', '4. 바꾼 조건은 각각 무엇인가')}
+<p class="note">3장 표의 조건이 모델에서 실제로 무엇을 바꾸는지입니다. 각 항목 끝의 수치는 3장의 「막지 못함 차이」이며, –는 차이가 없었다는 뜻입니다.</p>
+<h3>지휘 절차·권한·정보를 바꾸는 조건</h3>
+${item('appr', '기본 켜짐 → 끔', 'As-Is에서 육군 국지방공(군단 AOC)이 교전하려면 공군 MCRC와 음성·VTC로 협조하고 승인 처리를 거칩니다. 이 조건은 그 협조 단계를 통째로 없애 국지방공이 바로 쏘게 합니다. As-Is에만 있는 절차라 To-Be는 거의 움직이지 않습니다. 협조 병목이 얼마나 막고 있었는지를 보는 조건입니다.')}
+${item('cop', '기본 켜짐 → 끔', 'To-Be의 통합 지휘소(IAOC)가 국지방공의 교전 현황을 받아, 이미 교전 중인 표적에는 새로 명령하지 않는 기능입니다. 끄면 IAOC가 그 정보를 받고도 쓰지 않아 같은 표적을 두 계통이 각각 쏩니다. To-Be 전용이라 As-Is는 불변입니다. 통합 상황도의 가치를 보는 조건입니다.')}
+${item('icc', '기본 켜짐 → 끔', '켜져 있으면 교전명령이 ICC를 거칠 때 ICC 대기열에서 처리된 뒤에야 내려갑니다. 그 사이 대상 포대가 못 쏘게 됐으면 같은 권역의 다른 포대로 재배정하거나 반송합니다. 끄면 ICC를 그냥 통과합니다. As-Is는 명령이 ICC를 거치므로 효과가 나고, To-Be는 거치지 않아 불변입니다.')}
+${item('uavsd', '기본 꺼짐 → 켬', '현재 데이터에서는 육군 레이더가 잡고 육군 천마·비호가 쏘는 소형 무인기도 공군 MCRC의 승인을 기다립니다. 이 조건은 국지방공 축에서만 그 승인을 면제합니다. 교전 현황 공유는 그대로여서, 승인 없이 쏜 뒤 알리는 방식입니다. 자위권과는 다른 설정입니다.')}
+${item('eor', '기본 꺼짐 → 켬', '기본은 포대가 자기 다기능 레이더로 사격통제급 추적을 해야만 쏠 수 있습니다. 켜면 To-Be 킬웹 안의 다른 포대 레이더가 사격통제급으로 보고 있으면 자기 레이더가 못 봐도 쏩니다. 탐지 전용 레이더의 정보로는 쏘지 못합니다. To-Be 전용이며, 배치에 따라 방향이 갈립니다.')}
+${item('share', '없음 → 데이터링크', '미군과 한국군 사이에 항적 정보만 데이터링크로 오가게 하는 반사실입니다. 지휘·승인·교전 현황은 여전히 분리됩니다. 상황인식만 공유되면 얼마나 달라지는지를 보는 조건입니다.')}
+${item('sdf', '기본 켜짐 → 끔', '자위권은 명령이 전혀 없어도 자기 레이더로 본 탄도 위협이 자기 근처에 떨어질 것으로 예측되면 마지막 발사 시점에 쏘는 권리입니다. 탐지·보고·식별이 늦어 명령이 오지 못한 경우를 구제하는 경로이며 양 구조에 공통입니다. 끄면 그 구제가 사라집니다.')}
+`);
+pages.push(`${head('결과', '', '4. 바꾼 조건은 각각 무엇인가')}
+<h3>시간 가정에 얼마나 민감한가</h3>
+<p class="note">절차가 아니라 시간 값을 바꾸는 조건입니다. 각 항목 끝의 수치는 3장의 「막지 못함 차이」입니다.</p>
+${item('ecs', '기본 꺼짐 → 켬', 'ECS가 교전명령을 실행하는 시간을 이 모델의 3.5초에서 다른 시뮬레이터(ADSIM)가 쓰는 10초로 바꿉니다. 양 구조에 같은 크기로 더해지므로 구조 차이보다는 절대 시간이 늘어, 요격 시기를 놓치는 항적이 늘어납니다.')}
+${item('issue', '기본 꺼짐 → 켬', '결심한 지휘소가 명령을 낼 때마다 자기 처리 대기열을 한 번 더 거치게 합니다. 첫 발령이든 반송 뒤 재발령이든 같습니다. 기본은 명령 발령을 시간이 들지 않는 일로 봅니다. 결심 지휘소가 바쁠수록 영향이 큽니다.')}
+${item('par', '기본 켜짐 → 끔', '기본 조건에서는 To-Be 통합 지휘소의 운용자 판단시간을 As-Is 결심 지휘소와 같은 30초로 맞춰 둡니다. 구조가 달라져도 사람의 판단 시간은 같아야 한다는 결정입니다. 이 조건은 그 판단시간을 원래 값인 1초로 되돌립니다. To-Be 우위가 구조에서 오는지 판단시간 값에서 오는지를 가르는 조건입니다.')}
+<div class="box"><b>읽을 때</b><p>지휘 조건 대부분은 As-Is 또는 To-Be 한쪽에만 효과가 나타납니다. 그 구조에만 있는 절차를 건드리기 때문입니다. 배치에 따라 방향이 갈리는 조건은 여러 시작값으로 반복해야 확정할 수 있습니다.</p></div>`);
+
+// 5
+pages.push(`${head('결과', '05', '5. 지휘소의 작업 대기는 어느 정도였나')}
 <p>위협 생성 강도 1배 · 난수 시작값 29의 기준 실행입니다. 각 실행에서 평균 대기가 가장 길었던 지휘소를 적었습니다.</p>
 ${table(['배치·구조', '생성', '막지 못함', '평균 대기가 가장 긴 지휘소', '평균 대기'], four.map(({ dep, mode, b }) => [`${SHORT[dep]} ${MOD[mode]}`, b.spawned, b.leaked, esc(b.top[0].name), `${num(b.top[0].wq)}초`]), 'plain', [24, 14, 14, 30, 18])}
 <p class="note">대기는 해당 기관에 들어온 작업이 처리를 시작하기 전 기다린 시간입니다. 기관마다 맡는 작업이 달라, 평균 대기가 같아도 역할까지 같다는 뜻은 아닙니다. 지휘소 이름은 시뮬레이터의 명칭을 그대로 썼습니다.</p>
 <div class="box"><b>평균 이용률을 주된 결론으로 쓰지 않았습니다</b><p>모든 항적을 끝까지 추적하면 뒤쪽에 작업이 적은 시간이 포함됩니다. 이 때문에 기간 전체의 평균 이용률이 낮아질 수 있습니다. 여기서는 생성량·막지 못한 항적 수·작업 대기를 함께 제시합니다. 시작값 29의 한 사례입니다.</p></div>`);
 
-// 5
+// 6
 const reasonTable = dep => { const a = base(dep, 'asis'), t = base(dep, 'tobe');
   const codes = [...new Set([...Object.keys(a.reasons), ...Object.keys(t.reasons)])].filter(c => (a.reasons[c] || 0) + (t.reasons[c] || 0) > 0)
     .sort((x, y) => (a.reasons[y] || 0) + (t.reasons[y] || 0) - (a.reasons[x] || 0) - (t.reasons[x] || 0));
   for (const c of codes) assert.ok(REASONS[c], `unlabelled leak reason ${c}`);
   return table(['모델이 정한 주된 이유', 'As-Is', 'To-Be', '차이'], [...codes.map(c => [esc(REASONS[c]), a.reasons[c] || 0, t.reasons[c] || 0, delta((t.reasons[c] || 0) - (a.reasons[c] || 0))]),
     { cls: 'total', cells: ['합계', a.leaked, t.leaked, delta(t.leaked - a.leaked)] }], 'plain', [58, 14, 14, 14]); };
-pages.push(`${head('결과', '05', '5. 막지 못한 항적은 어떤 이유로 분류됐나')}
+pages.push(`${head('결과', '06', '6. 막지 못한 항적은 어떤 이유로 분류됐나')}
 <p class="note">기준 실행에서 끝내 막지 못한 항적입니다. 그 항적마다 하나씩 붙인 주원인의 수이며, 후보 검토 사유의 발생 횟수가 아닙니다. 분류의 근거는 「분석 방법 C」에 적었습니다.</p>
 ${DEPS.map(dep => `<h3>${DEP[dep]}</h3>${reasonTable(dep)}`).join('')}
 <div class="box"><b>막지 못했다는 것이 실제 피해 확정은 아닙니다</b><p>막지 못한 항적은 모델의 비행 종료까지 격추되지 않았다는 결과입니다. 지상 표적 명중, 피해 규모, 현실의 방어 실패 확률을 별도로 계산한 것은 아닙니다. 탄약 부족이나 발사불가가 한 번 기록돼도 다른 시도에서 격추될 수 있습니다.</p></div>`);
-
-// 6
-const marks = (r, k) => r.threats.reduce((n, t) => n + t[k], 0);
-pages.push(`${head('결과', '06', '6. 선정부터 발사까지 어떤 일이 있었나')}
-<p>숫자는 발생한 사건 수입니다. 항적 수와 다르며 한 항적에서 여러 번 일어날 수 있습니다.</p>
-${table(['배치·구조', '실제<br>발사', '중복<br>사건', '다른 자산<br>재배정', '명령<br>반송', '발사<br>불가', '중복<br>해소'], four.map(({ dep, mode, b, r }) => [`${SHORT[dep]} ${MOD[mode]}`, b.shots, b.dup, marks(r, 'reassign'), marks(r, 'bounce'), marks(r, 'noFire'), marks(r, 'dedup')]), 'plain', [28, 12, 12, 12, 12, 12, 12])}
-<h3>용어 읽는 법</h3>
-${table(['용어', '뜻'], [['재배정', '처음 정한 자산 대신 다른 자산으로 명령을 다시 연결한 사건입니다.'], ['명령 반송', '명령을 받은 중계 단계에서 진행하지 못하고 되돌린 기록입니다. 역방향 통신 전체가 기록됐다는 뜻은 아닙니다.'], ['발사불가', '그 시점의 발사 시도가 진행되지 못한 기록입니다. 그 항적을 끝내 막지 못했다는 뜻은 아닙니다.'], ['중복 사건', '엔진이 정한 중복교전 기준에 해당하는 사건입니다. 단순 재발사 수와 같지 않습니다.'], ['중복해소', '이미 존재하는 명령이나 교전 상태 때문에 새 선택을 억제한 기록일 수 있습니다. 실제 중복 발사 수로 세지 않습니다.']], 'plain kv', [20, 80])}
-${table(['배치·구조', '발사한<br>항적 수', '생성 → 첫 발사<br>평균 초', '탐지 → 첫 발사<br>평균 초', '요격탄 소모비용<br>개념 백만 달러'], four.map(({ dep, mode, b }) => [`${SHORT[dep]} ${MOD[mode]}`, b.decN, num(b.tte), num(b.dec), money(b.costM)]), 'plain', [24, 16, 20, 20, 20])}
-<p class="note">시간 평균에는 실제로 발사한 항적만 들어갑니다. 두 구조에서 발사한 항적 집합이 달라질 수 있어 평균 차이만으로 같은 항적의 처리 개선을 단정하지 않습니다. 소모비용은 모델에 입력된 개념 단가의 합계입니다. 실제 예산 지출이나 손실액으로 환산하지 않습니다.</p>`);
 
 // 7
 const typeTable = dep => table(['위협 종류', '생성', '격추<br>As-Is / To-Be', '막지 못함<br>As-Is / To-Be', '막지 못함 차이<br>To-Be − As-Is'], TYPES.map(type => {
@@ -217,6 +231,7 @@ tbody tr:nth-child(even) td { background:#f8fafb; }
 .kv td:first-child { font-weight:700; color:#16324f; }
 tr.total td { font-weight:700; border-top:1.5px solid #16324f; background:#fff !important; }
 .nil { color:#7d8a96; }
+.cond { margin:0 0 9px; padding:0 0 8px; border-bottom:1px solid #dfe6ec; } .cond > b { color:#16324f; font-size:10pt; } .cond .chg { font-size:8.4pt; color:#1f7a72; margin-left:6px; } .cond p { margin:3px 0 0; font-size:9.3pt; line-height:1.5; } .cond .val { font-size:8.4pt; color:#566575; }
 .bars { margin:14px 0 10px; } .bar { display:flex; align-items:center; gap:10px; margin:7px 0; font-size:8.8pt; }
 .bar .lab { width:27%; } .bar .track { flex:1; display:flex; height:17px; } .bar .val { width:9%; text-align:right; }
 .k { background:#237f70; display:block; } .l { background:#b96a28; display:block; }

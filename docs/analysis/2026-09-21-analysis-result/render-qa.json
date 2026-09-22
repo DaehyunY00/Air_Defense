@@ -14,7 +14,7 @@
       {
         "page": 2,
         "height": 1001.5625,
-        "contentBottom": 779.3125,
+        "contentBottom": 631.65625,
         "footerTop": 979.03125,
         "overflowX": 0,
         "overlapsFooter": false
@@ -22,7 +22,7 @@
       {
         "page": 3,
         "height": 1001.5625,
-        "contentBottom": 631.65625,
+        "contentBottom": 787.734375,
         "footerTop": 979.03125,
         "overflowX": 0,
         "overlapsFooter": false
@@ -30,7 +30,7 @@
       {
         "page": 4,
         "height": 1001.5625,
-        "contentBottom": 787.734375,
+        "contentBottom": 819.53125,
         "footerTop": 979.03125,
         "overflowX": 0,
         "overlapsFooter": false
@@ -38,7 +38,7 @@
       {
         "page": 5,
         "height": 1001.5625,
-        "contentBottom": 819.53125,
+        "contentBottom": 850.21875,
         "footerTop": 979.03125,
         "overflowX": 0,
         "overlapsFooter": false
@@ -46,7 +46,7 @@
       {
         "page": 6,
         "height": 1001.5625,
-        "contentBottom": 850.21875,
+        "contentBottom": 543.703125,
         "footerTop": 979.03125,
         "overflowX": 0,
         "overlapsFooter": false
@@ -54,7 +54,7 @@
       {
         "page": 7,
         "height": 1001.5625,
-        "contentBottom": 543.703125,
+        "contentBottom": 414.546875,
         "footerTop": 979.03125,
         "overflowX": 0,
         "overlapsFooter": false
@@ -62,7 +62,7 @@
       {
         "page": 8,
         "height": 1001.5625,
-        "contentBottom": 414.546875,
+        "contentBottom": 930.578125,
         "footerTop": 979.03125,
         "overflowX": 0,
         "overlapsFooter": false
@@ -70,7 +70,7 @@
       {
         "page": 9,
         "height": 1001.5625,
-        "contentBottom": 947.96875,
+        "contentBottom": 713.0625,
         "footerTop": 979.03125,
         "overflowX": 0,
         "overlapsFooter": false
@@ -78,31 +78,7 @@
       {
         "page": 10,
         "height": 1001.5625,
-        "contentBottom": 713.0625,
-        "footerTop": 979.03125,
-        "overflowX": 0,
-        "overlapsFooter": false
-      },
-      {
-        "page": 11,
-        "height": 1001.5625,
-        "contentBottom": 562.453125,
-        "footerTop": 979.03125,
-        "overflowX": 0,
-        "overlapsFooter": false
-      },
-      {
-        "page": 12,
-        "height": 1001.5625,
-        "contentBottom": 502.578125,
-        "footerTop": 979.03125,
-        "overflowX": 0,
-        "overlapsFooter": false
-      },
-      {
-        "page": 13,
-        "height": 1001.5625,
-        "contentBottom": 618.359375,
+        "contentBottom": 955.8125,
         "footerTop": 979.03125,
         "overflowX": 0,
         "overlapsFooter": false

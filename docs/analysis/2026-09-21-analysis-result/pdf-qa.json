@@ -1,25 +1,22 @@
 {
-  "checkedAt": "2026-09-22T11:19:12.665Z",
+  "checkedAt": "2026-09-22T12:17:11.205Z",
   "imageDir": "/tmp/kjamds-pdf-qa",
   "artifacts": [
     {
       "filename": "K-JAMDS_지휘흐름_분석결과.pdf",
-      "sha256": "7ad960edffce666983a014e5f0b708e45cd1abb640bdef074b64b2526438c2b5",
-      "pageCount": 13,
+      "sha256": "05b81ea916500debc7e7b3a239820f262d16ba2a39297e7e2f23061d259af0bf",
+      "pageCount": 10,
       "pageTextCharacters": [
-        560,
-        915,
+        559,
         777,
         663,
         661,
         1307,
         685,
         442,
-        638,
-        499,
-        517,
-        523,
-        771
+        618,
+        498,
+        1263
       ],
       "replacementGlyphs": 0,
       "unresolvedValues": 0,
@@ -27,55 +24,43 @@
       "pngs": [
         {
           "path": "/tmp/kjamds-pdf-qa/report-01.png",
-          "sha256": "22dfd23245cf551e763eae2da6bad8148fcfb87677b580293b4b11d6a65f9c49"
+          "sha256": "e4dc8c7b562323100b7a37ea1ec7ad83f3789ab82441e803f89a1bdaae3b0394"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-02.png",
-          "sha256": "1bce3bcccaef0a624a906ce36a304d2efee7810099d265095d343521866acd68"
+          "sha256": "ab566bbabdc1fe43c59b47a541e9a51dd1f5b5a72b571afda252f4c490c12ec1"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-03.png",
-          "sha256": "34a037b5d4f0cc6b8f346b89931bdc5bf78d5c9bf90dca5633c8b6e0589f4135"
+          "sha256": "788b770dc3b13b6eeaa334fcd7cee84cd5189adc223c40beac35741d3491335f"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-04.png",
-          "sha256": "39145ac11c32cc84cf0c331c60c0f89dd4b368f4380bd66d2a62fce71043e29e"
+          "sha256": "b432489a8990fb120e27c7d42c7420bca74cc47ae43ff8699bf6099dd8c1437e"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-05.png",
-          "sha256": "f17c8bfe7c17f52a5e801e230825199cd6f514d7bf6fef4251db7dad8fd36f03"
+          "sha256": "d37eae4c771e8f48acf7ca93a4cbdeb4200155f6176c0858b471c6f96e1b9cfc"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-06.png",
-          "sha256": "a09de3c1276fb178106622ddbf77432a9e7cf63cf48cceacb82565e7404d33d1"
+          "sha256": "4712d54750912216f83e852a894ac1e04a93bb78785f3b7f789968a27840f3c9"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-07.png",
-          "sha256": "89da6837c0ebf92257309453efac33f560c75e19065974aaa7d965349c1ef028"
+          "sha256": "ccde81853156dc45d2790ea2ea8506227da8cc71a71aceda41ed147aa897c2f3"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-08.png",
-          "sha256": "55843ea73c91478fb852db238e08a55d7869113495f8b17208cb48bf21a85e9d"
+          "sha256": "98abb32e93b7c40270c2e5b45c82669265015bfe9bdecc8e15562672dd46d88e"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-09.png",
-          "sha256": "d3c8a81958424a712f7231a0ab0f28bd3eb56230d359e2b4445f2e3eecc82a87"
+          "sha256": "f5d33203895cd947366a55516ccc36acd731e00f77f306c295d5881b4d434fa1"
         },
         {
           "path": "/tmp/kjamds-pdf-qa/report-10.png",
-          "sha256": "9a315c525bb553288d4720f2e52499bb1e350e1da1ceb9cc49ee1ecc7e53a3c8"
-        },
-        {
-          "path": "/tmp/kjamds-pdf-qa/report-11.png",
-          "sha256": "be6ab569365bc4ce93e828cde1a26babfa086c919a1a4a771b9ada7f962889f5"
-        },
-        {
-          "path": "/tmp/kjamds-pdf-qa/report-12.png",
-          "sha256": "c8a9ee6659333db02f02110245b34df77a75e40059d17ee9dd049bd97f2566fc"
-        },
-        {
-          "path": "/tmp/kjamds-pdf-qa/report-13.png",
-          "sha256": "83e4881a75841f9dbad8d75d3e2bc26a6fe513e2b481bbf8bd306ac9b8d43bc9"
+          "sha256": "3f82555555aaeba5ffd7a6e8d9a2223e58b503c87ab7de172e34d537069b0097"
         }
       ],
       "visualInspection": "Must inspect every generated PNG; see QA.md for the signed-off scope."

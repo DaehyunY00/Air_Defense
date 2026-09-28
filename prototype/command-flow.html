@@ -98,6 +98,9 @@
   ──────────────────────────────────────
   상단 [LEGACY]/[FULL] 스위치로 바꾼다. 이 화면의 목적이 **C2 구조 차이의 분석·시각화**이지
   기준선 수치의 재생산이 아니기 때문이다(사용자 결정).
+  **기본은 FULL이다**(사용자 결정 2026-09-28 · ADR-102). 배치 자체를 시험하는 판이 기본이어야
+  처음 여는 사람이 「포대 15개 중 4개가 한 발도 안 쏘는」 판을 기준으로 읽지 않는다. LEGACY는
+  스위치 또는 ?dep=HANBANDO_LEGACY_NORMAL 로 고른다. 대가: 기본 실행(1800초)이 24~31초 걸린다.
   · LEGACY 64노드(포대 15) — 계선 흐름을 읽기 좋다. 다만 **배치 자체는 시험되지 않는다**:
     실측(SC3·seed29·1800초) 상위 3개 포대가 발사의 68%를 담당하고 15개 중 4개는 한 발도 안 쏜다.
   · FULL 251노드(포대 84) — codex 배치를 옮겨 온 고해상도 판. SHORAD 차량 총계 167/100을
@@ -906,7 +909,7 @@
        +8 vs +15로 갈린다(PARAMS 주석 실측). 어느 배치의 수치인지 모르고 읽는 것이 이 화면의
        가장 큰 오독 위험이라, 고정하는 대신 **늘 보이게** 해서 막는다. -->
   <span class="modesw" id="depsw">
-    <button id="dep-legacy" class="on">LEGACY</button><button id="dep-full">FULL</button>
+    <button id="dep-legacy">LEGACY</button><button id="dep-full" class="on">FULL</button>
   </span>
   <span id="dep-fixed"></span>
   <span class="modesw">
@@ -1502,8 +1505,14 @@ const PARAMS = [
   // ⚠️ FULL은 계산이 무겁다(메인 스레드 동기 실행): 600초 5.6s · 1800초 24s(실측).
   //    실행 중에는 화면이 멈춘다 — 그래서 누르기 전에 예상 시간을 알린다.
   // 무력화 배치(MCRC_DOWN·KAMDOC_DOWN)는 스위치에 없지만 ?dep= 로 고를 수 있다.
-  { k: 'dep',   d: 'HANBANDO_LEGACY_NORMAL', t: 'str',
-    h: '배치 (HANBANDO_LEGACY_NORMAL|HANBANDO_FULL_NORMAL|…_MCRC_DOWN|…_KAMDOC_DOWN)' },
+  // ── 기본 배치: LEGACY → **FULL**(사용자 결정 2026-09-28 · ADR-102) ─────────────────────
+  // 위 문단이 말한 대로 이 화면이 답할 질문은 「FULL 251노드에서 그림이 어떻게 달라지는가」다.
+  // 그런데 기본이 LEGACY면 처음 여는 사람은 포대 15개 중 4개가 한 발도 안 쏘는 판을 기준으로
+  // 읽게 된다. 기본을 배치 자체가 시험되는 FULL로 옮긴다. LEGACY는 스위치·?dep= 로 그대로 고른다.
+  // ⚠️ 대가: 기본 실행(SC3·1800초·FULL)이 메인 스레드에서 24~31초 걸린다(ADR-101 실측 31초).
+  //    renderDep()이 「계산 20초+」를 미리 알린다. 재현용 seed 29·관측 1800초는 그대로다.
+  { k: 'dep',   d: 'HANBANDO_FULL_NORMAL', t: 'str',
+    h: '배치 (HANBANDO_FULL_NORMAL(기본)|HANBANDO_LEGACY_NORMAL|…_MCRC_DOWN|…_KAMDOC_DOWN)' },
   { k: 'mode',  d: 'asis',  t: 'str',  h: '체계 모드 (asis|tobe)' },
   // seed 기본값은 **대표 표본**이다(사용자 결정 2026-09-03). 종전 12345는 이 화면의 조건에서
   // 32 seed 중 가장 심한 이상치였다 — KAMDOC 도착 75건·ρ 0.81(중앙값 50건·ρ 0.48)이라 한 노드가
@@ -1621,7 +1630,7 @@ const P = parseCommandFlowParams(PARAMS, location.search);
 const INTENSITY = 1;             // 고정. 위 PARAMS 주석 참조.
 // 배치는 스위치·URL로 고른다(위 PARAMS 주석). 알 수 없는 값이면 기본으로 떨어뜨린다 —
 // 오타 하나로 조용히 다른 배치의 수치를 보게 두지 않는다.
-let DEPLOYMENT = (KJ.DEPLOYMENT_IDS || []).indexOf(P.dep) >= 0 ? P.dep : 'HANBANDO_LEGACY_NORMAL';
+let DEPLOYMENT = (KJ.DEPLOYMENT_IDS || []).indexOf(P.dep) >= 0 ? P.dep : 'HANBANDO_FULL_NORMAL';
 P.seed = Math.max(0, Math.floor(P.seed));
 P.dur = Math.min(7200, Math.max(60, Math.floor(P.dur)));
 console.info('[지휘 흐름] 실험 조건은 URL 파라미터로만 줍니다:\n' +

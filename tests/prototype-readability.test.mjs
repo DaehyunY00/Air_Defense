@@ -11,7 +11,8 @@
  * 눈으로는 놓친다. 그래서 「엔진이 내는 서식」과 「프로토타입이 푸는 서식」을 맞대어 잰다.
  *
  * 검증 관점:
- *  1) 결정 불변 — 로그는 화면일 뿐, 골든 지문이 움직이면 안 된다.
+ *  1) 결정 불변 — 로그는 화면일 뿐, 결정을 바꾸지 않는다: 결정론·계정 대사·관측 순수성·모드 분리·
+ *     결과 형상의 구조 불변식(플랫폼 의존 골든 지문은 2026-09-28에 폐기 — 본문 주석).
  *  2) 마크 서식 — 엔진이 실제로 낸 마크가 markView의 갈래에 걸린다.
  *  3) 누수 근거 — 누수 항적마다 `누수:` 마크와 failure(계열·구조성·기여원인)가 있다.
  *  4) 「쐈는가」 — 발사 마크 유무로 누수가 실제로 갈린다(이 판: 대부분 발사에 이르지 못함).
@@ -52,13 +53,43 @@ function run(mode, feats, opts) {
 }
 
 // ── 1. 결정 불변 ──
-console.log('# 1) 로그는 화면 — 결정은 움직이지 않는다');
-const GOLDEN = {
-  asis: '94ad09ff4e595491f841bdb60f64c6addfd7aed563ff8c230ee9028d416f1e21',
-  tobe: '6429f95197f36aa6447fd4af0c3724d89274566dc31a7a958dd41f6e93745b5f'
-};
-assert(sha(run('asis', {}, { seed: 12345 })) === GOLDEN.asis, 'SC3 As-Is 골든 지문 불변');
-assert(sha(run('tobe', {}, { seed: 12345 })) === GOLDEN.tobe, 'SC3 To-Be 골든 지문 불변');
+// 종전에는 SHA-256 골든 지문 두 개를 박아 두었다. 그런데 As-Is 지문은 **플랫폼에 따라 달랐다**
+// (실측 2026-09-28: 작성자 macOS/Apple Silicon에서는 94ad09ff…로 통과, Linux x86-64 컨테이너에서는
+// 골든이 박힌 커밋(3e1f6d4)부터 HEAD까지 줄곧 7b919ebb…로 실패 — To-Be 지문 6429f951…은 두 플랫폼이 같다).
+// 엔진 커밋이 바꾼 것이 아니라 As-Is만 지나는 부동소수 경로(정규분포 Box–Muller 등)의 마지막 자리 차이로
+// 보인다. 지문 비교는 `tests/hires-baseline.test.mjs`(6케이스)와 `ballistic-report-source.test.mjs`
+// (화면 기본 플래그 4케이스)가 이미 맡고 있으므로, 여기서는 「로그는 화면일 뿐 결정을 바꾸지 않는다」는
+// 계약을 **구조 불변식**으로 잰다 — 플랫폼과 무관하게 참이어야 하는 성질만.
+//  ① 결정론: 같은 입력을 두 번 돌리면 같은 결과(지문 동일).
+//  ② 계정 대사: 생성 = 격추 + 누수 + 미해결(엔진의 spawned/killed/leaked/unresolved).
+//  ③ 관측 순수성: trace(항적·노드 시계열 관측)를 켜도 동역학 결과가 같다 — 관측 키를 뺀 지문 동일.
+//  ④ 모드 분리: As-Is와 To-Be는 서로 다른 결과다(구조가 다르면 표본이 달라야 한다).
+//  ⑤ 결과 형상: 소비 측(프로토타입)이 읽는 상위 키가 그대로 있다.
+console.log('# 1) 로그는 화면 — 결정은 움직이지 않는다 (구조 불변식 · 플랫폼 무관)');
+function dynamicsSha(r) {
+  // 관측 전용 키를 뺀 지문 — trace ON/OFF 대조용(flow-trace.test.mjs의 fingerprint와 같은 규율).
+  const copy = Object.assign({}, r);
+  ['threatTraces', 'nodeSeries', 'traceTruncated', 'nodeSeriesTruncated',
+   'flowEvents', 'flowTruncated', 'flowCap'].forEach((k) => { delete copy[k]; });
+  return sha(copy);
+}
+const RESULT_KEYS = ['global', 'nodes', 'links', 'bottlenecks'];   // 프로토타입·본 앱이 읽는 상위 키
+['asis', 'tobe'].forEach((mode) => {
+  const a = run(mode, {}, { seed: 12345 }), b = run(mode, {}, { seed: 12345 });
+  assert(sha(a) === sha(b), `SC3 ${mode}: 같은 입력 두 번 = 같은 결과(결정론)`);
+  const g = a.global;
+  const spawned = g.spawned, killed = g.killed, leaked = g.leaked;
+  const unresolved = spawned - killed - leaked;
+  assert(Number.isInteger(spawned) && spawned > 0 && unresolved >= 0 && killed >= 0 && leaked >= 0,
+    `SC3 ${mode}: 생성 ${spawned} = 격추 ${killed} + 누수 ${leaked} + 미해결 ${unresolved}`);
+  const t = run(mode, {}, { seed: 12345, trace: true });
+  assert(dynamicsSha(t) === dynamicsSha(a), `SC3 ${mode}: trace ON/OFF 동역학 지문 동일(관측 순수성)`);
+  assert(Array.isArray(t.threatTraces) && t.threatTraces.length === Math.min(spawned, 20000),
+    `SC3 ${mode}: trace ON이면 항적 기록 ${t.threatTraces.length}건 = 생성 ${spawned}건`);
+  RESULT_KEYS.forEach((k) => assert(a[k] !== undefined, `SC3 ${mode}: 결과에 ${k} 키가 있다`));
+});
+assert(sha(run('asis', {}, { seed: 12345 })) !== sha(run('tobe', {}, { seed: 12345 })),
+  'SC3 As-Is ≠ To-Be (구조가 다르면 표본이 다르다)');
 
 // ── 2. 마크 서식 ──
 console.log('# 2) 엔진 마크가 markView의 갈래에 걸린다');

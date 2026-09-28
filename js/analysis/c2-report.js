@@ -521,7 +521,10 @@
     };
 
     // ── 비상·자위권 결과와 교전 공백 ──
-    var emergency = { total: 0, hit: 0, miss: 0, unresolved: 0 };
+    // ADR-104: 사전대기 큐 긴급발사 ②(`standby_emergency`)도 「정식 명령 전 발사」라 비상 버킷에 함께 센다.
+    //   국지방공 마감 긴급(`emergency`)과 구분해 읽을 수 있게 standby 소계를 따로 둔다(총계는 둘의 합).
+    var emergency = { total: 0, hit: 0, miss: 0, unresolved: 0, standby: 0 };
+    var isEmergencyCause = function (cause) { return cause === 'emergency' || cause === 'standby_emergency'; };
     var selfDefense = { total: 0, hit: 0, miss: 0, unresolved: 0 };
     var gap = { preFire: [], betweenEngagements: [], beforeLeak: [], neverEngagedLeaked: 0, gapsClosedByEmergency: 0 };
     function resultForFire(tr, fire) {
@@ -536,9 +539,10 @@
     Object.keys(threats).forEach(function (id) {
       var tr = threats[id], sortedFires = tr.fires.slice().sort(function (a, b) { return a.t - b.t; });
       sortedFires.forEach(function (fire) {
-        if (fire.cause !== 'emergency' && fire.cause !== 'self_defense') return;
-        var bucket = fire.cause === 'emergency' ? emergency : selfDefense;
+        if (!isEmergencyCause(fire.cause) && fire.cause !== 'self_defense') return;
+        var bucket = isEmergencyCause(fire.cause) ? emergency : selfDefense;
         bucket.total++;
+        if (fire.cause === 'standby_emergency') emergency.standby++;
         var resolved = resultForFire(tr, fire);
         if (!resolved) bucket.unresolved++;
         else if (resolved.type === 'INTERCEPT_HIT') bucket.hit++;
@@ -555,7 +559,7 @@
       var intervals = sortedFires.map(function (fire) {
         var resolved = resultForFire(tr, fire);
         var end = resolved ? resolved.t : (tr.kill != null ? tr.kill : (tr.leak != null ? tr.leak : duration));
-        return { start: fire.t, end: Math.max(fire.t, end), emergency: fire.cause === 'emergency' };
+        return { start: fire.t, end: Math.max(fire.t, end), emergency: isEmergencyCause(fire.cause) };
       }).sort(function (a, b) { return a.start - b.start; });
       var merged = [];
       intervals.forEach(function (interval) {

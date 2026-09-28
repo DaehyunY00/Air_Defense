@@ -165,6 +165,30 @@
 - **신뢰도 등급**: **C** — 구조 정합(codex 정본 승계)이 근거이며 수치 근거 없음
 - **MC 적용방식**: 결정적(라우팅 규칙). 켜면 보고 링크 지연 추첨 시점·횟수가 달라져 실행 전체가 다른 표본(재기준선 대상). OFF는 bit-exact.
 
+### [IADS-CUE-01] 사전대기 큐·긴급발사 (standbyCue, ADR-104)
+- **값/분포**: 불리언 + 게이트 모드(`awareness` 기본 / `decision_done`) — 수치 파라미터 없음
+- **단위**: 없음
+- **출처**: `IADS_codex` `sim-engine.js _stepStandbyCues()`(ADR-035→068) · EmergencyReadySet(ADR-053 D3 — Linear KAMD_OPS / killweb IAOC 발행) · `standbyCueGateMode='awareness'` 기본 · 긴급발사 ②와 자위권 ③의 상호배타 사다리(codex ADR-050)
+- **적용범위**: `ballisticReportSource` ON 전제. 발행 주체가 탄도 위협의 시작 보고를 받은 시점에 위협당 1회, 자격 포대(IADS-CUE-TIER-01) 전부에 하향 계선(coord·command) 지연만큼 늦게 큐 도착. 큐 받은 포대는 자기 MFR 사통·PIP·잔탄·채널이 갖춰지면 정식 명령 전 발사(`standby_emergency`). 정식 우선·이중 발사 없음·자위권 배제. C2 서비스 큐 미소모. USFK·LOCAL_AD·비탄도 불변.
+- **신뢰도 등급**: **C** — 구조 정합(codex 정본 승계)
+- **MC 적용방식**: 결정적(규칙). 켜면 큐 링크 지연 추첨·긴급발사로 실행 전체가 다른 표본(재기준선 대상). OFF는 bit-exact.
+
+### [IADS-CUE-TIER-01] 탄도 방어층 등재 (BALLISTIC_DEFENSE_TIERS, ADR-104)
+- **값/분포**: L-SAM = 상층(upper) · 천궁-II = 하층(lower) · PAC-3(한국군) = 하층(lower). 비호·천마·USFK는 미등재
+- **단위**: 없음
+- **출처**: `IADS_codex` `BALLISTIC_DEFENSE_TIERS` 상수의 구조를 옮김. 층위 값 자체는 큐 자격 판정(등재 여부)에만 쓰이고 발사 순서에는 쓰지 않는다
+- **적용범위**: `js/engine/sim-engine.js` `_issueStandbyCue` 자격 필터. `KJ.BALLISTIC_DEFENSE_TIERS`로 노출
+- **신뢰도 등급**: **C** — 개념 설정
+- **MC 적용방식**: 결정적
+
+### [IADS-CUE-GAIN-01] 큐 획득 이득 (cueAcquisitionGain, ADR-104 B-3)
+- **값/분포**: 0 (기본 · 이득 없음). 스윕 0 / 0.3 / 0.5 — 큐 도착 포대 MFR의 `transitionTime.detectToTrack`·`trackToFireControl`을 (1 − gain)배
+- **단위**: 비율
+- **출처**: 없음. codex ADR-026 filter2(큐가 포대 표적 필터·운용 모드(응시 섹터)에 위협을 주입해 획득을 앞당김)의 **대체 근사**다 — K-JAMDS에는 운용 모드 모델이 없다. 탐지확률·RNG 소비 순서는 건드리지 않는다
+- **적용범위**: `_onIadsSensorScan`의 `advanceTransitions` 호출에서 큐가 도착한 포대의 MFR만
+- **신뢰도 등급**: **C** — 값의 근거 없음(명시된 근사). 기본 0
+- **MC 적용방식**: 결정적(전이 시간 배율)
+
 ### [IADS-LINK-IFCN-01] 킬웹(To-Be) IFCN 네트워크 주기 (linkSemanticsV2, ADR-057)
 - **값/분포**: 1 s (고정)
 - **단위**: 초

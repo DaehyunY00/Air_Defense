@@ -102,6 +102,10 @@
     return b;
   }
 
+  // ADR-104: 탄도 방어층(codex BALLISTIC_DEFENSE_TIERS 이식) — 사전대기 큐 자격 판정에만 쓴다.
+  // 값·근거는 docs/params.md IADS-CUE-TIER-01(등급 C). 국지방공(비호·천마)·USFK는 층위에 없다.
+  var BALLISTIC_DEFENSE_TIERS = { LSAM: 'upper', CHEONGUNG2: 'lower', PAC3: 'lower' };
+
   function iadsThreatCategory(type) {
     return type === 'srbm' || type === 'mrl_large' ? 'ballistic' : 'abt';
   }
@@ -366,6 +370,19 @@
     // USFK 축·LOCAL_AD 축·비탄도 라우팅과 카탈로그 계선은 불변. 기본 OFF(불변 규칙 1 · 재기준선 대상).
     this.ballisticReportSource = ff('ballisticReportSource', false);
     this._bsrcThreats = this.ballisticReportSource ? [] : null;   // ON에서만 탄도 위협 명단(관측 종료 마감용)
+    // ADR-104: 사전대기 큐 + 긴급발사 ② — codex `_stepStandbyCues`/EmergencyReadySet(ADR-035→068·053 D3) 이식.
+    // 발행 주체(As-Is KAMD_OPS · To-Be IAOC)가 탄도 위협을 **인지**(그린파인 시작 보고 도착 = awareness)하면
+    // 위협당 1회, 방어층 등재 한국군 상층 포대 중 교전창이 있는 포대 전부에 하향 계선 지연만큼 늦게 큐를
+    // 보낸다(C2 서비스 큐 소모 없음 — ADR-090 §46→36 교훈). 큐를 받은 포대는 정식 명령 도착 전이라도 자기
+    // MFR 사통·PIP·잔탄·채널이 갖춰지면 발사한다(launchCause 'standby_emergency'). 정식이 있으면 정식 우선,
+    // 큐를 받은 포대는 ③ 자위권을 타지 않는다(상호배타). **파트 A(ballisticReportSource) ON 전제** — A가
+    // 꺼져 있으면 비활성(결과 features에 그 사실을 신고). 기본 OFF(불변 규칙 1 · 재기준선 대상).
+    this.standbyCue = ff('standbyCue', false);
+    this.standbyCueActive = !!(this.standbyCue && this.ballisticReportSource);
+    this.standbyCueGateMode = f.standbyCueGateMode === 'decision_done' ? 'decision_done' : 'awareness';
+    // B-3 획득 이득(명시된 근사 — codex filter2 운용 모드 전환의 대체, 근거 없음·등급 C). 기본 0 = 이득 없음.
+    this.cueAcquisitionGain = (typeof f.cueAcquisitionGain === 'number' && f.cueAcquisitionGain > 0)
+      ? Math.min(0.95, f.cueAcquisitionGain) : 0;
     // ADR-063: 표적권역 산포 — 종전에는 같은 축선의 모든 위협이 정확히 같은 한 점으로 향해
     // seed를 바꿔도 착탄점이 불변이었다. ON이면 위협마다 표적권역(disk) 안에서 착탄점을 뽑는다.
     // 반경은 features.targetSpreadKm로 스윕 가능(기본 THREAT-TARGET-DISP-01 = 15km, 등급 C).
@@ -478,6 +495,13 @@
     // wire shape 규율 — 켜졌을 때만 키가 실린다(OFF 골든 불변).
     if (this.threatAimpoints) this.features.threatAimpoints = true;
     if (this.ballisticReportSource) this.features.ballisticReportSource = true; // ADR-103 (OFF wire shape 보존)
+    if (this.standbyCue) {   // ADR-104 — 요청했을 때만 신고(OFF wire shape 보존). A 없이 켜면 비활성 사실을 남긴다.
+      this.features.standbyCue = this.standbyCueActive ? true : 'disabled_without_ballisticReportSource';
+      if (this.standbyCueActive) {
+        this.features.standbyCueGateMode = this.standbyCueGateMode;
+        this.features.cueAcquisitionGain = this.cueAcquisitionGain;
+      }
+    }
     if (this.c2DecisionTimeParity) this.features.c2DecisionTimeParity = true; // ADR-099
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
@@ -1534,7 +1558,14 @@
       else pFinal = Math.max(0, Math.min(0.99, pFinal * this.mult.detect));
       var before = track.state;
       var stepped = KJ.IADS.stepSensorTrack(track, pFinal, dt, track.rng, t);
-      var transitionEvent = KJ.IADS.advanceTransitions(track, type, t, threat.type);
+      var transType = type;
+      if (this.standbyCueActive && this.cueAcquisitionGain > 0 && threat._cueMfr && threat._cueMfr[sensor.id] && type.transitionTime) {
+        // ADR-104 B-3: 큐가 도착한 포대 MFR의 전이 시간만 (1−gain)배 — 탐지확률·RNG 소비 순서는 그대로(명시된 근사)
+        var gk = 1 - this.cueAcquisitionGain, tt = type.transitionTime;
+        transType = Object.assign({}, type, { transitionTime: Object.assign({}, tt, {
+          detectToTrack: (tt.detectToTrack || 0) * gk, trackToFireControl: (tt.trackToFireControl || 0) * gk }) });
+      }
+      var transitionEvent = KJ.IADS.advanceTransitions(track, transType, t, threat.type);
       var eventName = transitionEvent || stepped.event;
       if (before === KJ.IADS.SENSOR_STATE.UNDETECTED && track.state !== before) acquiredNow = true;
       if (eventName === 'SENSOR_DETECTED') this.iadsSensorStats.detections++;
@@ -1566,6 +1597,7 @@
     }
     // ADR-071: 자위권 발사 — 정식 경로가 아무것도 만들지 못한 채 발사 마감이 닥친 경우.
     // 별도 균일 감시 루프를 만들지 않고 기존 센서 스캔 사건에 얹는다(codex 구현 제약).
+    if (this.standbyCueActive && threat._cueReady) this._tryIadsStandbyFire(threat, t);   // ADR-104 ②(③보다 먼저)
     if (this.selfDefenseFire) this._tryIadsSelfDefense(threat, t);
     if (t + dt < threat.spawnT + threat.dwellSec) {
       this.schedule(t + dt, PRI.DETECT, 'IADS_SENSOR_SCAN', { threat: threat });
@@ -1618,6 +1650,7 @@
     });
     for (var i = 0; i < shooters.length; i++) {
       var shooter = shooters[i];
+      if (threat._cueReady && threat._cueReady[shooter.id]) continue;   // ADR-104: 큐를 받은 포대는 ③을 타지 않는다(②와 상호배타)
       // ① 정보 조건 — 자기 MFR의 자체 추적 성립(상부 트랙 원용 금지)
       var own = shooter.mfrSensorId && threat._sensorTracks
         ? threat._sensorTracks[shooter.mfrSensorId] : null;
@@ -1666,6 +1699,128 @@
       this._iadsTransitionPlan(plan, 'in_transit', t);
       this.schedule(t, PRI.LINK_ARRIVE, 'IADS_FIRE',
         { threat: threat, commander: commander, shooterId: shooter.id, plan: plan });
+      return;
+    }
+  };
+
+  /** ADR-104: 사전대기 큐 계정(ON에서만 만들어져 결과에 노출된다 — OFF wire shape 보존). */
+  Simulation.prototype._standbyCueStats = function () {
+    return this.global.standbyCue || (this.global.standbyCue = {
+      threatsCued: 0, noticesSent: 0, noticesArrived: 0, noPath: 0,
+      emergencyFired: 0, arbitrated: 0
+    });
+  };
+
+  /**
+   * ADR-104 B-1: 사전대기 큐 발행(codex `_stepStandbyCues` 의미).
+   * 발행 주체는 탄도 책임 C2 중 **global scope**(As-Is KAMD_OPS · To-Be IAOC)뿐이다 — KAMDOC 무력화 배치의
+   * 권역 ICC·ECS 위임은 큐를 내지 않는다(codex: 주체 노드가 없으면 큐 없음). 위협당 1회.
+   * 자격 = 한국군 상층(forceOwner 'ROK' — USFK·ROK_LOCAL_AD 제외) · 방어층 등재 · 자원 실재(operational) ·
+   *        (To-Be) 상층 웹 · 대응 탄종 존재(_iadsCanEngage) · 교전창 비-null(_iadsGeometryWindow — 캐시·난수 없음).
+   * 잔탄·FC·동시교전은 멤버십에 쓰지 않고 발사 평가(_iadsEvaluate)에서 재검사한다.
+   * 큐는 발행 C2 → ICC → ECS 하향 계선(coord·command)의 지연만큼 늦게 도착한다(ReadyNotice). flowTrace에는
+   * kind 'cue' link 사건으로 남는다. C2 서비스 큐는 소모하지 않는다.
+   */
+  Simulation.prototype._issueStandbyCue = function (threat, commander, t) {
+    if (!this.standbyCueActive || !threat.alive || threat.pipelineDead) return;
+    if (!this._bsrcApplies(threat, commander) || commander.scope !== 'global') return;
+    if (threat._cueIssued) return;
+    threat._cueIssued = true;
+    var self = this, sc = this._standbyCueStats();
+    sc.threatsCued++;
+    var web = this.mode === 'tobe' ? 'upper' : null;
+    var eligible = this._nodesInMode().filter(function (n) {
+      if (n.category !== 'shooter' || n.forceOwner !== 'ROK') return false;
+      if (!BALLISTIC_DEFENSE_TIERS[n.typeId]) return false;
+      if (!self.iadsResources[n.id]) return false;
+      if (web && self._iadsWebOf(n) !== web) return false;
+      if (!self._iadsCanEngage(n, threat)) return false;
+      return !!self._iadsGeometryWindow(n, threat);
+    });
+    threat._cueReady = threat._cueReady || {};
+    threat._cueMfr = threat._cueMfr || {};
+    this._mark(threat, '사전대기큐발행:' + commander.typeId + '(' + eligible.length + '포대)', t, axisOf(commander));
+    eligible.forEach(function (shooter) {
+      var target = shooter.ecsC2Id || shooter.id;
+      var path = self._iadsShortestPath(commander.id, target, ['coord', 'command']);
+      if (path === null) { sc.noPath++; return; }
+      var delay = 0;
+      path.forEach(function (l) {
+        var d = self._linkDelay(l.comm[self.mode]);
+        self._recordLink(l.from, l.to, l.comm[self.mode], 'cue', { threat: threat, t0: t + delay, delay: d });
+        delay += d;
+      });
+      sc.noticesSent++;
+      self.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_CUE_ARRIVE',
+        { threat: threat, commander: commander, shooterId: shooter.id });
+    });
+  };
+
+  /** ADR-104: 큐 도착 — 포대를 ReadySet에 넣고(자기 MFR을 획득 이득 대상으로 표시) 즉시 긴급발사를 시도한다. */
+  Simulation.prototype._onIadsCueArrive = function (t, d) {
+    var threat = d.threat;
+    if (!threat.alive || threat.pipelineDead) return;
+    var shooter = this._nodeById(d.shooterId);
+    if (!shooter) return;
+    this._standbyCueStats().noticesArrived++;
+    threat._cueReady = threat._cueReady || {};
+    threat._cueMfr = threat._cueMfr || {};
+    threat._cueReady[shooter.id] = { at: t, commander: d.commander, fired: false };
+    if (shooter.mfrSensorId) threat._cueMfr[shooter.mfrSensorId] = true;
+    this._mark(threat, '사전대기큐도착:' + shooter.id, t, axisOf(d.commander));
+    this._tryIadsStandbyFire(threat, t);
+  };
+
+  /**
+   * ADR-104 B-2: 긴급발사 ② — 큐를 받은 포대가 정식 명령 도착 전에 자기 MFR 사통·PIP·잔탄·채널이 갖춰지면 쏜다.
+   * 정식 우선: 탄도 책임 C2 축의 살아 있는 정식 계획(하달 중 포함)이 있으면 물러선다. 긴급 계획이 살아 있으면
+   * 같은 축의 정식 결심은 _iadsPlanBlocks가 막는다 → 같은 위협에 정식+긴급 이중 발사가 나지 않는다.
+   * 발사는 자위권(③)과 같이 하달 계선 없이 즉시(큐가 이미 ECS를 거쳤으므로 접수 큐도 다시 타지 않는다).
+   */
+  Simulation.prototype._tryIadsStandbyFire = function (threat, t) {
+    if (!this.standbyCueActive || !threat.alive || threat.pipelineDead || !threat._cueReady) return;
+    if (threat.tries >= this.iadsMaxShots) return;
+    var self = this, plans = threat._iadsPlans || [];
+    var formalActive = plans.some(function (p) {
+      return self._iadsActivePlan(p) && p.launchCause !== 'standby_emergency' &&
+        (p.commander.axis === 'KAMD' || p.commander.axis === 'KILL_WEB');
+    });
+    if (formalActive) return;
+    if (plans.some(function (p) { return self._iadsActivePlan(p) && p.launchCause === 'standby_emergency'; })) return;
+    var ids = Object.keys(threat._cueReady);
+    for (var i = 0; i < ids.length; i++) {
+      var entry = threat._cueReady[ids[i]];
+      if (entry.fired) continue;
+      var shooter = this._nodeById(ids[i]);
+      if (!shooter) continue;
+      // 싼 사전 점검: 자기 MFR이 FIRE_CONTROL이 아니면 평가하지 않는다(전속 MFR 없는 포대는 층위에 없다).
+      var own = shooter.mfrSensorId && threat._sensorTracks ? threat._sensorTracks[shooter.mfrSensorId] : null;
+      if (this.iadsSensorPhysics && shooter.mfrSensorId && (!own || own.state !== KJ.IADS.SENSOR_STATE.FIRE_CONTROL)) continue;
+      var win = this._iadsGeometryWindow(shooter, threat);
+      if (!win || t < win.firstFire - 1 || t > win.lastFire) continue;
+      var ev = this._iadsEvaluate(shooter, threat, t);
+      if (!ev.feasible) continue;
+      var commander = entry.commander;
+      var plan = this._iadsCreatePlan(commander, shooter.id, t, threat, {
+        targetEcsId: shooter.ecsC2Id || null, delegationLevel: 'STANDBY_CUE',
+        launchCause: 'standby_emergency', validUntil: win.lastFire + 3
+      });
+      threat._iadsPlans.push(plan);
+      threat._hadIadsPlan = true;
+      entry.fired = true;
+      this.global.c2Orders.created++;
+      this._standbyCueStats().emergencyFired++;
+      this._mark(threat, '긴급발사:' + shooter.id, t, axisOf(commander));
+      this._metricEvent('COMMAND_DECIDED', t, threat, {
+        nodeId: commander.id, shooterId: shooter.id, cause: 'standby_emergency',
+        directiveId: plan.directiveId, engagementId: plan.engagementId,
+        authorityLevel: plan.authorityLevel, delegationLevel: plan.delegationLevel,
+        commanderAxis: commander.axis, threatCategory: iadsThreatCategory(threat.type)
+      });
+      if (this.decisionAudit) this._decisionAuditStats.selfDefenseUnaudited++;   // WTA를 거치지 않는 발사(ADR-073 §한계와 같은 처리)
+      this._iadsTransitionPlan(plan, 'in_transit', t);
+      this._iadsTransitionPlan(plan, 'active', t);
+      this._onIadsFire(t, { threat: threat, commander: commander, shooterId: shooter.id, plan: plan, receptionComplete: true });
       return;
     }
   };
@@ -1727,6 +1882,8 @@
       return;
     }
     this._mark(threat, '항적정보접수:' + commander.typeId + '(' + track.sources.length + '출처)', t, axisOf(commander));
+    // ADR-104: 인지(awareness) 게이트 — 시작 보고가 **도착**한 시점에 큐를 발행한다(처리 완료를 기다리지 않음).
+    if (this.standbyCueActive && this.standbyCueGateMode === 'awareness') this._issueStandbyCue(threat, commander, t);
     var reportUpdates = (track.sources || []).map(function (source) { return source.lastUpdateAt; })
       .filter(Number.isFinite);
     this._metricEvent('TRACK_REPORT_RECEIVED', t, threat, {
@@ -1760,6 +1917,7 @@
       }
       self.global.commanderAssignments[commander.typeId] = (self.global.commanderAssignments[commander.typeId] || 0) + 1;
       self._mark(job.threat, '위협판단·표적할당준비:' + commander.typeId, done, axisOf(commander));
+      if (self.standbyCueActive && self.standbyCueGateMode === 'decision_done') self._issueStandbyCue(job.threat, commander, done);   // ADR-104 선택지
       self._iadsDecide(job.threat, done, commander);
     });
   };
@@ -3208,6 +3366,15 @@
 
     var otherFiredPlan = (threat._iadsPlans || []).find(function (p) { return p !== plan && p.fired && !p.resolved; });
     var otherFired = !!otherFiredPlan;
+    if (this.standbyCueActive && otherFired && otherFiredPlan.commander.axis === d.commander.axis &&
+        (plan.launchCause === 'standby_emergency' || otherFiredPlan.launchCause === 'standby_emergency')) {
+      // ADR-104 arbitration: 같은 축의 정식·긴급이 겹치면 뒤의 것을 접는다 — 같은 위협에 이중 발사 0건.
+      this._iadsTransitionPlan(plan, 'cancelled', t, 'released', 'standby_arbitration');
+      this.global.c2Orders.cancelled++;
+      this.global.c2Orders.released++;
+      this._standbyCueStats().arbitrated++;
+      return;
+    }
     if (otherFired) {
       this.global.coordAttempts++;
       this.global.coordGaps++;
@@ -3606,6 +3773,7 @@
       case 'IADS_C2_ARRIVE': this._onIadsC2Arrive(ev.t, ev.data); break;
       case 'IADS_RETRY': this._onIadsRetry(ev.t, ev.data); break;
       case 'IADS_EW_UPDATE': this._onIadsEwUpdate(ev.t, ev.data); break;
+      case 'IADS_CUE_ARRIVE': this._onIadsCueArrive(ev.t, ev.data); break;   // ADR-104
       case 'IADS_FIRE': this._onIadsFire(ev.t, ev.data); break;
       case 'IADS_BDA': this._onIadsBda(ev.t, ev.data); break;
       case 'IADS_RELOAD': this._onIadsReload(ev.t, ev.data); break;
@@ -3861,6 +4029,7 @@
     };
     if (this.highResolutionDeployment) {
       result.global.commanderAssignments = this.global.commanderAssignments;
+      if (this.standbyCueActive) result.global.standbyCue = this._standbyCueStats();   // ADR-104 (ON에서만 노출)
       result.global.failureSummary = {
         primary: this.global.failurePrimary,
         contributors: this.global.failureContributors,
@@ -3951,7 +4120,8 @@
   // 필요한 필드: {axis, target, spawnT, dwellSec, type, _launchExtKm}
   KJ.iadsThreatPosition = iadsThreatPosition;
   KJ.Simulation = Simulation;
-  KJ.DELEG_QUEUE_MULT = DELEG_QUEUE_MULT;  // 감사/스윕용 노출 (속성 변경 시 엔진이 즉시 참조 — 기본 asis4/tobe1)
+  KJ.DELEG_QUEUE_MULT = DELEG_QUEUE_MULT;
+  KJ.BALLISTIC_DEFENSE_TIERS = BALLISTIC_DEFENSE_TIERS;   // ADR-104 (진단·xlsx 노출용)  // 감사/스윕용 노출 (속성 변경 시 엔진이 즉시 참조 — 기본 asis4/tobe1)
 
   // ── 정밀화 Phase C: 요격 실패(누수) 원인 코드 → 병목 분류(taxonomy) ──
   // 엔진이 태깅하는 leakReason 코드의 정본 분류. UI(대조표·타임라인·분석 탭 파이프라인)와

@@ -1,0 +1,86 @@
+{
+  "checkedAt": "2026-09-28T11:13:19.825Z",
+  "imageDir": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa",
+  "artifacts": [
+    {
+      "filename": "K-JAMDS_지휘흐름_모의논리서.pdf",
+      "sha256": "00c50773b52030908eba7398c5aaf6453d0103a7f81b74609b9d0960a1002782",
+      "pageCount": 14,
+      "pageTextCharacters": [
+        1238,
+        1327,
+        1051,
+        1165,
+        857,
+        1208,
+        987,
+        1248,
+        1439,
+        1286,
+        1148,
+        1096,
+        845,
+        1294
+      ],
+      "pngs": [
+        {
+          "path": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa/logic-01.png",
+          "sha256": "e2c2e5b3927829e8c3379e7883b4bd7a87f8639af1322e0903c560749b8bf184"
+        },
+        {
+          "path": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa/logic-02.png",
+          "sha256": "9f9083d97f2e7980f4ef300e799a1314b602bf41711df2214248ce028627e667"
+        },
+        {
+          "path": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa/logic-03.png",
+          "sha256": "dbbfe1d5d9ae58b00ebd4aa8e3243422a10366d7a2df6cadf1cea642c90d225a"
+        },
+        {
+          "path": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa/logic-04.png",
+          "sha256": "91a9e731fb75c0781d0666b628094505199c755b2875bf97191441afdc3b1ae6"
+        },
+        {
+          "path": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa/logic-05.png",
+          "sha256": "9da138ddc3d4162fa881b9e6c249d07e34d8c8c43b9fa1e3fce25b9cd643a332"
+        },
+        {
+          "path": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa/logic-06.png",
+          "sha256": "c0996402d5324d2e76b717078345e694d3db30cbfbe8e2f733f2b18d8904a46b"
+        },
+        {
+          "path": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa/logic-07.png",
+          "sha256": "e1e91cc7a36936d2f43be1a57c3b724e3a63a347c4e6abed0221527224c4f6e3"
+        },
+        {
+          "path": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa/logic-08.png",
+          "sha256": "48979f9811592c7b9130019f924ed27e8b7180a6c64ccf15ca4e388aa6160e43"
+        },
+        {
+          "path": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa/logic-09.png",
+          "sha256": "cfbfae3f24f1d0073333bf0c3a438fb00787f8a3b47a145d5d5a1019a48bd28b"
+        },
+        {
+          "path": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa/logic-10.png",
+          "sha256": "235c2f0024c6ce8f39391a876cc7198a58ac9cbbe2df620a85dc2db2e84e75ec"
+        },
+        {
+          "path": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa/logic-11.png",
+          "sha256": "bd072096a256f668570f69ebfdb5217f55c1b116bd14e0675d6c36151d5b094a"
+        },
+        {
+          "path": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa/logic-12.png",
+          "sha256": "fcf34dbae8fbbed2c9fbfb2b42e8c6e5ab485c6a4ebb42c8424cfa77983ac051"
+        },
+        {
+          "path": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa/logic-13.png",
+          "sha256": "1432b4401f94178043ecebc881adf4046525cfcb25e03c87232162dbda327b7b"
+        },
+        {
+          "path": "/private/tmp/claude-501/-Users-daehyunyoo-Library-CloudStorage-GoogleDrive-dhyoo970111-gmail-com--------Air-Defense/7fde94b8-62d4-402c-88c6-68c05069cc0b/scratchpad/pdfqa/logic-14.png",
+          "sha256": "d8a8e644ff91e3254338aa235a40308575a3f7025218341dc7440e3b020a0652"
+        }
+      ],
+      "visualInspection": "생성된 PNG를 전부 눈으로 확인한다(별도 단계)."
+    }
+  ]
+}

@@ -1,0 +1,401 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>지휘흐름 모의논리서</title><style>
+@page { size:A4; margin:16mm 15mm 18mm; }
+* { box-sizing:border-box; }
+body { margin:0; color:#1c2b3a; font-family:"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; font-size:10pt; line-height:1.55; }
+.cover { break-after:page; }
+.chap { break-before:page; }
+.eyebrow { font-size:8.6pt; color:#1f7a72; letter-spacing:.3px; margin:0 0 12px; }
+h1 { font-size:30pt; line-height:1.22; margin:22px 0 14px; color:#16324f; }
+h2 { font-size:17pt; line-height:1.3; color:#16324f; margin:0 0 12px; padding-bottom:8px; border-bottom:2px solid #1f7a72; }
+h3 { font-size:11.4pt; color:#16324f; margin:16px 0 6px; break-after:avoid; }
+p { margin:7px 0; } ul, ol { margin:6px 0; padding-left:18px; } li { margin:4px 0; }
+.subtitle { font-size:12.5pt; font-weight:700; color:#16324f; margin:0 0 6px; }
+.note { font-size:8.4pt; color:#566575; line-height:1.5; margin-top:10px; }
+.box { background:#edf3f6; border-left:3px solid #1f7a72; padding:10px 13px; margin:12px 0 8px; font-size:8.9pt; color:#44525f; break-inside:avoid; } .box b { color:#16324f; font-size:9.4pt; } .box p { margin:4px 0 0; }
+table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:8.8pt; line-height:1.4; margin:8px 0 10px; }
+tr { break-inside:avoid; }
+th { background:#eaf1f5; color:#16324f; font-weight:700; text-align:left; padding:6px 8px; vertical-align:middle; }
+td { padding:6px 8px; border-bottom:1px solid #d3dde5; vertical-align:top; overflow-wrap:anywhere; }
+tbody tr:nth-child(even) td { background:#f8fafb; }
+.kv td:first-child, tbody.kv td:first-child { font-weight:700; color:#16324f; }
+.asis { color:#c0392b; } .tobe { color:#1f6feb; }
+code { background:#f4f6f9; padding:1px 4px; border-radius:3px; font-size:8.6pt; font-family:ui-monospace, Menlo, monospace; }
+.diagram { border:1px solid #d8dde5; border-radius:6px; padding:8px 10px; margin:10px 0; background:#fff; break-inside:avoid; }
+.diagram svg { width:100%; height:auto; display:block; }
+ol.ten li, ol.caveats li { margin:5px 0; }
+</style></head><body>
+<section class="cover">
+<div class="eyebrow">K-JAMDS 지휘 흐름 단일본 · 구현과 가정 설명</div>
+<h1>지휘흐름<br>모의논리서</h1>
+<p class="subtitle">화면 뒤에서 무엇이 어떻게 계산되는가, 그리고 무엇을 가정했는가</p>
+<p>이 문서는 <b>K-JAMDS_지휘흐름_단일본.html</b>이 보여주는 숫자와 그림이 어떤 논리로 만들어지는지를 설명합니다. 코드를 읽지 않아도 「위협 하나가 생겨서 격추되거나 빠져나갈 때까지 모의 안에서 무슨 일이 벌어지는가」를 따라갈 수 있도록 썼습니다. 각 장 끝에 근거가 되는 소스 파일과 결정 기록(ADR) 번호를 적었습니다.</p>
+<table class="kv"><colgroup><col style="width:28%"><col style="width:72%"></colgroup><tbody>
+<tr><td>대상</td><td>K-JAMDS_지휘흐름_단일본.html (원본 prototype/command-flow.html + js/ 엔진, 2026-09-28 소스)</td></tr>
+<tr><td>화면 기본 조건</td><td>시나리오 SC3 · 배치 <b>FULL</b>(251노드 · 포대 84) · As-Is 분절형 · seed 29 · 관측 1800초 · 위협 강도 ×1</td></tr>
+<tr><td>기본 실행 결과</td><td>생성 228 · 격추 165 · 누수 40 · 종료 미해결 23 (헤드리스 Chrome 실측 · 계산 32초)</td></tr>
+<tr><td>모의 방식</td><td>이산사건 모의(DES). 같은 위협·같은 난수열로 As-Is와 To-Be 두 지휘구조를 비교</td></tr>
+<tr><td>관련 문서</td><td>docs/모의논리서.html(본 앱 전체 모델) · K-JAMDS_지휘흐름_분석결과.pdf(결과) · docs/params.md(파라미터 근거 원장)</td></tr>
+</tbody></table>
+<div class="box"><b>이 문서의 수치는 모두 공개자료 기반 정책연구용 개념값입니다.</b><p>실제 작전자료가 아니며, 절대값이 아니라 As-Is와 To-Be의 <b>상대 비교</b>로만 읽습니다. 자산 위치·축선·표적은 도시 수준 개념좌표입니다.</p></div>
+<h3>1. 한눈에 보는 열 가지</h3>
+<ol class="ten">
+<li>모의는 <b>사건이 일어나는 순간만</b> 시계를 옮기는 이산사건 방식입니다. 관측창은 기본 1800초입니다.</li>
+<li>위협은 시나리오가 정한 강도로 축선을 따라 생성되고, 탄도탄은 발사점이 축선 연장선(발사점 연장)에서 시작해 조준점 10곳 중 하나를 노립니다.</li>
+<li>센서는 거리·신호비로 탐지하고 <b>보고 주기</b>(그린파인 16초 … MFR 1초)마다 책임 지휘소에 항적을 보냅니다.</li>
+<li>지휘소는 <b>창구(석)와 대기실</b>이 있는 창구 모델입니다. 창구가 다 차면 줄을 서고, 대기실이 넘치면 전문이 버려집니다.</li>
+<li>처리 시간은 「체계 시간 + 운용자 판단 시간」입니다. 결심 지휘소의 운용자 판단은 As-Is·To-Be 모두 <b>같은 값(30초)</b>을 씁니다.</li>
+<li>계선(통신선)마다 매체가 있고, 전문이 건너는 시간은 데이터링크 1~2초에서 음성·문자·VTC 수십~백 수십 초까지 <b>건마다 뽑힌 값</b>입니다.</li>
+<li>As-Is는 탄도·항공·국지 세 축으로 책임이 갈리고 협조·승인이 음성으로 오갑니다. To-Be는 IAOC 하나가 결심하고 나머지는 데이터링크로 통보받습니다.</li>
+<li>사수 선정은 사거리·고도대역·사격통제 준비를 통과한 후보 중에서 고르고, 발사 뒤 요격탄 비행시간이 지나면 명중 여부(BDA)가 정해집니다.</li>
+<li>화면의 모든 점·시각·대기는 엔진이 기록한 값입니다. 화면은 <b>정리 규칙</b>(병목 판정·묶음·굵기)만 더합니다.</li>
+<li>LEGACY와 FULL, 600초와 1800초, 서로 다른 seed의 수치는 <b>섞어 인용하지 않습니다.</b> 배치 이름과 관측 시간을 늘 함께 적습니다.</li>
+</ol>
+</section>
+<section class="chap"><h2>2. 위협 하나가 겪는 여정 — 킬체인을 이야기로</h2>
+<p>화면의 계선 그래프는 왼쪽에서 오른쪽으로 9개 열이 섭니다. 위협 하나가 생겨서 결말이 날 때까지 전문(메시지)이 이 열을 차례로 건너갑니다. 아래는 탄도탄 한 발이 As-Is에서 겪는 전형적인 여정입니다. 괄호 안은 모의가 그 단계에 붙이는 시간의 종류입니다.</p>
+<div class="diagram">
+<svg viewBox="0 0 720 118" xmlns="http://www.w3.org/2000/svg" font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="9.5">
+  <g fill="#1c2b3a">
+    <rect x="4" y="30" width="72" height="40" rx="6" fill="#e8f4fb" stroke="#38bdf8"/><text x="40" y="47" text-anchor="middle" font-weight="700">① 센서</text><text x="40" y="61" text-anchor="middle" fill="#566575">탐지·추적</text>
+    <rect x="84" y="30" width="72" height="40" rx="6" fill="#e8f4fb" stroke="#38bdf8"/><text x="120" y="47" text-anchor="middle" font-weight="700">② ECS↑</text><text x="120" y="61" text-anchor="middle" fill="#566575">포대 보고</text>
+    <rect x="164" y="30" width="72" height="40" rx="6" fill="#e8f4fb" stroke="#38bdf8"/><text x="200" y="47" text-anchor="middle" font-weight="700">③ ICC↑</text><text x="200" y="61" text-anchor="middle" fill="#566575">권역 보고</text>
+    <rect x="244" y="30" width="72" height="40" rx="6" fill="#f3efff" stroke="#a78bfa"/><text x="280" y="47" text-anchor="middle" font-weight="700">④ 조율층</text><text x="280" y="61" text-anchor="middle" fill="#566575">IAOC(To-Be)</text>
+    <rect x="324" y="30" width="72" height="40" rx="6" fill="#f3efff" stroke="#a78bfa"/><text x="360" y="47" text-anchor="middle" font-weight="700">⑤ 상급 C2</text><text x="360" y="61" text-anchor="middle" fill="#566575">MCRC·KAMDOC</text>
+    <rect x="404" y="30" width="72" height="40" rx="6" fill="#f3efff" stroke="#a78bfa"/><text x="440" y="47" text-anchor="middle" font-weight="700">⑥ 국지 C2</text><text x="440" y="61" text-anchor="middle" fill="#566575">군단 AOC</text>
+    <rect x="484" y="30" width="72" height="40" rx="6" fill="#e9f8f1" stroke="#34d399"/><text x="520" y="47" text-anchor="middle" font-weight="700">⑦ ICC↓</text><text x="520" y="61" text-anchor="middle" fill="#566575">명령 인가</text>
+    <rect x="564" y="30" width="72" height="40" rx="6" fill="#e9f8f1" stroke="#34d399"/><text x="600" y="47" text-anchor="middle" font-weight="700">⑧ ECS↓</text><text x="600" y="61" text-anchor="middle" fill="#566575">명령 접수</text>
+    <rect x="644" y="30" width="72" height="40" rx="6" fill="#e9f8f1" stroke="#34d399"/><text x="680" y="47" text-anchor="middle" font-weight="700">⑨ 요격부대</text><text x="680" y="61" text-anchor="middle" fill="#566575">발사·BDA</text>
+  </g>
+  <g stroke="#94a3b8" stroke-width="1.2" fill="none"><path d="M76 50 L84 50 M156 50 L164 50 M236 50 L244 50 M316 50 L324 50 M396 50 L404 50 M476 50 L484 50 M556 50 L564 50 M636 50 L644 50"/></g>
+  <text x="360" y="14" text-anchor="middle" fill="#566575">청 = 항적·정보가 올라가는 열 · 보라 = 지휘·협조 · 녹 = 교전·명령이 내려가는 열</text>
+  <text x="360" y="100" text-anchor="middle" fill="#566575">열 순서는 실측 통행량으로 정했고, ECS·ICC는 「보고(↑)」와 「명령(↓)」 두 자리에 나옵니다. 실린더(창구 모델)는 일이 처리되는 하행 자리에만 그립니다.</text>
+</svg></div>
+<table><colgroup><col style="width:5%"><col style="width:23%"><col style="width:72%"></colgroup><thead><tr><th>#</th><th>단계</th><th>모의 안에서 벌어지는 일 (붙는 시간)</th></tr></thead><tbody>
+<tr><td>0</td><td>생성</td><td>시나리오가 정한 도착률로 위협이 축선 진입점에 생깁니다. 탄도탄은 발사점이 축선 연장선 위(예: 중부축 405km 뒤)에 있고, 조준점 10곳 중 하나를 결정론으로 배정받습니다. 체공 시간이 정해지고, 그 끝이 「비행 종료」입니다.</td></tr>
+<tr><td>①</td><td>탐지·추적</td><td>이 위협을 볼 수 있는 모든 센서가 0.2초마다 스캔합니다. 거리·고도·수평선·섹터 게이트를 지나면 신호비로 탐지 확률이 정해지고 난수로 판정합니다. 탐지 → 추적 → 사격통제 순으로 상태가 오르고, 각 전이에 센서별 시간이 걸립니다(그린파인 10·12초, MFR 5·3초).</td></tr>
+<tr><td>②③</td><td>보고</td><td>센서는 <b>보고 주기</b>마다 책임 지휘소로 항적을 보냅니다(그린파인 16초·FPS-117 8초·TPS-880K 4초·포대 MFR 1초). 전문은 톱니 신선도(주기 안 어디쯤인가)만큼 늦게 도착합니다. 상관 실패(조기경보 2%, 그 외 10%)면 5초 뒤 다시 보냅니다.</td></tr>
+<tr><td>⑤⑥</td><td>식별·평가·결심</td><td>책임 지휘소(탄도탄은 KAMDOC)에 항적이 <b>도착</b>하면 창구가 비어 있으면 바로, 아니면 대기실에서 기다립니다(대기). 창구에서 「체계 시간 + 운용자 판단 30초」만큼 <b>처리</b>한 뒤 결심합니다. 다른 지휘소가 이미 잡은 표적이면 양보하고, 국지방공이면 교전 협조·승인을 거칩니다.</td></tr>
+<tr><td>⑦</td><td>명령 인가</td><td>결심 지휘소가 사수를 고르고 명령을 내립니다. As-Is는 ICC가 평균 9초 동안 포대를 다시 검증해 인가·재배정·반송합니다. 명령은 유효기간(마지막 발사 가능 시각 + 3초)이 있습니다.</td></tr>
+<tr><td>⑧</td><td>명령 접수</td><td>ECS(포대통제)가 명령을 접수 창구(평균 3.5초)에서 처리하고 발사대에 1초 계선으로 넘깁니다. 유효기간이 지났으면 「창 닫힘」으로 만료됩니다.</td></tr>
+<tr><td>⑨</td><td>발사·BDA</td><td>발사 직전 다시 쏠 수 있는지(탄약·채널·사격통제·요격점) 확인하고 쏩니다. 명중 여부는 발사 순간 명중확률로 뽑히지만, 결과(BDA)는 <b>요격탄 비행시간 뒤</b>에 옵니다. 빗나가면 0.5초 뒤 재결심하고, 표적당 최대 2발입니다.</td></tr>
+<tr><td>끝</td><td>결말</td><td>명중이면 <b>격추</b>. 비행 종료까지 격추되지 않으면 <b>누수</b>이고, 왜 못 막았는지 사유 하나가 붙습니다. 관측창(1800초)이 먼저 끝나면 <b>종료 미해결</b>입니다.</td></tr>
+</tbody></table>
+<p class="note">근거: prototype/command-flow.html COLS(9열 정의) · js/engine/sim-engine.js(사건 처리) · js/model/iads/sensor-model.js, engagement-model.js.</p>
+</section>
+
+<section class="chap"><h2>3. 모의의 뼈대 — 시계, 사건, 난수</h2>
+<h3>사건이 일어날 때만 시계가 움직입니다</h3>
+<p>이 모의는 <b>이산사건 모의(DES)</b>입니다. 1초마다 세상을 갱신하는 대신, 「다음에 일어날 사건」을 시각 순으로 쌓아 두고 가장 이른 것부터 꺼내 처리합니다. 사건은 14종류입니다(생성, 센서 스캔, C2 도착, 도메인 통보, 재시도, 조기경보 갱신, 발사, BDA, 재장전, 교전현황 도착, 승인 도착, 승인 회신, ICC 중계, 서비스 종료, 비행 종료). 같은 시각의 사건은 「우선순위 → 넣은 순서」로 풀어 <b>같은 입력이면 항상 같은 결과</b>가 나옵니다.</p>
+<h3>관측창과 「종료 미해결」</h3>
+<ul>
+<li>관측창은 기본 <b>1800초</b>입니다(ADR-101). 사건 시각이 관측창을 넘는 순간 모의가 멈춥니다. 600초에서는 SC3 항적의 3분의 1 이상이 결말이 나기 전에 관측이 끝났기 때문에 늘렸습니다.</li>
+<li><b>종료 미해결</b> = 생성 − 격추 − 누수. 관측이 끝날 때 아직 날고 있는 위협입니다. 누수로 강제 분류하지 않으며, 화면은 「전체 결과: 격추 / 누수 / 종료 미해결」로 셋을 나눠 적습니다.</li>
+<li>관측창을 늘리면 새 위협도 함께 늘어납니다. 같은 항적 묶음을 더 오래 지켜보는 것이 아닙니다. 그래서 「모든 항적의 결말」이 필요한 분석 보고서는 1800초까지 생성된 항적을 고정한 뒤 끝까지 돌리는 별도 러너를 씁니다.</li>
+</ul>
+<h3>난수와 재현</h3>
+<ul>
+<li>난수 생성기는 Mulberry32이고 <b>seed</b>로 완전히 재현됩니다. 같은 seed·같은 조건이면 몇 번을 돌려도 같은 결과입니다.</li>
+<li>난수 줄기는 넷으로 나뉩니다. 위협 도착, 착탄 산포, 남부 축선 도착은 seed에서 파생한 <b>전용 줄기</b>를 써서 As-Is와 To-Be가 <b>같은 위협</b>을 받습니다(공통 난수, CRN). 처리 난수(서비스 시간·음성 지연·명중 판정)는 모드마다 소비 순서가 달라 갈라집니다.</li>
+<li>난수를 쓰는 결정: C2 처리 시간, 분포가 있는 계선 지연(음성·문자·VTC), 센서 탐지 판정, 상관 판정, 명중 판정. 난수를 쓰지 않는 결정: 보고 주기 톱니, 고정 지연 계선, 경로 탐색, 사수 선정, 요격점 계산, 조준점 배정.</li>
+<li>화면 기본 seed 29는 2026-09-03에 32개 seed 가운데 「세 지표의 중앙값 이격 합이 가장 작은」 판으로 고른 <b>재현용 예시</b>입니다. 그 뒤 기본 모델이 여러 번 바뀌었으므로 현재 조건의 평균 성능을 뜻하지 않습니다. 구조 차이의 크기는 20개 seed 쌍대 비교로 읽습니다.</li>
+</ul>
+<p class="note">근거: js/model/iads/event-queue.js · js/engine/sim-engine.js(endTimeSec, censoredRaw, CRN 스트림) · js/core/rng.js · ADR-084 §추기 · ADR-100 · ADR-101.</p>
+</section>
+
+<section class="chap"><h2>4. 위협 — 무엇이, 어디서, 어떻게 날아오나</h2>
+<h3>시나리오</h3>
+<table><colgroup><col style="width:12%"><col style="width:26%"><col style="width:62%"></colgroup><thead><tr><th>시나리오</th><th>무엇을 보나</th><th>도착 구성(강도 ×1)</th></tr></thead><tbody>
+<tr><td>SC1</td><td>교전 중복·책임 공백</td><td>저속기·헬기·소형 무인기·순항미사일을 서부·수도권·중부 축에 배분, 합계 1.4건/분</td></tr>
+<tr><td>SC2</td><td>소형 무인기 전용</td><td>60초에 8대, 900초에 6대 동시 출현 + 0.75건/분 연속</td></tr>
+<tr><td><b>SC3</b>(기본)</td><td>복합 동시 포화</td><td>탄도탄 1.5·방사포 3.0·순항 0.3·무인기 1.9·전투기 0.8건/분 + 남부 축선 0.52. 합계 약 8건/분 → 1800초에 228개</td></tr>
+</tbody></table>
+<p>도착은 포아송 과정입니다. 도착 간격을 지수분포에서 뽑고, 매번 다음 도착을 예약합니다. 화면의 위협 강도는 ×1로 <b>고정</b>이며 손잡이가 없습니다.</p>
+<h3>위협 유형과 체공</h3>
+<table><colgroup><col style="width:18%"><col style="width:14%"><col style="width:14%"><col style="width:54%"></colgroup><thead><tr><th>유형</th><th>체공</th><th>고도대역</th><th>모의가 두는 고도 형상</th></tr></thead><tbody>
+<tr><td>srbm(탄도탄)</td><td>90초 → 발사점 연장 시 350초(중부축)</td><td>ballistic</td><td>정점 150km × 거리계수의 사인 곡선</td></tr>
+<tr><td>mrl_large(방사포)</td><td>80초 → 150초(동부축)</td><td>ballistic</td><td>정점 35km 사인 곡선</td></tr>
+<tr><td>cruise(순항)</td><td>120초</td><td>low</td><td>1,000m 순항 후 말기에 500m → 0m</td></tr>
+<tr><td>fighter(전투기)</td><td>180초</td><td>medium</td><td>10,000m 고정</td></tr>
+<tr><td>ac_low · heli</td><td>600 · 420초</td><td>low</td><td>10,000m 고정(단순화)</td></tr>
+<tr><td>uav_small</td><td>900초</td><td>low</td><td>100m</td></tr>
+</tbody></table>
+<p>위치는 「진입점에서 착탄점까지를 체공 시간에 걸쳐 <b>선형 보간</b>」합니다. 선언된 속도 값은 쓰지 않으며, 축선 길이에서 역산한 실효 속도가 선언값과 다를 수 있습니다(단순화 목록 참조).</p>
+<h3>어디서 출발해 어디를 노리나 — 이 화면의 두 기본값</h3>
+<ul>
+<li><b>발사점 연장(lx · ADR-091)</b>: 탄도탄과 방사포는 축선 진입점이 아니라 <b>대표 사거리만큼 뒤로 물린 발사점</b>에서 출발합니다(srbm 545km, mrl 375km 기준). 종전에는 탄도탄이 이미 모든 센서의 시야 한복판에서 생겨나 그린파인 조기경보가 한 번도 먼저 보지 못했습니다. 켜면 그린파인 최초 탐지가 53건 중 48건이 됩니다. 비탄도 위협은 손대지 않습니다.</li>
+<li><b>표적 조준점(aim · ADR-097)</b>: 탄도탄은 축선당 1점이 아니라 <b>조준점 10곳</b>(주요 지점 4·비행장 3·항만 3) 중 사거리 안의 후보를 순번 순환으로 배정받습니다. 난수를 쓰지 않아 CRN이 유지됩니다. 종전에는 착탄의 54%가 한 격자에 몰려 FULL 84포대 중 65개가 한 발도 쏘지 않았습니다.</li>
+<li>모든 위협의 착탄점은 표적 주위 <b>반경 15km 원판</b> 안에서 균등 산포됩니다(전용 난수 줄기).</li>
+<li>두 설정은 위협의 공간 조건을 바꾸므로, 켜고 끈 차이를 지휘구조의 효과로 읽지 않습니다. 끄려면 <code>?lx=0</code>, <code>?aim=0</code>.</li>
+</ul>
+<p class="note">근거: js/data/scenarios.js · js/data/threats.js · js/data/axes.js · js/model/iads/index.js(threatPhysics) · sim-engine.js iadsThreatPosition.</p>
+</section>
+
+<section class="chap"><h2>5. 센서 — 누가 먼저 보고, 누구에게 알리나</h2>
+<h3>탐지 판정</h3>
+<ul>
+<li>위협마다 그 유형을 볼 수 있는 <b>모든 센서</b>가 0.2초 간격으로 스캔합니다.</li>
+<li>게이트: 탐지 가능 유형 · 최저 고도 · 레이더 수평선 · 방위·고각 섹터 · 사거리. 하나라도 걸리면 그 스캔은 탐지 불가입니다.</li>
+<li>게이트를 지나면 탐지 확률 p = min(0.99, √((기준거리/거리)⁴ × RCS/기준RCS) × 0.95). 거리가 멀수록 급격히 낮아집니다. 재밍·ECM은 기본 없음입니다.</li>
+<li>추적 상실은 연속 3회 놓치면 일어납니다. 상태는 탐지 → 추적 → 사격통제 순으로 오르고, 전이마다 센서별 시간이 걸립니다.</li>
+</ul>
+<h3>보고 — 주기와 톱니</h3>
+<p>센서가 지휘소에 알리는 것은 「보고 주기」마다입니다. 전문이 계선을 건너는 시간은 <b>지금이 주기 안 어디쯤인가</b>(톱니 신선도)로 정해져 평균은 주기의 절반입니다. 양 모드가 같은 주기를 씁니다(ADR-067).</p>
+<table><colgroup><col style="width:22%"><col style="width:14%"><col style="width:32%"><col style="width:32%"></colgroup><thead><tr><th>센서</th><th>보고 주기</th><th class="asis">As-Is 보고처</th><th class="tobe">To-Be 보고처</th></tr></thead><tbody>
+<tr><td>그린파인(조기경보)</td><td>16초</td><td>KAMDOC</td><td>IAOC</td></tr>
+<tr><td>FPS-117(장거리)</td><td>8초</td><td>MCRC</td><td>IAOC</td></tr>
+<tr><td>TPS-880K(국지)</td><td>4초</td><td>관할 군단 AOC. MCRC는 문자(45초)로 늦게 봄</td><td>MCRC와 IAOC</td></tr>
+<tr><td>포대 MFR</td><td>1초</td><td>자기 ECS</td><td>자기 ECS와 IAOC</td></tr>
+</tbody></table>
+<ul>
+<li>책임 지휘소는 120초 안에 갱신된 센서 가운데 <b>가장 빠른 경로 하나</b>의 보고만 씁니다. 군단 AOC는 국지 센서 최속 1개와 MCRC 경유 최속 1개를 융합합니다.</li>
+<li>보고를 받을 때 「같은 표적인가」 상관 판정을 합니다. 실패 확률은 조기경보급 2%, 그 외 10%이고, 실패하면 5초 뒤 재시도합니다.</li>
+<li>한국군과 주한미군은 서로의 센서를 보지 않습니다(연합 항적 공유는 <code>?share=</code> 반사실로만 엽니다).</li>
+<li>조기경보 보고원(ew · ADR-090)은 기본 꺼짐입니다. 발사점 연장과 함께 켜도 효과가 0이었습니다.</li>
+</ul>
+<p class="note">근거: js/model/iads/sensor-model.js, track-model.js · js/config/system-types.js(센서 제원) · js/config/deployment-adapter.js(보고 계선) · ADR-067·069·090.</p>
+</section>
+<section class="chap"><h2>6. 지휘소는 「창구가 있는 대기실」이다</h2>
+<p>지휘소(C2 노드)마다 <b>창구(석)</b>가 몇 개 있고 <b>대기실</b>이 있습니다. 전문이 도착하면 빈 창구가 있으면 바로 처리하고, 없으면 대기실에서 줄을 섭니다. 대기실까지 차면 그 전문은 <b>버려집니다(넘침 드롭)</b>. 화면의 실린더가 차오르는 것이 창구 점유, 위로 쌓이는 원판이 대기, 붉은 섬광이 드롭입니다.</p>
+<div class="diagram">
+<svg viewBox="0 0 720 96" xmlns="http://www.w3.org/2000/svg" font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="9.5">
+  <text x="10" y="18" fill="#1c2b3a" font-weight="700">KAMDOC 예: 창구 6석 · 대기실 60건 · 처리 평균 37.5초</text>
+  <g><circle cx="30" cy="54" r="5" fill="#38bdf8"/><circle cx="46" cy="54" r="5" fill="#38bdf8"/><circle cx="62" cy="54" r="5" fill="#38bdf8"/><text x="46" y="80" text-anchor="middle" fill="#566575">도착하는 전문</text></g>
+  <path d="M75 54 L120 54" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#a)"/>
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#94a3b8"/></marker></defs>
+  <rect x="125" y="34" width="150" height="40" rx="5" fill="#fff7ed" stroke="#fb923c"/><text x="200" y="51" text-anchor="middle" fill="#1c2b3a">대기실 (최대 60건)</text><text x="200" y="66" text-anchor="middle" fill="#9a3412">차면 → 넘침 드롭 ✕</text>
+  <path d="M275 54 L320 54" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#a)"/>
+  <g><rect x="325" y="30" width="34" height="48" rx="4" fill="#eaf1f5" stroke="#16324f"/><rect x="363" y="30" width="34" height="48" rx="4" fill="#eaf1f5" stroke="#16324f"/><rect x="401" y="30" width="34" height="48" rx="4" fill="#eaf1f5" stroke="#16324f"/><text x="380" y="58" text-anchor="middle" fill="#16324f">창구 ×6</text></g>
+  <path d="M440 54 L485 54" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#a)"/>
+  <rect x="490" y="34" width="220" height="40" rx="5" fill="#f4f6f9" stroke="#94a3b8"/><text x="600" y="51" text-anchor="middle" fill="#1c2b3a">처리 시간 = 체계 5~10초 + 운용자 판단(평균 30초)</text><text x="600" y="66" text-anchor="middle" fill="#566575">지수분포로 뽑음 · 결심으로 이어짐</text>
+</svg></div>
+<table><colgroup><col style="width:22%"><col style="width:10%"><col style="width:14%"><col style="width:26%"><col style="width:12%"><col style="width:16%"></colgroup><thead><tr><th>노드</th><th>창구</th><th>평균 처리</th><th>체계 구간 + 운용자(중간 숙련)</th><th>대기실</th><th>있는 모드</th></tr></thead><tbody>
+<tr><td>KAMDOC(KAMD_OPS)</td><td>6</td><td>37.5초</td><td>5~10초 + 30초</td><td>60</td><td>둘 다</td></tr>
+<tr><td>MCRC</td><td>10</td><td>37.5초</td><td>5~10초 + 30초</td><td>100</td><td>둘 다</td></tr>
+<tr><td>IAOC</td><td>20</td><td>31.5초</td><td>1~2초 + 30초 (결심 시간 동일화 ON · 끄면 1초)</td><td>40</td><td>To-Be</td></tr>
+<tr><td>ICC(여단)</td><td>5</td><td>9초</td><td>3~5초 + 5초</td><td>25</td><td>둘 다</td></tr>
+<tr><td>군단 AOC(국지)</td><td>8</td><td>3.5초</td><td>1~2초 + 2초</td><td>16</td><td>둘 다</td></tr>
+<tr><td>ECS(포대통제)</td><td>8</td><td>3.5초</td><td>1~2초 + 2초</td><td>16</td><td>둘 다</td></tr>
+</tbody></table>
+<ul>
+<li><b>처리 시간은 평균만 정해진 확률값</b>입니다. 기본은 지수분포 한 번 뽑기이고, 처리 바닥(floor · ADR-092)을 켜면 「체계 구간 균등 + 운용자 지수」로 바뀌어 0초에 가까운 처리가 사라집니다(평균은 같음). 화면 기본은 꺼짐입니다.</li>
+<li><b>운용자 판단 시간은 As-Is와 To-Be가 같습니다(par · ADR-099).</b> 종전에는 IAOC가 0.5/1/1.5초로 As-Is 결심 노드의 30분의 1이었고, 그 값 차이가 To-Be 우위의 절반 이상을 만들었습니다. 「구조가 바뀌는 것이지 사람이 빨라지는 것이 아니다」는 결정으로 KAMDOC과 같은 15/30/50초(숙련도 상/중/하)를 씁니다.</li>
+<li>항적 작업은 위협 유형 순위(탄도탄이 가장 높음)와 남은 체공으로 <b>우선순위 줄서기</b>를 합니다. 이미 사라진 위협의 작업은 건너뛰고, 유효기간이 지난 작업은 버립니다.</li>
+<li>대기실 크기 = 창구 수 × 배수(상급 10, 여단 5, 그 외 2). 폭주할 때 결과를 가르는 것은 창구 수보다 대기실 크기입니다.</li>
+<li>추가 작업 종류(화면 기본): ICC 중계 인가 9초(ON), ECS 명령 접수(ON, 3.5초. ecs를 켜면 10초), 교전명령 발령 작업(OFF. 켜면 결심 노드가 명령마다 7.5초 등 추가).</li>
+<li>사수(포대)는 창구 모델이 아닙니다. 대신 <b>동시 교전 채널 수</b>와 발사대별 탄약, 900초 재장전으로 제약됩니다. 화면 실린더의 단위가 지휘소는 「석」, 포대는 「발」인 이유이며, 둘을 직접 비교하면 안 됩니다.</li>
+</ul>
+<p class="note">근거: js/config/system-types.js(노드 제원) · js/config/deployment-adapter.js(서비스 구성·대기실 배수) · sim-engine.js(큐 규칙) · ADR-088(KAMDOC 3→6석) · ADR-092·094·095·096·099. 대기실 크기·서버 수는 대부분 등급 C(개념 추정)입니다.</p>
+</section>
+
+<section class="chap"><h2>7. 계선 — 전문이 선을 건너는 시간</h2>
+<p>노드 사이의 선을 <b>계선</b>이라 부르고, 계선마다 <b>매체</b>가 정해져 있습니다. 전문이 계선을 건너는 시간은 매체의 분포에서 <b>건마다 새로 뽑습니다</b>. 화면에서 점이 선을 건너는 데 걸리는 시간이 곧 그 값이라, 빠르면 데이터링크, 기어가면 음성·문자·VTC로 눈에 들어옵니다.</p>
+<table><colgroup><col style="width:20%"><col style="width:20%"><col style="width:12%"><col style="width:48%"></colgroup><thead><tr><th>매체</th><th>지연</th><th>등급</th><th>어디에 쓰이나</th></tr></thead><tbody>
+<tr><td>데이터링크(DL)</td><td>1~2초 고정</td><td>C</td><td>C2↔C2 전달 1초 · ECS→발사대 1초 · To-Be 교전현황 2초</td></tr>
+<tr><td>IFCN</td><td>1초</td><td>C</td><td>To-Be 전용. 센서·C2가 IAOC와 주고받는 전 계선</td></tr>
+<tr><td>보고 주기(RP)</td><td>센서별 1~16초 톱니</td><td>—</td><td>센서 → 지휘소 항적 보고(양 모드 공통)</td></tr>
+<tr><td>음성</td><td>정규(평균 20, 표준편차 5초)</td><td>C</td><td>As-Is 군단 AOC → MCRC 교전 협조 요청과 회신</td></tr>
+<tr><td>문자(채팅)</td><td>정규(45, 7.5초)</td><td>C</td><td>As-Is MCRC ↔ 군단 AOC 항적 전달·공유</td></tr>
+<tr><td>음성·VTC</td><td>정규(135, 22.5초) · 1채널 · 대기 4건 · 300초 지나면 폐기</td><td>C</td><td>As-Is 군단 AOC → MCRC 교전현황 보고. 포화하면 대부분 버려짐</td></tr>
+<tr><td>KVMF 중계</td><td>30초 고정</td><td>C</td><td>방공C2A끼리 옆으로(양 모드 공통). 체계 반응시간을 간선 하나에 옮겨 쓴 값</td></tr>
+<tr><td>내부·통보</td><td>1초 · 0초</td><td>—</td><td>체계 내부 · To-Be 도메인 병렬 통보(0초, 팬아웃)</td></tr>
+</tbody></table>
+<ul>
+<li>계선 종류는 항적보고 · 협조 · 명령 · 교전현황 넷입니다. 보고 경로는 보고+협조 계선, 명령 경로는 협조+명령 계선, 승인 경로는 협조 계선만으로 <b>명목 지연이 가장 짧은 길</b>을 찾고, 실제 지연은 간선마다 새로 뽑아 더합니다.</li>
+<li>계선 종류는 「선언된 용도」입니다. 최단 경로가 협조 계선으로 보고를 보낼 수도 있습니다.</li>
+<li>데이터링크·IFCN·음성·문자·VTC 지연은 모두 <b>등급 C(개념 추정)</b>입니다. C2 사이 데이터링크만 B입니다. 인용할 때 가정임을 밝힙니다.</li>
+<li>화면에서 계선을 눌러 매체를 갈아 끼우는 <b>반사실 실험</b>을 걸 수 있습니다. 다만 매체를 바꾸면 난수 소비가 달라져 <b>실행 전체가 다른 표본</b>이 됩니다. 기준 실행과 나란히 놓고 「차이 = 이 계선의 몫」으로 읽으면 안 됩니다(ADR-084).</li>
+</ul>
+<p class="note">근거: js/config/deployment-adapter.js 상단 상수(DL_FAST·VOICE·CHAT_TRACK·VOICE_STATUS·KVMF_LATERAL) · sim-engine.js _linkDelay · docs/params.md C2-VOICE-COORD-01 등 · ADR-057·066·079·081·082.</p>
+</section>
+<section class="chap"><h2>8. As-Is 분절형과 To-Be 통합형은 무엇이 다른가</h2>
+<p>두 구조는 <b>같은 위협·같은 센서·같은 사수·같은 난수열</b>을 씁니다. 다른 것은 「누가 결심하는가」와 「그 결심이 어떤 선을 타고 오가는가」뿐입니다. 그래서 두 실행의 차이를 지휘구조의 몫으로 읽을 수 있습니다.</p>
+<div class="diagram">
+<svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif">
+  <text x="10" y="18" font-size="12" font-weight="700" fill="#c0392b">As-Is 분절형 — 책임이 세 축으로 갈리고 협조는 음성으로</text>
+  <g font-size="10.5" fill="#1c2b3a">
+    <rect x="10" y="40" width="70" height="30" rx="5" fill="#fff" stroke="#333"/><text x="45" y="59" text-anchor="middle">센서</text>
+    <rect x="130" y="30" width="86" height="26" rx="5" fill="#fff" stroke="#333"/><text x="173" y="47" text-anchor="middle">KAMDOC(탄도)</text>
+    <rect x="130" y="66" width="86" height="26" rx="5" fill="#fff" stroke="#333"/><text x="173" y="83" text-anchor="middle">MCRC(항공)</text>
+    <rect x="130" y="102" width="86" height="26" rx="5" fill="#fff" stroke="#333"/><text x="173" y="119" text-anchor="middle">군단 AOC(국지)</text>
+    <rect x="290" y="66" width="70" height="26" rx="5" fill="#fff" stroke="#333"/><text x="325" y="83" text-anchor="middle">ICC(여단)</text>
+    <rect x="420" y="66" width="70" height="26" rx="5" fill="#fff" stroke="#333"/><text x="455" y="83" text-anchor="middle">ECS(포대)</text>
+    <rect x="550" y="66" width="70" height="26" rx="5" fill="#fff" stroke="#333"/><text x="585" y="83" text-anchor="middle">발사대</text>
+    <path d="M80 55 L130 43 M80 55 L130 79 M80 55 L130 115" stroke="#38bdf8" stroke-width="1.6" fill="none"/>
+    <path d="M216 43 L290 79 M216 79 L290 79 M216 115 L290 79" stroke="#a78bfa" stroke-width="1.6" fill="none"/>
+    <path d="M360 79 L420 79 M490 79 L550 79" stroke="#34d399" stroke-width="1.6" fill="none"/>
+    <path d="M173 102 C 240 100, 240 60, 173 56" stroke="#fbbf24" stroke-width="1.8" stroke-dasharray="6 3" fill="none"/>
+    <text x="250" y="100" font-size="9.5" fill="#b45309">교전 협조(음성 평균 20초)</text>
+    <text x="600" y="40" font-size="9.5" fill="#566575" text-anchor="end">교전현황 공유: 음성·VTC(1채널 · 4건 · 평균 135초)</text>
+  </g>
+  <line x1="10" y1="140" x2="710" y2="140" stroke="#d3dde5"/>
+  <text x="10" y="160" font-size="12" font-weight="700" fill="#1f6feb">To-Be 통합형 — IAOC 하나가 결심하고 나머지는 데이터링크로 통보</text>
+  <g font-size="10.5" fill="#1c2b3a">
+    <rect x="10" y="185" width="70" height="30" rx="5" fill="#fff" stroke="#333"/><text x="45" y="204" text-anchor="middle">센서</text>
+    <rect x="130" y="187" width="86" height="26" rx="5" fill="#fff" stroke="#1f6feb" stroke-width="1.8"/><text x="173" y="204" text-anchor="middle">IAOC(결심)</text>
+    <rect x="130" y="222" width="86" height="22" rx="5" fill="#f4f6f9" stroke="#999" stroke-dasharray="3 2"/><text x="173" y="237" text-anchor="middle" font-size="9.5" fill="#566575">MCRC·KAMDOC·AOC 통보</text>
+    <rect x="290" y="187" width="70" height="26" rx="5" fill="#f4f6f9" stroke="#999" stroke-dasharray="3 2"/><text x="325" y="204" text-anchor="middle" font-size="9.5" fill="#566575">ICC 경유 없음</text>
+    <rect x="420" y="187" width="70" height="26" rx="5" fill="#fff" stroke="#333"/><text x="455" y="204" text-anchor="middle">ECS(포대)</text>
+    <rect x="550" y="187" width="70" height="26" rx="5" fill="#fff" stroke="#333"/><text x="585" y="204" text-anchor="middle">발사대</text>
+    <path d="M80 200 L130 200" stroke="#38bdf8" stroke-width="1.6" fill="none"/>
+    <path d="M216 200 L420 200 M490 200 L550 200" stroke="#34d399" stroke-width="1.6" fill="none"/>
+    <path d="M173 213 L173 222" stroke="#475569" stroke-width="1.2" stroke-dasharray="2 3"/>
+    <text x="600" y="175" font-size="9.5" fill="#566575" text-anchor="end">교전현황 공유: 데이터링크 2초 · 무손실 · 양방향</text>
+  </g>
+</svg>
+</div>
+<table><colgroup><col style="width:22%"><col style="width:39%"><col style="width:39%"></colgroup><thead><tr><th>항목</th><th class="asis">As-Is 분절형</th><th class="tobe">To-Be 통합형</th></tr></thead><tbody>
+<tr><td>누가 결심하나</td><td>위협 종류에 따라 KAMDOC(탄도)·MCRC(항공)·군단 AOC/수방사(국지)가 각자. 주한미군은 독립 축.</td><td>IAOC 하나. MCRC·KAMDOC·AOC는 같은 시각에 통보를 받아 별도 대기실에서 처리하지만, 그 결과가 IAOC의 결심을 바꾸지 않습니다(비차단 통보, 거부권 없음 · ADR-078·100).</td></tr>
+<tr><td>협조·승인</td><td>국지방공(AOC)이 쏘려면 MCRC와 <b>교전 협조</b>(음성, 평균 20초 · 표준편차 5초)를 거치고 승인 창구에서 줄을 섭니다. 쏠 수 있는 사수가 있을 때만 협조를 요청하고 회신은 같은 선을 역순으로 옵니다(협조 파이프라인 현실화 · ADR-093).</td><td>협조 절차가 없습니다. 국지 지휘관계는 유지하되 정보만 통합 COP로 공유합니다.</td></tr>
+<tr><td>명령이 가는 길</td><td>결심 지휘소 → ICC(여단, 평균 9초 동안 포대를 재검증해 인가·재배정·반송 · ADR-094) → ECS(포대) → 발사대</td><td>IAOC → ECS → 발사대. ICC를 거치지 않습니다.</td></tr>
+<tr><td>교전현황 공유</td><td>음성·VTC 1채널, 대기 4건, 평균 135초. 포화하면 대부분 버려져 <b>중복교전</b>이 생깁니다.</td><td>데이터링크 2초, 무손실, 양방향. 다른 지휘소가 이미 잡은 표적이 2초 뒤 보입니다(ADR-056·068).</td></tr>
+<tr><td>사람의 판단 시간</td><td colspan="2">양쪽 같습니다. 결심 지휘소 운용자 30초(숙련도 중간 기준 · ADR-099). 「구조가 바뀌지 사람이 빨라지는 것이 아니다」는 결정입니다. 화면에서 <code>?par=0</code>으로 끄면 To-Be가 종전 값 1초로 돌아가 값의 몫을 따로 잴 수 있습니다.</td></tr>
+<tr><td>자위권 발사</td><td colspan="2">양쪽 같습니다. 탄도축에서 자기 레이더로 추적 중이고 예측 낙하점이 포대 10km 안이며 발사 마감에 이르면 명령 없이 쏩니다(ADR-071). 그래서 To-Be에도 중복이 남을 수 있습니다.</td></tr>
+<tr><td>바뀌지 않는 것</td><td colspan="2">센서·사수의 성능, 탄약, 사거리, 신궁·천마가 탄도탄을 못 쏘는 제약, 주한미군 독립 축, 위협 자체.</td></tr>
+</tbody></table>
+<p class="note">근거: js/config/deployment-adapter.js(계선·정책 배선) · js/model/iads/c2-agent.js, c2-policy.js(결심·승인) · ADR-056·058·065·068·078·093·094·099. 용어 「교전 협조」는 ADR-098.</p>
+</section>
+<section class="chap"><h2>9. 사수 선정과 요격 — 그리고 「왜 못 막았나」</h2>
+<h3>후보를 거르는 순서</h3>
+<ol>
+<li><b>호환성</b> — 그 무기가 이 위협 유형을 쏠 수 있나. 신궁·천마·비호는 탄도탄을 못 쏩니다.</li>
+<li><b>탄약</b> — 발사대에 남은 탄이 있나. 없으면 「탄약 소진」.</li>
+<li><b>채널</b> — 동시 교전 채널이 비었나. 차 있으면 「용량 초과」.</li>
+<li><b>사격통제</b> — 자기 레이더가 사격통제 상태이고 3초 안에 갱신됐나. 전속 레이더가 없는 천마·비호는 면제. 안 되면 「사격통제 미준비」.</li>
+<li><b>요격점(PIP)</b> — 1초 간격으로 최대 300초 앞까지 훑어, 교전 포락선(거리·고도) 안에서 요격탄이 제때 닿는 <b>가장 이른 요격점</b>을 찾습니다. 없으면 「기하 불성립」.</li>
+<li><b>발사 시점</b> — 요격점 도달 시각 − 요격탄 비행시간 − 3초 여유. 아직 이르면 기다렸다가 다시 봅니다.</li>
+<li><b>명중확률</b> — 미사일별 표에서 거리 구간과 방향(정면·측면·후면)으로 찾습니다. 0.10 미만이면 후보에서 뺍니다.</li>
+</ol>
+<p>남은 후보 가운데 점수 = 명중확률 × 탄약 비율 × (1 − 채널 부하) ÷ 요격 거리가 가장 큰 사수를 고릅니다. 동점이면 포대 이름순입니다. 난수를 쓰지 않습니다.</p>
+<h3>발사부터 결과까지</h3>
+<ul>
+<li>명령이 ECS에 닿으면 접수 창구를 거치고, 유효기간(마지막 발사 가능 시각 + 3초)이 지났으면 「창 닫힘」으로 만료됩니다.</li>
+<li>발사 직전 다시 중복 여부와 발사 가능성을 확인합니다. 잔탄이 가장 많은 발사대가 쏘고, 비면 900초 재장전에 들어갑니다.</li>
+<li>명중 여부는 발사 순간 명중확률로 뽑히지만, 결과(BDA)는 <b>요격탄 비행시간 뒤</b>에 옵니다. 지도의 요격점이 「BDA 시각의 위협 위치」인 이유입니다.</li>
+<li>빗나가면 0.5초 뒤 다시 결심합니다(폐루프). 표적당 발사는 전 지휘축 합계 <b>최대 2발</b>입니다.</li>
+<li><b>중복교전</b>: 발사를 확정하는 순간 같은 위협에 다른 지휘축의 발사가 이미 나갔고 아직 결과가 없으면 중복으로 셉니다. 화면의 「복수 사수 발사」는 기록에서 따로 센 값이라 정의가 다르며, 둘을 나란히 적습니다. 자위권 발사(8장)도 중복의 한 원인입니다.</li>
+</ul>
+<h3>누수 사유 — 쉬운 말로</h3>
+<p>비행 종료까지 격추되지 않은 위협에는 <b>사유 하나</b>가 우선순위로 붙습니다. 사유 이름만으로 어느 지휘소 탓인지 가릴 수는 없습니다. 기준 실행에서 누수의 대부분은 「요격 실패」가 아니라 <b>「발사에 이르지 못함」</b>이라, 분석 보고서는 누수를 「막지 못한 항적」이라 부릅니다.</p>
+<table><colgroup><col style="width:30%"><col style="width:70%"></colgroup><thead><tr><th>사유</th><th>뜻</th></tr></thead><tbody>
+<tr><td>engagement_geometry_gap</td><td>책임 지휘소에 연결된 후보 포대 가운데 요격 가능한 시간·위치를 찾지 못함(탄약·채널·사격통제는 빼고 본 간이 검사)</td></tr>
+<tr><td>ammo_depleted</td><td>사용 가능한 탄약이 없음</td></tr>
+<tr><td>capacity_full</td><td>동시에 처리할 수 있는 교전 수를 넘음</td></tr>
+<tr><td>no_fire_control</td><td>사격통제 정보가 준비되지 않음</td></tr>
+<tr><td>window_lost_due_to_c2</td><td>지휘·명령이 진행되는 동안 교전 기회를 놓쳤다고 분류. 지연이 없었으면 반드시 격추됐다는 뜻은 아님</td></tr>
+<tr><td>timeout:c2</td><td>발사 없이 비행이 끝났고 더 구체적인 원인으로 분류되지 않음(세부 원인 미분류)</td></tr>
+<tr><td>timeout:engage · missed</td><td>교전을 시작했지만 비행 종료 전 막지 못함 · 발사했으나 명중하지 못함</td></tr>
+<tr><td>correlation_failed · not_detected</td><td>같은 표적인지 연결하지 못함 · 탐지 자체가 안 됨</td></tr>
+</tbody></table>
+<p class="note">근거: sim-engine.js(_iadsEvaluate · _onIadsFire · _classifyNativeExitFailure) · engagement-model.js · system-types.js(PSSEK 표) · ADR-050·071 · docs/analysis/2026-09-21-sc3-final/README.md.</p>
+</section>
+
+<section class="chap"><h2>10. 배치와 기본 조건</h2>
+<h3>두 배치</h3>
+<table><colgroup><col style="width:18%"><col style="width:41%"><col style="width:41%"></colgroup><thead><tr><th></th><th>LEGACY (legacy 배치 — 고해상도·정상)</th><th>FULL (한반도 본 배치 — 정상) · <b>기본</b></th></tr></thead><tbody>
+<tr><td>규모</td><td>64노드 · 포대 15 · 센서 19</td><td>251노드 · 포대 84 · 센서 71 (To-Be는 IAOC가 더해져 +1)</td></tr>
+<tr><td>포대</td><td>천마 5 · 천궁-II 6 · 비호 2 · PAC-3 1 · L-SAM 1</td><td>L-SAM 3 · 천궁-II 22 · PAC-3 8 · 비호 28 · 천마 17 · 주한미군 THAAD 1 · PAC-3 5</td></tr>
+<tr><td>센서</td><td>그린파인 1 · FPS-117 2 · TPS-880K 8 · 포대 레이더 8</td><td>그린파인 4 · FPS-117 16 · TPS-880K 12 · AN/TPY-2 1 · 포대 레이더 38</td></tr>
+<tr><td>C2</td><td>KAMDOC · MCRC · ICC 11 · 군단 AOC 2 · ECS 15</td><td>KAMDOC · MCRC · ICC 3 · 군단 AOC 5 · 주한미군 C2 2 · ECS 84</td></tr>
+<tr><td>어디에 좋은가</td><td>계선 흐름을 읽기 좋음. 다만 <b>배치 자체는 시험되지 않음</b>(상위 3개 포대가 발사의 68%, 4개는 한 발도 안 쏨, 조준점 10곳 중 5곳은 사거리 안 포대가 없음)</td><td>배치 자체를 시험함. 계산이 무거움(1800초에 24~32초, 메인 스레드라 화면이 멈춤). 밀집 열은 이름표가 빠지고 툴팁으로 읽음</td></tr>
+<tr><td>기준 실행 결과 (SC3 · seed 29 · 1800초까지 생성한 228개를 끝까지)</td><td>As-Is 격추 97 / 누수 131 · To-Be 112 / 116</td><td>As-Is 격추 186 / 누수 42 · To-Be 193 / 35</td></tr>
+</tbody></table>
+<div class="box"><b>기본 배치는 2026-09-28부터 FULL입니다(ADR-102).</b><p>이 화면이 답할 질문이 「배치 전체에서 그림이 어떻게 달라지는가」인데 기본이 LEGACY면 처음 여는 사람이 시험되지 않는 판을 기준으로 읽게 되기 때문입니다. LEGACY는 상단 스위치나 <code>?dep=HANBANDO_LEGACY_NORMAL</code>로 그대로 고릅니다. 무력화 배치(MCRC_DOWN·KAMDOC_DOWN)는 해당 지휘소 하나만 빠진 정적 배치이며 <code>?dep=</code>로만 고릅니다. 날짜가 앞선 캡처·보고서의 「기본 실행」은 LEGACY 수치입니다.</p></div>
+<h3>화면 기본 조건과 켜진 것</h3>
+<table><colgroup><col style="width:24%"><col style="width:76%"></colgroup><tbody class="kv">
+<tr><td>고정</td><td>SC3 · FULL · As-Is · seed 29 · 관측 1800초 · 위협 강도 ×1 · 표적 산포 · 남부 축선 · 계선 의미론 v2 · 보고 주기 대칭 · 톱니 신선도</td></tr>
+<tr><td>기본 ON(엔진 기본과 같음)</td><td>교전 협조 계선(appr) · 교전현황 공유 COP(cop) · 자위권 발사(sdf)</td></tr>
+<tr><td>기본 ON(이 화면만 · 엔진 기본은 OFF)</td><td>발사점 연장(lx) · 표적 조준점(aim) · 결심 시간 동일화(par) · 협조 파이프라인 현실화(pipe) · ICC 중계 인가(icc, 9초). 켜져 있는 동안 상태줄 칩으로 상시 표기</td></tr>
+<tr><td>기본 OFF</td><td>원격 교전(eor) · 연합 항적 공유(share) · 고도 적합도(suit) · 무인기 자체 교전(uavsd) · 조기경보 보고원(ew) · 처리 바닥(floor) · ECS 실행 10초(ecs) · 교전명령 발령 작업(issue)</td></tr>
+</tbody></table>
+<p class="note">근거: js/config/deployments.js · prototype/command-flow.html PARAMS · features() · ADR-061(배치 6종) · ADR-065·066·067·068·072(기본 ON 8개) · ADR-102.</p>
+</section>
+<!-- ===== 화면이 보여주는 것 ===== -->
+<section class="chap"><h2>11. 화면은 무엇을 읽고, 무엇을 스스로 계산하나</h2>
+<p>화면의 원칙은 <b>「좌표와 시각을 지어내지 않는다」</b>입니다. 점이 움직이는 출발·도착 시각, 대기·처리 시간, 격추·누수 결과는 모두 엔진이 실행 중에 기록한 값입니다. 화면은 그 기록을 <b>보기 좋게 정리</b>할 뿐이고, 정리 규칙은 아래와 같이 공개돼 있습니다.</p>
+<h3>엔진 기록에서 그대로 읽는 것</h3>
+<table><colgroup><col style="width:30%"><col style="width:70%"></colgroup><thead><tr><th>항목</th><th>내용</th></tr></thead><tbody>
+<tr><td>전체 결과</td><td>생성·격추·누수·종료 미해결 수, 요격비, 고가탄 보존율, 엔진이 센 중복교전·해소 수. <b>전수</b>이며 기록 상한의 영향을 받지 않습니다.</td></tr>
+<tr><td>전문 이동 기록</td><td>어느 노드에서 어느 노드로, 어떤 매체로, 몇 초에 출발해 몇 초에 도착했는지(건마다 뽑힌 실제 지연). 큐 도착·개시·완료·드롭, 계선 막힘·드롭.</td></tr>
+<tr><td>항적 기록</td><td>항적마다 단계 마크(탐지·보고·선정·명령·발사·BDA…), 결과, 실패 사유와 근거, 체공창, 표적, 발사점 연장 거리.</td></tr>
+<tr><td>카탈로그</td><td>노드의 창구 수·대기실 크기, 사수의 채널·사거리·발당 비용, 계선의 신뢰 등급, 좌표.</td></tr>
+<tr><td>위치 함수</td><td>지도의 위협 위치는 엔진이 쓰는 같은 함수로 되짚습니다. 화면이 궤적을 다시 계산하지 않습니다.</td></tr>
+</tbody></table>
+<h3>화면이 기록에서 파생하는 것 (표시 전용 · 모델을 바꾸지 않음)</h3>
+<table><colgroup><col style="width:30%"><col style="width:70%"></colgroup><thead><tr><th>표시</th><th>규칙</th></tr></thead><tbody>
+<tr><td>노드 상태(실린더)</td><td>기록을 시간순으로 훑어 그 시각의 처리 중 건수·대기 건수·최장 대기를 복원합니다. 채움 높이 = 처리 중 ÷ 창구 수. 창구가 다 차고 대기가 있으면 적색, 창구만 다 찼으면 주황.</td></tr>
+<tr><td>대기실 점유 막대</td><td>대기 건수 ÷ 대기실 크기. 35% 미만 황, 35~70% 주황, 70% 이상 적. 넘침(드롭)은 대기실이 찰 때 나므로 병목의 임박이 여기서 먼저 보입니다.</td></tr>
+<tr><td>현재 병목 카드</td><td>대기실이 있는 노드 가운데 <b>대기 건수 → 최장 대기 → 점유율</b> 순으로 가장 큰 노드. 대기가 0이면 「병목 없음 — 최장 대기를 낸 자리」로 표기합니다.</td></tr>
+<tr><td>부하 순위</td><td>도착이 있던 노드를 정체 → 대기 → 점유율 → 누적 도착 순으로 정렬해 상위 18개.</td></tr>
+<tr><td>계선 굵기</td><td>통행량의 로그. 굵은 선이 곧 많이 흐른 계선입니다.</td></tr>
+<tr><td>전문 묶음 배지</td><td>같은 계선에 동시에 3건 이상 떠 있으면 하나로 묶고 「N건 · 최장 N초」를 답니다. 위치는 실제 진행률의 평균, 최장은 실제 지연의 최댓값입니다.</td></tr>
+<tr><td>작업·교신 맥동</td><td>깜빡이는 주기 = 그 노드가 처리 중인 작업의 실제 서비스 시간(배속으로 나눔, 0.35~3초로 잘라 표시). 노드에 초 단위를 글자로 적지 않습니다.</td></tr>
+<tr><td>레인 타임라인</td><td>탐지·보고 / MCRC·KAMDOC / AOC·JAOC·ICC / ECS / 요격·타격 5줄, 240칸. 진한 칸 = 처리, 연한 칸 = 대기.</td></tr>
+<tr><td>병목 로그</td><td>넘침·기한 만료·큐 정리·계선 막힘·중복교전·누수를 사건별로 적고, 같은 노드·같은 종류가 10초 이내로 이어지면 한 줄로 묶습니다. 포화 구간 = 창구가 다 차고 대기가 생긴 때부터 대기가 0이 될 때까지.</td></tr>
+<tr><td>요격 표시</td><td>발사와 BDA 두 시각 사이를 요격탄이 직선으로 나아가고, 요격점은 <b>BDA 시각의 위협 지상 위치</b>입니다. 발사불가(적색 ✕ · 사수 자리)는 명중 실패와 다른 사건입니다.</td></tr>
+</tbody></table>
+<section class="chap"><h2>12. 가정과 단순화 — 알고 읽어야 하는 것</h2>
+<table><colgroup><col style="width:24%"><col style="width:76%"></colgroup><thead><tr><th>영역</th><th>가정·단순화</th></tr></thead><tbody>
+<tr><td>좌표</td><td>실제 지리는 해안선과 군사분계선(근사)뿐입니다. 자산 위치·축선 진입점·표적·발사점은 <b>도시 수준 개념좌표</b>입니다. 지도에 얹으면 실제처럼 읽히므로 고지를 상시 띄웁니다.</td></tr>
+<tr><td>제원</td><td>무기·센서·C2 제원은 공개자료 기반 정책연구 개념값이며 운용 성능 자료가 아닙니다. 음성·문자·VTC·KVMF 지연, C2 창구 수·대기실 크기는 대부분 등급 C(개념 추정)입니다.</td></tr>
+<tr><td>위협 운동</td><td>진입점→착탄점 선형 보간. 선언 속도는 쓰지 않고 체공 시간으로 움직입니다. 저속기·헬기 고도를 10km로 둡니다. 회피기동·분리·오인병합 없음.</td></tr>
+<tr><td>전자전</td><td>재밍·ECM은 기본 없음(0). 통신 두절·계선 파괴 없음.</td></tr>
+<tr><td>C2 손실</td><td>실행 도중 지휘소나 포대가 파괴되는 일은 없습니다. 무력화는 MCRC_DOWN·KAMDOC_DOWN처럼 시작부터 빠진 <b>정적 배치</b>로만 표현합니다.</td></tr>
+<tr><td>사람</td><td>운용자 판단 시간은 지수분포 평균값 하나(숙련도 상/중/하)로 표현하고 피로·학습·교대는 없습니다. 결심의 「질」은 모의하지 않고 시간만 모의합니다.</td></tr>
+<tr><td>교전 교리</td><td>표적당 최대 2발(쏘고-보고-쏘기), 발사 여유 3초, BDA 지연은 요격탄 비행시간만. 요격탄끼리의 간섭 없음.</td></tr>
+<tr><td>To-Be 도메인 제대</td><td>MCRC·KAMDOC·AOC는 IAOC와 같은 시각에 통보를 받아 처리하지만 결심을 막거나 거부하지 않습니다. 화면의 To-Be MCRC·KAMDOC 부하는 <b>상황 통보 처리량</b>이지, 도메인별 승인권을 가진 합동 지휘가 구현됐다는 뜻이 아닙니다(ADR-078·100).</td></tr>
+<tr><td>연합</td><td>주한미군 THAAD·패트리엇은 독립 축이고 한국군과 센서·권한을 공유하지 않습니다. 공유는 <code>?share=</code> 반사실로 보고 계선만 엽니다(ADR-085).</td></tr>
+<tr><td>범위</td><td>지상 배치 C2만 봅니다. 전투기·이지스·조기경보기·광학 감시는 제외(ADR-060).</td></tr>
+<tr><td>KVMF 계선</td><td>30초는 링크 지연이 아니라 체계 반응시간을 간선 하나에 옮겨 쓴 값이고, 중간 노드를 축약했습니다.</td></tr>
+<tr><td>톱니 신선도</td><td>모든 센서가 같은 시계로 동기됐다고 봅니다.</td></tr>
+<tr><td>강도</td><td>위협 강도 ×1 고정. 배율을 바꾸면 같은 화면이 다른 부하의 결과를 같은 모양으로 보여 주게 되어 손잡이를 두지 않았습니다.</td></tr>
+<tr><td>난수 생성기</td><td>Mulberry32(32비트). 대규모 통계에는 주기가 더 긴 생성기 검토가 과제로 남아 있습니다.</td></tr>
+</tbody></table>
+<p class="note">근거: js/data/axes.js 상단 · system-types.js 상단 · deployment-adapter.js 상수 주석 · sim-engine.js(jammingLevel, ecmActive, iadsMaxShots) · docs/모의논리서.html §7 · ADR-036·060·078·085·100.</p>
+</section>
+
+<section class="chap"><h2>13. 숫자를 읽을 때의 주의</h2>
+<ol class="caveats">
+<li><b>LEGACY와 FULL을 섞어 인용하지 않습니다.</b> 같은 시나리오·같은 seed에서도 To-Be 우위가 두 배 가까이 갈립니다. 배치 이름이 스위치와 상태줄 두 곳에 늘 적히는 이유입니다.</li>
+<li><b>관측 시간을 함께 적습니다.</b> 600초와 1800초는 결과의 크기가 다릅니다(20 seed 쌍대 누수율 차이 LEGACY −1.8 → −5.5%p). 소스 주석의 실측값은 두 조건이 섞여 있으니 조건을 확인합니다.</li>
+<li><b>seed 29 한 판은 예시입니다.</b> 구조 차이는 20개 seed 쌍대 비교의 신뢰구간으로 읽습니다. 두 배치 모두 20/20 seed에서 To-Be 누수가 적었습니다(LEGACY −7.3%p, FULL −4.3%p · 모든 항적 종결 기준).</li>
+<li><b>상세 기록 상한 300 ≠ 전체 생성 수.</b> 항적 목록·지도·복수 사수 집계는 표본이고, 「전체 결과」는 전수입니다. 기본 실행은 228/228이라 걸리지 않습니다.</li>
+<li><b>중복교전은 두 정의가 있습니다.</b> 엔진 카운터(발사 확정 시점 판정)와 화면의 「복수 사수 발사」(기록에서 센 값)는 다르며 나란히 적습니다.</li>
+<li><b>누수 ≠ 요격 실패.</b> 기준 실행에서 누수의 대부분은 한 발도 쏘지 못한 항적입니다. 「종료 미해결」도 요격 실패나 탄약 고갈로 읽지 않습니다.</li>
+<li><b>발사점 연장·조준점은 위협을 바꿉니다.</b> 켜고 끈 차이를 지휘구조의 효과로 읽지 않습니다. 켜면 누수가 늘고(막을 수 없는 곳으로 위협이 가므로) To-Be 우위는 줄어듭니다.</li>
+<li><b>계선 매체 반사실은 다른 표본입니다.</b> 한 판의 차이를 「그 계선의 몫」으로 읽지 않습니다.</li>
+<li><b>석과 발은 비교하지 않습니다.</b> 지휘소 창구와 포대 동시 교전 채널은 단위가 다릅니다.</li>
+<li><b>병목 판정은 화면의 규칙입니다.</b> 「대기 건수 → 최장 대기 → 점유율」로 고른 한 노드이며, 대기·막힘은 길이와 무관하게, 처리·이동은 20초 이상일 때만 병목으로 칠합니다. 교전 가능 상태를 기다린 「공백」은 병목이 아닙니다.</li>
+<li><b>이전 날짜의 수치는 그 날짜 조건의 기록입니다.</b> 기본 모델(KAMDOC 석 수, 결심 시간 동일화, 관측 시간, 기본 배치)이 여러 번 바뀌었습니다.</li>
+</ol>
+</section>
+
+<section class="chap"><h2>14. 재현하고 확인하는 방법</h2>
+<h3>URL 파라미터</h3>
+<p>조건은 전부 주소 뒤에 붙입니다. 예: <code>K-JAMDS_지휘흐름_단일본.html?sc=sc2&mode=tobe&dep=HANBANDO_LEGACY_NORMAL&seed=7&dur=600</code>. 기본값이 아닌 조건은 접혀 있어도 상태줄 칩에 뜨고, 목록은 로드 시 브라우저 콘솔에도 찍힙니다.</p>
+<table><colgroup><col style="width:14%"><col style="width:24%"><col style="width:62%"></colgroup><thead><tr><th>키</th><th>기본</th><th>뜻</th></tr></thead><tbody>
+<tr><td>sc</td><td>sc3</td><td>시나리오 sc1 · sc2 · sc3</td></tr>
+<tr><td>dep</td><td>HANBANDO_FULL_NORMAL</td><td>배치. …_LEGACY_NORMAL · …_MCRC_DOWN · …_KAMDOC_DOWN. 모르는 값은 FULL로 되돌림</td></tr>
+<tr><td>mode</td><td>asis</td><td>asis · tobe</td></tr>
+<tr><td>seed · dur</td><td>29 · 1800</td><td>난수 seed · 관측 시간(초, 60~7200)</td></tr>
+<tr><td>appr · cop · sdf</td><td>1 · 1 · 1</td><td>교전 협조 계선 · 교전현황 공유 · 자위권 발사</td></tr>
+<tr><td>lx · aim · par · pipe · icc</td><td>1</td><td>발사점 연장 · 조준점 · 결심 시간 동일화 · 협조 파이프라인 현실화 · ICC 중계 인가(iccsec로 초 지정)</td></tr>
+<tr><td>eor · suit · uavsd · ew · floor · ecs · issue</td><td>0</td><td>원격 교전 · 고도 적합도 · 무인기 자체 교전 · 조기경보 보고원 · 처리 바닥 · ECS 실행 10초(ecssec) · 명령 발령 작업(issuesec)</td></tr>
+<tr><td>share</td><td>(없음)</td><td>연합 항적 공유 반사실: datalink · kvmf-relay · voice · chat</td></tr>
+</tbody></table>
+<h3>단일본은 생성물입니다</h3>
+<ul>
+<li>원본은 <code>prototype/command-flow.html</code>과 그것이 읽는 <code>js/</code> 14개 모듈 + IADS 커널 8개 모듈입니다. <code>node scripts/build-command-flow-single.mjs</code>가 이들을 원본의 import 순서 그대로 인라인해 단일본을 만듭니다. 순서가 바뀌면 조용히 다른 수치가 나오므로 순서는 원본에서 읽습니다.</li>
+<li>단일본은 외부 파일·CDN 의존이 없어 인터넷 없이 더블클릭으로 열립니다. 계산은 워커 없이 메인 스레드에서 돕니다.</li>
+<li>회귀 테스트 <code>tests/command-flow-single.test.mjs</code>가 「저장된 단일본 = 현재 소스로 만든 것」을 바이트 단위로 확인합니다. 손으로 고치지 않습니다.</li>
+</ul>
+<h3>모델이 지키는 것(검증 장치)</h3>
+<ul>
+<li>보존 법칙: 생성 = 격추 + 누수 + 종료 미해결. 화면 상태줄과 테스트가 모두 확인합니다.</li>
+<li>관측은 동역학을 바꾸지 않습니다. 흐름 기록을 켜고 끈 두 실행의 결과 지문(SHA-256)이 같아야 합니다.</li>
+<li>기록 상한(traceCap·flowTraceCap)은 전체 결과를 바꾸지 못합니다.</li>
+<li>새 거동은 모두 플래그 뒤에 있고, 끄면 종전과 비트 단위로 같아야 합니다. 특정 모드가 이기는 것을 통과 조건으로 두지 않습니다. 전체 테스트는 <code>node tests/run-all.js</code>(55개 스위트).</li>
+</ul>
+<h3>더 읽을 것</h3>
+<p><b>docs/모의논리서.html</b>(본 앱 전체 모델·지표 계산식·V&V·한계) · <b>K-JAMDS_지휘흐름_분석결과.pdf</b>(20 seed 반복, 조건별 비교, 누수 사유) · <b>docs/params.md</b>(파라미터 값·출처·신뢰 등급 원장) · <b>K-JAMDS_파라미터.xlsx</b>(현행 기본값 내보내기) · <b>docs/adr/</b>(이 문서가 인용한 결정 기록).</p>
+</section>
+</body></html>

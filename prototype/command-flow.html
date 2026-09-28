@@ -599,6 +599,14 @@
      음성 20초는 짧은 자국만 남긴다. 「빠른 것은 순식간」을 형태로 읽게 한다. */
   .trail { fill: none; stroke-linecap: round; opacity: .5; }
   .dot { stroke: #04121f; stroke-width: .8; }
+  /* 사전대기 큐 전문(ADR-104) — 같은 계선을 타는 명령 전문(채운 원)과 반드시 달라 보여야 한다:
+     매체색 점선 테두리의 빈 원. 「가야 할 방향은 있는데 못 가는」 .wait-dot(주황 점선)과도 색으로 갈린다. */
+  .dot.cue { fill: none !important; stroke-width: 2; stroke-dasharray: 2.2 2.2; }
+  /* 발사 섬광 — 사수 노드에서 발사가 난 순간(1.5초) 링이 퍼진다. 흰 실선 = 명령을 받고 쏜 정식 발사 ·
+     주황 점선 = 긴급발사 ②(큐만 받고 정식 명령 전에 자기 사통으로 쏨). 넘침 섬광(.flash 붉은색)과 구분. */
+  .flash.fire { stroke: #dbe4f0; }
+  .flash.emer { stroke: var(--warn); stroke-dasharray: 4 3; }
+  .flashlab { font-size: 9px; fill: var(--warn); paint-order: stroke; stroke: #0b1017; stroke-width: 2.5; pointer-events: none; }
   .dotlab { font-size: 9px; fill: #cfe0f5; paint-order: stroke; stroke: #04121f; stroke-width: 2.5; }
   .qbadge { font-size: 9px; fill: var(--wait); }
 
@@ -1138,7 +1146,11 @@ const LINK_KIND = {
   report:  { label: '항적보고', hint: '센서·하급이 올리는 상황' },
   coord:   { label: '협조',     hint: '교전 협조 요청·회신(국지방공 AOC↔MCRC, 상하 관계 아님) · 권역 조정' },
   command: { label: '명령',     hint: '체계 내부 발사 지시' },
-  status:  { label: '교전현황', hint: '누가 무엇에 교전 중인가' }
+  status:  { label: '교전현황', hint: '누가 무엇에 교전 중인가' },
+  // ADR-104: 사전대기 큐 — KAMDOC(As-Is)/IAOC(To-Be)가 탄도 위협을 **인지한 순간** 상층 포대 전부에
+  //   하향 계선으로 내려보내는 「준비하라」 지시. **명령이 아니다** — 큐를 받은 포대는 정식 명령 전이라도
+  //   자기 MFR 사통이 잡히면 쏠 수 있다(긴급발사 ②). 명령 전문과 같은 계선을 타므로 점 모양을 갈라 그린다.
+  cue:     { label: '사전대기 큐', hint: '탄도 인지 즉시 상층 포대에 내려가는 사전 대기 지시 — 명령이 아니다(ADR-104). 빈 점선 원으로 그린다' }
 };
 
 /**
@@ -1459,8 +1471,8 @@ function features() {
     wtaSuitability: P.suit,      // ADR-086
     uavLocalSelfEngage: P.uavsd, // ADR-087
     earlyWarningReport: P.ew,    // ADR-090 — 엔진 기본 OFF (이 화면도 같다 — 아래 PARAMS 주석)
-    ballisticReportSource: P.bsrc, // ADR-103 — 엔진 기본 OFF (이 화면도 기본 OFF — 기본 ON 전환은 사용자 확인 대기, ADR-103 §프로토타입 기본값)
-    standbyCue: P.cue,             // ADR-104 — 〃 (bsrc=0이면 엔진이 비활성으로 신고 — 상태줄 경고 칩)
+    ballisticReportSource: P.bsrc, // ADR-103 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-28, ADR-103 §프로토타입 기본값)
+    standbyCue: P.cue,             // ADR-104 — 〃 (이 화면만 기본 ON · bsrc=0이면 엔진이 비활성으로 신고 — 상태줄 경고 칩)
     cueAcquisitionGain: P.cuegain > 0 ? P.cuegain : undefined, // ADR-104 B-3 획득 이득(기본 0 = 없음 · 명시된 근사)
     ballisticLaunchAxes: P.lx,   // ADR-091 — 〃
     threatAimpoints: P.aim,      // ADR-097 — 〃 (이 화면만 기본 켜짐)
@@ -1553,12 +1565,15 @@ const PARAMS = [
   //    항적은 한국군 탄도 킬체인이 시작하지 않는다(증거 no_ew_report). 엔진 기본 OFF.
   //    이 화면 기본값: pipe/icc/lx/aim/par처럼 기본 ON으로 두자는 제안이 있으나 ADR-090 추기의
   //    「엔진 기본 OFF면 화면도 OFF」 결정과 충돌해 **사용자 확인 전까지 기본 OFF**(?bsrc=1로 켬).
-  { k: 'bsrc',  d: 0,       t: 'bool', h: '탄도 위협 시작 보고원을 조기경보 레이더(그린파인)로 고정 — MCRC 경유 탄도 항적 0건 (ADR-103 · 기본 꺼짐)' },
+  //    **추기(2026-09-28, 사용자 결정)**: 화면 기본 **ON**으로 전환 — pipe/icc/lx/aim/par와 같은 예외(codex 정합이
+  //    이 화면의 목적). 엔진 기본은 그대로 OFF. 켜진 동안 상태줄 칩 「탄도 보고원 그린파인 ON」 상시 표기. 끄려면 ?bsrc=0.
+  { k: 'bsrc',  d: 1,       t: 'bool', h: '탄도 위협 시작 보고원을 조기경보 레이더(그린파인)로 고정 — MCRC 경유 탄도 항적 0건 (ADR-103 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   // ── cue(ADR-104): 사전대기 큐 + 긴급발사 ② — codex EmergencyReadySet 이식. bsrc=1 전제(없으면 엔진이 비활성).
   //    KAMDOC(As-Is)/IAOC(To-Be)가 탄도 위협을 인지하면 상층 포대 전부에 큐를 보내고, 큐를 받은 포대는 정식 명령
   //    전이라도 자기 MFR 사통이 잡히면 쏜다. 기본 OFF(사용자 확인 대기 — bsrc와 같은 사유). cuegain은 큐 도착 포대
   //    MFR의 전이 시간을 (1−gain)배로 줄이는 근사(기본 0 · 근거 없음 · 등급 C).
-  { k: 'cue',   d: 0,       t: 'bool', h: '사전대기 큐 + 긴급발사 — KAMDOC/IAOC 인지 시 상층 포대에 큐, 큐 받은 포대는 정식 명령 전 발사 가능 (ADR-104 · bsrc=1 전제 · 기본 꺼짐)' },
+  //    **추기(2026-09-28, 사용자 결정)**: 화면 기본 **ON**(bsrc와 함께). cuegain은 근사라 기본 0 유지. 끄려면 ?cue=0.
+  { k: 'cue',   d: 1,       t: 'bool', h: '사전대기 큐 + 긴급발사 — KAMDOC/IAOC 인지 시 상층 포대에 큐, 큐 받은 포대는 정식 명령 전 발사 가능 (ADR-104 · bsrc=1 전제 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   { k: 'cuegain', d: 0,     t: 'num',  h: '큐 획득 이득 0~0.95 — 큐 도착 포대 MFR의 탐지→추적→사통 전이 시간을 (1−gain)배 (ADR-104 B-3 · 명시된 근사 · 기본 0)' },
   // ── lx: 이 화면만 **기본 ON**으로 되돌린다(사용자 결정 2026-09-10 — 「출발점은 모든 배치에서
   //    수정」). 2026-09-01에 기본 OFF로 내렸던 결정을 뒤집는 것이라, 근거를 남긴다.
@@ -1862,6 +1877,14 @@ function buildTracks(res) {
       }
       m = s.name.match(/^발사불가:([^(]+)\(([^)]*)\)$/);
       if (m) t.noFire.push({ t: s.t, shooter: m[1], reason: m[2] });
+    });
+    // ADR-104 긴급발사 ② — 엔진은 `긴급발사:<사수>`를 같은 시각의 `발사:<사수>/…` 마크와 **함께** 남긴다
+    // (발사 자체는 정식 발사와 같은 경로를 타므로). 화면에서는 두 줄이 아니라 한 발사에 「긴급」 표식이다.
+    t.stages.forEach((s) => {
+      const m = s.name.match(/^긴급발사:(.+)$/);
+      if (!m) return;
+      const sh = t.shots.find((x) => x.shooter === m[1] && Math.abs(x.t0 - s.t) < 1e-6);
+      if (sh) sh.emer = true;
     });
   });
 
@@ -2257,6 +2280,20 @@ function markView(name, trk, axis) {
     return { text: '발사 못함 — ' + nodeName(m[1].trim()) + ' · ' + leakText(m[2]),
       cls: 'fail', raw: name };
   }
+  // ── ADR-104: 사전대기 큐·긴급발사 ── 큐는 명령이 아니고, 긴급발사는 같은 시각의 `발사:` 마크에 표식으로 붙는다
+  //    (buildLogRows·buildRecordEvents가 병합). 여기 분기는 로그 밖(툴팁·진단)에서 원문을 풀 때 쓰인다.
+  if ((m = /^사전대기큐발행:([^(]+)\((\d+)포대\)$/.exec(name))) {
+    return { text: '사전대기 큐 발행 — ' + shortC2(m[1], axis) + ' · 자격 포대 ' + m[2] + '개', raw: name,
+      sub: '탄도 위협을 인지한 순간 상층 포대에 「준비하라」 — 명령이 아니며 C2 처리 큐를 타지 않는다' };
+  }
+  if ((m = /^사전대기큐도착:(.+)$/.exec(name))) {
+    return { text: '사전대기 큐 접수 — ' + nodeName(m[1]), raw: name,
+      sub: '이 포대는 정식 명령 전이라도 자기 MFR 사통이 잡히면 쏠 수 있다(긴급발사 ②)' };
+  }
+  if ((m = /^긴급발사:(.+)$/.exec(name))) {
+    return { text: '긴급발사 — ' + nodeName(m[1]) + ' · 정식 명령 전 자기 사통 발사', cls: 'shot', raw: name,
+      sub: '사전대기 큐만 받은 상태에서 자기 MFR 사격통제·PIP·잔탄이 갖춰져 쏨(ADR-104 ②)' };
+  }
   // ── 발사 ── `발사:<사수>/<발사대>/PIP<거리>km`. 자위권발사는 사수만 물고 꼬리가 없다.
   if ((m = /^(발사|자위권발사):([^/]+)(?:\/(.*))?$/.exec(name))) {
     const pip = /PIP([\d.]+)km/.exec(m[3] || '');
@@ -2358,13 +2395,19 @@ function buildLogRows(t) {
     // 걸러내므로(drawFrame), 로그만 다른 기준을 쓰면 화면과 로그가 어긋난다.
     // 「무엇이 흐르는가(종류) · 어떻게 가는가(매체) · 얼마나 걸렸나 · 그 값을 믿을 수 있나(등급)」
     const meta = edgeMetaOf(f.from, f.to, f.mt);
-    const kl = kindLabel(meta), gl = gradeLabel(meta);
-    rows.push({ t: f.t0, kind: 'link', mt: f.mt, ref: f, sensor: f.mt === 'report-cycle',
+    // ADR-104: 큐 전문은 카탈로그 종류(협조/명령)가 아니라 사건의 종류로 적는다 — 같은 계선을 타지만 명령이 아니다.
+    const kl = f.kind === 'cue' ? LINK_KIND.cue.label : kindLabel(meta), gl = gradeLabel(meta);
+    rows.push({ t: f.t0, kind: 'link', mt: f.mt, ref: f, sensor: f.mt === 'report-cycle', cue: f.kind === 'cue',
       text: `${nodeName(f.from)} → ${nodeName(f.to)}`,
       grade: gl ? { label: gl, low: meta.confidence === 'C' } : null,
       tail: `${kl ? kl + ' · ' : ''}${m.label} ${f.d.toFixed(1)}초` });
   });
+  // ADR-104 긴급발사 ② — `긴급발사:<사수>` 마크는 같은 시각의 `발사:<사수>/…` 마크와 한 사건이다.
+  // 두 줄로 찍으면 두 번 쏜 것처럼 읽히므로 발사 줄에 표식을 붙이고 긴급발사 줄은 접는다.
+  const emerAt = {};
+  t.stages.forEach((s) => { const m = s.name.match(/^긴급발사:(.+)$/); if (m) emerAt[m[1] + '@' + s.t.toFixed(3)] = true; });
   const threatValueM = (KJ.threatType(t.type) || {}).unitCostM;
+  const fireOf = (shooter, at) => t.stages.some((x) => Math.abs(x.t - at) < 1e-6 && x.name.startsWith('발사:' + shooter));
   t.stages.forEach((s) => {
     // ADR-086: 발사 마크에 **요격탄 단가 대 위협 가치**를 붙인다. 「값싼 표적을 고가
     // 유도탄으로 잡는다」(KJADS 원칙 5-1)는 이 모델이 보여주려는 문제인데, 종전 화면에는
@@ -2385,8 +2428,12 @@ function buildLogRows(t) {
     // ⚠️ sensor 판정은 **원문**으로 한다. 화면 문구(「센서 탐지 — …」)로 재면 그래프의
     //    거르는 기준과 어긋나 체크박스를 꺼도 로그에만 센서 줄이 남는다.
     const mv = markView(s.name, t, s.axis);
-    rows.push({ t: s.t, kind: 'mark', sensor: /^SENSOR_/.test(s.name), text: mv.text,
-      raw: mv.raw, sub: mv.sub || null, note: mv.note || null, cls: mv.cls || null,
+    if (/^긴급발사:/.test(s.name) && fireOf(s.name.slice('긴급발사:'.length), s.t)) return;   // 발사 줄에 병합됨
+    const emer = !!(fire && emerAt[fire[1] + '@' + s.t.toFixed(3)]);
+    rows.push({ t: s.t, kind: 'mark', sensor: /^SENSOR_/.test(s.name),
+      text: mv.text + (emer ? ' · 긴급발사 ② (정식 명령 전 · 사전대기 큐)' : ''),
+      raw: mv.raw, sub: emer ? '사전대기 큐만 받은 상태에서 자기 MFR 사통·PIP·잔탄이 갖춰져 쏨(ADR-104)' : (mv.sub || null),
+      note: mv.note || null, cls: mv.cls || null, emer: emer,
       tail: '', lane: laneTag(s.axis), cost: cost });
   });
   // 「못 간」 전문 — 이 항적의 로그에서도 출발한 전문과 나란히 시각순으로 보여야,
@@ -2703,6 +2750,8 @@ function renderLineKey() {
     '<span style="opacity:.55">거의 안 보임</span> = 지금 안 쓰는 계선<br>' +
     '▸ <span style="opacity:.55">회색 점선</span> = 통행이 한 번도 없던 계선' +
     '([전체 계선 표시]를 켰을 때만)<br>' +
+    '▸ <b>빈 점선 원</b> = 사전대기 큐 전문(명령이 아니다) · 사수 노드의 <b>흰 링</b> = 정식 발사 · ' +
+    '<span style="color:var(--warn)">주황 점선 링</span> = 긴급발사 ②(정식 명령 전 · ADR-104)<br>' +
     '▸ <b>굵기</b> = 통행량(전문 건수) · 같은 열 왕복은 <b>좌·우로 갈라</b> 그린다<br>' +
     '▸ <b>계선을 누르면</b> 실측 지연·항적 목록·매체 교체가 열린다</div>';
   box.querySelectorAll('.lk:not(.none)').forEach((d) => {
@@ -3178,7 +3227,7 @@ function shotsSvg() {
       const a = mproj(n.coord, mapGeo);
       const ip = sh.t1 != null ? threatPosAt(t, sh.t1) : null;
       const tip = esc(nodeName(sh.shooter) + ' → ' + t.id +
-        (sh.sd ? ' · 자위권발사' : '') +
+        (sh.sd ? ' · 자위권발사' : '') + (sh.emer ? ' · 긴급발사 ②(정식 명령 전)' : '') +
         (sh.pipKm != null ? ' · PIP 경사거리 ' + sh.pipKm.toFixed(1) + 'km' : '') +
         (sh.t1 != null ? '\n발사 ' + fmt(sh.t0) + ' → 결과 ' + fmt(sh.t1) +
           ' (' + (sh.hit ? '격추' : '명중 실패') + ')'
@@ -3979,6 +4028,33 @@ function edgePt(e, p) { return e.el.getPointAtLength(e.len * Math.min(1, Math.ma
  * 이동 꼬리 — 지금 위치에서 **조금 전 위치**까지를 잇는다. 전송이 빠를수록(d가 작을수록)
  * 같은 벽시계 동안 더 많이 나아가므로 꼬리가 길어진다 — 길이가 곧 속도다.
  */
+/**
+ * 발사 섬광(ADR-104) — 최근 FIRE_FLASH초 안에 발사가 난 사수 노드에 링을 띄운다.
+ *  · 정식 발사(명령을 받고 쏨) = 흰 실선 링
+ *  · 긴급발사 ②(사전대기 큐만 받고 정식 명령 전 자기 사통으로 쏨) = 주황 점선 링 + 「긴급발사」 글자
+ *  · 자위권 ③은 기존 자위권 표기와 겹치지 않게 링만(글자 없음)
+ * 재료는 buildTracks의 t.shots(발사 마크)이며 새 수치를 만들지 않는다.
+ */
+const FIRE_FLASH = 1.5;
+function fireFlashSvg(tracks, geoRef, simT) {
+  let out = '';
+  const span = FIRE_FLASH * Math.max(1, speed);
+  tracks.forEach((t) => {
+    (t.shots || []).forEach((sh) => {
+      if (sh.t0 > simT || simT - sh.t0 > span) return;
+      const p = slotPos(geoRef, sh.shooter);
+      if (!p) return;
+      const age = (simT - sh.t0) / span;
+      out += `<circle class="flash ${sh.emer ? 'emer' : 'fire'}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}"` +
+        ` r="${(p.r + 3 + age * 9).toFixed(1)}" opacity="${(0.95 * (1 - age)).toFixed(2)}"></circle>`;
+      if (sh.emer) {
+        out += `<text class="flashlab" x="${(p.x + p.r + 6).toFixed(1)}" y="${(p.y - p.r - 2).toFixed(1)}"` +
+          ` opacity="${(1 - age * .6).toFixed(2)}">긴급발사 ②</text>`;
+      }
+    });
+  });
+  return out;
+}
 function trailSvg(e, pNow, dSec, color) {
   if (!(dSec > 0)) return '';
   const back = (TRAIL_WALL * speed) / dSec;          // 그동안 나아간 진행률
@@ -4369,8 +4445,10 @@ function drawFrameAll() {
     if (!showSensor && f.mt === 'report-cycle') return;
     if (keyFocusMt && f.mt !== keyFocusMt) return;   // 계선 범례의 매체 강조(표시 필터)
     hotEdges.add(e.key);
-    const list = byEdge.get(e.key);
-    if (list) list.push(f); else byEdge.set(e.key, [f]);
+    // ADR-104: 큐 전문은 같은 계선의 명령 전문과 **따로** 묶는다 — 한 묶음으로 세면 「명령 N건」에 큐가 섞인다.
+    const gk = f.kind === 'cue' ? e.key + '|cue' : e.key;
+    const list = byEdge.get(gk);
+    if (list) list.push(f); else byEdge.set(gk, [f]);
   });
 
   // ── 그리기 — 같은 계선의 동시 전문은 「이동 묶음 + N건」으로 집약한다 ────────
@@ -4387,17 +4465,22 @@ function drawFrameAll() {
     return y;
   };
   byEdge.forEach((list, key) => {
-    const e = geoAll.edgeByKey[key];
+    const isCue = /\|cue$/.test(key);
+    const e = geoAll.edgeByKey[isCue ? key.slice(0, -4) : key];
     const m = media(e.mt);
-    if (expandedEdges.has(key) || list.length < AGG_MIN) {
+    // 큐 전문(ADR-104)은 채운 원이 아니라 매체색 점선의 빈 원 — 명령과 같은 계선을 타므로 모양으로 갈라야 한다.
+    const dotAttr = isCue ? ` fill="none" stroke="${m.color}"` : ` fill="${m.color}"`;
+    const dotCls = isCue ? 'dot cue' : 'dot';
+    const what = isCue ? LINK_KIND.cue.label : m.label;
+    if (expandedEdges.has(key) || expandedEdges.has(e.key) || list.length < AGG_MIN) {
       // 펼친 계선(또는 두 건 이하) — 전문 하나에 점 하나. 꼬리 길이가 곧 속도다.
       list.forEach((f) => {
         const p = f.d > 0 ? (simT - f.t0) / f.d : 1;
         const pt = edgePt(e, p);
-        out += trailSvg(e, p, f.d, m.color) +
-          `<circle class="dot" data-th="${esc(f.th || '')}" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}"` +
-          ` r="${f.d >= SLOW ? 5 : 4}" fill="${m.color}">` +
-          `<title>${esc((f.th || '') + ' · ' + m.label + ' ' + f.d.toFixed(f.d < 10 ? 1 : 0) +
+        out += (isCue ? '' : trailSvg(e, p, f.d, m.color)) +
+          `<circle class="${dotCls}" data-th="${esc(f.th || '')}" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}"` +
+          ` r="${f.d >= SLOW ? 5 : 4}"${dotAttr}>` +
+          `<title>${esc((f.th || '') + ' · ' + what + (isCue ? ' · ' + m.label : '') + ' ' + f.d.toFixed(f.d < 10 ? 1 : 0) +
             '초 — 클릭하면 이 항적을 따라간다')}</title></circle>`;
       });
       return;
@@ -4412,12 +4495,12 @@ function drawFrameAll() {
     });
     const p = Math.min(1, Math.max(0, sum / list.length));
     const pt = edgePt(e, p);
-    out += `<circle class="dot agg-tok" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}"` +
-      ` r="${Math.min(9.5, 4.6 + list.length * .38).toFixed(1)}" fill="${m.color}">` +
-      `<title>${esc(nodeName(e.from) + ' → ' + nodeName(e.to) + ' · ' + m.label +
+    out += `<circle class="${dotCls} agg-tok" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}"` +
+      ` r="${Math.min(9.5, 4.6 + list.length * .38).toFixed(1)}"${dotAttr}>` +
+      `<title>${esc(nodeName(e.from) + ' → ' + nodeName(e.to) + ' · ' + what + (isCue ? ' · ' + m.label : '') +
         '\n지금 이 계선 위 전문 ' + list.length + '건 · 최장 ' + maxD.toFixed(maxD < 10 ? 1 : 0) + '초' +
         '\n항적: ' + ths.slice(0, 6).join(', ') + (ths.length > 6 ? ' 외 ' + (ths.length - 6) : ''))}</title></circle>`;
-    const lab = `${m.tag} ${list.length}건 · 최장 ${maxD.toFixed(maxD < 10 ? 1 : 0)}초`;
+    const lab = `${m.tag}${isCue ? ' 큐' : ''} ${list.length}건 · 최장 ${maxD.toFixed(maxD < 10 ? 1 : 0)}초`;
     const bw = textW(lab, 8.4) + 10, bx = pt.x + 11, by = dodge(pt.x + 11, pt.y - 18, bw);
     out += `<g class="aggbadge" data-agg="${esc(key)}">` +
       `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="13.5" rx="3" stroke="${m.color}"></rect>` +
@@ -4443,6 +4526,10 @@ function drawFrameAll() {
     out += `<circle class="flash" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}"` +
       ` r="${(p.r + 4 + age * 10).toFixed(1)}" opacity="${(0.9 * (1 - age)).toFixed(2)}"></circle>`;
   });
+  // 발사 섬광(ADR-104) — 사수 노드에서 발사가 난 순간. 흰 실선 링 = 정식 발사, 주황 점선 링 + 「긴급발사」 =
+  // 큐만 받고 정식 명령 전에 자기 사통으로 쏜 긴급발사 ②. 계선 위 전문 없이 노드에서 곧장 나는 발사가
+  // 「명령이 안 갔는데 쐈다」로 오독되지 않게, 그 자리에서 종류를 적는다.
+  out += fireFlashSvg(run.tracks, geoAll, simT);
   dots.innerHTML = out;
 
   // 노드 케파 — 링 채움(처리중/서버수)·큐 꼬리·색 단계(여유→가득→가득+대기).
@@ -5188,11 +5275,15 @@ function drawFrameTrack() {
     const p = f.d > 0 ? (simT - f.t0) / f.d : 1;
     const pt = e.el.getPointAtLength(e.len * Math.min(1, Math.max(0, p)));
     const m = media(f.mt);
-    out += `<circle class="dot" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5.5" fill="${m.color}"></circle>`;
-    // 느린 매체는 이름표를 달아 준다 — 빠른 것에 달면 깜빡임만 늘어난다.
-    if (f.d >= 10) {
+    const isCue = f.kind === 'cue';   // ADR-104 — 명령과 같은 계선을 타는 큐 전문은 빈 점선 원
+    out += isCue
+      ? `<circle class="dot cue" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5.5" fill="none" stroke="${m.color}"></circle>`
+      : `<circle class="dot" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5.5" fill="${m.color}"></circle>`;
+    // 느린 매체는 이름표를 달아 준다 — 빠른 것에 달면 깜빡임만 늘어난다. 큐는 개별 보기에서 늘 이름표를 단다
+    // (한 항적의 전문 하나하나를 보는 화면이라 「이 점이 명령이 아니라 큐다」가 읽혀야 한다).
+    if (f.d >= 10 || isCue) {
       out += `<text class="dotlab" x="${(pt.x + 8).toFixed(1)}" y="${(pt.y - 7).toFixed(1)}">` +
-        `${esc(m.label)} ${f.d.toFixed(0)}초</text>`;
+        `${esc(isCue ? LINK_KIND.cue.label + ' · ' + m.label : m.label)} ${f.d.toFixed(f.d < 10 ? 1 : 0)}초</text>`;
     }
   });
   // 활성 계선을 밝히고, 방금 도착한 계선은 잠깐 녹색으로 둔다.
@@ -5277,7 +5368,7 @@ function drawFrameTrack() {
     if (tk.kind === 'move') {
       const te = geo.edgeByKey[edgeKey(tk.f)];
       if (te && te.el) { const q = edgePt(te, tk.p); tx = q.x; ty = q.y; }
-      lab = media(tk.f.mt).label + ' ' + tk.f.d.toFixed(tk.f.d < 10 ? 1 : 0) + '초';
+      lab = (tk.f.kind === 'cue' ? LINK_KIND.cue.label + ' · ' : '') + media(tk.f.mt).label + ' ' + tk.f.d.toFixed(tk.f.d < 10 ? 1 : 0) + '초';
     } else {
       const np = slotPos(geo, tk.id);
       if (np) { tx = np.x + 14; ty = np.y - 13; }
@@ -5290,6 +5381,7 @@ function drawFrameTrack() {
     }
   }
 
+  out += fireFlashSvg([sel], geo, simT);
   out += diagnosisMarkersSvg();
   dots.innerHTML = out;
 
@@ -5928,12 +6020,13 @@ function buildRecordEvents(t) {
     raw: s.name, axis: s.axis || null
   });
   (t.flows || []).forEach((f) => {
-    if (f.kind !== 'command' && f.kind !== 'status') return;
-    rows.push({ t: f.t0, kind: 'transfer',
-      title: (f.kind === 'status' ? '교전현황 교신' : '명령 교신') + ' — ' +
+    if (f.kind !== 'command' && f.kind !== 'status' && f.kind !== 'cue') return;
+    rows.push({ t: f.t0, kind: f.kind === 'cue' ? 'cue' : 'transfer',
+      title: (f.kind === 'status' ? '교전현황 교신' : f.kind === 'cue' ? '사전대기 큐 교신' : '명령 교신') + ' — ' +
         nodeName(f.from) + ' → ' + nodeName(f.to),
       detail: '기록된 전송 구간 · 출발 ' + fmt(f.t0) + ' · 도착 예정 ' + fmt(f.t1) +
-        (f.kind === 'status' ? ' · 상태 내용은 별도 수신 기록에서 확인' : ''),
+        (f.kind === 'status' ? ' · 상태 내용은 별도 수신 기록에서 확인' :
+         f.kind === 'cue' ? ' · 명령이 아닌 사전 대기 지시(ADR-104)' : ''),
       raw: 'link:' + f.kind + ':' + f.from + '→' + f.to,
       axis: null, flow: f });
   });
@@ -5969,9 +6062,23 @@ function buildRecordEvents(t) {
     } else if (/^발사불가:/.test(name)) {
       const view = markView(name, t, s.axis);
       add(s, 'no-fire', view.text, '발사 전 중단 기록 · 명중 실패와 구분');
-    } else if (/^(발사|자위권발사):/.test(name)) {
+    } else if ((m = /^사전대기큐발행:/.exec(name))) {
       const view = markView(name, t, s.axis);
-      add(s, 'launch', view.text, '실제 발사 단계 기록');
+      add(s, 'cue', view.text, view.sub || '');
+    } else if ((m = /^사전대기큐도착:/.exec(name))) {
+      const view = markView(name, t, s.axis);
+      add(s, 'cue', view.text, view.sub || '');
+    } else if ((m = /^긴급발사:(.+)$/.exec(name))) {
+      // 같은 시각 `발사:` 기록에 병합 — 발사 줄이 없을 때만(방어적) 따로 남긴다.
+      if (!(t.stages || []).some((x) => Math.abs(x.t - s.t) < 1e-6 && x.name.startsWith('발사:' + m[1]))) {
+        const view = markView(name, t, s.axis);
+        add(s, 'launch', view.text, view.sub || '');
+      }
+    } else if ((m = /^(발사|자위권발사):([^/]+)/.exec(name))) {
+      const view = markView(name, t, s.axis);
+      const emer = m[1] === '발사' && (t.stages || []).some((x) => Math.abs(x.t - s.t) < 1e-6 && x.name === '긴급발사:' + m[2]);
+      add(s, 'launch', view.text + (emer ? ' · 긴급발사 ②' : ''),
+        emer ? '정식 명령 전 자기 사통 발사 — 사전대기 큐만 받은 상태(ADR-104)' : '실제 발사 단계 기록');
     } else if (/^BDA:(HIT|MISS):/.test(name)) {
       const view = markView(name, t, s.axis);
       add(s, 'result', view.text, '발사 후 결과 기록');
@@ -6067,7 +6174,7 @@ function refreshRecordPicker() {
 }
 
 function recordKindName(row) {
-  return ({ 'review-evidence':'관측', transfer:'교신', selection:'선정', directive:'명령 처리', reassignment:'재배정',
+  return ({ 'review-evidence':'관측', transfer:'교신', cue:'큐', selection:'선정', directive:'명령 처리', reassignment:'재배정',
     rejection:'반송', status:'상태 수신', 'status-drop':'교신 중단', 'status-rejected':'상태 미채택',
     'no-fire':'미발사', launch:'발사', result:'결과', exit:'항적 종결', 'observation-end':'관측 종료' })[row.kind] || '기록';
 }

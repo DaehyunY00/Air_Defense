@@ -354,6 +354,18 @@
     // 종전 종말 구간 모델에서는 모든 센서가 스폰 즉시 볼 수 있어 탐지 선착이 난수 추첨이었다.
     // 켜면 탐지 시각·교전 기하가 전부 이동한다 — 기본 OFF(불변 규칙 1 · 재기준선 대상).
     this.ballisticLaunchAxes = ff('ballisticLaunchAxes', false);
+    // ADR-103: 탄도 위협 **시작 보고원 고정** — IADS_codex `kamd_ballistic`(startNode GREEN_PINE_B) 정합.
+    // 탄도 위협(srbm·mrl_large)의 탄도 책임 C2(As-Is KAMD_OPS / KAMDOC 무력화 시 권역 ICC · To-Be IAOC)로
+    // 가는 시작 보고 번들은 role `ballistic_early_warning`인 센서(그린파인)만 낸다. FPS-117·TPS-880K·
+    // 포대 MFR의 탄도 탐지는 그 C2의 시작 보고원이 되지 않으며, 그린파인이 아직 fresh하지 않으면 경로를
+    // 고정하지 않고 그린파인 획득 시점의 다음 라우팅을 기다린다(스냅숏 고정 해제). ADR-090(추가 출처
+    // **병합**)과 달리 시작 보고 자체가 되어 C2 서비스 작업이 그때 생성된다. 그린파인이 끝내 잡지 못한
+    // 탄도 항적은 codex와 같이 한국군 탄도 킬체인이 시작하지 않고 증거 `no_ew_report`로 남는다.
+    // 배경(실측 SC3·FULL·seed 29·1800초): 방사포 90/90의 As-Is 경로가 FPS117→MCRC→ICC→KAMDOC였고
+    // KAMDOC이 그린파인 보고를 받은 항적 0건(최속 경로 1개 채택 + 최초 획득 스냅숏 — ADR-090 §맥락).
+    // USFK 축·LOCAL_AD 축·비탄도 라우팅과 카탈로그 계선은 불변. 기본 OFF(불변 규칙 1 · 재기준선 대상).
+    this.ballisticReportSource = ff('ballisticReportSource', false);
+    this._bsrcThreats = this.ballisticReportSource ? [] : null;   // ON에서만 탄도 위협 명단(관측 종료 마감용)
     // ADR-063: 표적권역 산포 — 종전에는 같은 축선의 모든 위협이 정확히 같은 한 점으로 향해
     // seed를 바꿔도 착탄점이 불변이었다. ON이면 위협마다 표적권역(disk) 안에서 착탄점을 뽑는다.
     // 반경은 features.targetSpreadKm로 스윕 가능(기본 THREAT-TARGET-DISP-01 = 15km, 등급 C).
@@ -465,6 +477,7 @@
     if (this.threatTargetDispersion) this.features.targetSpreadKm = this.targetSpreadKm;
     // wire shape 규율 — 켜졌을 때만 키가 실린다(OFF 골든 불변).
     if (this.threatAimpoints) this.features.threatAimpoints = true;
+    if (this.ballisticReportSource) this.features.ballisticReportSource = true; // ADR-103 (OFF wire shape 보존)
     if (this.c2DecisionTimeParity) this.features.c2DecisionTimeParity = true; // ADR-099
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
@@ -1191,6 +1204,17 @@
     }
   };
 
+  /** ADR-103: 탄도 조기경보 레이더인가(role `ballistic_early_warning` — 현재 GREEN_PINE_B/C). */
+  function isBallisticEwSensor(sensor) {
+    var st = sensor && KJ.SENSOR_TYPES[sensor.typeId];
+    return !!(st && /ballistic_early_warning/.test(st.role || ''));
+  }
+  /** ADR-103: 이 (위협, 책임 C2) 쌍에 시작 보고원 고정이 걸리는가 — 탄도 위협 × 탄도 책임 C2 축만. */
+  Simulation.prototype._bsrcApplies = function (threat, commander) {
+    return !!this.ballisticReportSource && iadsThreatCategory(threat.type) === 'ballistic' &&
+      (commander.axis === 'KAMD' || commander.axis === 'KILL_WEB');
+  };
+
   Simulation.prototype._iadsReportBundle = function (threat, commander) {
     var self = this, candidates = [], mcrcId = this._iadsUpperEchelonId();
     var reportSensors = (threat._sensors || []).filter(function (sensor) {
@@ -1198,6 +1222,13 @@
       var track = threat._sensorTracks && threat._sensorTracks[sensor.id];
       return track && KJ.IADS.trackFreshness(track, self.now, 120).fresh;
     });
+    // ADR-103: 탄도 책임 C2의 시작 보고원은 조기경보 레이더뿐이다. 그린파인이 아직 fresh하지 않으면
+    // 후보가 비어 null을 돌려주고(_routeIadsDetected가 경로를 고정하지 않는다), 다음 획득 사건에서
+    // 다시 시도한다. ⚠️ OFF에서는 이 분기가 통째로 건너뛰어져 종전과 자구 동일 경로다(bit-exact).
+    if (this._bsrcApplies(threat, commander)) {
+      reportSensors = reportSensors.filter(isBallisticEwSensor);
+      threat._bsrcWaiting = reportSensors.length === 0;
+    }
     reportSensors.forEach(function (sensor) {
       // ADR-036 승계: 미군 축과 한국군 축은 서로의 센서 보고를 보지 않는다.
       // ADR-085(usfkTrackSharing) 반사실이 켜지면 **이 상황인식 차단만** 풀린다 —
@@ -1373,6 +1404,10 @@
       if (!report) return;
       threat._iadsCommanderKeys[key] = true;
       threat._iadsCorrelationFailedAt = null;
+      if (self._bsrcApplies(threat, commander) && !threat._bsrcStarted) {   // ADR-103: 그린파인 시작 보고 계상
+        threat._bsrcStarted = true;
+        self.global.trackFusion.ballisticEwStarted = (self.global.trackFusion.ballisticEwStarted || 0) + 1;
+      }
       threat._iadsCommandersById[commander.id] = commander;
       var delay = 0, sources = [];
       report.reports.forEach(function (entry) {
@@ -1415,6 +1450,11 @@
         threat.leakReason = 'correlation_failed';
         threat._nextIadsCorrelationRetry = Math.floor(t / KJ.IADS.CORRELATION_RETRY_SECONDS + 1) * KJ.IADS.CORRELATION_RETRY_SECONDS;
         this._recordFailureEvidence(threat, 'correlation_failed', { commanderCount: commanders.length });
+      } else if (threat._bsrcWaiting) {
+        // ADR-103: 보고 경로가 없는 것이 아니라 조기경보 레이더가 **아직** 획득하지 않은 것이다.
+        // 여기서 no_report_path를 남기면 뒤늦게 그린파인이 잡아 시작된 항적까지 그 증거를 달고
+        // 누수 주원인이 보고경로 부재로 오분류된다. 사유·증거 없이 다음 획득 사건을 기다린다.
+        // 끝내 획득하지 못한 경우는 격추·누수·관측 종료 시점에 _bsrcRecordMissing이 남긴다.
       } else {
         threat.leakReason = 'no_report_path';
         this._recordFailureEvidence(threat, 'no_report_path', { commanderCount: commanders.length });
@@ -1422,9 +1462,30 @@
     }
   };
 
+  /**
+   * ADR-103: 그린파인이 끝내 획득하지 못해 한국군 탄도 킬체인이 시작하지 않은 탄도 항적을 계상한다
+   * (격추·누수·관측 종료 시점에 1회). 증거 `no_ew_report`는 「0건」과 「미측정」을 가르는 코드다(ADR-062).
+   * 켜져 있을 때만 호출되며 결과 계정은 trackFusion.ballisticEwStarted + ballisticEwMissing = 탄도 생성 수.
+   */
+  Simulation.prototype._bsrcRecordMissing = function (threat) {
+    if (!this.ballisticReportSource || iadsThreatCategory(threat.type) !== 'ballistic') return;
+    if (threat._bsrcStarted || threat._bsrcMissingRecorded) return;
+    threat._bsrcMissingRecorded = true;
+    this.global.trackFusion.ballisticEwMissing = (this.global.trackFusion.ballisticEwMissing || 0) + 1;
+    var ew = (threat._sensors || []).filter(isBallisticEwSensor), self = this;
+    var acquired = ew.filter(function (s) {
+      var tr = threat._sensorTracks && threat._sensorTracks[s.id];
+      return tr && tr.state !== KJ.IADS.SENSOR_STATE.UNDETECTED;
+    });
+    this._recordFailureEvidence(threat, 'no_ew_report', {
+      ewSensors: ew.length, ewAcquiredNow: acquired.length, detected: !!threat.detected
+    });
+  };
+
   /** 1 탐지: 축선·클래스 커버 센서 선별 후 첫 스캔 예약 */
   Simulation.prototype._beginDetect = function (threat, t) {
     var mode = this.mode, type = threat.type, axis = threat.axis, physical = this.iadsSensorPhysics;
+    if (this._bsrcThreats && iadsThreatCategory(type) === 'ballistic') this._bsrcThreats.push(threat);   // ADR-103
     var sensors = this._nodesInMode().filter(function (n) {
       return n.category === 'sensor' &&
         n.detects.indexOf(type) !== -1 && (physical || n.coverage.indexOf(axis) !== -1);
@@ -3246,6 +3307,7 @@
       this.global.c2Orders.released++;
       threat.alive = false; threat.killed = true;
       this.global.killed++;
+      if (this.ballisticReportSource) this._bsrcRecordMissing(threat);   // ADR-103 (OFF에서는 호출 없음)
       this.global.timeToKill.push(t - threat.spawnT);
       var value = KJ.threatType(threat.type).unitCostM || 0;
       this.cost.killedThreatM += value;
@@ -3434,6 +3496,7 @@
       }, this);
     }
     this.global.leaked++;
+    if (this.ballisticReportSource) this._bsrcRecordMissing(threat);   // ADR-103 (OFF에서는 호출 없음)
     // Phase 4(⑨, timeoutSplit): timeout을 tries로 분해. tries===0(한 번도 교전 못 함)=timeout:c2
     // (앞단 C2·협조가 시간을 소진 → 구조적), tries>0(교전했으나 체공창 소진)=timeout:engage(교전·BDA
     // 단계 물리 한계 → 비구조). 동일 물리 현상이 구조/비구조로 뭉뚱그려지던 결함(사실 e) 해소.
@@ -3515,6 +3578,16 @@
     Object.keys(this.nodeState).forEach(function (id) {
       self._advance(self.nodeState[id], self.endTime);
     });
+    // ADR-103: 관측 종료 시점까지 그린파인이 잡지 못한 탄도 항적도 미개시로 계상한다(ON에서만).
+    if (this._bsrcThreats) {
+      this._bsrcThreats.forEach(function (th) {
+        self._bsrcRecordMissing(th);
+        if (th._trace && th._trace.exitT === null && th._failureEvidence) th._trace.evidence = th._failureEvidence;
+      });
+      var tf = this.global.trackFusion;
+      tf.ballisticEwStarted = tf.ballisticEwStarted || 0;
+      tf.ballisticEwMissing = tf.ballisticEwMissing || 0;
+    }
     // trace 마감(CRN 검토 이식): 관측창 종료 시점에도 결말(격추/누수)이 미확정인 항적은
     // "진행중" 마커로 종결한다. exitT는 설정하지 않아(=null 유지) 누수로 오분류되지 않는다.
     if (this.trace) {
@@ -3892,6 +3965,8 @@
     no_sensor: { label: '탐지 공백(센서·커버리지 부재)', group: '탐지 공백', family: 'architecture', structurality: 'structural', structural: true, stage: '① 탐지' },
     no_responsible_c2: { label: '책임 C2·권한 부재', group: '책임 공백', family: 'architecture', structurality: 'structural', structural: true, stage: '②~⑦ 책임·결심' },
     no_report_path: { label: '책임 C2로의 보고경로 부재', group: '항적 비융합·보고경로 부재', family: 'architecture', structurality: 'structural', structural: true, stage: '② 추적생성' },
+    // ADR-103: 증거 코드(주원인이 아니라 기여원인) — 조기경보 레이더가 끝내 획득하지 못해 탄도 킬체인이 시작하지 않음.
+    no_ew_report: { label: '조기경보 보고 부재(탄도 킬체인 미개시)', group: '항적 비융합·보고경로 부재', family: 'architecture', structurality: 'structural', structural: true, stage: '② 추적생성' },
     correlation_failed: { label: '항적 상관·식별 실패', group: '항적 품질', family: 'stochastic', structurality: 'nonstructural', structural: false, stage: '②~④ 상관·식별' },
     responsibility_gap: { label: '책임공백(협조·명령경로 부재)', group: '책임 공백', family: 'architecture', structurality: 'structural', structural: true, stage: '⑥⑦ 결심·협조' },
     overflow: { label: '처리용량 포화', group: '처리 포화', family: 'capacity', structurality: 'conditional', structural: false, stage: '③④⑤ C2 / ⑧ 교전' }, // 'overflow:<노드>' 접두 코드

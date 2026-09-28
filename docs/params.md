@@ -157,6 +157,14 @@
 - **신뢰도 등급**: **C** — 개념 설정. IBCS류 engage-on-remote는 공개 개념이나 본 모델의 웹 경계·등급 판정 규칙은 codex 개념 설정 승계.
 - **MC 적용방식**: 결정적(등급 판정)
 
+### [IADS-BSRC-01] 탄도 위협 시작 보고원 고정 (ballisticReportSource, ADR-103)
+- **값/분포**: 불리언 — 구조 규칙, 수치 파라미터 없음
+- **단위**: 없음
+- **출처**: `IADS_codex` `LINEAR_TOPOLOGIES.kamd_ballistic`(`startNode: 'GREEN_PINE_B'` 고정 → KAMD_OPS → ICC → ECS → 사수) · `killchain.js _findStartSensor`(typeId === startNode인 센서만 시작) · `sim-engine.js _recordC2ReportTrack`(MCRC는 abt만 기록·전달) · codex ADR-044(MLRS를 MCRC/국지 경로로 라우팅 금지) · codex ADR-069(탄도 시작노드 GREEN_PINE_B 고정은 킬웹에서도 무변경)
+- **적용범위**: 탄도 위협(srbm·mrl_large)의 탄도 책임 C2(As-Is KAMD_OPS / KAMDOC 무력화 배치의 권역 ICC · To-Be IAOC)로 가는 **시작 보고**만. `role`이 `ballistic_early_warning`인 센서(GREEN_PINE_B/C)만 시작 보고원이 되고, 그린파인이 fresh하지 않으면 경로를 고정하지 않고 획득 시점에 라우팅한다. USFK 축·LOCAL_AD 축·비탄도 라우팅과 카탈로그 계선(MCRC↔ICC↔KAMDOC coord 포함)은 불변. 끝내 미획득이면 증거 `no_ew_report`.
+- **신뢰도 등급**: **C** — 구조 정합(codex 정본 승계)이 근거이며 수치 근거 없음
+- **MC 적용방식**: 결정적(라우팅 규칙). 켜면 보고 링크 지연 추첨 시점·횟수가 달라져 실행 전체가 다른 표본(재기준선 대상). OFF는 bit-exact.
+
 ### [IADS-LINK-IFCN-01] 킬웹(To-Be) IFCN 네트워크 주기 (linkSemanticsV2, ADR-057)
 - **값/분포**: 1 s (고정)
 - **단위**: 초

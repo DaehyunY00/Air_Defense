@@ -19,7 +19,7 @@ importScripts(
   '../core/heap.js?v=20260902c',
   '../analysis/bottleneck.js?v=20260902c',
   '../analysis/c2-report.js?v=20260902c',
-  '../engine/sim-engine.js?v=20260902c',
+  '../engine/sim-engine.js?v=20260928a',
   '../analysis/mc-runner.js?v=20260902c',
   '../analysis/transition.js?v=20260902c',
   '../analysis/overlap-heatmap.js?v=20260902c',

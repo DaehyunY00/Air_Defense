@@ -219,7 +219,7 @@
         CRUISE_MISSILE: { front: { '10-50': 1, '50-100': 1, '100-150': 1 }, side: { '10-50': 1, '50-100': 1, '100-150': 1 }, rear: { '10-50': 1, '50-100': 1, '100-150': 1 } },
         MLRS_GUIDED: { front: { '10-50': .91, '50-100': .87, '100-150': .80 }, side: { '10-50': .90, '50-100': .86, '100-150': .79 }, rear: { '10-50': .89, '50-100': .85, '100-150': .78 } },
         UAS: { front: { '10-50': 1, '50-100': 1, '100-150': 1 }, side: { '10-50': 1, '50-100': 1, '100-150': 1 }, rear: { '10-50': 1, '50-100': 1, '100-150': 1 } }
-      }, 98, { enabled: false },
+      }, 98, { enabled: false },   // ⚠️ compat 전용 — iads-c2(iadsSensorPhysics) 경로는 compatibility.enabled를 읽지 않는다(sim-engine _iadsEvaluate·_iadsGeometryWindow의 !iadsSensorPhysics 분기만 참조). 제거하지 않음(ADR-061 호환 원장 · ADR-103 §진단 B)
       { doctrine: 'SLS', interceptMethod: 'guided', guidance: 'PNG', killRadius: 500, bdaDelay: 10, launchInterval: 5 })
     }, { launcherCount: 4, simultaneousEngagement: 10, reloadTime: 900 }, {
       paramRef: 'WPN-LSAM-PK-01', sourceNote: 'IADS_codex_original LSAM', engageTimeSec: 40,
@@ -229,7 +229,7 @@
       ABM: missile('천궁-II ABM', { Rmin: 3, Rmax: 50, Hmin: .5, Hmax: 20 }, 2040, 8, 'WPN-MSAM2-PK-01', 3, .75, {
         SRBM: { front: { '5-15': .85, '15-30': .78, '30-50': .55 }, side: { '5-15': .765, '15-30': .702, '30-50': .495 }, rear: { '5-15': .425, '15-30': .39, '30-50': .275 } },
         MLRS_GUIDED: { front: { '5-15': .91, '15-30': .87, '30-50': .80 }, side: { '5-15': .90, '15-30': .86, '30-50': .79 }, rear: { '5-15': .89, '15-30': .85, '30-50': .78 } }
-      }, 40, { enabled: false },
+      }, 40, { enabled: false },   // ⚠️ compat 전용 — 위 L-SAM AAM과 같다. 천궁-II ABM은 iads-c2에서 **활성**이며 탄도 미교전의 원인이 아니다(ADR-103 §진단 A)
       { doctrine: 'SLS', interceptMethod: 'PNG', guidance: 'PNG', killRadius: 200, bdaDelay: 8, launchInterval: 4 }),
       AAM: missile('천궁-II AAM', { Rmin: 3, Rmax: 40, Hmin: .02, Hmax: 20 }, 2040, 8, 'WPN-MSAM2-PK-01', 3, 0.75, {
         AIRCRAFT: { front: { '5-15': .90, '15-30': .83, '30-40': .70 }, side: { '5-15': .90, '15-30': .83, '30-40': .70 }, rear: { '5-15': .90, '15-30': .83, '30-40': .70 } },

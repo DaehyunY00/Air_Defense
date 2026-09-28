@@ -92,6 +92,7 @@ var suites = [
   ,['icc-relay-authorization.test.mjs', 'ADR-094 ICC 중계 인가 (OFF 골든·To-Be 동역학 불변·ICC 큐 작업·전송 분할·인가/재배정/반송·손잡이)']
   ,['ecs-execution-time.test.mjs', 'ADR-095 ECS 실행 시간 ADSIM 정합 (OFF 골든·실효 10초·kind 한정·양 모드 공통·손잡이·바닥 합성)']
   ,['directive-issue-time.test.mjs', 'ADR-096 교전명령 발령 작업 (OFF 골든·발령=명령 건수·체계성분 7.5초·재발령 계상·로그 결과 표시)']
+  ,['ballistic-report-source.test.mjs', 'ADR-103 탄도 시작 보고원 고정 (OFF 골든·그린파인 시작·MCRC 경유 0·비탄도/USFK 보고 불변·관측 순수성·미획득 증거 계정·DOWN 배치)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

@@ -1077,7 +1077,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20260919a';
+const V = '?v=20260928a';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -1459,6 +1459,7 @@ function features() {
     wtaSuitability: P.suit,      // ADR-086
     uavLocalSelfEngage: P.uavsd, // ADR-087
     earlyWarningReport: P.ew,    // ADR-090 — 엔진 기본 OFF (이 화면도 같다 — 아래 PARAMS 주석)
+    ballisticReportSource: P.bsrc, // ADR-103 — 엔진 기본 OFF (이 화면도 기본 OFF — 기본 ON 전환은 사용자 확인 대기, ADR-103 §프로토타입 기본값)
     ballisticLaunchAxes: P.lx,   // ADR-091 — 〃
     threatAimpoints: P.aim,      // ADR-097 — 〃 (이 화면만 기본 켜짐)
     c2DecisionTimeParity: P.par, // ADR-099 — 〃 (이 화면만 기본 켜짐 · codex 정합)
@@ -1544,6 +1545,13 @@ const PARAMS = [
   // (2026-09-01): **엔진 기본 OFF인 것은 이 화면에서도 전부 기본 OFF** — 켜려면 URL로 명시한다
   // (예 ?ew=1&lx=1&floor=1). 켠 동안은 상태줄 칩으로 상시 표기한다.
   { k: 'ew',    d: 0,       t: 'bool', h: '조기경보 보고원 — 그린파인 보고가 책임 C2에 함께 접수 (ADR-090 · 기본 꺼짐)' },
+  // ── bsrc(ADR-103): 탄도 위협의 **시작 보고원**을 그린파인으로 고정한다(codex kamd_ballistic 정합).
+  //    종전에는 방사포 90/90이 FPS117→MCRC→ICC→KAMDOC 경유로 시작해 그린파인 보고 기여가 0이었다
+  //    (SC3·FULL·seed29·1800초). 켜면 MCRC를 지나는 탄도 항적이 0건이 되고, 그린파인이 못 잡은 탄도
+  //    항적은 한국군 탄도 킬체인이 시작하지 않는다(증거 no_ew_report). 엔진 기본 OFF.
+  //    이 화면 기본값: pipe/icc/lx/aim/par처럼 기본 ON으로 두자는 제안이 있으나 ADR-090 추기의
+  //    「엔진 기본 OFF면 화면도 OFF」 결정과 충돌해 **사용자 확인 전까지 기본 OFF**(?bsrc=1로 켬).
+  { k: 'bsrc',  d: 0,       t: 'bool', h: '탄도 위협 시작 보고원을 조기경보 레이더(그린파인)로 고정 — MCRC 경유 탄도 항적 0건 (ADR-103 · 기본 꺼짐)' },
   // ── lx: 이 화면만 **기본 ON**으로 되돌린다(사용자 결정 2026-09-10 — 「출발점은 모든 배치에서
   //    수정」). 2026-09-01에 기본 OFF로 내렸던 결정을 뒤집는 것이라, 근거를 남긴다.
   //
@@ -1648,6 +1656,7 @@ function activeConfigChips() {
   if (P.uavsd) out.push('무인기 자체교전 ON');
   // ew·lx·floor는 엔진 기본 OFF(이 화면도 기본 OFF) — 켜져 있으면 표기한다.
   if (P.ew) out.push('조기경보 보고 ON');
+  if (P.bsrc) out.push('탄도 보고원 그린파인 ON');
   if (P.lx) out.push('발사점 연장 ON');
   if (P.aim) out.push('표적 카탈로그 ON');
   if (P.par) out.push('결심 시간 동일화 ON');

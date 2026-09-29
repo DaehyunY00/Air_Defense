@@ -174,3 +174,4 @@
 - `moe-report.json` — 본문 전 수치의 원본(main: seed 29 두 모드 전 항목 · seeds: 30·31 · sweep: 7 조건 × 2 모드)
 - `probe.mjs` — 재생성 스크립트(저장소 루트에서 `node docs/analysis/2026-09-29-moe-analysis/probe.mjs`)
 - 관련 ADR: 103(탄도 시작 보고원) · 104(사전대기 큐) · 105(한미 협조) · 106(보고 재시도)
+- `render-pdf.mjs` — `README.md` → `report.html` → 저장소 루트 `K-JAMDS_효과척도_분석결과서.pdf`(A4 · 헤드리스 Chrome `--print-to-pdf`). 실행: `node docs/analysis/2026-09-29-moe-analysis/render-pdf.mjs` (`CHROME_PATH`로 브라우저 지정 가능)

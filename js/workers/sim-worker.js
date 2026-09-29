@@ -12,7 +12,7 @@ importScripts(
   '../data/nodes.js?v=20260902c',
   '../data/links.js?v=20260902c',
   '../data/threats.js?v=20260902c',
-  '../data/scenarios.js?v=20260902c',
+  '../data/scenarios.js?v=20260929c',
   '../data/axes.js?v=20260902c',
   '../config/deployment-adapter.js?v=20260902c',
   '../core/rng.js?v=20260902c',

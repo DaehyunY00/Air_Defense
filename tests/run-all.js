@@ -96,6 +96,7 @@ var suites = [
   ,['standby-cue.test.mjs', 'ADR-104 사전대기 큐·긴급발사 (bsrc 없이 동역학 불변·위협당 1회·자격 포대·큐 전 발사 0·자기 MFR 사통·이중 발사 0·자위권 배제·C2 도착 불변·gain 0 전이 동일·계정 대사)']
   ,['rok-usfk-coordination.test.mjs', 'ADR-105 한미 교전 협조(음성) (OFF bit-exact·coord 계선만·음성 교신·요청↔접수↔회신·양보 준수·한국군 배정>0·계정 대사·관측 순수성)']
   ,['commander-route-retry.test.mjs', 'ADR-106 책임 C2 보고 재시도 (OFF bit-exact·features 미신고·srbm#3 THAAD C2 인지 앞당김·중복 보고 0·회복 계정 대사·마크=회복 수·관측 순수성)']
+  ,['scenario-sc3s.test.mjs', 'SC3-S 남부 강화 변형 (sc3 불변·sc3s = sc3 남부 ×5·사거리 정합·남부 포대 발사 증가)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

@@ -2732,6 +2732,31 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     }
   ];
 
+  // ── SC3-S: 남부 강화 변형(사용자 요청 2026-09-29) ──
+  // 효과척도 분석(docs/analysis/2026-09-29-moe-analysis)과 강도 스윕에서 84개 포대 중 약 42개는 위협이
+  // 봉투에 한 번도 들어오지 않아 강도를 5배로 올려도 0발이었다 — 남부 축선 λ가 수도권의 0.1배라
+  // 남부 포대(안동·대구·부산·울산·포항 천궁-II·PAC-3·남부 L-SAM)가 시험되지 않는 시나리오 구조 문제.
+  // SC3의 본 mix는 그대로 두고(기존 골든 불변), 남부 배분비만 0.1 → 0.5(THREAT-SOUTH-SHARE-02)로 올린
+  // 별도 시나리오를 둔다. 축선·위협 조합은 SC3 southernMix와 같아 사거리 정합(ENV-AXIS-FIT-01)이 그대로 성립한다.
+  var SC3 = KJ.SCENARIOS.find(function (s) { return s.id === 'sc3'; });
+  var SOUTH_SHARE_SC3 = 0.1, SOUTH_SHARE_SC3S = 0.5;   // THREAT-SOUTH-SHARE-01 · -02
+  KJ.SCENARIOS.push({
+    id: 'sc3s',
+    name: 'SC3-S · 전략적 섞어쏘기 — 남부 강화 (남부 배분비 0.5)',
+    problem: '문제 상황 3 (변형)',
+    description: 'SC3와 같은 복합 동시 포화에 남부 종심 축선(대구·부산) 도착률을 수도권 대응 축선의 ' +
+      '0.5배로 올린 변형. 남부 포대(천궁-II·PAC-3·남부 L-SAM)가 실제로 교전에 참여하는 조건에서 ' +
+      '배치 전체와 C2 구조 차이를 시험한다.',
+    basis: 'SC3 + THREAT-SOUTH-SHARE-02(남부 배분비 0.5 · 등급 C — 배치 시험용 스윕값). ' +
+      '축선·위협 조합은 SC3 southernMix와 동일(ENV-AXIS-FIT-01 정합 유지)',
+    mix: SC3.mix,
+    southernMix: SC3.southernMix.map(function (e) {
+      return { type: e.type, axis: e.axis,
+        ratePerMin: Math.round(e.ratePerMin / SOUTH_SHARE_SC3 * SOUTH_SHARE_SC3S * 1000) / 1000 };
+    }),
+    defaultMode: 'asis'
+  });
+
   KJ.scenarioById = function (id) {
     return KJ.SCENARIOS.find(function (s) { return s.id === id; }) || KJ.SCENARIOS[0];
   };
@@ -9542,7 +9567,7 @@ function features() {
  *    여기서 임의로 다르게 두면 같은 시나리오인데 이 화면만 다른 수치를 낸다.
  */
 const PARAMS = [
-  { k: 'sc',    d: 'sc3',   t: 'str',  h: '시나리오 (sc1|sc2|sc3)' },
+  { k: 'sc',    d: 'sc3',   t: 'str',  h: '시나리오 (sc1|sc2|sc3|sc3s — sc3s는 남부 배분비 0.5 변형)' },
   // ── 배치: 고정 상수 → **파라미터로 되돌렸다**(사용자 결정 2026-09-10) ────────────────
   // 위 주석이 예약해 둔 「필요해지면 상수를 파라미터로 되돌린다」를 실행한 것이다.
   //

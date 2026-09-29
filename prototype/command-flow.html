@@ -1087,7 +1087,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20260929b';
+const V = '?v=20260929c';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -1503,7 +1503,7 @@ function features() {
  *    여기서 임의로 다르게 두면 같은 시나리오인데 이 화면만 다른 수치를 낸다.
  */
 const PARAMS = [
-  { k: 'sc',    d: 'sc3',   t: 'str',  h: '시나리오 (sc1|sc2|sc3)' },
+  { k: 'sc',    d: 'sc3',   t: 'str',  h: '시나리오 (sc1|sc2|sc3|sc3s — sc3s는 남부 배분비 0.5 변형)' },
   // ── 배치: 고정 상수 → **파라미터로 되돌렸다**(사용자 결정 2026-09-10) ────────────────
   // 위 주석이 예약해 둔 「필요해지면 상수를 파라미터로 되돌린다」를 실행한 것이다.
   //

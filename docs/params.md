@@ -181,6 +181,18 @@
 - **신뢰도 등급**: **C** — 개념 설정
 - **MC 적용방식**: 결정적
 
+### [IADS-COAL-01] 한미 교전 협조 계선·매체 (rokUsfkCoordination, ADR-105)
+- **값**: 미군 C2(THAAD C2·Patriot C2) ↔ 한국군 전역 결심 C2(As-Is KAMDOC·MCRC / To-Be IAOC) 양방향 `coord` 계선 · 매체 기본 음성 = C2-VOICE-COORD-01(Normal(20, σ5)) 재사용
+- **출처**: 연합 방공에서 한미 C2가 음성으로 교전을 협조한다는 일반 이해. 계선 존재와 매체는 구조 정합 판단이며 실측 근거 없음
+- **적용범위**: `rokUsfkCoordination` ON에서만 카탈로그에 생성(`coalition_coord`). 항적·교전현황·지휘 계선은 열지 않음(ADR-036 승계)
+- **신뢰도**: C
+
+### [IADS-COAL-02] 협조 생략 마감 여유·회신 시한 (coalitionDeadlineMarginSec·coalitionTimeoutSec, ADR-105)
+- **값**: 마감 여유 45초(잔여 요격 창이 이보다 짧으면 협조 없이 발사) · 회신 시한 90초(이 안에 회신이 없으면 협조 없이 진행)
+- **출처**: 음성 왕복 2×20초 + 처리 5초에서 파생(마감 여유) · 왕복 상한의 2배(시한). 개념값
+- **적용범위**: 두 값은 민감도 노브(features). 마감 여유를 줄이면 중복교전이 늘고, 늘리면 협조 없이 놓치는 창이 늘어난다
+- **신뢰도**: C
+
 ### [IADS-CUE-GAIN-01] 큐 획득 이득 (cueAcquisitionGain, ADR-104 B-3)
 - **값/분포**: 0 (기본 · 이득 없음). 스윕 0 / 0.3 / 0.5 — 큐 도착 포대 MFR의 `transitionTime.detectToTrack`·`trackToFireControl`을 (1 − gain)배
 - **단위**: 비율

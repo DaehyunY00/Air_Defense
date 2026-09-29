@@ -94,6 +94,7 @@ var suites = [
   ,['directive-issue-time.test.mjs', 'ADR-096 교전명령 발령 작업 (OFF 골든·발령=명령 건수·체계성분 7.5초·재발령 계상·로그 결과 표시)']
   ,['ballistic-report-source.test.mjs', 'ADR-103 탄도 시작 보고원 고정 (OFF 골든·그린파인 시작·MCRC 경유 0·비탄도/USFK 보고 불변·관측 순수성·미획득 증거 계정·DOWN 배치)']
   ,['standby-cue.test.mjs', 'ADR-104 사전대기 큐·긴급발사 (bsrc 없이 동역학 불변·위협당 1회·자격 포대·큐 전 발사 0·자기 MFR 사통·이중 발사 0·자위권 배제·C2 도착 불변·gain 0 전이 동일·계정 대사)']
+  ,['rok-usfk-coordination.test.mjs', 'ADR-105 한미 교전 협조(음성) (OFF bit-exact·coord 계선만·음성 교신·요청↔접수↔회신·양보 준수·한국군 배정>0·계정 대사·관측 순수성)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

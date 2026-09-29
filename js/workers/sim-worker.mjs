@@ -9,7 +9,7 @@ const classicModules = [
   '../config/system-types.js?v=20260902c', '../config/geo-mdl.js?v=20260902c', '../config/deployments.js?v=20260902c',
   '../data/nodes.js?v=20260902c', '../data/links.js?v=20260902c', '../data/threats.js?v=20260902c', '../data/scenarios.js?v=20260902c', '../data/axes.js?v=20260902c',
   '../config/deployment-adapter.js?v=20260902c', '../core/rng.js?v=20260902c', '../core/heap.js?v=20260902c',
-  '../analysis/bottleneck.js?v=20260902c', '../analysis/c2-report.js?v=20260928b', '../engine/sim-engine.js?v=20260928a', '../analysis/mc-runner.js?v=20260902c',
+  '../analysis/bottleneck.js?v=20260902c', '../analysis/c2-report.js?v=20260928b', '../engine/sim-engine.js?v=20260929a', '../analysis/mc-runner.js?v=20260902c',
   '../analysis/transition.js?v=20260902c', '../analysis/overlap-heatmap.js?v=20260902c'
 ];
 

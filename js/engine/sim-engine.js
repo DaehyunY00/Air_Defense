@@ -383,6 +383,23 @@
     // B-3 획득 이득(명시된 근사 — codex filter2 운용 모드 전환의 대체, 근거 없음·등급 C). 기본 0 = 이득 없음.
     this.cueAcquisitionGain = (typeof f.cueAcquisitionGain === 'number' && f.cueAcquisitionGain > 0)
       ? Math.min(0.95, f.cueAcquisitionGain) : 0;
+    // ADR-105: 한미 교전 협조(음성) — 미군 C2(THAAD·Patriot C2)와 한국군 결심 C2(As-Is KAMDOC·MCRC / To-Be
+    // IAOC)가 같은 위협에 대해 「내 최적 사수 제안 → 상대가 자기 최적 사수와 비교 → 회신」을 음성 계선
+    // (C2-VOICE-COORD-01 · Normal(20, σ5))으로 주고받아 **한 위협에 한 사수**를 정한다. 최적이 한국군 자산이면
+    // 미군이 양보하고, 그 반대도 같다. 협조가 늦거나(시한 초과) 요격 창 마감이 임박하면 협조 없이 쏘므로
+    // **중복교전은 여전히 가능**하다(계정에 남긴다). 값은 매체 이름(true = 'voice'). 계선은 어댑터가 깐다
+    // (`coalition_coord`) — 계선이 하나도 없는 배치에서는 켜도 비활성이며 features에 그 사실을 신고한다.
+    // 기본 OFF(불변 규칙 1 · 재기준선 대상). 협조 절차 자체는 C2 서비스 큐를 소모하지 않는다(ADR-104와 같은 규율).
+    this.rokUsfkCoordination = f.rokUsfkCoordination || null;
+    if (this.rokUsfkCoordination === true) this.rokUsfkCoordination = 'voice';
+    var modeForCoal = this.mode;
+    this.coalitionActive = !!(this.rokUsfkCoordination && (this.catalog.links || []).some(function (l) {
+      return l.axis === 'coalition_coord' && l.comm && l.comm[modeForCoal];
+    }));
+    // 마감 임박 판정(초): 잔여 요격 창이 이보다 짧으면 협조를 생략하고 쏜다(음성 왕복 2×20 + 처리 5, 등급 C).
+    this.coalitionDeadlineMarginSec = (typeof f.coalitionDeadlineMarginSec === 'number') ? f.coalitionDeadlineMarginSec : 45;
+    // 회신 시한(초): 이 안에 회신이 없으면 제안자가 협조 없이 진행한다(등급 C).
+    this.coalitionTimeoutSec = (typeof f.coalitionTimeoutSec === 'number') ? f.coalitionTimeoutSec : 90;
     // ADR-063: 표적권역 산포 — 종전에는 같은 축선의 모든 위협이 정확히 같은 한 점으로 향해
     // seed를 바꿔도 착탄점이 불변이었다. ON이면 위협마다 표적권역(disk) 안에서 착탄점을 뽑는다.
     // 반경은 features.targetSpreadKm로 스윕 가능(기본 THREAT-TARGET-DISP-01 = 15km, 등급 C).
@@ -495,6 +512,13 @@
     // wire shape 규율 — 켜졌을 때만 키가 실린다(OFF 골든 불변).
     if (this.threatAimpoints) this.features.threatAimpoints = true;
     if (this.ballisticReportSource) this.features.ballisticReportSource = true; // ADR-103 (OFF wire shape 보존)
+    if (this.rokUsfkCoordination) {   // ADR-105 — 요청했을 때만 신고(OFF wire shape 보존)
+      this.features.rokUsfkCoordination = this.coalitionActive ? this.rokUsfkCoordination : 'disabled_no_coalition_links';
+      if (this.coalitionActive) {
+        this.features.coalitionDeadlineMarginSec = this.coalitionDeadlineMarginSec;
+        this.features.coalitionTimeoutSec = this.coalitionTimeoutSec;
+      }
+    }
     if (this.standbyCue) {   // ADR-104 — 요청했을 때만 신고(OFF wire shape 보존). A 없이 켜면 비활성 사실을 남긴다.
       this.features.standbyCue = this.standbyCueActive ? true : 'disabled_without_ballisticReportSource';
       if (this.standbyCueActive) {
@@ -1791,6 +1815,15 @@
     for (var i = 0; i < ids.length; i++) {
       var entry = threat._cueReady[ids[i]];
       if (entry.fired) continue;
+      // ADR-105: 큐를 낸 결심 C2가 이 위협을 상대 진영에 양보했거나 회신을 기다리는 중이면 그 큐로도 쏘지 않는다
+      // (양보를 지키지 않으면 협조가 무의미하다 — srbm#3 실측: THAAD 발사 뒤 L-SAM 긴급발사로 중복).
+      if (this.coalitionActive && entry.commander) {
+        var cst = threat._coalition && threat._coalition[entry.commander.id];
+        if (cst && (cst.state === 'proposed' || (cst.state === 'ceded' && this._coalitionCededHold(threat, entry.commander, t)))) {
+          if (!entry.coalHeld) { entry.coalHeld = true; this._coalitionStats().standbyHeld++; }   // (위협×포대) 1회만 센다
+          continue;
+        }
+      }
       var shooter = this._nodeById(ids[i]);
       if (!shooter) continue;
       // 싼 사전 점검: 자기 MFR이 FIRE_CONTROL이 아니면 평가하지 않는다(전속 MFR 없는 포대는 층위에 없다).
@@ -2704,6 +2737,207 @@
     }));
   };
 
+  /** ADR-105 진영 판정 — 미군 축(USFK_*)과 그 밖(한국군). 협조는 진영이 다른 결심 C2 사이에서만 일어난다. */
+  function coalForce(axis) { return axis && String(axis).indexOf('USFK') === 0 ? 'usfk' : 'rok'; }
+
+  Simulation.prototype._coalitionStats = function () {
+    return this.global.coalition || (this.global.coalition = {
+      proposals: 0, arrivals: 0, concur: 0, counter: 0, alreadyEngaged: 0, crossed: 0,
+      expired: 0, skippedDeadline: 0, noPeer: 0, holds: 0, resumed: 0,
+      allocatedRok: 0, allocatedUsfk: 0, cededRok: 0, cededUsfk: 0, duplicates: 0, standbyHeld: 0
+    });
+  };
+
+  /** 협조 당사자인가 — 진영의 **전역 결심 C2**만(As-Is KAMDOC·MCRC / To-Be IAOC / 미군 THAAD·Patriot C2). 국지방공·ICC 위임·ECS 자율은 제외. */
+  Simulation.prototype._coalitionApplies = function (commander) {
+    if (!commander || commander.scope !== 'global') return false;
+    var a = commander.axis;
+    return a === 'KAMD' || a === 'MCRC' || a === 'KILL_WEB' || coalForce(a) === 'usfk';
+  };
+
+  /** 이 위협에 대해 협조 계선이 닿는 **상대 진영** 결심 C2들. 계선이 없으면 빈 배열(협조 없음). */
+  Simulation.prototype._coalitionPeers = function (threat, commander) {
+    var self = this, mine = coalForce(commander.axis);
+    return this._resolveIadsCommanders(threat).filter(function (c) {
+      return c.id !== commander.id && self._coalitionApplies(c) && coalForce(c.axis) !== mine &&
+        self._iadsShortestPath(commander.id, c.id, ['coord']) !== null;
+    });
+  };
+
+  /** 상대 C2가 **지금** 자기 포대로 낼 수 있는 최적 후보(순수 평가 — RNG·계정 무관). 없으면 null. */
+  Simulation.prototype._coalitionBest = function (commander, threat, t) {
+    var self = this, best = null;
+    commander.batteryIds.forEach(function (id) {
+      var shooter = self._nodeById(id), ev = self._iadsEvaluate(shooter, threat, t);
+      if (!ev.feasible) return;
+      var r = self.iadsResources[id], ammoRatio = r && r.initialAmmo ? ev.ammo / r.initialAmmo : 0;
+      var load = r && r.maxSimultaneous ? r.active / r.maxSimultaneous : 1;
+      var score = self._iadsWtaScore(ev, shooter, ammoRatio, load, threat);
+      if (!best || score > best.score || (score === best.score && id < best.shooterId)) best = { shooterId: id, score: score, pk: ev.pk };
+    });
+    return best;
+  };
+
+  /**
+   * 결심 진입 게이트 — 협조 상태에 따라 물러서거나 기다린다.
+   *  · proposed: 회신 대기(시한을 넘겼으면 협조 없이 진행 — expired 계상)
+   *  · ceded: 상대 진영의 계획이 살아 있으면 물러선다(deconflicted 계상 · 10초 뒤 재확인). 상대가 놓쳤으면(계획 종결) 재개.
+   */
+  Simulation.prototype._coalitionPreGate = function (threat, commander, t) {
+    var st = threat._coalition && threat._coalition[commander.id];
+    if (!st) return 'go';
+    var sc = this._coalitionStats(), self = this;
+    if (st.state === 'proposed') {
+      if (t + 1e-9 >= st.expiresAt) {
+        sc.expired++;
+        st.state = 'cleared';
+        this._mark(threat, '연합협조시한초과:' + commander.typeId + '(' + this.coalitionTimeoutSec + '초)', t, axisOf(commander));
+        return 'go';
+      }
+      return 'wait';
+    }
+    if (st.state === 'ceded') {
+      var hold = this._coalitionCededHold(threat, commander, t);
+      if (hold) {
+        this.global.coordAttempts++; this.global.deconflicted++; sc.holds++;
+        this._scheduleIadsRetry(threat, commander, t + 10);
+        return 'ceded';
+      }
+      delete threat._coalition[commander.id];
+      sc.resumed++;
+      this._mark(threat, '연합협조재개:' + commander.typeId + '(상대 계획 종결·시한)', t, axisOf(commander));
+      return 'go';
+    }
+    return 'go';   // 'cleared' — 아래 _coalitionGate가 소비한다
+  };
+
+  /**
+   * 양보 상태가 아직 유효한가 — 상대 진영의 계획이 살아 있으면 참. 상대 계획이 **아직 생기지 않은** 동안
+   * (회신이 음성 계선을 되짚어 가는 20초 안팎)도 시한(coalitionTimeoutSec) 안에서는 참으로 본다 —
+   * 그렇지 않으면 양보 직후 「상대 계획 종결」로 오판해 되살아난다(srbm#3 실측 226.0 → 226.9초).
+   * 상대 계획이 한 번 생겼다가 종결(명중·실패·해제)됐거나 시한이 지나도록 생기지 않으면 거짓 → 재개.
+   */
+  Simulation.prototype._coalitionCededHold = function (threat, commander, t) {
+    var st = threat._coalition && threat._coalition[commander.id];
+    if (!st || st.state !== 'ceded') return false;
+    var self = this, mine = coalForce(commander.axis), seen = false, active = false;
+    (threat._iadsPlans || []).forEach(function (p) {
+      if (coalForce(p.commander.axis) === mine) return;
+      if (p.createdAt >= (st.cededAt || 0) - 1e-9) seen = true;
+      if (self._iadsActivePlan(p)) active = true;
+    });
+    if (active) return true;
+    if (!seen && t < (st.cededAt || 0) + this.coalitionTimeoutSec) return true;
+    return false;
+  };
+
+  /**
+   * 제안 게이트 — 내 최적 사수가 정해진 뒤. 'cleared'면 소비하고 진행, 상대가 없으면 진행,
+   * 마감 임박이면 생략하고 진행(skippedDeadline), 아니면 상대 진영 전원에게 음성 제안을 보내고 기다린다.
+   */
+  Simulation.prototype._coalitionGate = function (threat, commander, chosen, t) {
+    threat._coalition = threat._coalition || {};
+    var st = threat._coalition[commander.id], sc = this._coalitionStats(), self = this;
+    if (st && st.state === 'cleared') { delete threat._coalition[commander.id]; return 'go'; }
+    var peers = this._coalitionPeers(threat, commander);
+    if (!peers.length) { sc.noPeer++; return 'go'; }
+    var gw = this._iadsGeometryWindow(chosen.shooter, threat);
+    if (gw && gw.lastFire - t < this.coalitionDeadlineMarginSec) {
+      sc.skippedDeadline++;
+      this._mark(threat, '연합협조생략:' + commander.typeId + '(마감 ' + Math.max(0, Math.round(gw.lastFire - t)) + '초 전)', t, axisOf(commander));
+      return 'go';
+    }
+    var proposal = { fromId: commander.id, fromAxis: commander.axis, shooterId: chosen.shooter.id,
+      score: chosen.score, pk: chosen.pk, at: t };
+    peers.forEach(function (peer) {
+      var path = self._iadsShortestPath(commander.id, peer.id, ['coord']), delay = 0;
+      path.forEach(function (l) {
+        var comm = l.comm[self.mode], d = self._linkDelay(comm);
+        self._recordLink(l.from, l.to, comm, 'coord', { threat: threat, t0: t + delay, delay: d });
+        delay += d;
+      });
+      sc.proposals++;
+      self._mark(threat, '연합협조요청:' + commander.typeId + '→' + peer.typeId + '(' + chosen.shooter.id + ')', t, axisOf(commander));
+      self.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_COALITION_ARRIVE',
+        { threat: threat, from: commander, to: peer, proposal: proposal });
+    });
+    threat._coalition[commander.id] = { state: 'proposed', proposal: proposal, pending: peers.length,
+      expiresAt: t + this.coalitionTimeoutSec };
+    this._scheduleIadsRetry(threat, commander, t + this.coalitionTimeoutSec);
+    return 'wait';
+  };
+
+  /** 제안 도착(상대 C2) — 자기 최적 후보와 비교해 판정하고 같은 계선을 되짚어 회신한다. */
+  Simulation.prototype._onIadsCoalitionArrive = function (t, d) {
+    var threat = d.threat, peer = d.to, from = d.from, self = this;
+    if (!threat.alive || threat.pipelineDead) return;
+    var sc = this._coalitionStats();
+    sc.arrivals++;
+    this._mark(threat, '연합협조접수:' + peer.typeId + '←' + from.typeId + '(' + d.proposal.shooterId + ')', t, axisOf(peer));
+    threat._coalition = threat._coalition || {};
+    var mine = threat._coalition[peer.id], verdict, decideNow = false;
+    var engaged = (threat._iadsPlans || []).some(function (p) { return p.commander.id === peer.id && self._iadsActivePlan(p); });
+    if (engaged) {
+      verdict = 'already_engaged'; sc.alreadyEngaged++;
+    } else if (mine && mine.state === 'proposed') {
+      // 교차 — 양쪽이 동시에 제안했다. 두 제안의 점수로 대칭 판정(같으면 id 사전순)하므로 회신을 기다리지 않아도
+      // 서로 같은 답을 낸다. 상대의 제안이 내게 닿은 이 순간 판정하고, 내 제안이 상대에게 닿을 때 상대도 같은 판정을 한다.
+      sc.crossed++;
+      var iWin = mine.proposal.score > d.proposal.score ||
+        (mine.proposal.score === d.proposal.score && peer.id < from.id);
+      if (iWin) { mine.state = 'cleared'; verdict = 'counter'; decideNow = true; }
+      else { mine.state = 'ceded'; mine.cededTo = from.id; mine.cededAt = t; verdict = 'concur'; }
+    } else {
+      var best = this._coalitionBest(peer, threat, t);
+      if (best && best.score > d.proposal.score) {
+        verdict = 'counter'; sc.counter++;
+        threat._coalition[peer.id] = { state: 'cleared', via: 'counter' };
+        decideNow = true;
+      } else {
+        verdict = 'concur'; sc.concur++;
+        threat._coalition[peer.id] = { state: 'ceded', cededTo: from.id, cededAt: t };
+      }
+    }
+    if (verdict === 'concur') { if (coalForce(peer.axis) === 'usfk') sc.cededUsfk++; else sc.cededRok++; }
+    if (verdict === 'counter') { if (coalForce(peer.axis) === 'usfk') sc.allocatedUsfk++; else sc.allocatedRok++; }
+    // 회신 — 요청이 온 계선을 역방향으로(ADR-093 (b)와 같은 규율 · 지연은 새로 추첨).
+    var fwd = this._iadsShortestPath(from.id, peer.id, ['coord']) || [], delay = 0;
+    for (var i = fwd.length - 1; i >= 0; i--) {
+      var l = fwd[i], comm = l.comm[this.mode], dl = this._linkDelay(comm);
+      this._recordLink(l.to, l.from, comm, 'coord', { threat: threat, t0: t + delay, delay: dl });
+      delay += dl;
+    }
+    var verdictKo = { concur: '동의', counter: '내 자산이 최적', already_engaged: '이미 교전 중' }[verdict];
+    this._mark(threat, '연합협조회신:' + peer.typeId + '→' + from.typeId + '(' + verdictKo + ')', t, axisOf(peer));
+    this.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_COALITION_REPLY',
+      { threat: threat, from: from, to: peer, verdict: verdict });
+    if (decideNow) this._iadsDecide(threat, t, peer);
+  };
+
+  /** 회신 도착(제안자) — 동의면 내 사수로 진행, 상대 자산이 최적이거나 상대가 이미 교전 중이면 양보한다. */
+  Simulation.prototype._onIadsCoalitionReply = function (t, d) {
+    var threat = d.threat, me = d.from, peer = d.to;
+    if (!threat.alive || threat.pipelineDead) return;
+    var st = threat._coalition && threat._coalition[me.id];
+    if (!st || st.state !== 'proposed') return;   // 교차 판정이나 시한 초과로 이미 정리된 제안
+    var sc = this._coalitionStats();
+    st.pending = Math.max(0, (st.pending || 1) - 1);
+    if (d.verdict === 'concur') {
+      if (st.pending > 0) return;   // 다른 상대의 회신도 기다린다
+      st.state = 'cleared';
+      if (coalForce(me.axis) === 'usfk') sc.allocatedUsfk++; else sc.allocatedRok++;
+      this._mark(threat, '연합협조결과:' + me.typeId + ' 배정(' + st.proposal.shooterId + ')', t, axisOf(me));
+      this._iadsDecide(threat, t, me);
+      return;
+    }
+    st.state = 'ceded'; st.cededTo = peer.id; st.cededAt = t;
+    if (coalForce(me.axis) === 'usfk') sc.cededUsfk++; else sc.cededRok++;
+    this.global.coordAttempts++; this.global.deconflicted++;
+    this._mark(threat, '연합양보:' + me.typeId + '→' + peer.typeId + '(' +
+      (d.verdict === 'counter' ? '상대 자산이 최적' : '상대 이미 교전 중') + ')', t, axisOf(me));
+    this._scheduleIadsRetry(threat, me, t + 10);
+  };
+
   Simulation.prototype._iadsDecide = function (threat, t, commander) {
     if (!threat.alive || threat.pipelineDead) return;
     if (threat._firstIadsDecisionT == null) threat._firstIadsDecisionT = t;
@@ -2743,6 +2977,11 @@
       this.global.coordAttempts++;
       this.global.deconflicted++;
       return;
+    }
+    // ADR-105: 한미 협조 상태 — 회신 대기 중이면 기다리고, 상대에게 양보한 위협은 상대 계획이 살아 있는 동안 물러선다.
+    if (this.coalitionActive && this._coalitionApplies(commander)) {
+      var coalPre = this._coalitionPreGate(threat, commander, t);
+      if (coalPre !== 'go') return;
     }
     // ADR-058: 승인 계선 — 계획 수립 전에 승인권한을 해소한다. LOCAL_AD 축(ROK 국지방공)에만
     // 적용된다: 다른 한국군 축은 승인권자가 자기 자신으로 해소되어 경유가 없고(§0-(6) 실측),
@@ -2806,6 +3045,10 @@
         commanderId: commander.id, shooterId: chosen.shooter.id, reason: 'no_command_path'
       });
       return;
+    }
+    // ADR-105: 내 최적 사수가 정해졌다 — 상대 진영에 제안하고 회신을 기다린다(마감 임박이면 생략하고 쏜다).
+    if (this.coalitionActive && this._coalitionApplies(commander)) {
+      if (this._coalitionGate(threat, commander, chosen, t) === 'wait') return;
     }
     var ledger = threat._c2TrackLedger && threat._c2TrackLedger[commander.id];
     var updates = ledger ? (ledger.sources || []).map(function (source) { return source.lastUpdateAt; })
@@ -3384,6 +3627,10 @@
       });
       this.global.duplicateEngagements++;
       this.global.realDuplicateEngagements++;
+      // ADR-105: 한미 협조가 켜져 있는데도 미군·한국군이 같은 위협에 각각 쏜 건수 — 협조가 늦었거나 생략된 몫.
+      if (this.coalitionActive && coalForce(d.commander.axis) !== coalForce(otherFiredPlan.commander.axis)) {
+        this._coalitionStats().duplicates++;
+      }
       var axes = [d.commander.axis, otherFiredPlan.commander.axis];
       if (axes.indexOf('MCRC') !== -1 && axes.indexOf('LOCAL_AD') !== -1) {
         this.global.statusSharing.duplicatesDueToStaleState++;
@@ -3774,6 +4021,8 @@
       case 'IADS_RETRY': this._onIadsRetry(ev.t, ev.data); break;
       case 'IADS_EW_UPDATE': this._onIadsEwUpdate(ev.t, ev.data); break;
       case 'IADS_CUE_ARRIVE': this._onIadsCueArrive(ev.t, ev.data); break;   // ADR-104
+      case 'IADS_COALITION_ARRIVE': this._onIadsCoalitionArrive(ev.t, ev.data); break;   // ADR-105
+      case 'IADS_COALITION_REPLY': this._onIadsCoalitionReply(ev.t, ev.data); break;     // ADR-105
       case 'IADS_FIRE': this._onIadsFire(ev.t, ev.data); break;
       case 'IADS_BDA': this._onIadsBda(ev.t, ev.data); break;
       case 'IADS_RELOAD': this._onIadsReload(ev.t, ev.data); break;
@@ -4030,6 +4279,7 @@
     if (this.highResolutionDeployment) {
       result.global.commanderAssignments = this.global.commanderAssignments;
       if (this.standbyCueActive) result.global.standbyCue = this._standbyCueStats();   // ADR-104 (ON에서만 노출)
+      if (this.coalitionActive) result.global.coalition = this._coalitionStats();       // ADR-105 (ON에서만 노출)
       result.global.failureSummary = {
         primary: this.global.failurePrimary,
         contributors: this.global.failureContributors,

@@ -204,9 +204,13 @@
     // 캐시 키에 들어가므로 OFF 카탈로그는 종전과 물리적으로 같은 객체다.
     var usfkShare = (opts && opts.usfkTrackSharing) || null;
     var decParity = !!(opts && opts.c2DecisionTimeParity); // ADR-099 (옵트인 — 캐시 키 분리)
+    // ADR-105: 한미 교전 협조 계선(음성) — 명시적으로 켤 때만(반사실과 같은 규율). 값은 매체 이름.
+    var coal = (opts && opts.rokUsfkCoordination) || null;
+    if (coal === true) coal = 'voice';
     var cacheKey = id + (v2 ? '|linkV2' : '') + (appr ? '|appr' : '') +
       (southern ? '|south' : '') + (parity ? '|rp' : '') + (opLevel ? '|op:' + opLevel : '') +
-      (kvmf ? '|kvmf' : '') + (usfkShare ? '|usfkshare:' + usfkShare : '') + (decParity ? '|decpar' : '');
+      (kvmf ? '|kvmf' : '') + (usfkShare ? '|usfkshare:' + usfkShare : '') + (decParity ? '|decpar' : '') +
+      (coal ? '|coal:' + coal : '');
     if (cache[cacheKey]) return cache[cacheKey];
     var deployment = KJ.deploymentById(id);
     if (!deployment) throw new Error('Unknown high-resolution deployment: ' + id);
@@ -547,6 +551,41 @@
       });
     }
 
+    // ── ADR-105 한미 교전 협조 계선 (rokUsfkCoordination) ─────────────────────────
+    //
+    // ADR-036·085는 미군 축과 한국군 계통 사이에 **지휘·협조 계선을 한 가닥도** 두지 않았다 —
+    // 그 결과 같은 탄도탄을 KAMDOC과 THAAD C2가 각자 결심해 서로 모르는 채 쏘거나(중복교전)
+    // 먼저 쏜 쪽이 그냥 이기는 구조였다(srbm#3 실측: THAAD 216초 발사, KAMDOC은 277초까지 모름).
+    // 실제 연합 방공에서는 한미 C2가 **음성으로 협조**해 최적 자산을 정한다. 이 플래그는 그
+    // 협조 계선만 깐다 — 양방향 coord, 매체 기본 음성(C2-VOICE-COORD-01 · Normal(20, σ5) 재사용).
+    //
+    // 여는 것: 미군 C2(THAAD C2·Patriot C2) ↔ 한국군 결심 C2 사이 **coord 계선**.
+    //   As-Is: KAMDOC(탄도)·MCRC(공중) · To-Be: IAOC.
+    // 열지 않는 것: 항적 공유(report — usfkTrackSharing의 몫) · 교전현황(status) · 지휘권(각자 자기 포대만).
+    // 엔진(sim-engine.js `_coalitionGate`)이 이 계선으로 「내 최적 사수 제안 → 상대 평가 → 회신」을
+    // 주고받아 한 위협에 한 사수를 정한다. 협조가 늦거나 마감이 임박하면 협조 없이 쏘므로 중복교전은
+    // 여전히 가능하고, 최적 사수가 한국군 자산이면 미군 축이 양보한다.
+    if (coal) {
+      var coalComm = {
+        voice: VOICE, datalink: C2_TRANSFER, ifcn: IFCN, chat: CHAT_TRACK, 'voice-vtc': VOICE_STATUS
+      }[coal];
+      if (!coalComm) throw new Error('알 수 없는 rokUsfkCoordination 매체: ' + coal);
+      var coalUsfk = nodes.filter(function (n) {
+        return n.category === 'c2' && n.forceOwner === 'USFK' && n.typeId !== 'ECS';
+      });
+      var coalAsisPeers = [mcrc, kamdoc].filter(Boolean);
+      coalUsfk.forEach(function (u) {
+        coalAsisPeers.forEach(function (p) {
+          addLink(links, u.id, p.id, 'coord', coalComm, null, 'coalition_coord');
+          addLink(links, p.id, u.id, 'coord', coalComm, null, 'coalition_coord');
+        });
+        if (iaoc) {
+          addLink(links, u.id, iaoc.id, 'coord', null, coalComm, 'coalition_coord');
+          addLink(links, iaoc.id, u.id, 'coord', null, coalComm, 'coalition_coord');
+        }
+      });
+    }
+
     // ⚠️ resolveRoleId는 **등록되지 않은 키를 그대로 반환한다**. 그 값은 nodeId가 아니므로
     //    엔진의 `!this.nodeState[approvalId]` 가드(sim-engine.js)에 걸려 "승인 불필요"로
     //    조용히 처리된다 — 승인 단계가 사라지는데 실행은 성공한다. 그래서 데이터(threats.js)가
@@ -657,6 +696,8 @@
         // 다른 플래그와 달리 `!== false`가 아니라 truthy 검사인 이유: 이것은 기본값 전환이
         // 아니라 반사실이라, 키가 없는 호출에서 조용히 켜지면 안 된다.
         usfkTrackSharing: features.usfkTrackSharing || null,
+        // ADR-105: 한미 교전 협조 계선 — 명시적으로 켤 때만(truthy · 매체 이름 또는 true=voice).
+        rokUsfkCoordination: features.rokUsfkCoordination || null,
         // ADR-058 동반 스윕: 운용자 처리시간 high/mid/low (기본 mid — 종전 동일)
         c2OperatorLevel: features.c2OperatorLevel === 'high' || features.c2OperatorLevel === 'low'
           ? features.c2OperatorLevel : null,

@@ -4293,6 +4293,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // B-3 획득 이득(명시된 근사 — codex filter2 운용 모드 전환의 대체, 근거 없음·등급 C). 기본 0 = 이득 없음.
     this.cueAcquisitionGain = (typeof f.cueAcquisitionGain === 'number' && f.cueAcquisitionGain > 0)
       ? Math.min(0.95, f.cueAcquisitionGain) : 0;
+    // ADR-106: 책임 C2 보고 재시도 — 어떤 책임 C2의 시작 보고가 **상관 실패**로 비었을 때, 종전에는 다른 센서가
+    // 새로 획득하는 사건이 올 때까지 그 C2로의 라우팅을 다시 시도하지 않았다(srbm#3: AN/TPY-2 46.8초 탐지 →
+    // THAAD C2 상관 실패 → L-SAM MFR 획득 150.6초에야 재시도·성공 = 104초 지연). ON이면 상관 실패로 빈 C2가
+    // 하나라도 남아 있는 한 CORRELATION_RETRY_SECONDS(5초) 경계마다 그 항적의 라우팅을 다시 돈다(상관 시도
+    // 창이 5초 단위라 5초 안에는 결과가 바뀌지 않는다). 이미 키가 잡힌 C2는 종전 가드로 건너뛰므로 중복 보고는
+    // 없다. 전 C2가 빈 경우의 종전 재시도(retryCorrelation)는 그대로 두고 그 위에 얹는다. RNG 순서: 재시도가
+    // 성공하면 계선 지연 추출이 앞당겨져 결과가 달라진다 — 기본 OFF(불변 규칙 1 · 재기준선 대상).
+    this.commanderRouteRetry = ff('commanderRouteRetry', false);
     // ADR-105: 한미 교전 협조(음성) — 미군 C2(THAAD·Patriot C2)와 한국군 결심 C2(As-Is KAMDOC·MCRC / To-Be
     // IAOC)가 같은 위협에 대해 「내 최적 사수 제안 → 상대가 자기 최적 사수와 비교 → 회신」을 음성 계선
     // (C2-VOICE-COORD-01 · Normal(20, σ5))으로 주고받아 **한 위협에 한 사수**를 정한다. 최적이 한국군 자산이면
@@ -4436,6 +4444,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         this.features.cueAcquisitionGain = this.cueAcquisitionGain;
       }
     }
+    if (this.commanderRouteRetry) this.features.commanderRouteRetry = true; // ADR-106 (OFF wire shape 보존)
     if (this.c2DecisionTimeParity) this.features.c2DecisionTimeParity = true; // ADR-099
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
@@ -5349,6 +5358,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         }
       });
     }
+    var routeRetryNeeded = false;   // ADR-106
     commanders.forEach(function (commander) {
       commander.batteryIds.forEach(function (id) { threat._eligibleShooterIds[id] = true; });
       var key = commander.id + '|' + commander.scope + '|' + commander.axis;
@@ -5359,9 +5369,27 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         return;
       }
       var report = self._iadsReportBundle(threat, commander);
-      if (!report) return;
+      if (!report) {
+        // ADR-106: 이 C2의 보고가 **이번 호출의 상관 실패**로 비었으면 재시도를 예약한다(플래그 OFF면 무동작).
+        if (self.commanderRouteRetry && self.iadsSensorPhysics && threat._iadsCorrelationFailedAt === self.now) {
+          routeRetryNeeded = true;
+          if (!threat._iadsRouteRetryPending) threat._iadsRouteRetryPending = {};
+          if (!threat._iadsRouteRetryPending[key]) {
+            threat._iadsRouteRetryPending[key] = t;
+            self._routeRetryStats().commandersDeferred++;
+          }
+        }
+        return;
+      }
       threat._iadsCommanderKeys[key] = true;
       threat._iadsCorrelationFailedAt = null;
+      if (self.commanderRouteRetry && threat._iadsRouteRetryPending && threat._iadsRouteRetryPending[key] != null) {
+        // ADR-106: 재시도로 살아난 C2 — 최초 실패 시각부터의 회복 지연을 계상하고 표에 남긴다.
+        var rr = self._routeRetryStats(), waited = t - threat._iadsRouteRetryPending[key];
+        rr.commandersRecovered++; rr.recoveryDelaySum += waited; rr.recoveryDelayMax = Math.max(rr.recoveryDelayMax, waited);
+        self._mark(threat, '보고재시도회복:' + commander.typeId + '(' + waited.toFixed(1) + 's)', t, axisOf(commander));
+        delete threat._iadsRouteRetryPending[key];
+      }
       if (self._bsrcApplies(threat, commander) && !threat._bsrcStarted) {   // ADR-103: 그린파인 시작 보고 계상
         threat._bsrcStarted = true;
         self.global.trackFusion.ballisticEwStarted = (self.global.trackFusion.ballisticEwStarted || 0) + 1;
@@ -5403,6 +5431,11 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       // ADR-078: 같은 시각에 도메인 제대에도 배포한다(직렬 중계가 아니라 병렬 통보).
       self._fanoutDomainEchelon(threat, commander, track, t + delay);
     });
+    if (this.commanderRouteRetry) {   // ADR-106: 다음 상관 창 경계에 재시도(없으면 예약 해제)
+      threat._iadsRouteRetryAt = routeRetryNeeded
+        ? Math.floor(t / KJ.IADS.CORRELATION_RETRY_SECONDS + 1) * KJ.IADS.CORRELATION_RETRY_SECONDS : null;
+      if (routeRetryNeeded) this._routeRetryStats().scheduled++;
+    }
     if (!Object.keys(threat._iadsCommanderKeys).length) {
       if (this.iadsSensorPhysics && threat._iadsCorrelationFailedAt != null) {
         threat.leakReason = 'correlation_failed';
@@ -5522,7 +5555,11 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var noCommanderTrack = !threat._iadsCommanderKeys || !Object.keys(threat._iadsCommanderKeys).length;
     var retryCorrelation = threat.detected && noCommanderTrack && threat.leakReason === 'correlation_failed' &&
       t >= (threat._nextIadsCorrelationRetry || Infinity);
-    if (threat.detected && (acquiredNow || retryCorrelation)) {
+    // ADR-106: 일부 책임 C2만 상관 실패로 빈 경우의 재시도(OFF면 항상 false — 종전 조건 자구 그대로).
+    var retryRoute = this.commanderRouteRetry && threat.detected && threat._iadsRouteRetryAt != null &&
+      t >= threat._iadsRouteRetryAt;
+    if (retryRoute) this._routeRetryStats().attempts++;
+    if (threat.detected && (acquiredNow || retryCorrelation || retryRoute)) {
       this._routeIadsDetected(threat, t);
       if (threat._iadsCommanderKeys && Object.keys(threat._iadsCommanderKeys).length &&
           (threat.leakReason === 'no_report_path' || threat.leakReason === 'correlation_failed')) {
@@ -6649,6 +6686,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 
   /** ADR-105 진영 판정 — 미군 축(USFK_*)과 그 밖(한국군). 협조는 진영이 다른 결심 C2 사이에서만 일어난다. */
   function coalForce(axis) { return axis && String(axis).indexOf('USFK') === 0 ? 'usfk' : 'rok'; }
+
+  // ADR-106: 책임 C2 보고 재시도 계정(ON에서만 생성·노출).
+  Simulation.prototype._routeRetryStats = function () {
+    return this.global.routeRetry || (this.global.routeRetry = {
+      scheduled: 0, attempts: 0, commandersDeferred: 0, commandersRecovered: 0,
+      recoveryDelaySum: 0, recoveryDelayMax: 0
+    });
+  };
 
   Simulation.prototype._coalitionStats = function () {
     return this.global.coalition || (this.global.coalition = {
@@ -8190,6 +8235,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       result.global.commanderAssignments = this.global.commanderAssignments;
       if (this.standbyCueActive) result.global.standbyCue = this._standbyCueStats();   // ADR-104 (ON에서만 노출)
       if (this.coalitionActive) result.global.coalition = this._coalitionStats();       // ADR-105 (ON에서만 노출)
+      if (this.commanderRouteRetry) result.global.routeRetry = this._routeRetryStats();  // ADR-106 (ON에서만 노출)
       result.global.failureSummary = {
         primary: this.global.failurePrimary,
         contributors: this.global.failureContributors,
@@ -9469,6 +9515,7 @@ function features() {
     ballisticReportSource: P.bsrc, // ADR-103 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-28, ADR-103 §프로토타입 기본값)
     standbyCue: P.cue,             // ADR-104 — 〃 (이 화면만 기본 ON · bsrc=0이면 엔진이 비활성으로 신고 — 상태줄 경고 칩)
     cueAcquisitionGain: P.cuegain > 0 ? P.cuegain : undefined, // ADR-104 B-3 획득 이득(기본 0 = 없음 · 명시된 근사)
+    commanderRouteRetry: P.rr,     // ADR-106 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 요청 2026-09-29)
     rokUsfkCoordination: P.coal ? 'voice' : null, // ADR-105 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-29)
     ballisticLaunchAxes: P.lx,   // ADR-091 — 〃
     threatAimpoints: P.aim,      // ADR-097 — 〃 (이 화면만 기본 켜짐)
@@ -9580,6 +9627,10 @@ const PARAMS = [
   //    최적이 한국군 자산이면 미군이 양보한다. 마감 임박(잔여 창 45초 미만)이면 협조 없이 쏘고, 큐 기반
   //    긴급발사도 양보 상태를 지킨다. **엔진 기본 OFF · 이 화면만 기본 ON**(사용자 결정 2026-09-29). 끄려면 ?coal=0.
   { k: 'coal',  d: 1,       t: 'bool', h: '한미 교전 협조(음성) — THAAD·Patriot C2 ↔ KAMDOC·MCRC/IAOC가 최적 사수를 협조해 정함, 마감 임박·시한 초과면 협조 없이 발사 (ADR-105 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  // ── rr(ADR-106): 책임 C2 보고 재시도. 어떤 책임 C2의 시작 보고가 상관 실패로 비면 종전에는 다른 센서의 신규 획득
+  //    사건이 올 때까지 그 C2 라우팅을 다시 시도하지 않았다(srbm#3: AN/TPY-2 46.8초 탐지 → THAAD C2 인지 150.6초).
+  //    켜면 5초(상관 시도 창) 경계마다 재시도한다. **엔진 기본 OFF · 이 화면만 기본 ON**(사용자 요청 2026-09-29). 끄려면 ?rr=0.
+  { k: 'rr',    d: 1,       t: 'bool', h: '책임 C2 보고 재시도 — 상관 실패로 시작 보고가 빈 C2를 5초마다 다시 라우팅 (ADR-106 · THAAD C2 인지 지연 해소 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   // ── lx: 이 화면만 **기본 ON**으로 되돌린다(사용자 결정 2026-09-10 — 「출발점은 모든 배치에서
   //    수정」). 2026-09-01에 기본 OFF로 내렸던 결정을 뒤집는 것이라, 근거를 남긴다.
   //
@@ -9689,6 +9740,7 @@ function activeConfigChips() {
   // ew·lx·floor는 엔진 기본 OFF(이 화면도 기본 OFF) — 켜져 있으면 표기한다.
   if (P.ew) out.push('조기경보 보고 ON');
   if (P.coal) out.push('한미 음성 협조 ON');
+  if (P.rr) out.push('보고 재시도 ON');
   if (INTENSITY.x !== 1) out.push('강도 ×' + INTENSITY.x);
   if (P.bsrc) out.push('탄도 보고원 그린파인 ON');
   if (P.cue && !P.bsrc) out.push('⚠ 사전대기 큐 비활성 — bsrc=0');
@@ -10309,6 +10361,12 @@ function markView(name, trk, axis) {
   if ((m = /^긴급발사:(.+)$/.exec(name))) {
     return { text: '긴급발사 — ' + nodeName(m[1]) + ' · 정식 명령 전 자기 사통 발사', cls: 'shot', raw: name,
       sub: '사전대기 큐만 받은 상태에서 자기 MFR 사격통제·PIP·잔탄이 갖춰져 쏨(ADR-104 ②)' };
+  }
+  // ── ADR-106: 책임 C2 보고 재시도 회복 ── `보고재시도회복:<C2>(<대기>s)`. 상관 실패로 비어 있던 시작 보고가
+  //    재시도로 살아난 시점. 같은 시각의 「책임C2:」 마크와 짝이다.
+  if ((m = /^보고재시도회복:([^(]+)\(([\d.]+)s\)$/.exec(name))) {
+    return { text: '보고 재시도 회복 — ' + shortC2(m[1], axis) + ' · 상관 실패 후 ' + m[2] + '초 만에 시작 보고 성립', cls: 'cue', raw: name,
+      sub: '종전에는 다른 센서의 신규 획득까지 이 C2로의 라우팅을 다시 시도하지 않았다(ADR-106)' };
   }
   // ── ADR-105: 한미 교전 협조(음성) ── 요청 → 접수 → 회신 → 결과/양보. 「누가 쏘는가」를 두 진영이 정하는 자리라
   //    로그에서 눈에 띄게 둔다(cls 'coal').

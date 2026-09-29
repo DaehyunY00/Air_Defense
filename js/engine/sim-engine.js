@@ -383,6 +383,14 @@
     // B-3 획득 이득(명시된 근사 — codex filter2 운용 모드 전환의 대체, 근거 없음·등급 C). 기본 0 = 이득 없음.
     this.cueAcquisitionGain = (typeof f.cueAcquisitionGain === 'number' && f.cueAcquisitionGain > 0)
       ? Math.min(0.95, f.cueAcquisitionGain) : 0;
+    // ADR-106: 책임 C2 보고 재시도 — 어떤 책임 C2의 시작 보고가 **상관 실패**로 비었을 때, 종전에는 다른 센서가
+    // 새로 획득하는 사건이 올 때까지 그 C2로의 라우팅을 다시 시도하지 않았다(srbm#3: AN/TPY-2 46.8초 탐지 →
+    // THAAD C2 상관 실패 → L-SAM MFR 획득 150.6초에야 재시도·성공 = 104초 지연). ON이면 상관 실패로 빈 C2가
+    // 하나라도 남아 있는 한 CORRELATION_RETRY_SECONDS(5초) 경계마다 그 항적의 라우팅을 다시 돈다(상관 시도
+    // 창이 5초 단위라 5초 안에는 결과가 바뀌지 않는다). 이미 키가 잡힌 C2는 종전 가드로 건너뛰므로 중복 보고는
+    // 없다. 전 C2가 빈 경우의 종전 재시도(retryCorrelation)는 그대로 두고 그 위에 얹는다. RNG 순서: 재시도가
+    // 성공하면 계선 지연 추출이 앞당겨져 결과가 달라진다 — 기본 OFF(불변 규칙 1 · 재기준선 대상).
+    this.commanderRouteRetry = ff('commanderRouteRetry', false);
     // ADR-105: 한미 교전 협조(음성) — 미군 C2(THAAD·Patriot C2)와 한국군 결심 C2(As-Is KAMDOC·MCRC / To-Be
     // IAOC)가 같은 위협에 대해 「내 최적 사수 제안 → 상대가 자기 최적 사수와 비교 → 회신」을 음성 계선
     // (C2-VOICE-COORD-01 · Normal(20, σ5))으로 주고받아 **한 위협에 한 사수**를 정한다. 최적이 한국군 자산이면
@@ -526,6 +534,7 @@
         this.features.cueAcquisitionGain = this.cueAcquisitionGain;
       }
     }
+    if (this.commanderRouteRetry) this.features.commanderRouteRetry = true; // ADR-106 (OFF wire shape 보존)
     if (this.c2DecisionTimeParity) this.features.c2DecisionTimeParity = true; // ADR-099
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
@@ -1439,6 +1448,7 @@
         }
       });
     }
+    var routeRetryNeeded = false;   // ADR-106
     commanders.forEach(function (commander) {
       commander.batteryIds.forEach(function (id) { threat._eligibleShooterIds[id] = true; });
       var key = commander.id + '|' + commander.scope + '|' + commander.axis;
@@ -1449,9 +1459,27 @@
         return;
       }
       var report = self._iadsReportBundle(threat, commander);
-      if (!report) return;
+      if (!report) {
+        // ADR-106: 이 C2의 보고가 **이번 호출의 상관 실패**로 비었으면 재시도를 예약한다(플래그 OFF면 무동작).
+        if (self.commanderRouteRetry && self.iadsSensorPhysics && threat._iadsCorrelationFailedAt === self.now) {
+          routeRetryNeeded = true;
+          if (!threat._iadsRouteRetryPending) threat._iadsRouteRetryPending = {};
+          if (!threat._iadsRouteRetryPending[key]) {
+            threat._iadsRouteRetryPending[key] = t;
+            self._routeRetryStats().commandersDeferred++;
+          }
+        }
+        return;
+      }
       threat._iadsCommanderKeys[key] = true;
       threat._iadsCorrelationFailedAt = null;
+      if (self.commanderRouteRetry && threat._iadsRouteRetryPending && threat._iadsRouteRetryPending[key] != null) {
+        // ADR-106: 재시도로 살아난 C2 — 최초 실패 시각부터의 회복 지연을 계상하고 표에 남긴다.
+        var rr = self._routeRetryStats(), waited = t - threat._iadsRouteRetryPending[key];
+        rr.commandersRecovered++; rr.recoveryDelaySum += waited; rr.recoveryDelayMax = Math.max(rr.recoveryDelayMax, waited);
+        self._mark(threat, '보고재시도회복:' + commander.typeId + '(' + waited.toFixed(1) + 's)', t, axisOf(commander));
+        delete threat._iadsRouteRetryPending[key];
+      }
       if (self._bsrcApplies(threat, commander) && !threat._bsrcStarted) {   // ADR-103: 그린파인 시작 보고 계상
         threat._bsrcStarted = true;
         self.global.trackFusion.ballisticEwStarted = (self.global.trackFusion.ballisticEwStarted || 0) + 1;
@@ -1493,6 +1521,11 @@
       // ADR-078: 같은 시각에 도메인 제대에도 배포한다(직렬 중계가 아니라 병렬 통보).
       self._fanoutDomainEchelon(threat, commander, track, t + delay);
     });
+    if (this.commanderRouteRetry) {   // ADR-106: 다음 상관 창 경계에 재시도(없으면 예약 해제)
+      threat._iadsRouteRetryAt = routeRetryNeeded
+        ? Math.floor(t / KJ.IADS.CORRELATION_RETRY_SECONDS + 1) * KJ.IADS.CORRELATION_RETRY_SECONDS : null;
+      if (routeRetryNeeded) this._routeRetryStats().scheduled++;
+    }
     if (!Object.keys(threat._iadsCommanderKeys).length) {
       if (this.iadsSensorPhysics && threat._iadsCorrelationFailedAt != null) {
         threat.leakReason = 'correlation_failed';
@@ -1612,7 +1645,11 @@
     var noCommanderTrack = !threat._iadsCommanderKeys || !Object.keys(threat._iadsCommanderKeys).length;
     var retryCorrelation = threat.detected && noCommanderTrack && threat.leakReason === 'correlation_failed' &&
       t >= (threat._nextIadsCorrelationRetry || Infinity);
-    if (threat.detected && (acquiredNow || retryCorrelation)) {
+    // ADR-106: 일부 책임 C2만 상관 실패로 빈 경우의 재시도(OFF면 항상 false — 종전 조건 자구 그대로).
+    var retryRoute = this.commanderRouteRetry && threat.detected && threat._iadsRouteRetryAt != null &&
+      t >= threat._iadsRouteRetryAt;
+    if (retryRoute) this._routeRetryStats().attempts++;
+    if (threat.detected && (acquiredNow || retryCorrelation || retryRoute)) {
       this._routeIadsDetected(threat, t);
       if (threat._iadsCommanderKeys && Object.keys(threat._iadsCommanderKeys).length &&
           (threat.leakReason === 'no_report_path' || threat.leakReason === 'correlation_failed')) {
@@ -2739,6 +2776,14 @@
 
   /** ADR-105 진영 판정 — 미군 축(USFK_*)과 그 밖(한국군). 협조는 진영이 다른 결심 C2 사이에서만 일어난다. */
   function coalForce(axis) { return axis && String(axis).indexOf('USFK') === 0 ? 'usfk' : 'rok'; }
+
+  // ADR-106: 책임 C2 보고 재시도 계정(ON에서만 생성·노출).
+  Simulation.prototype._routeRetryStats = function () {
+    return this.global.routeRetry || (this.global.routeRetry = {
+      scheduled: 0, attempts: 0, commandersDeferred: 0, commandersRecovered: 0,
+      recoveryDelaySum: 0, recoveryDelayMax: 0
+    });
+  };
 
   Simulation.prototype._coalitionStats = function () {
     return this.global.coalition || (this.global.coalition = {
@@ -4280,6 +4325,7 @@
       result.global.commanderAssignments = this.global.commanderAssignments;
       if (this.standbyCueActive) result.global.standbyCue = this._standbyCueStats();   // ADR-104 (ON에서만 노출)
       if (this.coalitionActive) result.global.coalition = this._coalitionStats();       // ADR-105 (ON에서만 노출)
+      if (this.commanderRouteRetry) result.global.routeRetry = this._routeRetryStats();  // ADR-106 (ON에서만 노출)
       result.global.failureSummary = {
         primary: this.global.failurePrimary,
         contributors: this.global.failureContributors,

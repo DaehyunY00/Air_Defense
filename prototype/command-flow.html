@@ -1087,7 +1087,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20260929a';
+const V = '?v=20260929b';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -1476,6 +1476,7 @@ function features() {
     ballisticReportSource: P.bsrc, // ADR-103 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-28, ADR-103 §프로토타입 기본값)
     standbyCue: P.cue,             // ADR-104 — 〃 (이 화면만 기본 ON · bsrc=0이면 엔진이 비활성으로 신고 — 상태줄 경고 칩)
     cueAcquisitionGain: P.cuegain > 0 ? P.cuegain : undefined, // ADR-104 B-3 획득 이득(기본 0 = 없음 · 명시된 근사)
+    commanderRouteRetry: P.rr,     // ADR-106 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 요청 2026-09-29)
     rokUsfkCoordination: P.coal ? 'voice' : null, // ADR-105 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-29)
     ballisticLaunchAxes: P.lx,   // ADR-091 — 〃
     threatAimpoints: P.aim,      // ADR-097 — 〃 (이 화면만 기본 켜짐)
@@ -1587,6 +1588,10 @@ const PARAMS = [
   //    최적이 한국군 자산이면 미군이 양보한다. 마감 임박(잔여 창 45초 미만)이면 협조 없이 쏘고, 큐 기반
   //    긴급발사도 양보 상태를 지킨다. **엔진 기본 OFF · 이 화면만 기본 ON**(사용자 결정 2026-09-29). 끄려면 ?coal=0.
   { k: 'coal',  d: 1,       t: 'bool', h: '한미 교전 협조(음성) — THAAD·Patriot C2 ↔ KAMDOC·MCRC/IAOC가 최적 사수를 협조해 정함, 마감 임박·시한 초과면 협조 없이 발사 (ADR-105 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  // ── rr(ADR-106): 책임 C2 보고 재시도. 어떤 책임 C2의 시작 보고가 상관 실패로 비면 종전에는 다른 센서의 신규 획득
+  //    사건이 올 때까지 그 C2 라우팅을 다시 시도하지 않았다(srbm#3: AN/TPY-2 46.8초 탐지 → THAAD C2 인지 150.6초).
+  //    켜면 5초(상관 시도 창) 경계마다 재시도한다. **엔진 기본 OFF · 이 화면만 기본 ON**(사용자 요청 2026-09-29). 끄려면 ?rr=0.
+  { k: 'rr',    d: 1,       t: 'bool', h: '책임 C2 보고 재시도 — 상관 실패로 시작 보고가 빈 C2를 5초마다 다시 라우팅 (ADR-106 · THAAD C2 인지 지연 해소 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   // ── lx: 이 화면만 **기본 ON**으로 되돌린다(사용자 결정 2026-09-10 — 「출발점은 모든 배치에서
   //    수정」). 2026-09-01에 기본 OFF로 내렸던 결정을 뒤집는 것이라, 근거를 남긴다.
   //
@@ -1696,6 +1701,7 @@ function activeConfigChips() {
   // ew·lx·floor는 엔진 기본 OFF(이 화면도 기본 OFF) — 켜져 있으면 표기한다.
   if (P.ew) out.push('조기경보 보고 ON');
   if (P.coal) out.push('한미 음성 협조 ON');
+  if (P.rr) out.push('보고 재시도 ON');
   if (INTENSITY.x !== 1) out.push('강도 ×' + INTENSITY.x);
   if (P.bsrc) out.push('탄도 보고원 그린파인 ON');
   if (P.cue && !P.bsrc) out.push('⚠ 사전대기 큐 비활성 — bsrc=0');
@@ -2316,6 +2322,12 @@ function markView(name, trk, axis) {
   if ((m = /^긴급발사:(.+)$/.exec(name))) {
     return { text: '긴급발사 — ' + nodeName(m[1]) + ' · 정식 명령 전 자기 사통 발사', cls: 'shot', raw: name,
       sub: '사전대기 큐만 받은 상태에서 자기 MFR 사격통제·PIP·잔탄이 갖춰져 쏨(ADR-104 ②)' };
+  }
+  // ── ADR-106: 책임 C2 보고 재시도 회복 ── `보고재시도회복:<C2>(<대기>s)`. 상관 실패로 비어 있던 시작 보고가
+  //    재시도로 살아난 시점. 같은 시각의 「책임C2:」 마크와 짝이다.
+  if ((m = /^보고재시도회복:([^(]+)\(([\d.]+)s\)$/.exec(name))) {
+    return { text: '보고 재시도 회복 — ' + shortC2(m[1], axis) + ' · 상관 실패 후 ' + m[2] + '초 만에 시작 보고 성립', cls: 'cue', raw: name,
+      sub: '종전에는 다른 센서의 신규 획득까지 이 C2로의 라우팅을 다시 시도하지 않았다(ADR-106)' };
   }
   // ── ADR-105: 한미 교전 협조(음성) ── 요청 → 접수 → 회신 → 결과/양보. 「누가 쏘는가」를 두 진영이 정하는 자리라
   //    로그에서 눈에 띄게 둔다(cls 'coal').

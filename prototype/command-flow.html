@@ -411,6 +411,7 @@
   .ev.fail .x { color: var(--warn); font-weight: 700; }
   .ev.hit .x { color: var(--ok); font-weight: 700; }
   .ev.shot .x { color: var(--accent); }
+  .ev.coal .x { color: #fbbf24; }   /* 한미 협조(음성) — 음성 매체색과 같은 노랑 */
   .ev .t { color: var(--dim); flex: none; width: 52px; text-align: right; font-size: 11px; }
   /* 줄바꿈한다. nowrap+ellipsis 였을 때 노드 이름을 배치 이름으로 푼 뒤로는 거의 모든
      줄이 오른쪽 끝에서 잘려 나갔다 — 「발사 못함 — 천궁-II (BAT_E1) · 요격점(PIP) 미성립」
@@ -928,6 +929,7 @@
   <span id="adv" hidden>
     <label>seed <input id="seed" class="mono" type="number" value="29" style="width:78px"></label>
     <label>관측 <input id="dur" class="mono" type="number" value="1800" step="60" style="width:64px">초</label>
+    <label title="위협 생성 강도 — 시나리오 도착률(λ)의 배수. 1 = 원문 그대로. 본 앱 [시뮬레이션] 탭의 강도 슬라이더와 같은 뜻(ADR-105 동반 · 종전 이 화면은 1로 고정)">강도 ×<input id="x" class="mono" type="number" value="1" min="0.1" max="10" step="0.5" style="width:54px"></label>
   </span>
   <button id="side-toggle" title="왼쪽 자리(패널·지도)를 접고 그래프를 넓게 쓴다">‹ 패널 접기</button>
   <span id="dirty" hidden>⟳ 조건이 바뀌었습니다 — [실행]</span>
@@ -1085,7 +1087,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20260928a';
+const V = '?v=20260929a';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -1474,6 +1476,7 @@ function features() {
     ballisticReportSource: P.bsrc, // ADR-103 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-28, ADR-103 §프로토타입 기본값)
     standbyCue: P.cue,             // ADR-104 — 〃 (이 화면만 기본 ON · bsrc=0이면 엔진이 비활성으로 신고 — 상태줄 경고 칩)
     cueAcquisitionGain: P.cuegain > 0 ? P.cuegain : undefined, // ADR-104 B-3 획득 이득(기본 0 = 없음 · 명시된 근사)
+    rokUsfkCoordination: P.coal ? 'voice' : null, // ADR-105 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-29)
     ballisticLaunchAxes: P.lx,   // ADR-091 — 〃
     threatAimpoints: P.aim,      // ADR-097 — 〃 (이 화면만 기본 켜짐)
     c2DecisionTimeParity: P.par, // ADR-099 — 〃 (이 화면만 기본 켜짐 · codex 정합)
@@ -1545,6 +1548,10 @@ const PARAMS = [
   // 확정 결과보다 관측창이 먼저 끝났다. 분석 보고서도 같은 기본값으로 다시 돌린다.
   // ⚠️ seed 29는 600초 조건에서 고른 재현 예시다(위 주석) — 1800초의 대표 표본이라는 뜻이 아니다.
   { k: 'dur',   d: 1800,    t: 'num',  h: '관측 시간(초 · 기본 1800)' },
+  // ── x: 위협 생성 강도(도착률 배수). 종전에는 이 화면이 1로 **고정**이었다(수치를 비교 조건으로 삼지 않으려는
+  //    뜻) — 사용자 결정 2026-09-29로 [고급 모의설정]에 손잡이를 둔다. 본 앱 강도 슬라이더와 같은 엔진 값
+  //    (`intensity`)이며, 1이 아니면 상태줄 칩 「강도 ×N」이 상시 뜬다. FULL·강도 3 이상은 계산이 오래 걸린다.
+  { k: 'x',     d: 1,       t: 'num',  h: '위협 생성 강도 — 시나리오 도착률 배수 (0.1~10 · 기본 1 · 고급 모의설정에서도 조절)' },
   // 위협 강도는 **×1 고정**이다(사용자 결정). 배율을 바꾸면 같은 화면이 다른 부하의
   // 결과를 같은 모양으로 보여주게 되고, 본 앱 기본값과도 어긋난다. 파라미터를 두지 않는다.
   { k: 'appr',  d: 1,       t: 'bool', h: '교전 협조 계선 — 국지방공 AOC↔MCRC 협조 (ADR-058·065·098)' },
@@ -1575,6 +1582,11 @@ const PARAMS = [
   //    **추기(2026-09-28, 사용자 결정)**: 화면 기본 **ON**(bsrc와 함께). cuegain은 근사라 기본 0 유지. 끄려면 ?cue=0.
   { k: 'cue',   d: 1,       t: 'bool', h: '사전대기 큐 + 긴급발사 — KAMDOC/IAOC 인지 시 상층 포대에 큐, 큐 받은 포대는 정식 명령 전 발사 가능 (ADR-104 · bsrc=1 전제 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   { k: 'cuegain', d: 0,     t: 'num',  h: '큐 획득 이득 0~0.95 — 큐 도착 포대 MFR의 탐지→추적→사통 전이 시간을 (1−gain)배 (ADR-104 B-3 · 명시된 근사 · 기본 0)' },
+  // ── coal(ADR-105): 한미 교전 협조(음성). 미군 C2(THAAD·Patriot C2)와 한국군 결심 C2(KAMDOC·MCRC / IAOC)가
+  //    같은 위협에 「내 최적 사수 제안 → 상대 평가 → 회신」을 음성(20초 ±5)으로 주고받아 한 사수를 정한다.
+  //    최적이 한국군 자산이면 미군이 양보한다. 마감 임박(잔여 창 45초 미만)이면 협조 없이 쏘고, 큐 기반
+  //    긴급발사도 양보 상태를 지킨다. **엔진 기본 OFF · 이 화면만 기본 ON**(사용자 결정 2026-09-29). 끄려면 ?coal=0.
+  { k: 'coal',  d: 1,       t: 'bool', h: '한미 교전 협조(음성) — THAAD·Patriot C2 ↔ KAMDOC·MCRC/IAOC가 최적 사수를 협조해 정함, 마감 임박·시한 초과면 협조 없이 발사 (ADR-105 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   // ── lx: 이 화면만 **기본 ON**으로 되돌린다(사용자 결정 2026-09-10 — 「출발점은 모든 배치에서
   //    수정」). 2026-09-01에 기본 OFF로 내렸던 결정을 뒤집는 것이라, 근거를 남긴다.
   //
@@ -1658,7 +1670,11 @@ function parseCommandFlowParams(params, search) {
 }
 const qs = new URLSearchParams(location.search);
 const P = parseCommandFlowParams(PARAMS, location.search);
-const INTENSITY = 1;             // 고정. 위 PARAMS 주석 참조.
+/** 위협 생성 강도 — URL ?x= 또는 [고급 모의설정] 입력. 0.1~10으로 자른다(ADR-105 동반 · 종전 1 고정).
+ *  ⚠️ 아래 선언문(상수 INTENSITY의 선언 줄)은 tests/command-flow-config.test.mjs가 PARAMS 절의 끝 표지로 읽는다 —
+ *     이름·`const`·형태를 바꾸지 말 것(이 주석에도 그 문자열을 그대로 적으면 표지가 주석에서 먼저 잡혀 절이 잘린다). */
+const clampX = (v) => Math.min(10, Math.max(0.1, Number.isFinite(+v) && +v > 0 ? +v : 1));
+const INTENSITY = { x: clampX(P.x) };
 // 배치는 스위치·URL로 고른다(위 PARAMS 주석). 알 수 없는 값이면 기본으로 떨어뜨린다 —
 // 오타 하나로 조용히 다른 배치의 수치를 보게 두지 않는다.
 let DEPLOYMENT = (KJ.DEPLOYMENT_IDS || []).indexOf(P.dep) >= 0 ? P.dep : 'HANBANDO_FULL_NORMAL';
@@ -1679,6 +1695,8 @@ function activeConfigChips() {
   if (P.uavsd) out.push('무인기 자체교전 ON');
   // ew·lx·floor는 엔진 기본 OFF(이 화면도 기본 OFF) — 켜져 있으면 표기한다.
   if (P.ew) out.push('조기경보 보고 ON');
+  if (P.coal) out.push('한미 음성 협조 ON');
+  if (INTENSITY.x !== 1) out.push('강도 ×' + INTENSITY.x);
   if (P.bsrc) out.push('탄도 보고원 그린파인 ON');
   if (P.cue && !P.bsrc) out.push('⚠ 사전대기 큐 비활성 — bsrc=0');
   if (P.cue && P.bsrc) out.push('사전대기 큐 ON' + (P.cuegain > 0 ? ` (획득이득 ${P.cuegain})` : ''));
@@ -1722,7 +1740,7 @@ function doRun() {
     scenario: KJ.scenarioById(el('sc').value), mode: mode,
     // 본 앱 [시뮬레이션] 탭의 강도 슬라이더와 같은 의미(도착률 배율) — 엔진이 이미
     // 지원하는 값이라 여기서 새 의미를 지어내는 것이 아니다.
-    intensity: INTENSITY,
+    intensity: (INTENSITY.x = clampX(el('x').value)),
     seed: Math.max(0, Math.floor(+el('seed').value || 0)),
     endTimeSec: Math.min(7200, Math.max(60, Math.floor(+el('dur').value || 1800))),
     deploymentId: DEPLOYMENT, modelFidelity: 'iads-c2',
@@ -1790,6 +1808,11 @@ function doRun() {
         `중복교전 ${co.duplicates} · 해소 ${co.deconflicted}</b>` +
         ` <span style="color:var(--dim)" title="상세 기록에서 서로 다른 사수가 같은 항적에 발사한 항적 수. 항적 기록 상한 초과분은 포함하지 않음">` +
         `(${esc(observation.multiFireLabel)})</span>` : '') +
+      // ADR-105: 한미 협조 계정 — 제안·배정·양보·중복. 「미군이 쏜다」가 아니라 「협조로 정했다」가 읽히게 나란히 적는다.
+      (res.global.coalition
+        ? ` · <b style="color:var(--warn)" title="한미 교전 협조(음성) 계정: 제안 · 배정(한국군/미군) · 마감 임박 생략 · 협조가 켜져 있는데도 한미가 각각 쏜 중복">` +
+          `한미 협조 ${res.global.coalition.proposals}건 · 배정 한국군 ${res.global.coalition.allocatedRok} / 미군 ${res.global.coalition.allocatedUsfk}` +
+          ` · 생략 ${res.global.coalition.skippedDeadline} · 중복 ${res.global.coalition.duplicates}</b>` : '') +
       (chips.length ? ` · <b style="color:var(--warn)">${esc(chips.join(' · '))}</b>` : '');
     // 같은 항적을 계속 보게 한다 — 조건을 바꿔 가며 한 항적을 쫓는 것이 이 화면의 쓰임이다.
     if (view === 'track') {
@@ -2293,6 +2316,37 @@ function markView(name, trk, axis) {
   if ((m = /^긴급발사:(.+)$/.exec(name))) {
     return { text: '긴급발사 — ' + nodeName(m[1]) + ' · 정식 명령 전 자기 사통 발사', cls: 'shot', raw: name,
       sub: '사전대기 큐만 받은 상태에서 자기 MFR 사격통제·PIP·잔탄이 갖춰져 쏨(ADR-104 ②)' };
+  }
+  // ── ADR-105: 한미 교전 협조(음성) ── 요청 → 접수 → 회신 → 결과/양보. 「누가 쏘는가」를 두 진영이 정하는 자리라
+  //    로그에서 눈에 띄게 둔다(cls 'coal').
+  if ((m = /^연합협조요청:([^→]+)→([^(]+)\((.+)\)$/.exec(name))) {
+    return { text: '한미 협조 요청 — ' + shortC2(m[1], axis) + ' → ' + shortC2(m[2], axis) + ' · 제안 사수 ' + nodeName(m[3]),
+      cls: 'coal', raw: name, sub: '음성으로 「내 최적 사수」를 제안하고 회신을 기다린다(ADR-105)' };
+  }
+  if ((m = /^연합협조접수:([^←]+)←([^(]+)\((.+)\)$/.exec(name))) {
+    return { text: '한미 협조 접수 — ' + shortC2(m[1], axis) + ' ← ' + shortC2(m[2], axis) + ' · 상대 제안 ' + nodeName(m[3]),
+      cls: 'coal', raw: name, sub: '자기 포대의 최적 후보와 비교해 판정한다' };
+  }
+  if ((m = /^연합협조회신:([^→]+)→([^(]+)\((.+)\)$/.exec(name))) {
+    return { text: '한미 협조 회신 — ' + shortC2(m[1], axis) + ' → ' + shortC2(m[2], axis) + ' · ' + m[3], cls: 'coal', raw: name };
+  }
+  if ((m = /^연합협조결과:([^ ]+) 배정\((.+)\)$/.exec(name))) {
+    return { text: '한미 협조 결과 — ' + shortC2(m[1], axis) + '이(가) 쏜다 · ' + nodeName(m[2]), cls: 'coal', raw: name,
+      sub: '상대가 동의했다 — 정식 사수선정으로 이어진다' };
+  }
+  if ((m = /^연합양보:([^→]+)→([^(]+)\((.+)\)$/.exec(name))) {
+    return { text: '한미 협조 양보 — ' + shortC2(m[1], axis) + ' → ' + shortC2(m[2], axis) + ' · ' + m[3], cls: 'coal', raw: name,
+      sub: '상대 계획이 살아 있는 동안 물러선다 · 상대가 놓치면 재개' };
+  }
+  if ((m = /^연합협조생략:([^(]+)\((.+)\)$/.exec(name))) {
+    return { text: '한미 협조 생략 — ' + shortC2(m[1], axis) + ' · ' + m[2], cls: 'coal', raw: name,
+      sub: '요격 창 마감이 임박해 협조 없이 쏜다 — 중복교전 가능' };
+  }
+  if ((m = /^연합협조재개:([^(]+)\((.+)\)$/.exec(name))) {
+    return { text: '한미 협조 재개 — ' + shortC2(m[1], axis) + ' · ' + m[2], cls: 'coal', raw: name };
+  }
+  if ((m = /^연합협조시한초과:([^(]+)\((.+)\)$/.exec(name))) {
+    return { text: '한미 협조 시한 초과 — ' + shortC2(m[1], axis) + ' · ' + m[2] + ' 안에 회신 없음 → 협조 없이 진행', cls: 'coal', raw: name };
   }
   // ── 발사 ── `발사:<사수>/<발사대>/PIP<거리>km`. 자위권발사는 사수만 물고 꼬리가 없다.
   if ((m = /^(발사|자위권발사):([^/]+)(?:\/(.*))?$/.exec(name))) {
@@ -5615,6 +5669,7 @@ el('dep-full').addEventListener('click', () => setDeployment('HANBANDO_FULL_NORM
 renderDep();
 el('seed').value = String(P.seed);
 el('dur').value = String(P.dur);
+el('x').value = String(INTENSITY.x);
 if (P.mode === 'tobe') setMode('tobe');
 
 el('legend').innerHTML =
@@ -5783,9 +5838,10 @@ function setMode(m) {
 // 실행 조건이 바뀌는 컨트롤은 전부 dirty 표시를 올린다 — 화면 수치가 옛 실행의 것임을
 // 알리지 않으면, 토글만 누르고 바뀐 결과를 본 것으로 오해한다.
 // 상단 바에 남은 컨트롤만 재실행 대상이다(나머지 조건은 URL이라 새로고침으로 바뀐다).
-['sc', 'seed', 'dur'].forEach((id) => {
+['sc', 'seed', 'dur', 'x'].forEach((id) => {
   el(id).addEventListener('change', () => {
     if (id === 'dur') { P.dur = Math.min(7200, Math.max(60, Math.floor(+el('dur').value || 1800))); renderDep(); }
+    if (id === 'x') { INTENSITY.x = clampX(el('x').value); el('x').value = String(INTENSITY.x); renderDep(); }
     markDirty();
   });
 });
@@ -6062,6 +6118,9 @@ function buildRecordEvents(t) {
     } else if (/^발사불가:/.test(name)) {
       const view = markView(name, t, s.axis);
       add(s, 'no-fire', view.text, '발사 전 중단 기록 · 명중 실패와 구분');
+    } else if (/^연합(협조요청|협조접수|협조회신|협조결과|양보|협조생략|협조재개|협조시한초과):/.test(name)) {
+      const view = markView(name, t, s.axis);
+      add(s, 'coalition', view.text, view.sub || '한미 교전 협조 기록(음성 · ADR-105)');
     } else if ((m = /^사전대기큐발행:/.exec(name))) {
       const view = markView(name, t, s.axis);
       add(s, 'cue', view.text, view.sub || '');
@@ -6174,7 +6233,7 @@ function refreshRecordPicker() {
 }
 
 function recordKindName(row) {
-  return ({ 'review-evidence':'관측', transfer:'교신', cue:'큐', selection:'선정', directive:'명령 처리', reassignment:'재배정',
+  return ({ 'review-evidence':'관측', transfer:'교신', cue:'큐', coalition:'한미 협조', selection:'선정', directive:'명령 처리', reassignment:'재배정',
     rejection:'반송', status:'상태 수신', 'status-drop':'교신 중단', 'status-rejected':'상태 미채택',
     'no-fire':'미발사', launch:'발사', result:'결과', exit:'항적 종결', 'observation-end':'관측 종료' })[row.kind] || '기록';
 }

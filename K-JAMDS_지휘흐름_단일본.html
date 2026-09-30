@@ -8255,6 +8255,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       if (this.standbyCueActive) result.global.standbyCue = this._standbyCueStats();   // ADR-104 (ON에서만 노출)
       if (this.coalitionActive) result.global.coalition = this._coalitionStats();       // ADR-105 (ON에서만 노출)
       if (this.commanderRouteRetry) result.global.routeRetry = this._routeRetryStats();  // ADR-106 (ON에서만 노출)
+      if (this.shoradPkRealism) result.global.shoradPkSamples = this.global.shoradPkSamples || 0;  // ADR-107 ② (ON에서만 노출)
       result.global.failureSummary = {
         primary: this.global.failurePrimary,
         contributors: this.global.failureContributors,

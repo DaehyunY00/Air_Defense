@@ -543,6 +543,12 @@
     }
     if (this.commanderRouteRetry) this.features.commanderRouteRetry = true; // ADR-106 (OFF wire shape 보존)
     if (this.shoradCruiseExclusion) this.features.shoradCruiseExclusion = true; // ADR-107 ①
+    if (f.catalogOverlay && typeof f.catalogOverlay === 'object') {   // ADR-108: 객체 대신 적용 요약만 신고
+      var ovl = this.catalog.overlay || {};
+      this.features.catalogOverlay = { nodes: ovl.nodes || 0, links: ovl.links || 0, removed: ovl.removed || 0,
+        unknownNodes: (ovl.unknownNodes || []).length, unknownLinks: (ovl.unknownLinks || []).length,
+        source: f.catalogOverlay.source || null };
+    }
     if (this.shoradPkRealism) this.features.shoradPkRealism = true;             // ADR-107 ②
     if (this.c2DecisionTimeParity) this.features.c2DecisionTimeParity = true; // ADR-099
     this.features.southernAxes = this.southernAxes;
@@ -1182,12 +1188,15 @@
     return out;
   };
 
+  // ADR-108: 덮어쓰기(overlay)가 실린 노드는 자기 제원(typeOverride)을 먼저 본다 — 없으면 종전과 같은 유형표.
+  function sensorSpec(node) { return node ? (node.typeOverride || KJ.SENSOR_TYPES[node.typeId]) : null; }
+  function shooterSpec(node) { return node ? (node.typeOverride || KJ.SHOOTER_TYPES[node.typeId]) : null; }
   function isShorad(shooter) { return !!shooter && (shooter.typeId === 'BIHO' || shooter.typeId === 'CHUNMA'); }
   Simulation.prototype._iadsCanEngage = function (shooter, threat) {
     if (!shooter || !threat) return false;
     if (this.shoradCruiseExclusion && threat.type === 'cruise' && isShorad(shooter)) return false;   // ADR-107 ①
     if (!this.iadsSensorPhysics) return !!(shooter.canEngage && shooter.canEngage[threat.type]);
-    var type = KJ.SHOOTER_TYPES[shooter.typeId];
+    var type = shooterSpec(shooter);
     var allowed = type && type.iadsEngageableThreats;
     return Array.isArray(allowed) && allowed.indexOf(threat.type) !== -1;
   };
@@ -1274,7 +1283,7 @@
 
   /** ADR-103: 탄도 조기경보 레이더인가(role `ballistic_early_warning` — 현재 GREEN_PINE_B/C). */
   function isBallisticEwSensor(sensor) {
-    var st = sensor && KJ.SENSOR_TYPES[sensor.typeId];
+    var st = sensorSpec(sensor);
     return !!(st && /ballistic_early_warning/.test(st.role || ''));
   }
   /** ADR-103: 이 (위협, 책임 C2) 쌍에 시작 보고원 고정이 걸리는가 — 탄도 위협 × 탄도 책임 C2 축만. */
@@ -1368,7 +1377,7 @@
     var mcrcId = this._iadsUpperEchelonId();
     threat._ewReported = threat._ewReported || {};
     (threat._sensors || []).forEach(function (sensor) {
-      var st = KJ.SENSOR_TYPES[sensor.typeId];
+      var st = sensorSpec(sensor);
       if (!st || !/early_warning/.test(st.role || '')) return;
       var guard = commander.id + '|' + sensor.id;
       if (threat._ewReported[guard]) return;
@@ -1615,7 +1624,7 @@
     (threat._sensors || []).forEach(function (sensor) {
       var track = threat._sensorTracks[sensor.id];
       if (!track) return;
-      var type = KJ.SENSOR_TYPES[sensor.typeId];
+      var type = sensorSpec(sensor);
       var pFinal = KJ.IADS.computeScanPFinal({
         id: sensor.id,
         position: sensor.position || { lon: sensor.coord[1], lat: sensor.coord[0], alt: 0 },
@@ -2059,7 +2068,7 @@
       if (!tr || tr.state !== KJ.IADS.SENSOR_STATE.FIRE_CONTROL) continue;
       if (!KJ.IADS.trackFreshness(tr, t, 3).fresh) continue;
       var sensor = this._nodeById(ids[i]);
-      var spec = sensor && KJ.SENSOR_TYPES[sensor.typeId];
+      var spec = sensorSpec(sensor);
       // 탐지 전용 레이더는 발사 자격을 주지 못한다(D2 — 교전 추적 모드로 들어가면 광역 감시 저하).
       if (!KJ.IADS.hasFireControlCapability(spec, threat.type)) continue;
       if (this._iadsWebOf(sensor) !== myWeb) continue; // D1 웹 파티션
@@ -2088,7 +2097,7 @@
       };
     }
     var sensor = this._nodeById(shooter.mfrSensorId);
-    var spec = sensor && KJ.SENSOR_TYPES[sensor.typeId];
+    var spec = sensorSpec(sensor);
     if (!sensor || !spec) return { ready: false, readyAt: t + 1, state: 'UNDETECTED' };
     var compatRanges = spec.compatibilityRanges || spec.ranges;
     var fcRange = compatRanges && compatRanges.fireControl;
@@ -2240,7 +2249,7 @@
       // ADR-107 ②: 사수선정 점수용 결정적 Pk — 비호·천마 × 소형 무인기/순항은 WPN-SHORAD-PK-01 최빈값 0.3(발사 시 분포 추출).
       if (this.shoradPkRealism && isShorad(shooter) && (threat.type === 'uav_small' || threat.type === 'cruise')) basePk = 0.3;
       var mfr = shooter.mfrSensorId ? this._nodeById(shooter.mfrSensorId) : null;
-      var mfrType = mfr && KJ.SENSOR_TYPES[mfr.typeId];
+      var mfrType = sensorSpec(mfr);
       var threatPhysical = KJ.IADS.threatPhysics(threat.type,
         Math.max(0, Math.min(1, (t - threat.spawnT) / threat.dwellSec)), threat._iadsAxisDistanceKm);
       var correctedPk = KJ.IADS.applyEngagementProbabilityCorrections(basePk, {

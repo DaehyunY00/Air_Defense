@@ -288,7 +288,7 @@ function metaSheet() {
 }
 function guideSheet() {
   return [['안내'],
-    [`K-JAMDS 파라미터 참조본. ${AS_OF} 현재 소스 ${VERSION}${SOURCE_DIRTY ? '+dirty' : ''}에서 재내보냈습니다. 엑셀 불러오기 기능은 없습니다.`],
+    [`K-JAMDS 파라미터 참조본. ${AS_OF} 현재 소스 ${VERSION}${SOURCE_DIRTY ? '+dirty' : ''}에서 재내보냈습니다. 고친 셀은 scripts/import-params-xlsx.mjs로 가져와 엔진에 덮어쓸 수 있습니다(ADR-108).`],
     [''],
     ['1. 좌표는 위도, 경도 순서의 십진도입니다. codex 원자료의 경도, 위도 순서와 구분합니다. 현 좌표는 도시 수준 개념값이며 실제 배치·표적이 아닙니다.'],
     ['2. 「아군자산_LEGACY / _FULL」은 자산별 실효 카탈로그입니다. 현재 지휘흐름 화면 기본 features를 각각 적용합니다. 엑셀 값 수정은 실행 모델을 변경하지 않습니다.'],

@@ -8,3 +8,6 @@
 # 에디터·OS 부산물
 *.swp
 Thumbs.db
+
+# ADR-108: xlsx 가져오기 산출물 — 실제 위치·제원이 들어갈 수 있어 커밋하지 않는다
+*_overlay.json

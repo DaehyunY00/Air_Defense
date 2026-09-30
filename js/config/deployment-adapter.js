@@ -619,6 +619,113 @@
   }
 
   // ADR-061: KJ.LEGACY_CATALOG 폐기 — 고해상도 카탈로그만 존재한다.
+  /**
+   * ADR-108: 카탈로그 덮어쓰기(overlay) — xlsx에서 가져온 값(위치·제원·계선)을 **실행 시점에** 카탈로그에 얹는다.
+   * 소스 파일·캐시된 카탈로그는 건드리지 않는다(노드·링크를 얕은 복사한 새 카탈로그를 돌려준다). overlay가
+   * 없으면 호출되지 않으므로 기본 경로는 bit-exact다.
+   *
+   * overlay 형식(scripts/import-params-xlsx.mjs가 생성):
+   *   { version: 1, deploymentId, removeNodes: [id…],
+   *     nodes: { id: { coord: [lat, lon], rangeKm, engage: { rangeKm, channels, engageTimeSec, magazine,
+   *                    missiles: { ABM: { engagementEnvelope: { Rmin, Rmax, Hmin, Hmax }, missileSpeed } } },
+   *                    queue: { servers, capacity, serviceTimeSec: { asis, tobe } },
+   *                    sensor: { ranges: { detect, track, fireControl }, transitionTime: {…}, detectionProbability },
+   *                    iadsEngageableThreats: [type…] } },
+   *     links: [ { from, to, kind, asis: { type, delaySec, dist }, tobe: {…} } ] }
+   * 센서·포대 유형 제원은 노드에 `typeOverride`로 실린다(엔진이 KJ.SENSOR_TYPES/SHOOTER_TYPES보다 먼저 본다).
+   * 좌표가 바뀌면 coverage(축선 투영)를 다시 계산한다.
+   */
+  function applyCatalogOverlay(catalog, overlay, southern) {
+    if (!overlay || typeof overlay !== 'object') return catalog;
+    var nodeOv = overlay.nodes || {}, remove = {};
+    (overlay.removeNodes || []).forEach(function (id) { remove[id] = true; });
+    var applied = { nodes: 0, links: 0, removed: 0, unknownNodes: [], unknownLinks: [] };
+    Object.keys(nodeOv).forEach(function (id) {
+      if (!catalog.nodes.some(function (n) { return n.id === id; })) applied.unknownNodes.push(id);
+    });
+    var nodes = [];
+    catalog.nodes.forEach(function (n) {
+      if (remove[n.id]) { applied.removed++; return; }
+      var o = nodeOv[n.id];
+      if (!o) { nodes.push(n); return; }
+      var m = Object.assign({}, n);
+      if (o.coord && o.coord.length === 2) {
+        m.coord = [o.coord[0], o.coord[1]];
+        m.position = Object.assign({}, n.position || {}, { lat: o.coord[0], lon: o.coord[1] });
+        m.coordNote = (n.coordNote ? n.coordNote + ' · ' : '') + 'overlay';
+      }
+      if (typeof o.rangeKm === 'number') m.rangeKm = o.rangeKm;
+      if (o.engage && n.engage) {
+        var e = Object.assign({}, n.engage);
+        ['rangeKm', 'channels', 'engageTimeSec', 'magazine', 'costPerShotM'].forEach(function (k) { if (typeof o.engage[k] === 'number') e[k] = o.engage[k]; });
+        if (o.engage.missiles && e.missiles) {
+          var ms = Object.assign({}, e.missiles);
+          Object.keys(o.engage.missiles).forEach(function (mk) {
+            if (!ms[mk]) return;
+            var mo = o.engage.missiles[mk], mm = Object.assign({}, ms[mk]);
+            if (mo.engagementEnvelope) mm.engagementEnvelope = Object.assign({}, mm.engagementEnvelope || {}, mo.engagementEnvelope);
+            if (typeof mo.missileSpeed === 'number') mm.missileSpeed = mo.missileSpeed;
+            if (typeof mo.roundsPerLauncher === 'number') mm.roundsPerLauncher = mo.roundsPerLauncher;
+            ms[mk] = mm;
+          });
+          e.missiles = ms;
+          var ranges = Object.keys(ms).map(function (k) { return ms[k].engagementEnvelope ? ms[k].engagementEnvelope.Rmax : 0; });
+          if (typeof o.engage.rangeKm !== 'number') e.rangeKm = Math.max.apply(null, ranges.concat([e.rangeKm || 0]));
+        }
+        m.engage = e; m.rangeKm = e.rangeKm;
+      }
+      if (o.queue && n.queue) {
+        var q = Object.assign({}, n.queue);
+        if (typeof o.queue.servers === 'number') q.servers = o.queue.servers;
+        if (typeof o.queue.capacity === 'number') q.capacity = o.queue.capacity;
+        if (o.queue.serviceTimeSec) q.serviceTimeSec = Object.assign({}, q.serviceTimeSec || {}, o.queue.serviceTimeSec);
+        m.queue = q;
+      }
+      if (o.sensor && n.category === 'sensor') {
+        var base = KJ.SENSOR_TYPES[n.typeId] || {};
+        var t = Object.assign({}, n.typeOverride || base);
+        if (o.sensor.ranges) t.ranges = Object.assign({}, t.ranges || {}, o.sensor.ranges);
+        if (o.sensor.transitionTime) t.transitionTime = Object.assign({}, t.transitionTime || {}, o.sensor.transitionTime);
+        if (typeof o.sensor.detectionProbability === 'number') { t.detectionProbability = o.sensor.detectionProbability; m.detectProb = { value: o.sensor.detectionProbability, paramRef: 'overlay' }; }
+        if (typeof o.sensor.reportingPeriod === 'number') t.reportingPeriod = o.sensor.reportingPeriod;
+        m.typeOverride = t;
+        if (t.ranges && t.ranges.detect != null) m.rangeKm = maxRange(t.ranges.detect);
+      }
+      if (Array.isArray(o.iadsEngageableThreats) && n.category === 'shooter') {
+        m.typeOverride = Object.assign({}, n.typeOverride || KJ.SHOOTER_TYPES[n.typeId] || {}, { iadsEngageableThreats: o.iadsEngageableThreats.slice() });
+        if (n.canEngage) { var ce = {}; Object.keys(n.canEngage).forEach(function (k) { ce[k] = o.iadsEngageableThreats.indexOf(k) !== -1; }); m.canEngage = ce; }
+      }
+      if ((o.coord || typeof o.rangeKm === 'number' || o.engage || o.sensor) && m.coord && (n.category === 'sensor' || n.category === 'shooter')) {
+        m.coverage = axesFor({ lat: m.coord[0], lon: m.coord[1] }, m.rangeKm || 0, southern);
+      }
+      applied.nodes++; nodes.push(m);
+    });
+    var linkOv = {};
+    (overlay.links || []).forEach(function (l) { linkOv[l.from + '>' + l.to + '|' + (l.kind || '')] = l; });
+    var matched = {};
+    var links = catalog.links.filter(function (l) { return !remove[l.from] && !remove[l.to]; }).map(function (l) {
+      var o = linkOv[l.from + '>' + l.to + '|' + l.kind] || linkOv[l.from + '>' + l.to + '|'];
+      if (!o) return l;
+      matched[l.from + '>' + l.to + '|' + (o.kind || '')] = true;
+      var comm = Object.assign({}, l.comm || {});
+      ['asis', 'tobe'].forEach(function (mode) {
+        if (!o[mode] || !comm[mode]) return;
+        var c = Object.assign({}, comm[mode]);
+        if (typeof o[mode].delaySec === 'number') { c.delaySec = o[mode].delaySec; if (c.dist) c.dist = Object.assign({}, c.dist, { mean: o[mode].delaySec }); }
+        if (o[mode].type) c.type = o[mode].type;
+        if (o[mode].dist === null) delete c.dist;
+        else if (o[mode].dist) c.dist = Object.assign({}, c.dist || {}, o[mode].dist);
+        c.paramRef = 'overlay'; comm[mode] = c;
+      });
+      applied.links++;
+      return Object.assign({}, l, { comm: comm });
+    });
+    Object.keys(linkOv).forEach(function (k) { if (!matched[k]) applied.unknownLinks.push(k); });
+    var out = Object.assign({}, catalog, { nodes: nodes, links: links, overlay: applied,
+      id: (catalog.id || '') + '+overlay' });
+    return out;
+  }
+  KJ.applyCatalogOverlay = applyCatalogOverlay;
   KJ.buildDeploymentCatalog = buildDeploymentCatalog;
 
   /**
@@ -676,7 +783,8 @@
     // ADR-055: MINI 폐기 이후의 기본 고해상도 배치. LEGACY_HIRES는 legacy와 자산 편성이
     // 같아, 배치 ID를 생략한 호출이 legacy 결과와 가장 가까운 편성을 보게 된다.
     // ADR-057: linkSemanticsV2 ON이면 codex ADR-014 정합 링크 변형 카탈로그를 쓴다(캐시 분리).
-    return buildDeploymentCatalog(config.deploymentId || 'HANBANDO_LEGACY_NORMAL',
+    var overlay = features.catalogOverlay && typeof features.catalogOverlay === 'object' ? features.catalogOverlay : null;   // ADR-108
+    var base = buildDeploymentCatalog(config.deploymentId || 'HANBANDO_LEGACY_NORMAL',
       // ADR-066: 기본 ON 전환 — 엔진 기본값과 반드시 일치해야 한다(`=== true`로 두면 features에
       // 키가 없는 호출에서 엔진은 ON인데 카탈로그는 구 링크값인 조용한 불일치가 생긴다).
       { linkSemanticsV2: features.linkSemanticsV2 !== false,
@@ -703,6 +811,7 @@
           ? features.c2OperatorLevel : null,
         // ADR-099: To-Be 결심 노드 운용자 시간 = As-Is 결심 노드 — 반사실(명시적으로 켤 때만).
         c2DecisionTimeParity: features.c2DecisionTimeParity === true });
+    return overlay ? applyCatalogOverlay(base, overlay, features.southernAxes !== false) : base;
   };
   KJ.resolveRoleId = function (id, catalog) {
     catalog = catalog || buildDeploymentCatalog('HANBANDO_LEGACY_NORMAL', {});

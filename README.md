@@ -90,7 +90,7 @@ OFF입니다. Leaflet 없는 SVG fallback도 같은 중첩 표시와 범위 링 
 
 ## 파라미터 XLSX 활용 방법 (`K-JAMDS_파라미터.xlsx`)
 
-현행 소스의 카탈로그를 그대로 뽑은 **참조본**이다. 시트를 고쳐도 모의에는 반영되지 않는다(가져오기 기능 없음). 13개 시트의 쓰임은 다음과 같다.
+현행 소스의 카탈로그를 그대로 뽑은 **참조본**이며, 고친 셀은 **가져오기**로 엔진에 얹을 수 있다(ADR-108 · 아래). 13개 시트의 쓰임은 다음과 같다.
 
 | 시트 | 무엇을 보나 | 어떻게 쓰나 |
 |---|---|---|
@@ -103,6 +103,19 @@ OFF입니다. Leaflet 없는 SVG fallback도 같은 중첩 표시와 범위 링 
 
 - 모든 수치 행에 **출처·등급** 열이 있다. 등급 C는 공개 근거가 없는 개념값이므로 인용 시 그렇게 적는다.
 - 소스가 바뀌면 다시 뽑는다: `node scripts/export-params-xlsx.mjs`(기존 서식 보존, Artifact Tool 필요) 또는 `--lite`(서식 없이 재생성). 시트 값의 출처는 전부 `js/config`·`js/data`·`prototype/command-flow.html`이며 스크립트가 숫자를 지어내지 않는다.
+
+### 가져오기 — 실제 위치·제원을 넣어 엔진으로 모의하기 (ADR-108)
+
+```bash
+node scripts/import-params-xlsx.mjs 내가고친.xlsx --out my_overlay.json      # 현행 카탈로그와 다른 셀만 overlay JSON으로 (검증 경고 출력, --strict면 경고 시 중단)
+node scripts/run-with-overlay.mjs my_overlay.json --mode both --seed 29 --dur 1800   # 기준 실행과 나란히 요약 (--json 결과.json)
+```
+
+- 읽는 시트: 「아군자산_FULL/LEGACY」(위도·경도 · 센서 탐지거리 · 포대 사거리·채널·교전시간·탄약 · 지휘소 결심석·대기실·처리시간), 「자산제원_센서」(탐지·추적·사통 거리, 전이 시간, 탐지확률, 보고주기 → 그 유형 전부),
+  「자산제원_포대」(요격탄별 사거리·고도·속도, 교전가능위협 → 그 유형 전부), 「통신계선_FULL/LEGACY」(매체·지연). 행을 지우면 그 노드를 제거한다. 새 행(새 id)은 지원하지 않는다.
+- 엔진에서 직접 쓰려면 `KJ.runDES({ …, features: { …, catalogOverlay: JSON.parse(fs.readFileSync('my_overlay.json')) } })`. 결과 `global.features.catalogOverlay`에 적용 요약이 실린다.
+- 화면·단일본은 overlay를 읽지 않는다(사용자 결정). overlay JSON(`*_overlay.json`)과 실제 자산이 든 통합문서는 커밋하지 않는다(`.gitignore`).
+- 바꿀 수 없는 것: 요격확률 표, 위협 물리, 결심 규칙(코드), 새 노드 추가, 같은 유형 포대 일부만 다른 제원.
 
 ## 사용 흐름
 
@@ -361,6 +374,7 @@ legacy C2 이론은 **정책 계층으로 이식**되었습니다. 본 앱의 �
 | **`commanderRouteRetry`** | OFF (지휘 흐름 화면 ON) | ADR-106 책임 C2 보고 재시도 — 어떤 책임 C2의 시작 보고가 **상관 실패**로 비면 5초(상관 시도 창) 경계마다 그 항적의 라우팅을 다시 시도. 종전에는 다른 센서의 신규 획득까지 기다렸다(srbm#3: AN/TPY-2 46.8초 탐지 → THAAD C2 인지 150.6초 → 켜면 50.0초) | ADR-106 |
 | **`shoradCruiseExclusion`** | OFF (지휘 흐름 화면 ON) | ADR-107 ① 비호·천마의 순항미사일 교전 제외 — codex 승계값(순항 교전 가능·Pk 1.0)은 근거 없음. 켜면 순항은 두 체계 모두 천궁-II·Patriot이 잡고 킬웹의 순항 시간 이득(68 → 20초)이 사라진다 | ADR-107 |
 | **`shoradPkRealism`** | OFF (지휘 흐름 화면 ON) | ADR-107 ② 비호·천마의 소형 무인기·순항 요격확률을 WPN-SHORAD-PK-01(0.1/0.3/0.5)로 — 종전 물리 경로는 1.0. 무인기 격추 39 → 27(As-Is)·40 → 20(To-Be) | ADR-107 |
+| `catalogOverlay` (객체) | 없음 | ADR-108 xlsx 가져오기 결과(위치·제원·계선 덮어쓰기)를 실행 시점에 카탈로그에 얹음. 화면 미적용 — `scripts/run-with-overlay.mjs` | ADR-108 |
 | `engageOnRemote` | OFF | 원격 화력통제 교전 — 킬웹 웹 파티션 안에서 다른 포대의 화력통제 항적으로 사격(탐지 전용 자산 제외). **반사실 전용** — 사유는 ADR-070 | ADR-070 |
 | `nativeWtaMode` (+반증 `nativeWtaCostAsis`) | OFF | WTA 모드 차등 — As-Is는 관측 가능한 것만, To-Be는 물리 점수×비용 인식 | ADR-059 |
 | `c2OperatorLevel` ('high'/'low') | mid | 운용자 처리시간 스윕 노브 | ADR-058 |

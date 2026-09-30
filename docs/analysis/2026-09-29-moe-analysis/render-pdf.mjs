@@ -11,7 +11,8 @@ const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, 
 const inline = (s) => esc(s)
   .replace(/`([^`]+)`/g, '<code>$1</code>')
   .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+  .replace(/\{\{red:([^}]+)\}\}/g, '<span class="red">$1</span>');   // {{red:…}} → 붉은 강조(차이가 두드러진 칸)
 const lines = md.split('\n'); const out = []; let i = 0, inList = null, para = [];
 const flushPara = () => { if (para.length) { out.push('<p>' + inline(para.join(' ')) + '</p>'); para = []; } };
 const closeList = () => { if (inList) { out.push('</' + inList + '>'); inList = null; } };
@@ -53,6 +54,7 @@ tr { break-inside: avoid; }
 code { font-family: 'SF Mono', Menlo, Consolas, 'WenQuanYi Zen Hei Mono', monospace; font-size: 8.4pt; background: #f0f2f4; padding: 0 1mm; border-radius: 2px; }
 pre { background: #f0f2f4; padding: 3mm; font-size: 8pt; overflow-wrap: anywhere; white-space: pre-wrap; }
 strong { color: #0f2a40; }
+.red { color: #b3261e; font-weight: 700; }
 a { color: inherit; text-decoration: none; }
 </style></head><body>${out.join('\n')}</body></html>`;
 const htmlPath = path.join(HERE, 'report.html'); fs.writeFileSync(htmlPath, html);

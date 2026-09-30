@@ -398,6 +398,9 @@
     // 발사 시 명중 판정에는 분포 추출(플래그 ON에서만 RNG 소비). 둘 다 기본 OFF(불변 규칙 1 · 재기준선 대상).
     this.shoradCruiseExclusion = ff('shoradCruiseExclusion', false);
     this.shoradPkRealism = ff('shoradPkRealism', false);
+    // 사용자 가정(2026-09-30): 비호·천마의 소형 무인기·순항 요격확률 = 0.7 고정(분포 없음 · RNG 추가 소비 없음).
+    this.shoradSmallTargetPk = (typeof f.shoradSmallTargetPk === 'number' && f.shoradSmallTargetPk > 0 && f.shoradSmallTargetPk <= 1)
+      ? f.shoradSmallTargetPk : 0.7;
     // ADR-105: 한미 교전 협조(음성) — 미군 C2(THAAD·Patriot C2)와 한국군 결심 C2(As-Is KAMDOC·MCRC / To-Be
     // IAOC)가 같은 위협에 대해 「내 최적 사수 제안 → 상대가 자기 최적 사수와 비교 → 회신」을 음성 계선
     // (C2-VOICE-COORD-01 · Normal(20, σ5))으로 주고받아 **한 위협에 한 사수**를 정한다. 최적이 한국군 자산이면
@@ -549,7 +552,7 @@
         unknownNodes: (ovl.unknownNodes || []).length, unknownLinks: (ovl.unknownLinks || []).length,
         source: f.catalogOverlay.source || null };
     }
-    if (this.shoradPkRealism) this.features.shoradPkRealism = true;             // ADR-107 ②
+    if (this.shoradPkRealism) { this.features.shoradPkRealism = true; this.features.shoradSmallTargetPk = this.shoradSmallTargetPk; } // ADR-107 ②
     if (this.c2DecisionTimeParity) this.features.c2DecisionTimeParity = true; // ADR-099
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
@@ -1194,7 +1197,10 @@
   function isShorad(shooter) { return !!shooter && (shooter.typeId === 'BIHO' || shooter.typeId === 'CHUNMA'); }
   Simulation.prototype._iadsCanEngage = function (shooter, threat) {
     if (!shooter || !threat) return false;
-    if (this.shoradCruiseExclusion && threat.type === 'cruise' && isShorad(shooter)) return false;   // ADR-107 ①
+    // ADR-107 ①(2026-09-30 개정): 비호는 순항미사일 교전 불가(양 모드). 천마는 근거리 순항 요격이 가능하되 **현 체계에서는**
+    // 비호와 같은 군단 방공에 묶여 순항 항적을 받지 못하므로 불가, 킬웹에서는 가능(사용자 가정).
+    if (this.shoradCruiseExclusion && threat.type === 'cruise' && isShorad(shooter) &&
+        (shooter.typeId === 'BIHO' || this.mode !== 'tobe')) return false;
     if (!this.iadsSensorPhysics) return !!(shooter.canEngage && shooter.canEngage[threat.type]);
     var type = shooterSpec(shooter);
     var allowed = type && type.iadsEngageableThreats;
@@ -2247,7 +2253,7 @@
       var basePk = KJ.IADS.lookupPssek(table, threat.type, pip.rangeKm, aspect);
       if (basePk == null) return;
       // ADR-107 ②: 사수선정 점수용 결정적 Pk — 비호·천마 × 소형 무인기/순항은 WPN-SHORAD-PK-01 최빈값 0.3(발사 시 분포 추출).
-      if (this.shoradPkRealism && isShorad(shooter) && (threat.type === 'uav_small' || threat.type === 'cruise')) basePk = 0.3;
+      if (this.shoradPkRealism && isShorad(shooter) && (threat.type === 'uav_small' || threat.type === 'cruise')) basePk = this.shoradSmallTargetPk;
       var mfr = shooter.mfrSensorId ? this._nodeById(shooter.mfrSensorId) : null;
       var mfrType = sensorSpec(mfr);
       var threatPhysical = KJ.IADS.threatPhysics(threat.type,
@@ -3763,8 +3769,8 @@
     threat.tries++;
     var pkUsed = ev.pk;
     if (this.shoradPkRealism && isShorad(shooter) && (threat.type === 'uav_small' || threat.type === 'cruise')) {
-      // ADR-107 ②: WPN-SHORAD-PK-01 Triangular(0.1, 0.3, 0.5) × 민감도 배수 — ON에서만 RNG 1회 추가 소비.
-      pkUsed = Math.max(0, Math.min(1, this.rng.triangular(0.1, 0.3, 0.5) * this.mult.pk));
+      // ADR-107 ②(2026-09-30 개정): 고정 0.7(사용자 가정) × 민감도 배수 — 분포 추출 없음(RNG 추가 소비 없음).
+      pkUsed = Math.max(0, Math.min(1, this.shoradSmallTargetPk * this.mult.pk));
       this.global.shoradPkSamples = (this.global.shoradPkSamples || 0) + 1;
     }
     var hit = this.rng.raw() < pkUsed;

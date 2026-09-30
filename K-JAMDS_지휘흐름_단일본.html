@@ -4417,6 +4417,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 발사 시 명중 판정에는 분포 추출(플래그 ON에서만 RNG 소비). 둘 다 기본 OFF(불변 규칙 1 · 재기준선 대상).
     this.shoradCruiseExclusion = ff('shoradCruiseExclusion', false);
     this.shoradPkRealism = ff('shoradPkRealism', false);
+    // 사용자 가정(2026-09-30): 비호·천마의 소형 무인기·순항 요격확률 = 0.7 고정(분포 없음 · RNG 추가 소비 없음).
+    this.shoradSmallTargetPk = (typeof f.shoradSmallTargetPk === 'number' && f.shoradSmallTargetPk > 0 && f.shoradSmallTargetPk <= 1)
+      ? f.shoradSmallTargetPk : 0.7;
     // ADR-105: 한미 교전 협조(음성) — 미군 C2(THAAD·Patriot C2)와 한국군 결심 C2(As-Is KAMDOC·MCRC / To-Be
     // IAOC)가 같은 위협에 대해 「내 최적 사수 제안 → 상대가 자기 최적 사수와 비교 → 회신」을 음성 계선
     // (C2-VOICE-COORD-01 · Normal(20, σ5))으로 주고받아 **한 위협에 한 사수**를 정한다. 최적이 한국군 자산이면
@@ -4568,7 +4571,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         unknownNodes: (ovl.unknownNodes || []).length, unknownLinks: (ovl.unknownLinks || []).length,
         source: f.catalogOverlay.source || null };
     }
-    if (this.shoradPkRealism) this.features.shoradPkRealism = true;             // ADR-107 ②
+    if (this.shoradPkRealism) { this.features.shoradPkRealism = true; this.features.shoradSmallTargetPk = this.shoradSmallTargetPk; } // ADR-107 ②
     if (this.c2DecisionTimeParity) this.features.c2DecisionTimeParity = true; // ADR-099
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
@@ -5213,7 +5216,10 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   function isShorad(shooter) { return !!shooter && (shooter.typeId === 'BIHO' || shooter.typeId === 'CHUNMA'); }
   Simulation.prototype._iadsCanEngage = function (shooter, threat) {
     if (!shooter || !threat) return false;
-    if (this.shoradCruiseExclusion && threat.type === 'cruise' && isShorad(shooter)) return false;   // ADR-107 ①
+    // ADR-107 ①(2026-09-30 개정): 비호는 순항미사일 교전 불가(양 모드). 천마는 근거리 순항 요격이 가능하되 **현 체계에서는**
+    // 비호와 같은 군단 방공에 묶여 순항 항적을 받지 못하므로 불가, 킬웹에서는 가능(사용자 가정).
+    if (this.shoradCruiseExclusion && threat.type === 'cruise' && isShorad(shooter) &&
+        (shooter.typeId === 'BIHO' || this.mode !== 'tobe')) return false;
     if (!this.iadsSensorPhysics) return !!(shooter.canEngage && shooter.canEngage[threat.type]);
     var type = shooterSpec(shooter);
     var allowed = type && type.iadsEngageableThreats;
@@ -6266,7 +6272,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       var basePk = KJ.IADS.lookupPssek(table, threat.type, pip.rangeKm, aspect);
       if (basePk == null) return;
       // ADR-107 ②: 사수선정 점수용 결정적 Pk — 비호·천마 × 소형 무인기/순항은 WPN-SHORAD-PK-01 최빈값 0.3(발사 시 분포 추출).
-      if (this.shoradPkRealism && isShorad(shooter) && (threat.type === 'uav_small' || threat.type === 'cruise')) basePk = 0.3;
+      if (this.shoradPkRealism && isShorad(shooter) && (threat.type === 'uav_small' || threat.type === 'cruise')) basePk = this.shoradSmallTargetPk;
       var mfr = shooter.mfrSensorId ? this._nodeById(shooter.mfrSensorId) : null;
       var mfrType = sensorSpec(mfr);
       var threatPhysical = KJ.IADS.threatPhysics(threat.type,
@@ -7782,8 +7788,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     threat.tries++;
     var pkUsed = ev.pk;
     if (this.shoradPkRealism && isShorad(shooter) && (threat.type === 'uav_small' || threat.type === 'cruise')) {
-      // ADR-107 ②: WPN-SHORAD-PK-01 Triangular(0.1, 0.3, 0.5) × 민감도 배수 — ON에서만 RNG 1회 추가 소비.
-      pkUsed = Math.max(0, Math.min(1, this.rng.triangular(0.1, 0.3, 0.5) * this.mult.pk));
+      // ADR-107 ②(2026-09-30 개정): 고정 0.7(사용자 가정) × 민감도 배수 — 분포 추출 없음(RNG 추가 소비 없음).
+      pkUsed = Math.max(0, Math.min(1, this.shoradSmallTargetPk * this.mult.pk));
       this.global.shoradPkSamples = (this.global.shoradPkSamples || 0) + 1;
     }
     var hit = this.rng.raw() < pkUsed;
@@ -9773,9 +9779,9 @@ const PARAMS = [
   { k: 'rr',    d: 1,       t: 'bool', h: '책임 C2 보고 재시도 — 상관 실패로 시작 보고가 빈 C2를 5초마다 다시 라우팅 (ADR-106 · THAAD C2 인지 지연 해소 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   // ── nocm·shpk(ADR-107): 단거리방공 현실화. codex 승계값은 비호·천마가 순항미사일을 Pk 1.0으로 잡는다(근거 없음 —
   //    2026-09-30 사용자 지적). nocm=1이면 비호·천마의 순항미사일 교전을 막고, shpk=1이면 소형 무인기·순항 요격확률을
-  //    WPN-SHORAD-PK-01(0.1/0.3/0.5)로 되돌린다. **엔진 기본 OFF · 이 화면만 기본 ON**(사용자 결정 2026-09-30).
-  { k: 'nocm',  d: 1,       t: 'bool', h: '비호·천마 순항미사일 교전 제외 (ADR-107 ① · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
-  { k: 'shpk',  d: 1,       t: 'bool', h: '비호·천마 소형 무인기·순항 요격확률을 WPN-SHORAD-PK-01(0.1/0.3/0.5)로 (ADR-107 ② · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  //    0.7로 둔다(사용자 가정). 천마는 킬웹에서만 순항 교전 허용. **엔진 기본 OFF · 이 화면만 기본 ON**(사용자 결정 2026-09-30).
+  { k: 'nocm',  d: 1,       t: 'bool', h: '비호 순항미사일 교전 제외(양 모드) · 천마는 킬웹에서만 허용 (ADR-107 ① · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  { k: 'shpk',  d: 1,       t: 'bool', h: '비호·천마 소형 무인기·순항 요격확률 0.7 고정 (ADR-107 ② · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   // ── lx: 이 화면만 **기본 ON**으로 되돌린다(사용자 결정 2026-09-10 — 「출발점은 모든 배치에서
   //    수정」). 2026-09-01에 기본 OFF로 내렸던 결정을 뒤집는 것이라, 근거를 남긴다.
   //
@@ -9886,8 +9892,8 @@ function activeConfigChips() {
   if (P.ew) out.push('조기경보 보고 ON');
   if (P.coal) out.push('한미 음성 협조 ON');
   if (P.rr) out.push('보고 재시도 ON');
-  if (P.nocm) out.push('비호·천마 순항 제외');
-  if (P.shpk) out.push('단거리방공 Pk 현실화');
+  if (P.nocm) out.push('비호 순항 제외·천마 킬웹만');
+  if (P.shpk) out.push('단거리방공 Pk 0.7');
   if (INTENSITY.x !== 1) out.push('강도 ×' + INTENSITY.x);
   if (P.bsrc) out.push('탄도 보고원 그린파인 ON');
   if (P.cue && !P.bsrc) out.push('⚠ 사전대기 큐 비활성 — bsrc=0');

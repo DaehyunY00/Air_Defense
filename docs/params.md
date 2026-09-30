@@ -201,18 +201,18 @@
 - **MC 적용방식**: 결정적(재시도 시각) · 상관 성패는 기존 캐시(시도 창별 결정적 해시)
 
 ### [WPN-SHORAD-CRUISE-01] 비호·천마의 순항미사일 교전 가능 여부 (shoradCruiseExclusion, ADR-107 ①)
-- **값**: 플래그 OFF = 교전 가능(codex 승계 · `engageableThreats`에 CRUISE_MISSILE) · ON = **교전 불가**
+- **값**: 플래그 OFF = 교전 가능(codex 승계 · `engageableThreats`에 CRUISE_MISSILE) · ON = **비호 교전 불가(양 모드) · 천마 현 체계 불가(군단 방공에 순항 항적 미전달) · 천마 킬웹 가능(근거리)** — 2026-09-30 사용자 결정
 - **출처**: 비호(K30)·천마는 저고도 항공기·헬기·소형 무인기 대응 체계이며 순항미사일 요격 능력이 공식적으로 주장되지 않는다(공개자료 일반 이해). codex 승계값(Pk 1.0)은 근거 없음 — 사용자 지적 2026-09-30
 - **적용범위**: `_iadsCanEngage` 한 곳(책임 C2 후보·사수선정·긴급발사·자위권 공통). [지휘 흐름] 화면 기본 ON
 - **신뢰도 등급**: C(개념 설정)
 - **MC 적용방식**: 결정적
 
 ### [WPN-SHORAD-PK-02] 비호·천마 소형표적(무인기·순항) 요격확률 물리 경로 복원 (shoradPkRealism, ADR-107 ②)
-- **값/분포**: 사수선정 점수 0.3(결정적) · 명중 판정 Triangular(0.1, 0.3, 0.5) × 민감도 배수 — WPN-SHORAD-PK-01과 같은 분포
-- **출처**: WPN-SHORAD-PK-01(2022-12-26 격추 실패 반영). 종전 물리 경로는 codex 승계 `pssekTable` CRUISE_MISSILE·UAS 행 1.0을 써 문서값과 어긋나 있었다
+- **값/분포**: **0.7 고정**(`shoradSmallTargetPk` · 사수선정 점수와 명중 판정 동일 · 분포 없음) × 민감도 배수 — 2026-09-30 사용자 가정. 종전 개정판의 Triangular(0.1, 0.3, 0.5)는 폐기
+- **출처**: 사용자 가정(2026-09-30 · 등급 C). 종전 물리 경로는 codex 승계 `pssekTable` CRUISE_MISSILE·UAS 행 1.0을 썼고, WPN-SHORAD-PK-01(0.1/0.3/0.5)은 소형 무인기 사건에 기댄 값이라 순항까지 대표하기 어렵다는 판단
 - **적용범위**: 비호·천마 × {uav_small, cruise}. 항공기·헬기 행(codex 0.30~0.62)은 그대로. ON에서만 발사당 RNG 1회 추가 소비
 - **신뢰도 등급**: C
-- **MC 적용방식**: 분포샘플링(명중 판정) · 결정적(사수선정)
+- **MC 적용방식**: 결정적(0.7 · 명중 판정은 기존 난수 1회만 사용)
 
  큐 획득 이득 (cueAcquisitionGain, ADR-104 B-3)
 - **값/분포**: 0 (기본 · 이득 없음). 스윕 0 / 0.3 / 0.5 — 큐 도착 포대 MFR의 `transitionTime.detectToTrack`·`trackToFireControl`을 (1 − gain)배

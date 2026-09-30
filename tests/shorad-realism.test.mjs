@@ -1,8 +1,8 @@
 /**
  * ADR-107 단거리방공 현실화 — shoradCruiseExclusion(①) · shoradPkRealism(②) 회귀.
  *  ① OFF bit-exact — 미지정 = false, features·global에 키 없음.
- *  ② ① ON: 비호·천마의 순항미사일 발사 0건, 다른 위협(무인기) 발사는 남는다.
- *  ③ ② ON: global.shoradPkSamples = 비호·천마가 무인기·순항에 쏜 발사 수 · Pk가 내려가 격추가 준다.
+ *  ② ① ON: 비호의 순항미사일 발사 0건(양 모드) · 천마는 현 체계 0건, 킬웹은 허용. 다른 위협(무인기) 발사는 남는다.
+ *  ③ ② ON: global.shoradPkSamples = 비호·천마가 무인기·순항에 쏜 발사 수 · features.shoradSmallTargetPk = 0.7 · Pk가 1.0 → 0.7로 내려가 격추가 줄거나 같다.
  *  ④ ① 단독은 순항 외 결과를 거의 바꾸지 않는다(전체 격추 차이 ≤ 5).
  *  ⑤ 관측 순수성 — flowTrace ON/OFF 동역학 지문 동일.
  */
@@ -29,7 +29,7 @@ const SCREEN = Object.freeze({ highResolutionDeployment: true, threatTargetDispe
 const run = (mode, extra, opts) => KJ.runDES(Object.assign({ scenario: KJ.scenarioById('sc3'), mode, intensity: 1, seed: 29, endTimeSec: 900,
   deploymentId: 'HANBANDO_FULL_NORMAL', modelFidelity: 'iads-c2', trace: true, traceCap: 2000, features: Object.assign({}, SCREEN, extra || {}) }, opts || {}));
 const isShorad = (id) => /^BATTERY_(BIHO|CHUNMA)_/.test(id);
-const shots = (res, pred) => { let n = 0; res.threatTraces.forEach((t) => { if (!pred(t)) return; t.stages.forEach((s) => { const m = /^(발사|자위권발사):([^/]+)/.exec(s.name); if (m && isShorad(m[2])) n++; }); }); return n; };
+const shots = (res, pred, re) => { let n = 0; re = re || /^BATTERY_(BIHO|CHUNMA)_/; res.threatTraces.forEach((t) => { if (!pred(t)) return; t.stages.forEach((s) => { const m = /^(발사|자위권발사):([^/]+)/.exec(s.name); if (m && re.test(m[2])) n++; }); }); return n; };
 
 for (const mode of ['asis', 'tobe']) {
   console.log(`\n# ${mode}`);
@@ -38,7 +38,8 @@ for (const mode of ['asis', 'tobe']) {
   assert(off.global.features.shoradCruiseExclusion === undefined && off.global.features.shoradPkRealism === undefined && off.global.shoradPkSamples === undefined, '① OFF wire shape에 키 없음');
   const a = run(mode, { shoradCruiseExclusion: true });
   assert(a.global.features.shoradCruiseExclusion === true, '② features 신고');
-  assert(shots(a, (t) => t.type === 'cruise') === 0, `② 비호·천마 순항 발사 0건 (OFF에서는 ${shots(off, (t) => t.type === 'cruise')}건)`);
+  assert(shots(a, (t) => t.type === 'cruise', /^BATTERY_BIHO_/) === 0, `② 비호 순항 발사 0건 (OFF에서는 비호·천마 ${shots(off, (t) => t.type === 'cruise')}건)`);
+  if (mode === 'asis') assert(shots(a, (t) => t.type === 'cruise', /^BATTERY_CHUNMA_/) === 0, '② 현 체계: 천마 순항 발사 0건');
   assert(shots(a, (t) => t.type === 'uav_small') > 0, '② 비호·천마 무인기 발사는 남음');
   assert(Math.abs(a.global.killed - off.global.killed) <= 5, `④ ① 단독 격추 차이 ≤ 5 (${off.global.killed} → ${a.global.killed})`);
   const b = run(mode, { shoradCruiseExclusion: true, shoradPkRealism: true }, { flowTrace: true, flowTraceCap: 400000 });
@@ -46,6 +47,7 @@ for (const mode of ['asis', 'tobe']) {
   assert(dyn(b) === dyn(bNoFlow), '⑤ flowTrace ON/OFF 동역학 지문 동일');
   const expectSamples = shots(b, (t) => t.type === 'uav_small' || t.type === 'cruise');
   assert(b.global.shoradPkSamples === expectSamples && expectSamples > 0, `③ Pk 샘플 ${b.global.shoradPkSamples} = 비호·천마 무인기·순항 발사 ${expectSamples}`);
-  assert(b.global.killed < a.global.killed, `③ Pk 현실화로 격추 감소 (${a.global.killed} → ${b.global.killed})`);
+  assert(b.global.features.shoradSmallTargetPk === 0.7, '③ features.shoradSmallTargetPk = 0.7');
+  assert(b.global.killed <= a.global.killed, `③ Pk 1.0 → 0.7로 격추 감소 또는 동일 (${a.global.killed} → ${b.global.killed})`);
 }
 console.log(fail ? `\n${fail} FAIL` : '\nALL PASS'); process.exit(fail ? 1 : 0);

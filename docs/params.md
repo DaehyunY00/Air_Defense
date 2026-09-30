@@ -200,7 +200,21 @@
 - **신뢰도**: C
 - **MC 적용방식**: 결정적(재시도 시각) · 상관 성패는 기존 캐시(시도 창별 결정적 해시)
 
-### [IADS-CUE-GAIN-01] 큐 획득 이득 (cueAcquisitionGain, ADR-104 B-3)
+### [WPN-SHORAD-CRUISE-01] 비호·천마의 순항미사일 교전 가능 여부 (shoradCruiseExclusion, ADR-107 ①)
+- **값**: 플래그 OFF = 교전 가능(codex 승계 · `engageableThreats`에 CRUISE_MISSILE) · ON = **교전 불가**
+- **출처**: 비호(K30)·천마는 저고도 항공기·헬기·소형 무인기 대응 체계이며 순항미사일 요격 능력이 공식적으로 주장되지 않는다(공개자료 일반 이해). codex 승계값(Pk 1.0)은 근거 없음 — 사용자 지적 2026-09-30
+- **적용범위**: `_iadsCanEngage` 한 곳(책임 C2 후보·사수선정·긴급발사·자위권 공통). [지휘 흐름] 화면 기본 ON
+- **신뢰도 등급**: C(개념 설정)
+- **MC 적용방식**: 결정적
+
+### [WPN-SHORAD-PK-02] 비호·천마 소형표적(무인기·순항) 요격확률 물리 경로 복원 (shoradPkRealism, ADR-107 ②)
+- **값/분포**: 사수선정 점수 0.3(결정적) · 명중 판정 Triangular(0.1, 0.3, 0.5) × 민감도 배수 — WPN-SHORAD-PK-01과 같은 분포
+- **출처**: WPN-SHORAD-PK-01(2022-12-26 격추 실패 반영). 종전 물리 경로는 codex 승계 `pssekTable` CRUISE_MISSILE·UAS 행 1.0을 써 문서값과 어긋나 있었다
+- **적용범위**: 비호·천마 × {uav_small, cruise}. 항공기·헬기 행(codex 0.30~0.62)은 그대로. ON에서만 발사당 RNG 1회 추가 소비
+- **신뢰도 등급**: C
+- **MC 적용방식**: 분포샘플링(명중 판정) · 결정적(사수선정)
+
+ 큐 획득 이득 (cueAcquisitionGain, ADR-104 B-3)
 - **값/분포**: 0 (기본 · 이득 없음). 스윕 0 / 0.3 / 0.5 — 큐 도착 포대 MFR의 `transitionTime.detectToTrack`·`trackToFireControl`을 (1 − gain)배
 - **단위**: 비율
 - **출처**: 없음. codex ADR-026 filter2(큐가 포대 표적 필터·운용 모드(응시 섹터)에 위협을 주입해 획득을 앞당김)의 **대체 근사**다 — K-JAMDS에는 운용 모드 모델이 없다. 탐지확률·RNG 소비 순서는 건드리지 않는다

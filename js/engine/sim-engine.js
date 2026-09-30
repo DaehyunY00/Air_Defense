@@ -391,6 +391,13 @@
     // 없다. 전 C2가 빈 경우의 종전 재시도(retryCorrelation)는 그대로 두고 그 위에 얹는다. RNG 순서: 재시도가
     // 성공하면 계선 지연 추출이 앞당겨져 결과가 달라진다 — 기본 OFF(불변 규칙 1 · 재기준선 대상).
     this.commanderRouteRetry = ff('commanderRouteRetry', false);
+    // ADR-107: 단거리방공(비호·천마) 현실화 — codex 승계값(순항미사일 교전 가능 · 순항/무인기 Pk 1.0)은 근거가 없다
+    // (codex 주석 「UAS/CM Pk=1.0 (사용자 결정)」). ① shoradCruiseExclusion: 비호·천마의 순항미사일 교전을 막는다
+    // (책임 C2 후보·사수선정·긴급발사 전부에 적용 — _iadsCanEngage 한 곳). ② shoradPkRealism: 비호·천마의 소형 무인기·
+    // 순항미사일 요격확률을 WPN-SHORAD-PK-01(Triangular 0.1/0.3/0.5)로 되돌린다 — 사수선정 점수에는 최빈값 0.3(결정적),
+    // 발사 시 명중 판정에는 분포 추출(플래그 ON에서만 RNG 소비). 둘 다 기본 OFF(불변 규칙 1 · 재기준선 대상).
+    this.shoradCruiseExclusion = ff('shoradCruiseExclusion', false);
+    this.shoradPkRealism = ff('shoradPkRealism', false);
     // ADR-105: 한미 교전 협조(음성) — 미군 C2(THAAD·Patriot C2)와 한국군 결심 C2(As-Is KAMDOC·MCRC / To-Be
     // IAOC)가 같은 위협에 대해 「내 최적 사수 제안 → 상대가 자기 최적 사수와 비교 → 회신」을 음성 계선
     // (C2-VOICE-COORD-01 · Normal(20, σ5))으로 주고받아 **한 위협에 한 사수**를 정한다. 최적이 한국군 자산이면
@@ -535,6 +542,8 @@
       }
     }
     if (this.commanderRouteRetry) this.features.commanderRouteRetry = true; // ADR-106 (OFF wire shape 보존)
+    if (this.shoradCruiseExclusion) this.features.shoradCruiseExclusion = true; // ADR-107 ①
+    if (this.shoradPkRealism) this.features.shoradPkRealism = true;             // ADR-107 ②
     if (this.c2DecisionTimeParity) this.features.c2DecisionTimeParity = true; // ADR-099
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
@@ -1173,8 +1182,10 @@
     return out;
   };
 
+  function isShorad(shooter) { return !!shooter && (shooter.typeId === 'BIHO' || shooter.typeId === 'CHUNMA'); }
   Simulation.prototype._iadsCanEngage = function (shooter, threat) {
     if (!shooter || !threat) return false;
+    if (this.shoradCruiseExclusion && threat.type === 'cruise' && isShorad(shooter)) return false;   // ADR-107 ①
     if (!this.iadsSensorPhysics) return !!(shooter.canEngage && shooter.canEngage[threat.type]);
     var type = KJ.SHOOTER_TYPES[shooter.typeId];
     var allowed = type && type.iadsEngageableThreats;
@@ -2226,6 +2237,8 @@
       var aspect = KJ.IADS.classifyAspect(shooterPos, iadsThreatPosition(threat, t), nextPos);
       var basePk = KJ.IADS.lookupPssek(table, threat.type, pip.rangeKm, aspect);
       if (basePk == null) return;
+      // ADR-107 ②: 사수선정 점수용 결정적 Pk — 비호·천마 × 소형 무인기/순항은 WPN-SHORAD-PK-01 최빈값 0.3(발사 시 분포 추출).
+      if (this.shoradPkRealism && isShorad(shooter) && (threat.type === 'uav_small' || threat.type === 'cruise')) basePk = 0.3;
       var mfr = shooter.mfrSensorId ? this._nodeById(shooter.mfrSensorId) : null;
       var mfrType = mfr && KJ.SENSOR_TYPES[mfr.typeId];
       var threatPhysical = KJ.IADS.threatPhysics(threat.type,
@@ -3739,12 +3752,18 @@
     // 나오던 결함 수정. 임계·정의는 legacy와 동일(HIGH_VALUE_COST_M, KJADS 5-1).
     if (cps >= HIGH_VALUE_COST_M) this.global.highValueInterceptM += cps;
     threat.tries++;
-    var hit = this.rng.raw() < ev.pk;
+    var pkUsed = ev.pk;
+    if (this.shoradPkRealism && isShorad(shooter) && (threat.type === 'uav_small' || threat.type === 'cruise')) {
+      // ADR-107 ②: WPN-SHORAD-PK-01 Triangular(0.1, 0.3, 0.5) × 민감도 배수 — ON에서만 RNG 1회 추가 소비.
+      pkUsed = Math.max(0, Math.min(1, this.rng.triangular(0.1, 0.3, 0.5) * this.mult.pk));
+      this.global.shoradPkSamples = (this.global.shoradPkSamples || 0) + 1;
+    }
+    var hit = this.rng.raw() < pkUsed;
     this._mark(threat, '발사:' + shooter.id + '/' + launcher.id + '/PIP' + ev.pip.rangeKm.toFixed(1) + 'km', t);
     this._iadsTransitionPlan(plan, 'bda_pending', t, 'bda_pending');
     this.schedule(t + ev.pip.flyout, PRI.SERVICE_END, 'IADS_BDA', {
       threat: threat, commander: d.commander, shooterId: shooter.id, plan: plan,
-      hit: hit, pk: ev.pk, launcherId: launcher.id
+      hit: hit, pk: pkUsed, launcherId: launcher.id
     });
   };
 
@@ -4326,6 +4345,7 @@
       if (this.standbyCueActive) result.global.standbyCue = this._standbyCueStats();   // ADR-104 (ON에서만 노출)
       if (this.coalitionActive) result.global.coalition = this._coalitionStats();       // ADR-105 (ON에서만 노출)
       if (this.commanderRouteRetry) result.global.routeRetry = this._routeRetryStats();  // ADR-106 (ON에서만 노출)
+      if (this.shoradPkRealism) result.global.shoradPkSamples = this.global.shoradPkSamples || 0;  // ADR-107 ② (ON에서만 노출)
       result.global.failureSummary = {
         primary: this.global.failurePrimary,
         contributors: this.global.failureContributors,

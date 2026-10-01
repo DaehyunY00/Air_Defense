@@ -378,6 +378,7 @@ legacy C2 이론은 **정책 계층으로 이식**되었습니다. 본 앱의 �
 | **`shoradCruiseExclusion`** | OFF (지휘 흐름 화면 ON) | ADR-107 ① 비호는 순항미사일 교전 불가(양 모드), 천마는 현 체계 불가(군단 방공에 순항 항적 미전달)·킬웹 가능(근거리) — codex 승계값(둘 다 가능·Pk 1.0)은 근거 없음 | ADR-107 |
 | **`shoradPkRealism`** (+값 `shoradSmallTargetPk`, 기본 0.7) | OFF (지휘 흐름 화면 ON) | ADR-107 ② 비호·천마의 소형 무인기·순항 요격확률을 0.7 고정으로 — 종전 물리 경로는 1.0(사용자 가정 2026-09-30) | ADR-107 |
 | **`earlyShooterAssignment`** (+값 `earlyAssignmentTimePenaltySec`, 기본 30) | OFF (지휘 흐름 화면 ON) | ADR-109 조기 사수 지정 — 결심 지휘소가 항적을 받은 시점에 예상 요격 창이 있는 포대까지 후보로 사수를 정하고 「준비되면 쏘라」 명령. 종전 규칙(지금 쏠 수 있는 후보가 생길 때까지 보류)은 OFF로 보존. srbm#3 결심 252 → 63초, 한미 중복 발사 14 → 2 | ADR-109 |
+| **`assignmentFeedback`** (+값 `cantcoGraceSec` 30 · `cantcoCooldownSec` 60) | OFF (지휘 흐름 화면 ON) | ADR-110 사수 지정 되먹임 — 예측을 실제 발사 평가와 같은 조건(300초 전방 요격점 + 레이더 사격통제 획득 예상)으로 계산하고, 지정 사수가 예측 준비 시각 + 30초 안에 못 쏘면 「수행 불가(CANTCO)」 회신 → 1초 뒤 재지정(같은 사수는 60초 냉각). 다른 웹은 COP로 계획 소멸을 보고 진행. earlyShooterAssignment ON에서만 뜻이 있음 | ADR-110 |
 | 실행 옵션 `spawnUntilSec` (cfg · 화면 `?sw=`) | 미지정 = `endTimeSec` | 위협 생성 구간(초). 관측 시간보다 짧게 주면 그 뒤로 새 위협이 생성되지 않아 관측 종료 시 「미해결」(관측 절단)이 0이 되게 할 수 있다(효과척도 결과서는 생성 1800초 · 관측 3600초). 미지정이면 종전과 bit-exact | — |
 | `catalogOverlay` (객체) | 없음 | ADR-108 xlsx 가져오기 결과(위치·제원·계선 덮어쓰기)를 실행 시점에 카탈로그에 얹음. 화면 미적용 — `scripts/run-with-overlay.mjs` | ADR-108 |
 | `engageOnRemote` | OFF | 원격 화력통제 교전 — 킬웹 웹 파티션 안에서 다른 포대의 화력통제 항적으로 사격(탐지 전용 자산 제외). **반사실 전용** — 사유는 ADR-070 | ADR-070 |

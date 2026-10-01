@@ -412,6 +412,13 @@
     this.earlyShooterAssignment = ff('earlyShooterAssignment', false);
     this.earlyAssignmentTimePenaltySec = (typeof f.earlyAssignmentTimePenaltySec === 'number' && f.earlyAssignmentTimePenaltySec > 0)
       ? f.earlyAssignmentTimePenaltySec : 30;
+    // ADR-110: 사수 지정 되먹임 — ① 예측 일치(예측 창을 실제 발사 평가와 같은 300초 전방 요격점 조건 + 포대 레이더 사격통제
+    // 획득 예상으로 계산) ② 사수 CANTCO 회신(예측 준비 시각 + 유예 안에 못 쏘면 「수행 불가」 회신, 15분 대기 대체)
+    // ③ 즉시 재지정(회신 1초 뒤 재결심 · 같은 사수는 냉각 시간 동안 예측 재지정 제외 · 다른 웹은 COP로 계획 소멸을 보고 진행).
+    // earlyShooterAssignment ON에서만 뜻이 있다. 기본 OFF(bit-exact). 유예 30초·냉각 60초는 개념값(등급 C).
+    this.assignmentFeedback = ff('assignmentFeedback', false) && this.earlyShooterAssignment;
+    this.cantcoGraceSec = (typeof f.cantcoGraceSec === 'number' && f.cantcoGraceSec >= 0) ? f.cantcoGraceSec : 30;
+    this.cantcoCooldownSec = (typeof f.cantcoCooldownSec === 'number' && f.cantcoCooldownSec >= 0) ? f.cantcoCooldownSec : 60;
     // ADR-105: 한미 교전 협조(음성) — 미군 C2(THAAD·Patriot C2)와 한국군 결심 C2(As-Is KAMDOC·MCRC / To-Be
     // IAOC)가 같은 위협에 대해 「내 최적 사수 제안 → 상대가 자기 최적 사수와 비교 → 회신」을 음성 계선
     // (C2-VOICE-COORD-01 · Normal(20, σ5))으로 주고받아 **한 위협에 한 사수**를 정한다. 최적이 한국군 자산이면
@@ -569,6 +576,11 @@
     if (this.earlyShooterAssignment) {   // ADR-109 (OFF wire shape 보존)
       this.features.earlyShooterAssignment = true;
       this.features.earlyAssignmentTimePenaltySec = this.earlyAssignmentTimePenaltySec;
+      if (this.assignmentFeedback) {   // ADR-110 (OFF wire shape 보존)
+        this.features.assignmentFeedback = true;
+        this.features.cantcoGraceSec = this.cantcoGraceSec;
+        this.features.cantcoCooldownSec = this.cantcoCooldownSec;
+      }
     }
     if (this.c2DecisionTimeParity) this.features.c2DecisionTimeParity = true; // ADR-099
     this.features.southernAxes = this.southernAxes;
@@ -2193,12 +2205,98 @@
    * 돌려주는 ev는 feasible=true · predicted=true · readyAt(창 시작) · windowEnd(창 끝) · pk(요격탄 기본값 또는 ADR-107 값)
    * · pip.rangeKm(창 시작 시각의 거리)를 갖는다. 탄 소진·채널 포화·교전 불가 사유는 예측하지 않는다. 순수 함수(RNG·계정 무관).
    */
+  /**
+   * ADR-110 ①: 요격점 구간 — 실제 발사 평가(findEarliestPip · 300초 전방 · 비행시간 ≤ 도달시간)와 같은 조건으로
+   * 「이 시각에 쏘면 요격점이 있다」가 성립하는 시각 구간의 합집합. 점 p가 봉투 안이고 비행시간 f(p)이면
+   * 발사 시각 τ ∈ [p − 300, p − f(p)]에서 그 점이 요격점이 된다. 탄 소진·채널·레이더는 보지 않는다(반사실). 캐시는
+   * 기하 창과 같은 키(사수|유형|축|체공|착탄점). 순수 함수.
+   */
+  Simulation.prototype._iadsPipIntervals = function (shooter, threat) {
+    if (!this._iadsCanEngage(shooter, threat)) return null;
+    this._pipIntervalCache = this._pipIntervalCache || {};
+    var cacheKey = shooter.id + '|' + threat.type + '|' + threat.axis + '|' + threat.dwellSec +
+      (threat.target ? '|' + threat.target[0] + ',' + threat.target[1] : '');
+    var cached = this._pipIntervalCache[cacheKey];
+    if (cached === undefined) {
+      var missiles = shooter.engage.missiles || {};
+      var shooterPos = { lat: shooter.coord[0], lon: shooter.coord[1], altKm: 0 };
+      var canonicalType = KJ.IADS.canonicalThreatType(threat.type);
+      var horizon = KJ.IADS.PIP_SEARCH_HORIZON_SECONDS || 300;
+      var raw = [];
+      Object.keys(missiles).forEach(function (k) {
+        var m = missiles[k], table = m.pssekTable || {};
+        var detailed = Object.keys(table).some(function (key) { return key !== 'default'; });
+        if (detailed && !table[canonicalType]) return;
+        var env = m.engagementEnvelope;
+        for (var p = 1; p <= Math.floor(threat.dwellSec); p++) {
+          var pos = iadsThreatPosition(threat, threat.spawnT + p);
+          var range = haversineKm(shooterPos, pos), alt = pos.altKm;
+          if (range < env.Rmin || range > env.Rmax || alt < env.Hmin || alt > env.Hmax) continue;
+          var flyout = range * 1000 / m.missileSpeed;
+          if (m.fuelTime && flyout > m.fuelTime) continue;
+          if (flyout > horizon) continue;
+          raw.push([p - horizon, p - flyout]);
+        }
+      });
+      raw.sort(function (a, b) { return a[0] - b[0]; });
+      var merged = [];
+      raw.forEach(function (iv) {
+        var last = merged[merged.length - 1];
+        if (last && iv[0] <= last[1]) last[1] = Math.max(last[1], iv[1]); else merged.push([iv[0], iv[1]]);
+      });
+      cached = merged.length ? merged : null;
+      this._pipIntervalCache[cacheKey] = cached;
+    }
+    if (!cached) return null;
+    var s0 = threat.spawnT;
+    return cached.map(function (iv) { return [s0 + iv[0], s0 + iv[1]]; });
+  };
+
+  /** ADR-110 ①: 포대 레이더 사격통제 획득 예상 시각 — 사격통제 거리 진입 + 전이 시간. 레이더가 없으면 fromT. 영영 못 보면 Infinity. */
+  Simulation.prototype._iadsPredictFcReadyAt = function (shooter, threat, fromT) {
+    if (!shooter.mfrSensorId) return fromT;
+    var sensor = this._nodeById(shooter.mfrSensorId), spec = sensorSpec(sensor);
+    if (!sensor || !spec) return Infinity;
+    var ranges = spec.compatibilityRanges || spec.ranges, fcRange = ranges && ranges.fireControl;
+    if (!fcRange) return Infinity;
+    var end = threat.spawnT + threat.dwellSec, sPos = { lat: sensor.coord[0], lon: sensor.coord[1], altKm: 0 };
+    var tr = spec.transitionTime || {}, lead = (Number(tr.detectToTrack) || 0) + (Number(tr.trackToFireControl) || 0);
+    for (var at = Math.max(threat.spawnT, Math.floor(fromT)); at <= end; at += 1) {
+      if (haversineKm(sPos, iadsThreatPosition(threat, at)) <= fcRange) return at + lead;
+    }
+    return Infinity;
+  };
+
   Simulation.prototype._iadsPredictiveEvaluate = function (shooter, threat, t) {
     var ev = this._iadsEvaluate(shooter, threat, t);
     if (ev.feasible || !PREDICTABLE_REASONS[ev.reason]) return ev;
-    var gw = this._iadsGeometryWindow(shooter, threat);
-    if (!gw || gw.lastFire <= t + 1) return ev;
-    var readyAt = Math.max(gw.firstFire, t + 1);
+    var readyAt, windowEnd;
+    if (this.assignmentFeedback) {   // ADR-110 ① 보수적 예측
+      if (threat._cantco && Number.isFinite(threat._cantco[shooter.id]) && t - threat._cantco[shooter.id] < this.cantcoCooldownSec) {
+        return { feasible: false, reason: 'cantco_cooldown', readyAt: threat._cantco[shooter.id] + this.cantcoCooldownSec };
+      }
+      var ivs = this._iadsPipIntervals(shooter, threat);
+      if (!ivs) return ev;
+      var earliest = t + 1;
+      if (ev.reason === 'no_fire_control') {
+        var fcAt = this._iadsPredictFcReadyAt(shooter, threat, t + 1);
+        if (!Number.isFinite(fcAt)) return ev;
+        earliest = Math.max(earliest, fcAt);
+      }
+      readyAt = null;
+      for (var i = 0; i < ivs.length; i++) {
+        if (ivs[i][1] < earliest) continue;
+        readyAt = Math.max(ivs[i][0], earliest); break;
+      }
+      if (readyAt === null) return ev;
+      windowEnd = ivs[ivs.length - 1][1];
+      if (windowEnd <= t + 1) return ev;
+    } else {
+      var gw = this._iadsGeometryWindow(shooter, threat);
+      if (!gw || gw.lastFire <= t + 1) return ev;
+      readyAt = Math.max(gw.firstFire, t + 1);
+      windowEnd = gw.lastFire;
+    }
     var pos = iadsThreatPosition(threat, readyAt);
     var rangeKm = pos ? haversineKm({ lat: shooter.coord[0], lon: shooter.coord[1], altKm: 0 }, pos) : 1;
     var missiles = (shooter.engage && shooter.engage.missiles) || {}, pk = null;
@@ -2209,7 +2307,7 @@
     if (pk === null) pk = 0.75;
     if (this.shoradPkRealism && isShorad(shooter) && (threat.type === 'uav_small' || threat.type === 'cruise')) pk = this.shoradSmallTargetPk;
     pk = Math.max(0, Math.min(0.99, pk * this.mult.pk));
-    return { feasible: true, predicted: true, reason: ev.reason, readyAt: readyAt, windowEnd: gw.lastFire,
+    return { feasible: true, predicted: true, reason: ev.reason, readyAt: readyAt, windowEnd: windowEnd,
       pk: pk, ammo: this._iadsAmmo(shooter.id, t), pip: { rangeKm: rangeKm, flyout: null, timeToReach: readyAt - t } };
   };
   /** ADR-109: 후보 점수 — 예측 후보는 준비까지 남은 시간만큼 지수 감쇠(지금 쏠 수 있는 포대 우선). */
@@ -3210,8 +3308,10 @@
       launchCause: cause,
       trackLastUpdateAt: lastUpdateAt,
       trackReceivedAt: ledger && ledger.receivedAt,
-      validUntil: geometryWindow ? geometryWindow.lastFire + 3 : null
+      validUntil: (this.assignmentFeedback && chosen.predicted && Number.isFinite(chosen.windowEnd))
+        ? chosen.windowEnd + 3 : (geometryWindow ? geometryWindow.lastFire + 3 : null)
     });
+    if (this.assignmentFeedback && chosen.predicted) plan.predictedReadyAt = chosen.readyAt;   // ADR-110 ②
     threat._iadsPlans.push(plan);
     this.global.c2Orders.created++;
     threat._hadIadsPlan = true;
@@ -3733,6 +3833,22 @@
       // 포대의 준비 예정 시각(사통 전이·요격점)에 다시 본다. 창(validUntil)이 닫히면 위의 만료 분기로 빠져 재결심한다.
       var es = this._earlyAssignStats();
       if (!d.waiting) { es.waits++; this._mark(threat, '사수대기:' + shooter.id + '(' + ev.reason + ')', t, axisOf(d.commander)); d.waitStartedAt = t; }
+      if (this.assignmentFeedback && Number.isFinite(plan.predictedReadyAt) && t > plan.predictedReadyAt + this.cantcoGraceSec) {
+        // ADR-110 ②③: 예측 준비 시각 + 유예가 지나도 못 쏜다 → 「수행 불가(CANTCO)」 회신, 계획 해제, 결심 지휘소는 1초 뒤 재결심.
+        // 같은 사수는 냉각 시간 동안 예측 재지정에서 제외된다. 다른 웹(군단 방공)은 COP에서 계획 소멸을 보고 자기 결심을 진행한다.
+        es.cantco = (es.cantco || 0) + 1;
+        es.waitSecSum += (t - (d.waitStartedAt || t));
+        this._mark(threat, '사수불가회신:' + shooter.id + '(' + ev.reason + ')', t, axisOf(d.commander));
+        this._iadsTransitionPlan(plan, 'expired', t, 'released', 'cantco');
+        this.global.c2Orders.expired++;
+        this.global.c2Orders.released++;
+        this.global.c2Orders.expiryByReason.cantco = (this.global.c2Orders.expiryByReason.cantco || 0) + 1;
+        threat._cantco = threat._cantco || {};
+        threat._cantco[shooter.id] = t;
+        this._sendIadsStatus(threat, d.commander, 'released', t);
+        this._scheduleIadsRetry(threat, d.commander, t + 1);
+        return;
+      }
       var again = Number.isFinite(ev.readyAt) && ev.readyAt > t ? Math.min(ev.readyAt, t + 5) : t + 1;
       if (Number.isFinite(plan.validUntil)) again = Math.min(again, plan.validUntil + 0.001);
       this.schedule(again, PRI.LINK_ARRIVE, 'IADS_FIRE', Object.assign({}, d, { receptionComplete: true, waiting: true }));

@@ -8,18 +8,36 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 const HERE=path.dirname(fileURLToPath(import.meta.url)),ROOT=path.resolve(HERE,'../../..');
 const localRequire=createRequire(import.meta.url);
-let chromium;
+let chromium=null;
 try { ({chromium}=localRequire('playwright')); }
 catch {
-  const moduleDir=process.env.PLAYWRIGHT_MODULE_DIR||path.join(os.homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/node');
-  ({chromium}=createRequire(path.join(moduleDir,'package.json'))('playwright'));
+  try {
+    const moduleDir=process.env.PLAYWRIGHT_MODULE_DIR||path.join(os.homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/node');
+    ({chromium}=createRequire(path.join(moduleDir,'package.json'))('playwright'));
+  } catch { chromium=null; }
+}
+// Playwright가 없으면 헤드리스 Chrome(headless_shell)의 --print-to-pdf로 떨어진다(효과척도 결과서 렌더러와 같은 방식 · 꼬리말 쪽 번호 없음).
+if(!chromium){
+  const shell=process.env.CHROME_PATH||['/usr/bin/google-chrome','/usr/bin/chromium',
+    ...(fs.existsSync('/opt/pw-browsers')?fs.readdirSync('/opt/pw-browsers').filter(d=>/headless_shell/.test(d)).map(d=>path.join('/opt/pw-browsers',d,'chrome-linux/headless_shell')):[])].find(p=>fs.existsSync(p));
+  if(!shell)throw new Error('Chrome unavailable; set CHROME_PATH');
+  const audits=[];
+  for(const [source,name] of [['report.html','K-JAMDS_지휘흐름_모의논리서.pdf']]){
+    const out=path.join(ROOT,name);
+    execFileSync(shell,['--headless','--disable-gpu','--no-sandbox','--no-pdf-header-footer','--print-to-pdf='+out,pathToFileURL(path.join(HERE,source)).href],{stdio:['ignore','ignore','pipe']});
+    const pages=(fs.readFileSync(out).toString('latin1').match(/\/Type\s*\/Page[^s]/g)||[]).length;
+    audits.push({html:source,pdf:name,pages,errors:[],renderer:'headless_shell --print-to-pdf',renderedAt:new Date().toISOString()});
+    console.log('rendered',name,'pages',pages);
+  }
+  fs.writeFileSync(path.join(HERE,'render-qa.json'),JSON.stringify(audits,null,2));
+  process.exit(0);
 }
 const executablePath=process.env.CHROME_PATH||[
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium'
 ].find(p=>fs.existsSync(p));
 if(!executablePath)throw new Error('Chrome unavailable; set CHROME_PATH');
 const outputs=[['report.html','K-JAMDS_지휘흐름_모의논리서.pdf']];
-const DATE='2026-09-28';
+const DATE='2026-10-01';
 const browser=await chromium.launch({headless:true,executablePath});
 const audits=[];
 try {

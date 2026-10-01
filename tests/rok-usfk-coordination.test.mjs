@@ -136,5 +136,21 @@ for (const mode of ['asis', 'tobe']) {
   console.log(`  info ${mode}: 격추/누수 OFF ${off.global.killed}/${off.global.leaked} → ON ${g.killed}/${g.leaked}`);
 }
 
+// 6) 모드별 매체 { asis, tobe } — As-Is 음성 · To-Be 데이터링크(사용자 결정 2026-10-01)
+console.log('\n# 6) 모드별 매체 { asis: voice, tobe: datalink }');
+{
+  const mixed = { asis: 'voice', tobe: 'datalink' };
+  const catA = KJ.resolveModelCatalog({ deploymentId: DEP, mode: 'asis', features: Object.assign({}, SCREEN, { rokUsfkCoordination: mixed }) });
+  const catT = KJ.resolveModelCatalog({ deploymentId: DEP, mode: 'tobe', features: Object.assign({}, SCREEN, { rokUsfkCoordination: mixed }) });
+  const mA = new Set(catA.links.filter((l) => l.axis === 'coalition_coord' && l.comm.asis).map((l) => l.comm.asis.type));
+  const mT = new Set(catT.links.filter((l) => l.axis === 'coalition_coord' && l.comm.tobe).map((l) => l.comm.tobe.type));
+  assert(mA.size === 1 && mA.has('voice') && mT.size === 1 && mT.has('datalink'), `계선 매체 As-Is ${[...mA]} · To-Be ${[...mT]}`);
+  const sameA = run('asis', { rokUsfkCoordination: mixed }), voiceA = run('asis', { rokUsfkCoordination: 'voice' });
+  assert(sha(sameA) === sha(voiceA), 'As-Is: { asis: voice } = \'voice\' bit-exact');
+  const dl = run('tobe', { rokUsfkCoordination: mixed }), vo = run('tobe', { rokUsfkCoordination: 'voice' });
+  assert(dl.global.features.rokUsfkCoordination === 'datalink', 'To-Be: features에 datalink 신고');
+  assert(sha(dl) !== sha(vo) && dl.global.coalition.proposals > 0, `To-Be: 데이터링크 협조가 음성과 다른 결과(제안 ${dl.global.coalition.proposals})`);
+}
+
 console.log(fail ? `\n실패 ${fail}건` : '\n전체 통과');
 process.exit(fail ? 1 : 0);

@@ -3236,10 +3236,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // ADR-105: 한미 교전 협조 계선(음성) — 명시적으로 켤 때만(반사실과 같은 규율). 값은 매체 이름.
     var coal = (opts && opts.rokUsfkCoordination) || null;
     if (coal === true) coal = 'voice';
+    // 매체는 문자열(두 모드 같음) 또는 { asis, tobe }(모드별 — 예: As-Is 음성 · To-Be 데이터링크, 사용자 결정 2026-10-01).
+    var coalAsis = coal && (typeof coal === 'string' ? coal : coal.asis) || null;
+    var coalTobe = coal && (typeof coal === 'string' ? coal : coal.tobe) || null;
+    if (coal && !coalAsis && !coalTobe) coal = null;
     var cacheKey = id + (v2 ? '|linkV2' : '') + (appr ? '|appr' : '') +
       (southern ? '|south' : '') + (parity ? '|rp' : '') + (opLevel ? '|op:' + opLevel : '') +
       (kvmf ? '|kvmf' : '') + (usfkShare ? '|usfkshare:' + usfkShare : '') + (decParity ? '|decpar' : '') +
-      (coal ? '|coal:' + coal : '');
+      (coal ? '|coal:' + coalAsis + '/' + coalTobe : '');
     if (cache[cacheKey]) return cache[cacheKey];
     var deployment = KJ.deploymentById(id);
     if (!deployment) throw new Error('Unknown high-resolution deployment: ' + id);
@@ -3595,22 +3599,21 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 주고받아 한 위협에 한 사수를 정한다. 협조가 늦거나 마감이 임박하면 협조 없이 쏘므로 중복교전은
     // 여전히 가능하고, 최적 사수가 한국군 자산이면 미군 축이 양보한다.
     if (coal) {
-      var coalComm = {
-        voice: VOICE, datalink: C2_TRANSFER, ifcn: IFCN, chat: CHAT_TRACK, 'voice-vtc': VOICE_STATUS
-      }[coal];
-      if (!coalComm) throw new Error('알 수 없는 rokUsfkCoordination 매체: ' + coal);
+      var COAL_MEDIA = { voice: VOICE, datalink: C2_TRANSFER, ifcn: IFCN, chat: CHAT_TRACK, 'voice-vtc': VOICE_STATUS };
+      var coalCommAsis = coalAsis ? COAL_MEDIA[coalAsis] : null, coalCommTobe = coalTobe ? COAL_MEDIA[coalTobe] : null;
+      if ((coalAsis && !coalCommAsis) || (coalTobe && !coalCommTobe)) throw new Error('알 수 없는 rokUsfkCoordination 매체: ' + JSON.stringify(coal));
       var coalUsfk = nodes.filter(function (n) {
         return n.category === 'c2' && n.forceOwner === 'USFK' && n.typeId !== 'ECS';
       });
       var coalAsisPeers = [mcrc, kamdoc].filter(Boolean);
       coalUsfk.forEach(function (u) {
-        coalAsisPeers.forEach(function (p) {
-          addLink(links, u.id, p.id, 'coord', coalComm, null, 'coalition_coord');
-          addLink(links, p.id, u.id, 'coord', coalComm, null, 'coalition_coord');
+        if (coalCommAsis) coalAsisPeers.forEach(function (p) {
+          addLink(links, u.id, p.id, 'coord', coalCommAsis, null, 'coalition_coord');
+          addLink(links, p.id, u.id, 'coord', coalCommAsis, null, 'coalition_coord');
         });
-        if (iaoc) {
-          addLink(links, u.id, iaoc.id, 'coord', null, coalComm, 'coalition_coord');
-          addLink(links, iaoc.id, u.id, 'coord', null, coalComm, 'coalition_coord');
+        if (iaoc && coalCommTobe) {
+          addLink(links, u.id, iaoc.id, 'coord', null, coalCommTobe, 'coalition_coord');
+          addLink(links, iaoc.id, u.id, 'coord', null, coalCommTobe, 'coalition_coord');
         }
       });
     }
@@ -4440,6 +4443,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 기본 OFF(불변 규칙 1 · 재기준선 대상). 협조 절차 자체는 C2 서비스 큐를 소모하지 않는다(ADR-104와 같은 규율).
     this.rokUsfkCoordination = f.rokUsfkCoordination || null;
     if (this.rokUsfkCoordination === true) this.rokUsfkCoordination = 'voice';
+    // 매체가 모드별 객체({ asis, tobe })이면 이 실행의 모드에 해당하는 매체 이름만 남긴다(신고·판정 모두 문자열).
+    if (this.rokUsfkCoordination && typeof this.rokUsfkCoordination === 'object') this.rokUsfkCoordination = this.rokUsfkCoordination[this.mode] || null;
     var modeForCoal = this.mode;
     this.coalitionActive = !!(this.rokUsfkCoordination && (this.catalog.links || []).some(function (l) {
       return l.axis === 'coalition_coord' && l.comm && l.comm[modeForCoal];
@@ -9748,7 +9753,7 @@ function features() {
     shoradCruiseExclusion: P.nocm, // ADR-107 ① — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-30)
     shoradPkRealism: P.shpk,       // ADR-107 ② — 〃
     commanderRouteRetry: P.rr,     // ADR-106 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 요청 2026-09-29)
-    rokUsfkCoordination: P.coal ? 'voice' : null, // ADR-105 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-29)
+    rokUsfkCoordination: P.coal ? { asis: 'voice', tobe: 'datalink' } : null, // ADR-105 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-29) · To-Be는 데이터링크(사용자 결정 2026-10-01)
     ballisticLaunchAxes: P.lx,   // ADR-091 — 〃
     threatAimpoints: P.aim,      // ADR-097 — 〃 (이 화면만 기본 켜짐)
     c2DecisionTimeParity: P.par, // ADR-099 — 〃 (이 화면만 기본 켜짐 · codex 정합)
@@ -9859,7 +9864,7 @@ const PARAMS = [
   //    같은 위협에 「내 최적 사수 제안 → 상대 평가 → 회신」을 음성(20초 ±5)으로 주고받아 한 사수를 정한다.
   //    최적이 한국군 자산이면 미군이 양보한다. 마감 임박(잔여 창 45초 미만)이면 협조 없이 쏘고, 큐 기반
   //    긴급발사도 양보 상태를 지킨다. **엔진 기본 OFF · 이 화면만 기본 ON**(사용자 결정 2026-09-29). 끄려면 ?coal=0.
-  { k: 'coal',  d: 1,       t: 'bool', h: '한미 교전 협조(음성) — THAAD·Patriot C2 ↔ KAMDOC·MCRC/IAOC가 최적 사수를 협조해 정함, 마감 임박·시한 초과면 협조 없이 발사 (ADR-105 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  { k: 'coal',  d: 1,       t: 'bool', h: '한미 교전 협조 — THAAD·Patriot C2 ↔ KAMDOC·MCRC(As-Is 음성)/IAOC(To-Be 데이터링크)가 최적 사수를 협조해 정함, 마감 임박·시한 초과면 협조 없이 발사 (ADR-105 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   // ── rr(ADR-106): 책임 C2 보고 재시도. 어떤 책임 C2의 시작 보고가 상관 실패로 비면 종전에는 다른 센서의 신규 획득
   //    사건이 올 때까지 그 C2 라우팅을 다시 시도하지 않았다(srbm#3: AN/TPY-2 46.8초 탐지 → THAAD C2 인지 150.6초).
   //    켜면 5초(상관 시도 창) 경계마다 재시도한다. **엔진 기본 OFF · 이 화면만 기본 ON**(사용자 요청 2026-09-29). 끄려면 ?rr=0.

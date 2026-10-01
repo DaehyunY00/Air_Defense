@@ -207,10 +207,14 @@
     // ADR-105: 한미 교전 협조 계선(음성) — 명시적으로 켤 때만(반사실과 같은 규율). 값은 매체 이름.
     var coal = (opts && opts.rokUsfkCoordination) || null;
     if (coal === true) coal = 'voice';
+    // 매체는 문자열(두 모드 같음) 또는 { asis, tobe }(모드별 — 예: As-Is 음성 · To-Be 데이터링크, 사용자 결정 2026-10-01).
+    var coalAsis = coal && (typeof coal === 'string' ? coal : coal.asis) || null;
+    var coalTobe = coal && (typeof coal === 'string' ? coal : coal.tobe) || null;
+    if (coal && !coalAsis && !coalTobe) coal = null;
     var cacheKey = id + (v2 ? '|linkV2' : '') + (appr ? '|appr' : '') +
       (southern ? '|south' : '') + (parity ? '|rp' : '') + (opLevel ? '|op:' + opLevel : '') +
       (kvmf ? '|kvmf' : '') + (usfkShare ? '|usfkshare:' + usfkShare : '') + (decParity ? '|decpar' : '') +
-      (coal ? '|coal:' + coal : '');
+      (coal ? '|coal:' + coalAsis + '/' + coalTobe : '');
     if (cache[cacheKey]) return cache[cacheKey];
     var deployment = KJ.deploymentById(id);
     if (!deployment) throw new Error('Unknown high-resolution deployment: ' + id);
@@ -566,22 +570,21 @@
     // 주고받아 한 위협에 한 사수를 정한다. 협조가 늦거나 마감이 임박하면 협조 없이 쏘므로 중복교전은
     // 여전히 가능하고, 최적 사수가 한국군 자산이면 미군 축이 양보한다.
     if (coal) {
-      var coalComm = {
-        voice: VOICE, datalink: C2_TRANSFER, ifcn: IFCN, chat: CHAT_TRACK, 'voice-vtc': VOICE_STATUS
-      }[coal];
-      if (!coalComm) throw new Error('알 수 없는 rokUsfkCoordination 매체: ' + coal);
+      var COAL_MEDIA = { voice: VOICE, datalink: C2_TRANSFER, ifcn: IFCN, chat: CHAT_TRACK, 'voice-vtc': VOICE_STATUS };
+      var coalCommAsis = coalAsis ? COAL_MEDIA[coalAsis] : null, coalCommTobe = coalTobe ? COAL_MEDIA[coalTobe] : null;
+      if ((coalAsis && !coalCommAsis) || (coalTobe && !coalCommTobe)) throw new Error('알 수 없는 rokUsfkCoordination 매체: ' + JSON.stringify(coal));
       var coalUsfk = nodes.filter(function (n) {
         return n.category === 'c2' && n.forceOwner === 'USFK' && n.typeId !== 'ECS';
       });
       var coalAsisPeers = [mcrc, kamdoc].filter(Boolean);
       coalUsfk.forEach(function (u) {
-        coalAsisPeers.forEach(function (p) {
-          addLink(links, u.id, p.id, 'coord', coalComm, null, 'coalition_coord');
-          addLink(links, p.id, u.id, 'coord', coalComm, null, 'coalition_coord');
+        if (coalCommAsis) coalAsisPeers.forEach(function (p) {
+          addLink(links, u.id, p.id, 'coord', coalCommAsis, null, 'coalition_coord');
+          addLink(links, p.id, u.id, 'coord', coalCommAsis, null, 'coalition_coord');
         });
-        if (iaoc) {
-          addLink(links, u.id, iaoc.id, 'coord', null, coalComm, 'coalition_coord');
-          addLink(links, iaoc.id, u.id, 'coord', null, coalComm, 'coalition_coord');
+        if (iaoc && coalCommTobe) {
+          addLink(links, u.id, iaoc.id, 'coord', null, coalCommTobe, 'coalition_coord');
+          addLink(links, iaoc.id, u.id, 'coord', null, coalCommTobe, 'coalition_coord');
         }
       });
     }

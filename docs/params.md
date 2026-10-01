@@ -182,7 +182,7 @@
 - **MC 적용방식**: 결정적
 
 ### [IADS-COAL-01] 한미 교전 협조 계선·매체 (rokUsfkCoordination, ADR-105)
-- **값**: 미군 C2(THAAD C2·Patriot C2) ↔ 한국군 전역 결심 C2(As-Is KAMDOC·MCRC / To-Be IAOC) 양방향 `coord` 계선 · 매체 기본 음성 = C2-VOICE-COORD-01(Normal(20, σ5)) 재사용
+- **값**: 미군 C2(THAAD C2·Patriot C2) ↔ 한국군 전역 결심 C2(As-Is KAMDOC·MCRC / To-Be IAOC) 양방향 `coord` 계선 · 매체는 문자열(두 모드 같음) 또는 `{ asis, tobe }`(모드별). 음성 = C2-VOICE-COORD-01(Normal(20, σ5)) 재사용 · 데이터링크 = IADS-LINK-SHORT-01(1초). [지휘 흐름] 화면·결과서는 **As-Is 음성 · To-Be 데이터링크**(사용자 결정 2026-10-01: 킬웹의 한미 협조는 데이터링크)
 - **출처**: 연합 방공에서 한미 C2가 음성으로 교전을 협조한다는 일반 이해. 계선 존재와 매체는 구조 정합 판단이며 실측 근거 없음
 - **적용범위**: `rokUsfkCoordination` ON에서만 카탈로그에 생성(`coalition_coord`). 항적·교전현황·지휘 계선은 열지 않음(ADR-036 승계)
 - **신뢰도**: C

@@ -1087,7 +1087,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20261001b';
+const V = '?v=20261001c';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -1480,7 +1480,7 @@ function features() {
     shoradCruiseExclusion: P.nocm, // ADR-107 ① — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-30)
     shoradPkRealism: P.shpk,       // ADR-107 ② — 〃
     commanderRouteRetry: P.rr,     // ADR-106 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 요청 2026-09-29)
-    rokUsfkCoordination: P.coal ? 'voice' : null, // ADR-105 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-29)
+    rokUsfkCoordination: P.coal ? { asis: 'voice', tobe: 'datalink' } : null, // ADR-105 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-29) · To-Be는 데이터링크(사용자 결정 2026-10-01)
     ballisticLaunchAxes: P.lx,   // ADR-091 — 〃
     threatAimpoints: P.aim,      // ADR-097 — 〃 (이 화면만 기본 켜짐)
     c2DecisionTimeParity: P.par, // ADR-099 — 〃 (이 화면만 기본 켜짐 · codex 정합)
@@ -1591,7 +1591,7 @@ const PARAMS = [
   //    같은 위협에 「내 최적 사수 제안 → 상대 평가 → 회신」을 음성(20초 ±5)으로 주고받아 한 사수를 정한다.
   //    최적이 한국군 자산이면 미군이 양보한다. 마감 임박(잔여 창 45초 미만)이면 협조 없이 쏘고, 큐 기반
   //    긴급발사도 양보 상태를 지킨다. **엔진 기본 OFF · 이 화면만 기본 ON**(사용자 결정 2026-09-29). 끄려면 ?coal=0.
-  { k: 'coal',  d: 1,       t: 'bool', h: '한미 교전 협조(음성) — THAAD·Patriot C2 ↔ KAMDOC·MCRC/IAOC가 최적 사수를 협조해 정함, 마감 임박·시한 초과면 협조 없이 발사 (ADR-105 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  { k: 'coal',  d: 1,       t: 'bool', h: '한미 교전 협조 — THAAD·Patriot C2 ↔ KAMDOC·MCRC(As-Is 음성)/IAOC(To-Be 데이터링크)가 최적 사수를 협조해 정함, 마감 임박·시한 초과면 협조 없이 발사 (ADR-105 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   // ── rr(ADR-106): 책임 C2 보고 재시도. 어떤 책임 C2의 시작 보고가 상관 실패로 비면 종전에는 다른 센서의 신규 획득
   //    사건이 올 때까지 그 C2 라우팅을 다시 시도하지 않았다(srbm#3: AN/TPY-2 46.8초 탐지 → THAAD C2 인지 150.6초).
   //    켜면 5초(상관 시도 창) 경계마다 재시도한다. **엔진 기본 OFF · 이 화면만 기본 ON**(사용자 요청 2026-09-29). 끄려면 ?rr=0.

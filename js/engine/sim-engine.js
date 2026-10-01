@@ -421,6 +421,8 @@
     // 기본 OFF(불변 규칙 1 · 재기준선 대상). 협조 절차 자체는 C2 서비스 큐를 소모하지 않는다(ADR-104와 같은 규율).
     this.rokUsfkCoordination = f.rokUsfkCoordination || null;
     if (this.rokUsfkCoordination === true) this.rokUsfkCoordination = 'voice';
+    // 매체가 모드별 객체({ asis, tobe })이면 이 실행의 모드에 해당하는 매체 이름만 남긴다(신고·판정 모두 문자열).
+    if (this.rokUsfkCoordination && typeof this.rokUsfkCoordination === 'object') this.rokUsfkCoordination = this.rokUsfkCoordination[this.mode] || null;
     var modeForCoal = this.mode;
     this.coalitionActive = !!(this.rokUsfkCoordination && (this.catalog.links || []).some(function (l) {
       return l.axis === 'coalition_coord' && l.comm && l.comm[modeForCoal];

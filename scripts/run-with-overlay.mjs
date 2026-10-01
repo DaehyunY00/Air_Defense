@@ -32,7 +32,7 @@ const depId = opt('--deployment', overlay.deploymentId || 'HANBANDO_FULL_NORMAL'
 const SCREEN = { highResolutionDeployment: true, threatTargetDispersion: true, southernAxes: true, linkSemanticsV2: true, sensorReportParity: true,
   sawtoothFreshness: true, approvalChain: true, unifiedEngagementState: true, selfDefenseFire: true, ballisticLaunchAxes: true, threatAimpoints: true,
   c2DecisionTimeParity: true, approvalPipelineRealism: true, iccRelayAuthorization: true, ballisticReportSource: true, standbyCue: true,
-  rokUsfkCoordination: 'voice', commanderRouteRetry: true, shoradCruiseExclusion: true, shoradPkRealism: true };
+  rokUsfkCoordination: { asis: 'voice', tobe: 'datalink' }, commanderRouteRetry: true, shoradCruiseExclusion: true, shoradPkRealism: true };
 const flags = Object.assign({}, SCREEN, JSON.parse(opt('--flags', '{}')));
 
 function run(mode, withOverlay) {

@@ -2207,8 +2207,8 @@
    */
   /**
    * ADR-110 ①: 요격점 구간 — 실제 발사 평가(findEarliestPip · 300초 전방 · 비행시간 ≤ 도달시간)와 같은 조건으로
-   * 「이 시각에 쏘면 요격점이 있다」가 성립하는 시각 구간의 합집합. 점 p가 봉투 안이고 비행시간 f(p)이면
-   * 발사 시각 τ ∈ [p − 300, p − f(p)]에서 그 점이 요격점이 된다. 탄 소진·채널·레이더는 보지 않는다(반사실). 캐시는
+   * 「이 시각에 쏘면 요격점이 있고 아직 이르지도 않다」가 성립하는 시각 구간의 합집합. 점 p가 봉투 안이고 비행시간 f(p)이면
+   * 발사 시각 τ ∈ [p − f(p) − 3, p − f(p)]에서 그 점이 요격점이 된다(실제 평가의 launchWait ≤ 0 조건과 같음). 탄 소진·채널·레이더는 보지 않는다(반사실). 캐시는
    * 기하 창과 같은 키(사수|유형|축|체공|착탄점). 순수 함수.
    */
   Simulation.prototype._iadsPipIntervals = function (shooter, threat) {
@@ -2235,7 +2235,9 @@
           var flyout = range * 1000 / m.missileSpeed;
           if (m.fuelTime && flyout > m.fuelTime) continue;
           if (flyout > horizon) continue;
-          raw.push([p - horizon, p - flyout]);
+          // 실제 발사 평가: 전방 탐색의 첫 봉투 안 점 p에 대해 launchWait = (p−τ) − f − 3 ≤ 0 일 때만 발사 가능 → τ ∈ [p − f − 3, p − f].
+          // (p − 300 부터가 아니다 — 그 구간은 「아직 이름(too_early)」.) 봉투 안 연속 구간이면 합집합이 [진입 − f − 3, 이탈 − f]가 된다.
+          raw.push([p - flyout - 3, p - flyout]);
         }
       });
       raw.sort(function (a, b) { return a[0] - b[0]; });

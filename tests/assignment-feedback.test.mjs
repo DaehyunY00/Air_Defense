@@ -45,10 +45,13 @@ for (const mode of ['asis', 'tobe']) {
       if (!s.name.startsWith('사수불가회신:')) return;
       cantcoMarks++;
       const shooter = s.name.slice('사수불가회신:'.length).replace(/\(.*$/, '');
-      // 직전 사수지정(예측) 마크의 「준비 +Ns」와 지정 시각으로 예측 준비 시각을 복원 → 대기 ≤ 준비 + 유예 + 5
+      // 직전 사수지정(예측) 마크의 「준비 +Ns」와 지정 시각으로 예측 준비 시각을 복원. 명령이 포대에 늦게 닿으면(하달 계선 지연)
+      // 첫 「사수대기」 시각부터 재므로, CANTCO ≤ max(예측 준비, 첫 대기) + 유예 30 + 재점검 5(+반올림 1).
+      let firstWait = null;
       for (let j = i - 1; j >= 0; j--) {
+        const w = /^사수대기:(.+)\(/.exec(st[j].name); if (w && w[1] === shooter && firstWait === null) firstWait = st[j].t;
         const m = /^사수지정\(예측\):[^→]+→(.+)\(준비 \+(\d+)s\)$/.exec(st[j].name);
-        if (m && m[1] === shooter) { checked++; if (s.t > st[j].t + (+m[2]) + 30 + 5 + 1) waitTooLong++; break; }
+        if (m && m[1] === shooter) { checked++; const ready = Math.max(st[j].t + (+m[2]), firstWait === null ? 0 : firstWait); if (s.t > ready + 30 + 5 + 1) waitTooLong++; break; }
       }
       // 냉각 60초 안에 같은 사수 예측 재지정 0
       for (let j = i + 1; j < st.length && st[j].t < s.t + 60; j++) {

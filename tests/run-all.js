@@ -99,6 +99,7 @@ var suites = [
   ,['shorad-realism.test.mjs', 'ADR-107 단거리방공 현실화 (OFF bit-exact·비호·천마 순항 발사 0·Pk 샘플 계정·격추 감소·관측 순수성)']
   ,['catalog-overlay.test.mjs', 'ADR-108 xlsx 가져오기·카탈로그 덮어쓰기 (OFF bit-exact·빈 overlay·셀 변경 추출·검증 경고·좌표/탄약/창구/제거/센서/계선 반영·요약 신고·관측 순수성)']
   ,['early-shooter-assignment.test.mjs', 'ADR-109 조기 사수 지정 (OFF bit-exact·예측 지정 마크=계정·early_assigned 발사·대기 계정 대사·srbm#3 결심 앞당김·긴급발사 겹침 0·관측 순수성)']
+  ,['spawn-window.test.mjs', '위협 생성 구간(spawnUntilSec) — 미지정 bit-exact · 생성 구간 뒤 생성 0 · 관측 연장 시 미해결 0 · 결과 cfg 신고']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

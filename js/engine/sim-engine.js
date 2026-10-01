@@ -214,6 +214,9 @@
     this.intensity = cfg.intensity === undefined ? 1 : cfg.intensity; // 강도 0 허용
     this.seed = cfg.seed === undefined ? 1 : (cfg.seed >>> 0); // seed 0 보존
     this.endTime = cfg.endTimeSec || 1800;
+    // 생성 구간(초). 기본은 관측 종료와 같다(bit-exact). 더 짧게 주면 그 뒤로는 새 위협이 생성되지 않아
+    // 관측 종료까지 모든 항적이 격추·누수로 끝날 수 있다(「미해결」= 관측 절단 제거용).
+    this.spawnUntil = (typeof cfg.spawnUntilSec === 'number' && cfg.spawnUntilSec > 0) ? Math.min(cfg.spawnUntilSec, this.endTime) : this.endTime;
     // 민감도 스윕용 파라미터 배수(기본 1). 서비스시간·통신지연·탐지확률·요격확률을
     // 전역 스케일링해 ±20% 스윕 등에 사용 (Phase 3 mc-runner). 근거: 계획서 V&V 민감도분석.
     var m = cfg.mult || {};
@@ -4028,7 +4031,7 @@
     var ratePerSec = ((entry.ratePerMin || 0) * this.intensity) / 60;
     if (ratePerSec > 0) {
       var next = t + this._arrivalRng(entry).exponential(1 / ratePerSec); // 도착 전용 스트림(CRN) — 모드 불변
-      if (next <= this.endTime) this.schedule(next, PRI.SPAWN, 'SPAWN', { entry: entry });
+      if (next <= this.spawnUntil) this.schedule(next, PRI.SPAWN, 'SPAWN', { entry: entry });
     }
   };
 
@@ -4130,13 +4133,13 @@
         var n = Math.round(entry.burst * self.intensity);
         var at = entry.atSec || 0;
         for (var i = 0; i < n; i++) {
-          if (at <= self.endTime) self.schedule(at, PRI.SPAWN, 'SPAWN', { entry: entry });
+          if (at <= self.spawnUntil) self.schedule(at, PRI.SPAWN, 'SPAWN', { entry: entry });
         }
       }
       var ratePerSec = ((entry.ratePerMin || 0) * self.intensity) / 60;
       if (ratePerSec <= 0) return;
       var first = self._arrivalRng(entry).exponential(1 / ratePerSec); // 도착 전용 스트림(CRN) — 모드 불변
-      if (first <= self.endTime) self.schedule(first, PRI.SPAWN, 'SPAWN', { entry: entry });
+      if (first <= self.spawnUntil) self.schedule(first, PRI.SPAWN, 'SPAWN', { entry: entry });
     });
 
     while (this.heap.size() > 0) {
@@ -4336,6 +4339,7 @@
         scenario: this.scenario.id, mode: this.mode,
         intensity: this.intensity, seed: this.seed, endTimeSec: this.endTime
       };
+    if (this.spawnUntil !== this.endTime) resultConfig.spawnUntilSec = this.spawnUntil; // 생성 구간을 따로 준 경우만 신고(기본 wire shape 불변)
     if (this.highResolutionDeployment) {
       resultConfig.deploymentId = this.deploymentId;
       resultConfig.compatibilityMode = this.catalog.compatibilityMode;

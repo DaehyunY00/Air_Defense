@@ -1087,7 +1087,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20261001a';
+const V = '?v=20261001b';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -1552,6 +1552,7 @@ const PARAMS = [
   // 확정 결과보다 관측창이 먼저 끝났다. 분석 보고서도 같은 기본값으로 다시 돌린다.
   // ⚠️ seed 29는 600초 조건에서 고른 재현 예시다(위 주석) — 1800초의 대표 표본이라는 뜻이 아니다.
   { k: 'dur',   d: 1800,    t: 'num',  h: '관측 시간(초 · 기본 1800)' },
+  { k: 'sw',    d: 0,       t: 'num',  h: '위협 생성 구간(초 · 0이면 관측 시간과 같음). 관측 시간보다 짧게 주면 그 뒤로 새 위협이 생기지 않아 관측 종료 시 미해결(관측 절단)을 없앨 수 있음(예: ?sw=1800&dur=3600)' },
   // ── x: 위협 생성 강도(도착률 배수). 종전에는 이 화면이 1로 **고정**이었다(수치를 비교 조건으로 삼지 않으려는
   //    뜻) — 사용자 결정 2026-09-29로 [고급 모의설정]에 손잡이를 둔다. 본 앱 강도 슬라이더와 같은 엔진 값
   //    (`intensity`)이며, 1이 아니면 상태줄 칩 「강도 ×N」이 상시 뜬다. FULL·강도 3 이상은 계산이 오래 걸린다.
@@ -1697,6 +1698,7 @@ const INTENSITY = { x: clampX(P.x) };
 let DEPLOYMENT = (KJ.DEPLOYMENT_IDS || []).indexOf(P.dep) >= 0 ? P.dep : 'HANBANDO_FULL_NORMAL';
 P.seed = Math.max(0, Math.floor(P.seed));
 P.dur = Math.min(7200, Math.max(60, Math.floor(P.dur)));
+P.sw = Math.max(0, Math.floor(P.sw || 0));
 console.info('[지휘 흐름] 실험 조건은 URL 파라미터로만 줍니다:\n' +
   PARAMS.map((p) => `  ?${p.k}=  (기본 ${JSON.stringify(p.d)})  ${p.h}`).join('\n') +
   '\n예) ?sc=sc2&x=5&appr=0&mode=asis');
@@ -1764,6 +1766,7 @@ function doRun() {
     intensity: (INTENSITY.x = clampX(el('x').value)),
     seed: Math.max(0, Math.floor(+el('seed').value || 0)),
     endTimeSec: Math.min(7200, Math.max(60, Math.floor(+el('dur').value || 1800))),
+    spawnUntilSec: P.sw > 0 ? P.sw : undefined,
     deploymentId: DEPLOYMENT, modelFidelity: 'iads-c2',
     trace: true, traceCap: 300, flowTrace: true, features: features()
   };

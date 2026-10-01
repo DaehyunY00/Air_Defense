@@ -15,7 +15,7 @@ const TYPES = ['srbm','mrl_large','cruise','fighter','uav_small'];
 const q = (a,p)=>{ if(!a.length) return NaN; const s=[...a].sort((x,y)=>x-y); return s[Math.min(s.length-1,Math.floor(p*s.length))]; };
 const short = (id)=>id.replace(/^(C2_|SENSOR_|BATTERY_|ECS_)/,'').replace(/^(KAMD_OPS|MCRC|IAOC|ICC|ARMY_LOCAL_AD|USFK_PATRIOT_C2|USFK_THAAD_C2)_.*/,'$1');
 function run(mode, features, seed, flow) {
-  return KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode, intensity:1, seed, endTimeSec:1800, deploymentId:'HANBANDO_FULL_NORMAL', modelFidelity:'iads-c2', trace:true, traceCap:1000, flowTrace:!!flow, flowTraceCap:400000, features });
+  return KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode, intensity:1, seed, endTimeSec:3600, spawnUntilSec:1800, deploymentId:'HANBANDO_FULL_NORMAL', modelFidelity:'iads-c2', trace:true, traceCap:1000, flowTrace:!!flow, flowTraceCap:400000, features });
 }
 function analyze(res) {
   const out = { g: {}, time: {}, path: {}, load: {}, sensor: {}, outcomeByType: {} };

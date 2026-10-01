@@ -845,6 +845,7 @@ launchZones·conceptReachKm과 대조해 축선 배분의 정합성을 검증한
 
 ### [ENV-DES-CENSOR-01] 종료 절단(censoring) 보정 (Phase 3 ⑨, `js/engine/sim-engine.js`)
 - **값/분포**: `censored = max(0, spawned − killed − leaked)` — 관측창 종료(endTimeSec)까지 격추·누수 어느 쪽으로도 미해결한 위협. `features.censorFix`(기본 ON)이면 격추율·누수율 분모에서 제외(denom = spawned − censored)
+- **생성 구간**: 실행 옵션 `spawnUntilSec`(미지정 = `endTimeSec`)로 위협 생성을 관측 종료보다 먼저 멈출 수 있다. 생성 1800초 · 관측 3600초면 SC3 강도 1배에서 모든 항적이 2310초 안에 격추·누수로 끝나 censored = 0(실측 seed 29·30·31). 따로 준 경우만 결과 `config.spawnUntilSec`에 신고(기본 wire shape 불변)
 - **출처**: 이산사건 시뮬레이션 종료 절단(right-censoring) 표준 처리 — 개념 적용
 - **적용범위**: `_results` 격추율·누수율 분모(순수 보고 변경 — spawned·killed·leaked·rng·이벤트 불변). `censored`·`censoredRaw` 노출. **공용 유틸**: ①단계 탐지율도 `detected/(spawned−censored)`로 동일 보정 가능(동일 필드 재사용)
 - **신뢰도 등급**: B(방법론)

@@ -1716,7 +1716,8 @@ function activeConfigChips() {
   if (P.uavsd) out.push('무인기 자체교전 ON');
   // ew·lx·floor는 엔진 기본 OFF(이 화면도 기본 OFF) — 켜져 있으면 표기한다.
   if (P.ew) out.push('조기경보 보고 ON');
-  if (P.coal) out.push('한미 음성 협조 ON');
+  if (P.coal) out.push('한미 협조 ON (As-Is 음성·To-Be 데이터링크)');
+  if (P.sw > 0) out.push('생성 구간 ' + P.sw + '초');
   if (P.rr) out.push('보고 재시도 ON');
   if (P.nocm) out.push('비호 순항 제외·천마 킬웹만');
   if (P.shpk) out.push('단거리방공 Pk 0.7');

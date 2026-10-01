@@ -3122,7 +3122,9 @@
         if (!threat._iadsApproval || threat._iadsApproval[stKey] === undefined) {
           var sim = this;
           needGate = commander.batteryIds.some(function (id) {
-            return sim._iadsEvaluate(sim._nodeById(id), threat, t).feasible;
+            // ADR-109: 조기 사수 지정이 켜지면 예측 후보도 「쏠 수 있는 사수」로 쳐서 승인 계선을 먼저 탄다(승인 우회 방지).
+            return (sim.earlyShooterAssignment ? sim._iadsPredictiveEvaluate(sim._nodeById(id), threat, t)
+              : sim._iadsEvaluate(sim._nodeById(id), threat, t)).feasible;
           });
         }
       }

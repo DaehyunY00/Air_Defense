@@ -51,7 +51,7 @@ const MEDIA_FROM_KO = inv(MEDIA_KO), KIND_FROM_KO = inv(KIND_KO);
 
 // ── 현행 카탈로그(두 모드 합집합 — 내보내기와 같은 features) ──
 const F = { highResolutionDeployment: true, southernAxes: true, linkSemanticsV2: true, sensorReportParity: true, approvalChain: true,
-  kvmfLateral: true, rokUsfkCoordination: 'voice', c2DecisionTimeParity: true };   // [지휘 흐름] 화면 기본(내보내기와 같은 조건)
+  kvmfLateral: true, rokUsfkCoordination: { asis: 'voice', tobe: 'datalink' }, c2DecisionTimeParity: true };   // [지휘 흐름] 화면 기본(내보내기와 같은 조건)
 const cats = {}; ['asis', 'tobe'].forEach((m) => { cats[m] = KJ.resolveModelCatalog({ deploymentId: depId, mode: m, modelFidelity: 'iads-c2', features: F }); });
 const nodeById = new Map();
 ['asis', 'tobe'].forEach((m) => KJ.nodesInMode(m, cats[m]).forEach((n) => { if (!nodeById.has(n.id)) nodeById.set(n.id, n); }));

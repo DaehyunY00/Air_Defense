@@ -401,6 +401,14 @@
     // 사용자 가정(2026-09-30): 비호·천마의 소형 무인기·순항 요격확률 = 0.7 고정(분포 없음 · RNG 추가 소비 없음).
     this.shoradSmallTargetPk = (typeof f.shoradSmallTargetPk === 'number' && f.shoradSmallTargetPk > 0 && f.shoradSmallTargetPk <= 1)
       ? f.shoradSmallTargetPk : 0.7;
+    // ADR-109: 조기 사수 지정 — 결심 지휘소가 「지금 쏠 수 있는 포대」만이 아니라 **예상 요격 창이 있는 포대**까지 후보에 넣어
+    // 항적을 받은 시점에 사수를 고르고 「준비되면 쏘라」는 명령을 내린다. 명령이 닿은 포대는 자기 MFR 사통·요격점·탄·채널이
+    // 갖춰지는 순간 쏜다(그때까지 계획은 살아 있어 같은 축의 재결심·긴급발사를 막는다). 종전 규칙(지금 쏠 수 있는 후보가
+    // 생길 때까지 결심 보류)은 OFF 경로로 보존된다(bit-exact). 예측 후보의 점수는 준비까지 남은 시간만큼 지수 감쇠한다
+    // (earlyAssignmentTimePenaltySec · 기본 30초 · 등급 C): 「최초 요격 기회 우선」 — 지금 쏠 수 있거나 먼저 준비되는 포대를 공연히 미루지 않기 위함. 1/거리 항이 종말 단계 하층 포대를 선호하는 편향을 이 감쇠가 상쇄한다(120초로 두면 천궁-II가 탄도탄 사수로 뽑혀 격추가 준다 — 실측).
+    this.earlyShooterAssignment = ff('earlyShooterAssignment', false);
+    this.earlyAssignmentTimePenaltySec = (typeof f.earlyAssignmentTimePenaltySec === 'number' && f.earlyAssignmentTimePenaltySec > 0)
+      ? f.earlyAssignmentTimePenaltySec : 30;
     // ADR-105: 한미 교전 협조(음성) — 미군 C2(THAAD·Patriot C2)와 한국군 결심 C2(As-Is KAMDOC·MCRC / To-Be
     // IAOC)가 같은 위협에 대해 「내 최적 사수 제안 → 상대가 자기 최적 사수와 비교 → 회신」을 음성 계선
     // (C2-VOICE-COORD-01 · Normal(20, σ5))으로 주고받아 **한 위협에 한 사수**를 정한다. 최적이 한국군 자산이면
@@ -553,6 +561,10 @@
         source: f.catalogOverlay.source || null };
     }
     if (this.shoradPkRealism) { this.features.shoradPkRealism = true; this.features.shoradSmallTargetPk = this.shoradSmallTargetPk; } // ADR-107 ②
+    if (this.earlyShooterAssignment) {   // ADR-109 (OFF wire shape 보존)
+      this.features.earlyShooterAssignment = true;
+      this.features.earlyAssignmentTimePenaltySec = this.earlyAssignmentTimePenaltySec;
+    }
     if (this.c2DecisionTimeParity) this.features.c2DecisionTimeParity = true; // ADR-099
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
@@ -2164,6 +2176,46 @@
     return typeof v === 'number' ? v : 1;
   };
 
+  // ADR-109: 조기 사수 지정 계정(ON에서만 생성·노출).
+  Simulation.prototype._earlyAssignStats = function () {
+    return this.global.earlyAssignment || (this.global.earlyAssignment = {
+      assigned: 0, waits: 0, firedAfterWait: 0, expiredWaiting: 0, relayPassed: 0, waitSecSum: 0
+    });
+  };
+  var PREDICTABLE_REASONS = { no_fire_control: true, no_feasible_pip: true, too_early: true };
+  /**
+   * ADR-109: 예측 평가 — 지금 쏠 수 없더라도(사통 미달·요격점 미형성) 궤적상 요격 창이 남아 있으면 후보로 돌려준다.
+   * 돌려주는 ev는 feasible=true · predicted=true · readyAt(창 시작) · windowEnd(창 끝) · pk(요격탄 기본값 또는 ADR-107 값)
+   * · pip.rangeKm(창 시작 시각의 거리)를 갖는다. 탄 소진·채널 포화·교전 불가 사유는 예측하지 않는다. 순수 함수(RNG·계정 무관).
+   */
+  Simulation.prototype._iadsPredictiveEvaluate = function (shooter, threat, t) {
+    var ev = this._iadsEvaluate(shooter, threat, t);
+    if (ev.feasible || !PREDICTABLE_REASONS[ev.reason]) return ev;
+    var gw = this._iadsGeometryWindow(shooter, threat);
+    if (!gw || gw.lastFire <= t + 1) return ev;
+    var readyAt = Math.max(gw.firstFire, t + 1);
+    var pos = iadsThreatPosition(threat, readyAt);
+    var rangeKm = pos ? haversineKm({ lat: shooter.coord[0], lon: shooter.coord[1], altKm: 0 }, pos) : 1;
+    var missiles = (shooter.engage && shooter.engage.missiles) || {}, pk = null;
+    Object.keys(missiles).forEach(function (k) {
+      var m = missiles[k], d = m.pssekTable && typeof m.pssekTable.default === 'number' ? m.pssekTable.default : 0.75;
+      if (pk === null || d > pk) pk = d;
+    });
+    if (pk === null) pk = 0.75;
+    if (this.shoradPkRealism && isShorad(shooter) && (threat.type === 'uav_small' || threat.type === 'cruise')) pk = this.shoradSmallTargetPk;
+    pk = Math.max(0, Math.min(0.99, pk * this.mult.pk));
+    return { feasible: true, predicted: true, reason: ev.reason, readyAt: readyAt, windowEnd: gw.lastFire,
+      pk: pk, ammo: this._iadsAmmo(shooter.id, t), pip: { rangeKm: rangeKm, flyout: null, timeToReach: readyAt - t } };
+  };
+  /** ADR-109: 후보 점수 — 예측 후보는 준비까지 남은 시간만큼 지수 감쇠(지금 쏠 수 있는 포대 우선). */
+  Simulation.prototype._iadsCandidateScore = function (ev, shooter, threat, t) {
+    var r = this.iadsResources[shooter.id], ammoRatio = r && r.initialAmmo ? ev.ammo / r.initialAmmo : 0;
+    var load = r && r.maxSimultaneous ? r.active / r.maxSimultaneous : 1;
+    var score = this._iadsWtaScore(ev, shooter, ammoRatio, load, threat);
+    if (ev.predicted) score *= Math.exp(-Math.max(0, ev.readyAt - t) / this.earlyAssignmentTimePenaltySec);
+    return score;
+  };
+
   Simulation.prototype._iadsWtaScore = function (ev, shooter, ammoRatio, load, threat) {
     var priority = Number(shooter.shooterPriority) || 9;
     if (this.nativeWtaMode && this.mode === 'asis') {
@@ -2841,11 +2893,12 @@
   Simulation.prototype._coalitionBest = function (commander, threat, t) {
     var self = this, best = null;
     commander.batteryIds.forEach(function (id) {
-      var shooter = self._nodeById(id), ev = self._iadsEvaluate(shooter, threat, t);
+      var shooter = self._nodeById(id);
+      var ev = self.earlyShooterAssignment ? self._iadsPredictiveEvaluate(shooter, threat, t) : self._iadsEvaluate(shooter, threat, t);   // ADR-109
       if (!ev.feasible) return;
       var r = self.iadsResources[id], ammoRatio = r && r.initialAmmo ? ev.ammo / r.initialAmmo : 0;
       var load = r && r.maxSimultaneous ? r.active / r.maxSimultaneous : 1;
-      var score = self._iadsWtaScore(ev, shooter, ammoRatio, load, threat);
+      var score = ev.predicted ? self._iadsCandidateScore(ev, shooter, threat, t) : self._iadsWtaScore(ev, shooter, ammoRatio, load, threat);
       if (!best || score > best.score || (score === best.score && id < best.shooterId)) best = { shooterId: id, score: score, pk: ev.pk };
     });
     return best;
@@ -3082,11 +3135,11 @@
     var self = this, candidates = [], nextAt = Infinity, reasons = {};
     commander.batteryIds.forEach(function (id) {
       var shooter = self._nodeById(id);
-      var ev = self._iadsEvaluate(shooter, threat, t);
+      var ev = self.earlyShooterAssignment ? self._iadsPredictiveEvaluate(shooter, threat, t) : self._iadsEvaluate(shooter, threat, t);   // ADR-109
       if (ev.feasible) {
         var r = self.iadsResources[id], ammoRatio = r.initialAmmo ? ev.ammo / r.initialAmmo : 0;
         var load = r.maxSimultaneous ? r.active / r.maxSimultaneous : 1;
-        ev.score = self._iadsWtaScore(ev, shooter, ammoRatio, load, threat);
+        ev.score = ev.predicted ? self._iadsCandidateScore(ev, shooter, threat, t) : self._iadsWtaScore(ev, shooter, ammoRatio, load, threat);
         ev.shooter = shooter;
         // ADR-073: 점수식이 이미 쓴 중간항을 계측용으로 보관만 한다(재계산·난수 없음).
         // 플래그 OFF에서는 속성 자체를 만들지 않아 객체 형상까지 직전과 동일하다.
@@ -3138,6 +3191,11 @@
     if (this.emergencyEngagement && commander.axis === 'LOCAL_AD' && geometryWindow &&
         geometryWindow.lastFire - t <= 30) {
       cause = 'emergency';
+    }
+    if (chosen.predicted) {   // ADR-109: 「준비되면 쏘라」 — 발사 귀속은 early_assigned로 가른다.
+      cause = 'early_assigned';
+      this._earlyAssignStats().assigned++;
+      this._mark(threat, '사수지정(예측):' + commander.typeId + '→' + chosen.shooter.id + '(준비 +' + Math.max(0, Math.round(chosen.readyAt - t)) + 's)', t, axisOf(commander));
     }
     var plan = this._iadsCreatePlan(commander, chosen.shooter.id, t, threat, {
       targetEcsId: chosen.shooter.ecsC2Id || null,
@@ -3283,8 +3341,11 @@
   Simulation.prototype._iadsRelayAuthorize = function (t, d) {
     var self = this, threat = d.threat, plan = d.plan;
     var shooter = this._nodeById(d.shooterId);
-    var ev = shooter ? this._iadsEvaluate(shooter, threat, t) : { feasible: false, reason: 'not_operational' };
+    var ev = shooter ? ((this.earlyShooterAssignment && plan.launchCause === 'early_assigned')   // ADR-109: 예측 사수는 인가 통과
+      ? this._iadsPredictiveEvaluate(shooter, threat, t) : this._iadsEvaluate(shooter, threat, t))
+      : { feasible: false, reason: 'not_operational' };
     if (ev.feasible) {
+      if (ev.predicted) this._earlyAssignStats().relayPassed++;
       this._mark(threat, '교전명령인가:' + d.iccId, t, axisOf(d.commander));
       var delay = this._iadsSendAlong(d.path, d.from, d.path.length, t, threat);
       this.schedule(t + delay, PRI.LINK_ARRIVE, 'IADS_FIRE',
@@ -3623,6 +3684,11 @@
         commanderId: d.commander.id, shooterId: shooter.id, phase: 'directive-arrival'
       });
       this._sendIadsStatus(threat, d.commander, 'released', t);
+      if (this.earlyShooterAssignment && plan.launchCause === 'early_assigned') {   // ADR-109: 지정 사수가 끝내 준비되지 못함 → 재결심
+        if (d.waiting) this._earlyAssignStats().expiredWaiting++;
+        this._mark(threat, '사수대기만료:' + shooter.id, t, axisOf(d.commander));
+        this._scheduleIadsRetry(threat, d.commander, t + 0.5);
+      }
       return;
     }
     if (this.iadsSensorPhysics && shooter.mfrSensorId) {
@@ -3654,6 +3720,18 @@
       return;
     }
     var ev = this._iadsEvaluate(shooter, threat, t);
+    if (!ev.feasible && this.earlyShooterAssignment && plan.launchCause === 'early_assigned' && PREDICTABLE_REASONS[ev.reason] &&
+        (!Number.isFinite(plan.validUntil) || t <= plan.validUntil)) {
+      // ADR-109: 「준비되면 쏘라」 — 명령은 닿았고 포대가 아직 준비되지 않았다. 계획은 살아 있고(같은 축 재결심·긴급발사 차단),
+      // 포대의 준비 예정 시각(사통 전이·요격점)에 다시 본다. 창(validUntil)이 닫히면 위의 만료 분기로 빠져 재결심한다.
+      var es = this._earlyAssignStats();
+      if (!d.waiting) { es.waits++; this._mark(threat, '사수대기:' + shooter.id + '(' + ev.reason + ')', t, axisOf(d.commander)); d.waitStartedAt = t; }
+      var again = Number.isFinite(ev.readyAt) && ev.readyAt > t ? Math.min(ev.readyAt, t + 5) : t + 1;
+      if (Number.isFinite(plan.validUntil)) again = Math.min(again, plan.validUntil + 0.001);
+      this.schedule(again, PRI.LINK_ARRIVE, 'IADS_FIRE', Object.assign({}, d, { receptionComplete: true, waiting: true }));
+      return;
+    }
+    if (ev.feasible && d.waiting) { this._earlyAssignStats().firedAfterWait++; this._earlyAssignStats().waitSecSum += (t - (d.waitStartedAt || t)); }
     if (!ev.feasible) {
       // 관측 전용(ADR-081과 같은 계열): **명령은 도착했는데 못 쏜 순간**을 항적 이력에 남긴다.
       // 종전에는 이 자리에 아무 마크가 없어, 화면에서 「ECS → 포대」 전문이 도착한 뒤 발사도
@@ -4361,6 +4439,7 @@
       if (this.coalitionActive) result.global.coalition = this._coalitionStats();       // ADR-105 (ON에서만 노출)
       if (this.commanderRouteRetry) result.global.routeRetry = this._routeRetryStats();  // ADR-106 (ON에서만 노출)
       if (this.shoradPkRealism) result.global.shoradPkSamples = this.global.shoradPkSamples || 0;  // ADR-107 ② (ON에서만 노출)
+      if (this.earlyShooterAssignment) result.global.earlyAssignment = this._earlyAssignStats();   // ADR-109 (ON에서만 노출)
       result.global.failureSummary = {
         primary: this.global.failurePrimary,
         contributors: this.global.failureContributors,

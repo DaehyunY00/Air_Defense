@@ -1087,7 +1087,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20260930c';
+const V = '?v=20261001a';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -1476,6 +1476,7 @@ function features() {
     ballisticReportSource: P.bsrc, // ADR-103 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-28, ADR-103 §프로토타입 기본값)
     standbyCue: P.cue,             // ADR-104 — 〃 (이 화면만 기본 ON · bsrc=0이면 엔진이 비활성으로 신고 — 상태줄 경고 칩)
     cueAcquisitionGain: P.cuegain > 0 ? P.cuegain : undefined, // ADR-104 B-3 획득 이득(기본 0 = 없음 · 명시된 근사)
+    earlyShooterAssignment: P.ea,  // ADR-109 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 요청 2026-10-01)
     shoradCruiseExclusion: P.nocm, // ADR-107 ① — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-30)
     shoradPkRealism: P.shpk,       // ADR-107 ② — 〃
     commanderRouteRetry: P.rr,     // ADR-106 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 요청 2026-09-29)
@@ -1599,6 +1600,10 @@ const PARAMS = [
   //    0.7로 둔다(사용자 가정). 천마는 킬웹에서만 순항 교전 허용. **엔진 기본 OFF · 이 화면만 기본 ON**(사용자 결정 2026-09-30).
   { k: 'nocm',  d: 1,       t: 'bool', h: '비호 순항미사일 교전 제외(양 모드) · 천마는 킬웹에서만 허용 (ADR-107 ① · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   { k: 'shpk',  d: 1,       t: 'bool', h: '비호·천마 소형 무인기·순항 요격확률 0.7 고정 (ADR-107 ② · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  // ── ea(ADR-109): 조기 사수 지정. 종전 결심 규칙은 「지금 쏠 수 있는 포대」가 생길 때까지 결심을 보류했다(결심 시각 =
+  //    포대가 준비된 시각). 켜면 결심 지휘소가 항적을 받은 시점에 예상 요격 창이 있는 포대까지 후보에 넣어 사수를 고르고
+  //    「준비되면 쏘라」는 명령을 내린다(사용자 요청 2026-10-01). **엔진 기본 OFF · 이 화면만 기본 ON**. 끄려면 ?ea=0.
+  { k: 'ea',    d: 1,       t: 'bool', h: '조기 사수 지정 — 예상 요격 창 기준으로 항적 접수 시점에 사수를 정하고 「준비되면 쏘라」 명령 (ADR-109 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   // ── lx: 이 화면만 **기본 ON**으로 되돌린다(사용자 결정 2026-09-10 — 「출발점은 모든 배치에서
   //    수정」). 2026-09-01에 기본 OFF로 내렸던 결정을 뒤집는 것이라, 근거를 남긴다.
   //
@@ -1711,6 +1716,7 @@ function activeConfigChips() {
   if (P.rr) out.push('보고 재시도 ON');
   if (P.nocm) out.push('비호 순항 제외·천마 킬웹만');
   if (P.shpk) out.push('단거리방공 Pk 0.7');
+  if (P.ea) out.push('조기 사수지정 ON');
   if (INTENSITY.x !== 1) out.push('강도 ×' + INTENSITY.x);
   if (P.bsrc) out.push('탄도 보고원 그린파인 ON');
   if (P.cue && !P.bsrc) out.push('⚠ 사전대기 큐 비활성 — bsrc=0');
@@ -2331,6 +2337,17 @@ function markView(name, trk, axis) {
   if ((m = /^긴급발사:(.+)$/.exec(name))) {
     return { text: '긴급발사 — ' + nodeName(m[1]) + ' · 정식 명령 전 자기 사통 발사', cls: 'shot', raw: name,
       sub: '사전대기 큐만 받은 상태에서 자기 MFR 사격통제·PIP·잔탄이 갖춰져 쏨(ADR-104 ②)' };
+  }
+  // ── ADR-109: 조기 사수 지정 ── `사수지정(예측):<C2>→<사수>(준비 +Ns)` · `사수대기:<사수>(사유)` · `사수대기만료:<사수>`.
+  if ((m = /^사수지정\(예측\):([^→]+)→([^(]+)\(준비 \+(\d+)s\)$/.exec(name))) {
+    return { text: '조기 사수 지정 — ' + shortC2(m[1], axis) + ' → ' + nodeName(m[2]) + ' · 준비까지 약 ' + m[3] + '초', cls: 'cue', raw: name,
+      sub: '예상 요격 창 기준으로 미리 정했다 — 포대는 자기 레이더 사격통제·요격점이 갖춰지면 쏜다(ADR-109)' };
+  }
+  if ((m = /^사수대기:([^(]+)\((.+)\)$/.exec(name))) {
+    return { text: '사수 대기 — ' + nodeName(m[1]) + ' · 명령은 닿았으나 아직 ' + (m[2] === 'no_fire_control' ? '사격통제 등급 미달' : '요격점 미형성'), cls: 'cue', raw: name };
+  }
+  if ((m = /^사수대기만료:(.+)$/.exec(name))) {
+    return { text: '사수 대기 만료 — ' + nodeName(m[1]) + ' · 요격 창이 닫혀 재결심', cls: 'cue', raw: name };
   }
   // ── ADR-106: 책임 C2 보고 재시도 회복 ── `보고재시도회복:<C2>(<대기>s)`. 상관 실패로 비어 있던 시작 보고가
   //    재시도로 살아난 시점. 같은 시각의 「책임C2:」 마크와 짝이다.

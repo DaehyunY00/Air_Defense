@@ -12,7 +12,7 @@
 
 수치는 2026-09-28 소스 기준이며, 노드 제원·계선 지연은 `js/config/system-types.js`·`js/config/deployment-adapter.js`에서,
 기본 조건은 `prototype/command-flow.html` PARAMS에서 읽었다. 기준 실행 결과(FULL·As-Is·1800초: 생성 228·격추 165·누수 40·미해결 23)는
-헤드리스 Chrome에서 단일본을 실제로 돌린 값이다. 「모든 항적 종결」 수치는 `docs/analysis/2026-09-21-sc3-final/`의 것이다.
+헤드리스 Chrome에서 단일본을 실제로 돌린 값이다. 「모든 항적 종결」 수치는 생성 1800초 · 관측 3600초 실행(`spawnUntilSec`)의 것이다.
 
 ## 2026-10-01 개정
 

@@ -14,17 +14,10 @@ DES(이산사건 시뮬레이션) 엔진이 IADS_C2 계열 물리(SNR/RCS·레�
 
 | 자료 | 범위 |
 |---|---|
-| [분석 방법과 결과](K-JAMDS_분석_방법과_결과.pdf) | SC3 전용. 생성된 모든 항적의 결과가 정해질 때까지 모의한 최종 결과, 20쌍 반복 비교, 조건별 비교, C2 기록과 항적 사례 |
 | [지휘흐름 모의논리서](K-JAMDS_지휘흐름_모의논리서.pdf) | 지휘흐름 단일본의 구현과 가정을 쉽게 쓴 19쪽 문서(2026-10-01 개정) — 위협의 여정, 창구 모델, 계선 지연, As-Is/To-Be 차이(한미 협조·대기 지시·비호·천마), 사수 선정(조기 지정·사수 대기·CANTCO 되먹임), 누수 사유, 화면이 읽는 것과 계산하는 것, 가정·단순화(탄약·재장전·예측 창), 해석 주의, URL 파라미터. [소스](docs/analysis/2026-09-28-command-flow-logic/) |
-| [지휘흐름 분석결과](K-JAMDS_지휘흐름_분석결과.pdf) | 위 문서를 간추린 10쪽판 — 결과 6개 장(조건별 설명 포함)과 파라미터 xlsx 사용 방법 부록. 위협 생성 강도 1배만, 시나리오 가정·모델 세부 가정 비교와 차이 없는 조건은 제외하고, 지휘 조건과 시간 가정을 나눠 실음. [소스](docs/analysis/2026-09-21-analysis-result/) |
-| [이번 분석 설명과 집계](docs/analysis/2026-09-21-sc3-final/) | 누수·미해결 정의, 설정과 실패 사유의 쉬운 설명, 168개 조건의 최종 집계와 검증 요약 |
 | [파라미터 XLSX](K-JAMDS_파라미터.xlsx) | 현행 소스의 카탈로그·기본 설정·적용값을 확인하는 내보내기 파일 |
-| [이전 보고서 재현 자료](docs/analysis/2026-09-19-current-reports/) | 2026-09-19의 1800초 종료 보고서에 사용한 실행·생성 스크립트와 결과. 이번 최종 결과와 관측 종료 기준이 다름 |
 
-이번 보고서는 기존 SC3의 **1800초까지 생성되는 항적을 고정**한 뒤 새 항적 생성을 멈추고,
-각 항적이 격추 또는 누수로 끝날 때까지 관측했습니다. 시간대별 실적 비교를 없애고
-최종 결과만 다루며, 기존 13·14장은 삭제했습니다. 시뮬레이터 화면의 기본 실행시간을
-변경한 것은 아닙니다.
+효과척도 분석결과서는 위협 생성 1800초 · 관측 3600초(엔진 옵션 `spawnUntilSec`)로 돌려 생성된 228개 항적 전부의 결말을 봅니다. 2026-09-21 이전의 분석 PDF(분석 방법과 결과 · 지휘흐름 분석결과)와 그 재현 자료는 결심 규칙·한미 협조·대기 지시가 바뀌기 전 모델의 기록이라 2026-10-01에 저장소에서 제거했습니다(`docs/README-docs-consolidation.md` 참조 · git 이력에 보존).
 
 **누수**는 격추되지 않은 채 모델의 비행 종료까지 도달한 최종 결과입니다.
 **미해결**은 관측을 멈춘 시점에 격추·누수 어느 쪽도 확정되지 않은 상태입니다.
@@ -424,7 +417,8 @@ legacy C2 이론은 **정책 계층으로 이식**되었습니다. 본 앱의 �
 index.html                       # 진입점: 탭 구조·컨트롤·디스클레이머
 K-JAMDS_시뮬레이터_단일본.html    # ★ 자기완결 단일본(서버 없이 실행, IIFE 커널 동봉) — build-single.mjs로 재생성
 K-JAMDS_지휘흐름_단일본.html      # ★ [지휘 흐름] 프로토타입의 자기완결 단일본(서버 없이 실행) — build-command-flow-single.mjs로 재생성
-K-JAMDS_분석_방법과_결과.pdf      # 현행 기본 설정의 재실행 결과와 방법 + 항적별 C2 기록 분석 (SC3 기준 통합본)
+K-JAMDS_효과척도_분석결과서.pdf    # 효과척도(시간·경로·부하) 분석 결과서 — docs/analysis/2026-09-29-moe-analysis/render-pdf.mjs로 재생성
+K-JAMDS_지휘흐름_모의논리서.pdf   # 지휘흐름 단일본의 구현과 가정 — docs/analysis/2026-09-28-command-flow-logic/render-report.mjs로 재생성
 K-JAMDS_파라미터.xlsx             # 카탈로그·기본 설정 내보내기 (가져오기 미지원)
 css/style.css                    # 레이아웃·테마
 js/
@@ -451,9 +445,10 @@ docs/
   params.md                      # 파라미터 근거표 (ID·출처·인용·신뢰도 A/B/C)
   high-resolution-iads-architecture.md  # 목표 아키텍처(§6은 ADR-061로 개정)
   compat-retirement-readiness.md # Phase 5 폐기 조건 판정 원장
+  analysis/2026-09-29-moe-analysis/   # 효과척도 결과서 소스(README.md → PDF) · 재생성 probe.mjs
+  analysis/2026-09-28-command-flow-logic/ # 지휘흐름 모의논리서 소스
+  analysis/2026-09-16-command-flow-c2-review/ # 2026-09-16 C2 검토 기록(ADR-100 근거 · 수정 전 상태)
   adr/ADR-001~009, 050~100       # 결정 기록
-  analysis/2026-09-21-sc3-final/ # 현행 PDF의 최종 집계·정의·검증 요약
-  analysis/2026-09-19-current-reports/ # 이전 1800초 종료 PDF의 실행·생성 자료
 scripts/
   serve.sh (macOS·Linux) · serve.bat + serve.ps1 (Windows 내장 PowerShell, 설치 불요)
   build-single.mjs · build-command-flow-single.mjs · single-lib.mjs(두 단일본 빌더 공용) ·

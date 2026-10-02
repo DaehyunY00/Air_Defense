@@ -10751,6 +10751,21 @@ function markView(name, trk, axis) {
     var cfWhy = { no_fire_control: '사격통제 등급 미달', no_feasible_pip: '요격점 미형성', too_early: '아직 이름' }[m[2]] || m[2];
     return { text: '사수 수행 불가 회신 — ' + nodeName(m[1]) + ' · ' + cfWhy + ' · 지휘소가 재지정', cls: 'cue', raw: name };
   }
+  // ── ADR-056: 중복교전 회피 ── `교전중복해소:MCRC/<발신C2>/<assigned|fired>`(군단 AOC 교전현황을 상급 C2가 소비) ·
+  //    `교전중복해소:COP/<상위C2>`(역방향 — 군단 AOC가 통합 COP의 상위 축 계획을 보고 보류). 종전에는 범용 분기로
+  //    떨어져 「MCRC/…/C2A/assigned」처럼 노드 ID 조각이 그대로 찍혔다.
+  if ((m = /^교전중복해소:MCRC\/([^/]+)\/(assigned|fired)$/.exec(name))) {
+    const cid = String(axis || '').split('|')[1];
+    return { text: '중복교전 회피 — ' + (cid ? nodeName(cid) : '상급 C2') + ' · ' + nodeName(m[1]) +
+      (m[2] === 'fired' ? '이(가) 이미 발사' : '이(가) 이미 사수 할당') + ' → 내 사격 보류', cls: 'cue', raw: name,
+      sub: '군단 방공이 보낸 교전현황을 받아 같은 항적에 사수를 겹쳐 내지 않는다 · 상태 유효시간이 지나면 재결심' };
+  }
+  if ((m = /^교전중복해소:COP\/(.+)$/.exec(name))) {
+    const cid = String(axis || '').split('|')[1];
+    return { text: '중복교전 회피 — ' + (cid ? nodeName(cid) : '군단 AOC') + ' · 통합 COP에서 ' + nodeName(m[1]) +
+      '의 교전 계획 확인 → 내 사격 보류', cls: 'cue', raw: name,
+      sub: '데이터링크 지연(2초) 뒤 상위 축의 살아 있는 계획을 보고 물러선다 · 계획이 풀리면 재결심' };
+  }
   // ── ADR-106: 책임 C2 보고 재시도 회복 ── `보고재시도회복:<C2>(<대기>s)`. 상관 실패로 비어 있던 시작 보고가
   //    재시도로 살아난 시점. 같은 시각의 「책임C2:」 마크와 짝이다.
   if ((m = /^보고재시도회복:([^(]+)\(([\d.]+)s\)$/.exec(name))) {
@@ -14526,6 +14541,7 @@ function buildRecordEvents(t) {
       raw: 'link:' + f.kind + ':' + f.from + '→' + f.to,
       axis: null, flow: f });
   });
+  let dedupLast = null;
   (t.stages || []).forEach((s) => {
     const name = String(s.name || '');
     let m;
@@ -14552,6 +14568,16 @@ function buildRecordEvents(t) {
     } else if ((m = /^교전현황드롭:([^→]+)→([^/]+)\/(.+)$/.exec(name))) {
       add(s, 'status-drop', '교전현황 전송 불가 — ' + phaseName(m[3]),
         nodeName(m[1]) + ' → ' + nodeName(m[2]) + ' · 기록된 드롭');
+    } else if (/^교전중복해소:/.test(name)) {
+      // 같은 상대의 계획이 살아 있는 동안 2.5초마다 반복 기록된다(To-Be COP 역방향은 항적당 수십 건).
+      // 연속 반복은 한 줄로 접고 횟수·구간만 적는다 — 기록은 그대로, 읽는 줄만 줄인다.
+      if (dedupLast && dedupLast.raw === name) {
+        dedupLast.n++; dedupLast.row.detail = dedupLast.sub + ' · ' + dedupLast.n + '회 반복 · ' + fmt(dedupLast.row.t) + ' ~ ' + fmt(s.t);
+      } else {
+        const view = markView(name, t, s.axis);
+        add(s, 'status', view.text, view.sub || '');
+        dedupLast = { raw: name, n: 1, row: rows[rows.length - 1], sub: view.sub || '' };
+      }
     } else if (/^교전현황미채택:/.test(name)) {
       const view = markView(name, t, s.axis);
       add(s, 'status-rejected', view.text, view.sub || '');

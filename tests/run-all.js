@@ -101,6 +101,7 @@ var suites = [
   ,['early-shooter-assignment.test.mjs', 'ADR-109 조기 사수 지정 (OFF bit-exact·예측 지정 마크=계정·early_assigned 발사·대기 계정 대사·srbm#3 결심 앞당김·긴급발사 겹침 0·관측 순수성)']
   ,['spawn-window.test.mjs', '위협 생성 구간(spawnUntilSec) — 미지정 bit-exact · 생성 구간 뒤 생성 0 · 관측 연장 시 미해결 0 · 결과 cfg 신고']
   ,['assignment-feedback.test.mjs', 'ADR-110 사수 지정 되먹임 (OFF bit-exact·CANTCO 마크=계정·대기 ≤ 유예·예측 readyAt 요격점 성립·냉각 재지정 0·만료 대기 감소·관측 순수성)']
+  ,['decision-trace.test.mjs', 'ADR-111 결심 기록 (trace ON/OFF 동역학 동일·chosen∈ok·긴급발사↔standby 기록 일치·반복 접힘·상한)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

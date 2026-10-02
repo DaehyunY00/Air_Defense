@@ -60,6 +60,8 @@
   // 이 비율 이하일 때만 후보로 인정. 1.0 = 결정론(평균 ≤ 잔여). 교전시간은 지수분포라 평균이
   // 창 안에 들어와도 실현의 절반은 초과하므로, 확률적 여유(<1.0)를 둘지는 STOP 판단 대상(기본 1.0).
   var ENGAGE_WINDOW_MARGIN = 1.0;
+  // ── ADR-111: 결심 기록(trace.decisions) 항적당 상한 — 관측 전용 ──
+  var DECISION_TRACE_CAP = 400;
   // ── ADR-073: 결심 감사 로깅(decisionAudit) 상한 — 계측 전용, 물리·결심에 무관 ──
   // 후보 상한: To-Be는 한 결심에서 수십 개 후보를 보므로 이벤트 크기를 묶는다. 점수 내림차순
   // 상위 N만 남기며 실제 선택(rank 0)은 절대 잘리지 않는다. 전체 후보 수는 candidateCount로 보존.
@@ -852,6 +854,32 @@
     ev.count++;
     ev.lastT = this.now;
     if (!ev.detail && detail) ev.detail = detail;
+  };
+
+  /**
+   * ADR-111: 결심 기록(decisions) — 「결심 시각에 어떤 포대를 검토해 무엇이 가능했고 누구를 골랐는가」.
+   * trace 대상 위협에만, 관측 전용(난수·스케줄·분기 무관). 같은 C2·같은 판정표가 연속되면 새 항목을 만들지 않고
+   * 직전 항목의 n·tEnd만 올린다(정식 결심은 1초 재시도, 큐 자체 판단은 센서 스캔마다 돌아 그대로 두면 수천 건).
+   * 항적당 상한 초과 시 decisionsTruncated=true.
+   */
+  Simulation.prototype._traceDecision = function (threat, t, kind, commanderId, cands, chosenId) {
+    var tr = threat._trace;
+    if (!tr) return;
+    var key = kind + '|' + commanderId;
+    var sig = chosenId + '|' + cands.map(function (c) { return c.id + ':' + (c.ok ? 1 : 0) + ':' + (c.why || ''); }).join(',');
+    var lastBy = threat._dtrLast || (threat._dtrLast = {});
+    var last = lastBy[key];
+    if (last && last.t === t) {
+      // 같은 시각의 재평가(큐 도착이 같은 초에 겹칠 때) — 마지막 판정표로 덮는다.
+      last.cands = cands; last.chosen = chosenId; last._sig = sig; return;
+    }
+    if (last && last._sig === sig) { last.n++; last.tEnd = t; return; }
+    var list = tr.decisions || (tr.decisions = []);
+    if (list.length >= DECISION_TRACE_CAP) { tr.decisionsTruncated = true; return; }
+    var rec = { t: t, tEnd: t, n: 1, kind: kind, c2: commanderId, chosen: chosenId, cands: cands };
+    Object.defineProperty(rec, '_sig', { value: sig, writable: true, enumerable: false });   // 비교용 — JSON에 싣지 않는다
+    list.push(rec);
+    lastBy[key] = rec;
   };
 
   /** 노드 재고(재계 중+대기) 시계열 샘플 기록 (trace 모드 전용, 상한 초과 시 절삭·플래그) */
@@ -1904,15 +1932,19 @@
     if (formalActive) return;
     if (plans.some(function (p) { return self._iadsActivePlan(p) && p.launchCause === 'standby_emergency'; })) return;
     var ids = Object.keys(threat._cueReady);
+    var dtr = threat._trace ? [] : null, dtrC2 = null;   // ADR-111: 큐 포대 자체 판단 기록(관측 전용)
+    var dtrFlush = function (chosenId) { if (dtr && dtr.length) self._traceDecision(threat, t, 'standby', dtrC2, dtr, chosenId); };
     for (var i = 0; i < ids.length; i++) {
       var entry = threat._cueReady[ids[i]];
       if (entry.fired) continue;
+      if (dtr && !dtrC2 && entry.commander) dtrC2 = entry.commander.id;
       // ADR-105: 큐를 낸 결심 C2가 이 위협을 상대 진영에 양보했거나 회신을 기다리는 중이면 그 큐로도 쏘지 않는다
       // (양보를 지키지 않으면 협조가 무의미하다 — srbm#3 실측: THAAD 발사 뒤 L-SAM 긴급발사로 중복).
       if (this.coalitionActive && entry.commander) {
         var cst = threat._coalition && threat._coalition[entry.commander.id];
         if (cst && (cst.state === 'proposed' || (cst.state === 'ceded' && this._coalitionCededHold(threat, entry.commander, t)))) {
           if (!entry.coalHeld) { entry.coalHeld = true; this._coalitionStats().standbyHeld++; }   // (위협×포대) 1회만 센다
+          if (dtr) dtr.push({ id: ids[i], ok: false, why: 'coalition_hold' });
           continue;
         }
       }
@@ -1920,11 +1952,18 @@
       if (!shooter) continue;
       // 싼 사전 점검: 자기 MFR이 FIRE_CONTROL이 아니면 평가하지 않는다(전속 MFR 없는 포대는 층위에 없다).
       var own = shooter.mfrSensorId && threat._sensorTracks ? threat._sensorTracks[shooter.mfrSensorId] : null;
-      if (this.iadsSensorPhysics && shooter.mfrSensorId && (!own || own.state !== KJ.IADS.SENSOR_STATE.FIRE_CONTROL)) continue;
+      if (this.iadsSensorPhysics && shooter.mfrSensorId && (!own || own.state !== KJ.IADS.SENSOR_STATE.FIRE_CONTROL)) {
+        if (dtr) dtr.push({ id: ids[i], ok: false, why: 'no_fire_control' });
+        continue;
+      }
       var win = this._iadsGeometryWindow(shooter, threat);
-      if (!win || t < win.firstFire - 1 || t > win.lastFire) continue;
+      if (!win || t < win.firstFire - 1 || t > win.lastFire) {
+        if (dtr) dtr.push({ id: ids[i], ok: false, why: 'outside_window', readyAt: win && t < win.firstFire - 1 ? win.firstFire : null });
+        continue;
+      }
       var ev = this._iadsEvaluate(shooter, threat, t);
-      if (!ev.feasible) continue;
+      if (!ev.feasible) { if (dtr) dtr.push({ id: ids[i], ok: false, why: ev.reason, readyAt: Number.isFinite(ev.readyAt) ? ev.readyAt : null }); continue; }
+      if (dtr) dtr.push({ id: ids[i], ok: true, rank: 1 });
       var commander = entry.commander;
       var plan = this._iadsCreatePlan(commander, shooter.id, t, threat, {
         targetEcsId: shooter.ecsC2Id || null, delegationLevel: 'STANDBY_CUE',
@@ -1943,11 +1982,14 @@
         commanderAxis: commander.axis, threatCategory: iadsThreatCategory(threat.type)
       });
       if (this.decisionAudit) this._decisionAuditStats.selfDefenseUnaudited++;   // WTA를 거치지 않는 발사(ADR-073 §한계와 같은 처리)
+      if (dtr) for (var j = i + 1; j < ids.length; j++) { if (!threat._cueReady[ids[j]].fired) dtr.push({ id: ids[j], ok: false, why: 'preempted' }); }
+      dtrFlush(shooter.id);
       this._iadsTransitionPlan(plan, 'in_transit', t);
       this._iadsTransitionPlan(plan, 'active', t);
       this._onIadsFire(t, { threat: threat, commander: commander, shooterId: shooter.id, plan: plan, receptionComplete: true });
       return;
     }
+    dtrFlush(null);
   };
 
   /** 자위권은 포대 자체 권한이므로 자기 ECS(없으면 사수 자신)를 지휘자로 삼는다. */
@@ -3240,9 +3282,13 @@
       }
     }
     var self = this, candidates = [], nextAt = Infinity, reasons = {};
+    var dtr = threat._trace ? [] : null;   // ADR-111 결심 기록(관측 전용)
     commander.batteryIds.forEach(function (id) {
       var shooter = self._nodeById(id);
       var ev = self.earlyShooterAssignment ? self._iadsPredictiveEvaluate(shooter, threat, t) : self._iadsEvaluate(shooter, threat, t);   // ADR-109
+      if (dtr) dtr.push(ev.feasible
+        ? { id: id, ok: true, predicted: !!ev.predicted, readyAt: ev.predicted && Number.isFinite(ev.readyAt) ? ev.readyAt : null }
+        : { id: id, ok: false, why: ev.reason, readyAt: Number.isFinite(ev.readyAt) ? ev.readyAt : null });
       if (ev.feasible) {
         var r = self.iadsResources[id], ammoRatio = r.initialAmmo ? ev.ammo / r.initialAmmo : 0;
         var load = r.maxSimultaneous ? r.active / r.maxSimultaneous : 1;
@@ -3260,6 +3306,11 @@
       }
     });
     candidates.sort(function (a, b) { return b.score - a.score || (a.shooter.id < b.shooter.id ? -1 : 1); });
+    if (dtr) {
+      // 점수는 정렬 뒤에 붙인다(ok 후보만 갖는다) — 화면이 「왜 이 포대인가」를 순위로 읽는다.
+      candidates.forEach(function (c, i) { var e = dtr.find(function (x) { return x.id === c.shooter.id; }); if (e) { e.score = c.score; e.rank = i + 1; } });
+      this._traceDecision(threat, t, 'formal', commander.id, dtr, candidates.length ? candidates[0].shooter.id : null);
+    }
     if (!candidates.length) {
       if (Number.isFinite(nextAt)) this._scheduleIadsRetry(threat, commander, nextAt);
       else if (!threat.leakReason) threat.leakReason = this._terminalIadsFailure(threat,

@@ -4455,6 +4455,12 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     this.assignmentFeedback = ff('assignmentFeedback', false) && this.earlyShooterAssignment;
     this.cantcoGraceSec = (typeof f.cantcoGraceSec === 'number' && f.cantcoGraceSec >= 0) ? f.cantcoGraceSec : 30;
     this.cantcoCooldownSec = (typeof f.cantcoCooldownSec === 'number' && f.cantcoCooldownSec >= 0) ? f.cantcoCooldownSec : 60;
+    // ADR-112: 포대 상태 보고 — 결심 C2의 후보 평가가 포대의 **마지막으로 보고된** 상태(잔탄·교전 채널·자기 MFR 사격통제 등급)를
+    // 쓴다. 포대는 주기 P(statusReportPeriodSec)마다 상태를 올리고 전문은 C2→ECS 하향 계선의 대표 지연 d(카탈로그 · 난수 없음)
+    // 뒤에 닿는다 → C2가 t에 아는 상태 = 발신 시각 max{kP : kP + d ≤ t}의 상태. 요격점·기하는 C2 자체 계산이라 지연 없음.
+    // 포대 자신의 발사 전 재검증·큐 자체 판단·자위권은 실제 상태(지연 0). 기본 OFF(bit-exact) · 지휘 흐름 화면 ON.
+    this.batteryStatusReporting = ff('batteryStatusReporting', false);
+    this.statusReportPeriodSec = (typeof f.statusReportPeriodSec === 'number' && f.statusReportPeriodSec > 0) ? f.statusReportPeriodSec : 4;
     // ADR-105: 한미 교전 협조(음성) — 미군 C2(THAAD·Patriot C2)와 한국군 결심 C2(As-Is KAMDOC·MCRC / To-Be
     // IAOC)가 같은 위협에 대해 「내 최적 사수 제안 → 상대가 자기 최적 사수와 비교 → 회신」을 음성 계선
     // (C2-VOICE-COORD-01 · Normal(20, σ5))으로 주고받아 **한 위협에 한 사수**를 정한다. 최적이 한국군 자산이면
@@ -4618,6 +4624,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         this.features.cantcoCooldownSec = this.cantcoCooldownSec;
       }
     }
+    if (this.batteryStatusReporting) { this.features.batteryStatusReporting = true; this.features.statusReportPeriodSec = this.statusReportPeriodSec; } // ADR-112
     if (this.c2DecisionTimeParity) this.features.c2DecisionTimeParity = true; // ADR-099
     this.features.southernAxes = this.southernAxes;
     this.features.sensorReportParity = this.sensorReportParity; // ADR-067: 항상 실제 해석값 신고
@@ -6166,7 +6173,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     return 'upper';
   };
 
-  Simulation.prototype._iadsRemoteFcGrade = function (shooter, threat, t) {
+  Simulation.prototype._iadsRemoteFcGrade = function (shooter, threat, t, view) {
     if (!this.engageOnRemote || this.mode !== 'tobe' || !this.iadsSensorPhysics) return false;
     var tracks = threat._sensorTracks;
     if (!tracks) return false;
@@ -6178,6 +6185,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       var tr = tracks[ids[i]];
       if (!tr || tr.state !== KJ.IADS.SENSOR_STATE.FIRE_CONTROL) continue;
       if (!KJ.IADS.trackFreshness(tr, t, 3).fresh) continue;
+      if (view && Number.isFinite(tr.stateChangedAt) && tr.stateChangedAt > view.asOf) continue;   // ADR-112
       var sensor = this._nodeById(ids[i]);
       var spec = sensorSpec(sensor);
       // 탐지 전용 레이더는 발사 자격을 주지 못한다(D2 — 교전 추적 모드로 들어가면 광역 감시 저하).
@@ -6188,15 +6196,17 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     return false;
   };
 
-  Simulation.prototype._iadsFireControlState = function (shooter, threat, t) {
+  Simulation.prototype._iadsFireControlState = function (shooter, threat, t, view) {
     if (!shooter.mfrSensorId) return { ready: true, readyAt: t, state: 'FIRE_CONTROL' };
     if (this.iadsSensorPhysics) {
       var physicalTrack = threat._sensorTracks && threat._sensorTracks[shooter.mfrSensorId];
       var state = physicalTrack ? physicalTrack.state : KJ.IADS.SENSOR_STATE.UNDETECTED;
       var freshness = KJ.IADS.trackFreshness(physicalTrack, t, 3);
       var ownReady = state === KJ.IADS.SENSOR_STATE.FIRE_CONTROL && freshness.fresh;
+      // ADR-112: C2가 보는 등급 — 마지막 보고 발신 시각 뒤에 올라간 등급은 아직 모른다.
+      if (ownReady && view && physicalTrack && Number.isFinite(physicalTrack.stateChangedAt) && physicalTrack.stateChangedAt > view.asOf) ownReady = false;
       // ADR-070: 자기 MFR이 FC가 아니어도 웹 내 다른 포대 MFR이 FC를 주면 발사 자격 인정.
-      var remote = !ownReady && this._iadsRemoteFcGrade(shooter, threat, t);
+      var remote = !ownReady && this._iadsRemoteFcGrade(shooter, threat, t, view);
       if (remote) this.global.remoteFcGrants = (this.global.remoteFcGrants || 0) + 1;
       return {
         ready: ownReady || remote,
@@ -6221,7 +6231,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (firstInside === null) return { ready: false, readyAt: t + 1, state: 'UNDETECTED' };
     var tr = spec.transitionTime || {};
     var fcAt = firstInside + (Number(tr.detectToTrack) || 0) + (Number(tr.trackToFireControl) || 0);
-    return { ready: t >= fcAt, readyAt: fcAt, state: t >= fcAt ? 'FIRE_CONTROL' : 'TRACKED' };
+    var seenT = view ? view.asOf : t;   // ADR-112
+    return { ready: seenT >= fcAt, readyAt: fcAt, state: seenT >= fcAt ? 'FIRE_CONTROL' : 'TRACKED' };
   };
 
   /** ADR-059: 비용 인식 항 ((1−W)+W·costFit), costFit=min(1, 위협가치/요격탄가). legacy Step 1과
@@ -6345,8 +6356,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     return Infinity;
   };
 
-  Simulation.prototype._iadsPredictiveEvaluate = function (shooter, threat, t) {
-    var ev = this._iadsEvaluate(shooter, threat, t);
+  Simulation.prototype._iadsPredictiveEvaluate = function (shooter, threat, t, view) {
+    var ev = this._iadsEvaluate(shooter, threat, t, view);
     if (ev.feasible || !PREDICTABLE_REASONS[ev.reason]) return ev;
     var readyAt, windowEnd;
     if (this.assignmentFeedback) {   // ADR-110 ① 보수적 예측
@@ -6425,20 +6436,52 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     return out;
   };
 
-  Simulation.prototype._iadsEvaluate = function (shooter, threat, t) {
+  /**
+   * ADR-112: 지휘소가 시각 t에 알고 있는 포대 상태의 기준 시각(마지막 보고 **발신** 시각). 보고는 kP마다 발신되고
+   * C2→ECS 하향 계선의 대표 지연 합 d 뒤에 닿는다(상향도 같은 매체로 본다 · 분포가 아닌 대표값 — 난수 없음).
+   * 경로가 없으면 d=0. 첫 보고 전(t < d)이면 0(초기 상태).
+   */
+  Simulation.prototype._iadsStatusAsOf = function (commander, shooter, t) {
+    var cache = this._statusDelayCache || (this._statusDelayCache = {});
+    var key = commander.id + '|' + shooter.id, d = cache[key];
+    if (d === undefined) {
+      var path = this._iadsShortestPath(commander.id, shooter.ecsC2Id || shooter.id, ['coord', 'command']), mode = this.mode;
+      d = 0;
+      if (path) path.forEach(function (l) { var c = l.comm && l.comm[mode]; if (c && Number.isFinite(c.delaySec)) d += c.delaySec; });
+      cache[key] = d;
+    }
+    var P = this.statusReportPeriodSec, k = Math.floor((t - d) / P);
+    return k < 0 ? 0 : k * P;
+  };
+
+  /** ADR-112: 포대 자원 변화 기록(발사·교전 종료) — 플래그 ON에서만. C2의 지연 조회가 읽는다. */
+  Simulation.prototype._iadsNoteStatus = function (resource, shooterId, t) {
+    if (!this.batteryStatusReporting || !resource) return;
+    (resource._hist = resource._hist || []).push({ t: t, ammo: this._iadsAmmo(shooterId, t), active: resource.active });
+  };
+
+  /** ADR-112: 시각 asOf에 포대가 보고했을 잔탄·채널(발사·교전 종료·재장전 완료마다 기록). 기록이 없으면 초기 상태. */
+  Simulation.prototype._iadsResourceAsOf = function (resource, asOf) {
+    var h = resource._hist, known = null;
+    if (h) for (var i = h.length - 1; i >= 0; i--) { if (h[i].t <= asOf) { known = h[i]; break; } }
+    return known ? { ammo: known.ammo, active: known.active } : { ammo: resource.initialAmmo, active: 0 };
+  };
+
+  Simulation.prototype._iadsEvaluate = function (shooter, threat, t, view) {
     if (!this._iadsCanEngage(shooter, threat)) return { feasible: false, reason: 'no_missile_for_threat' };
     var resource = this.iadsResources[shooter.id];
     if (!resource) return { feasible: false, reason: 'not_operational' };
-    var ammo = this._iadsAmmo(shooter.id, t);
+    var ammo = this._iadsAmmo(shooter.id, t), active = resource.active;
+    if (view) { var known = this._iadsResourceAsOf(resource, view.asOf); ammo = known.ammo; active = known.active; }   // ADR-112
     if (ammo <= 0) {
       var nextReload = resource.launchers.reduce(function (m, l) {
         return l.reloadCompleteAt !== null ? Math.min(m, l.reloadCompleteAt) : m;
       }, Infinity);
       return { feasible: false, reason: 'ammo_depleted', readyAt: nextReload };
     }
-    if (resource.active >= resource.maxSimultaneous) return { feasible: false, reason: 'capacity_full', readyAt: t + 1 };
+    if (active >= resource.maxSimultaneous) return { feasible: false, reason: 'capacity_full', readyAt: t + 1 };
 
-    var fc = this._iadsFireControlState(shooter, threat, t);
+    var fc = this._iadsFireControlState(shooter, threat, t, view);
     if (!fc.ready) return { feasible: false, reason: 'no_fire_control', readyAt: Math.max(t + 1, fc.readyAt) };
 
     var missiles = shooter.engage.missiles || {}, shooterPos = { lat: shooter.coord[0], lon: shooter.coord[1], altKm: 0 };
@@ -7304,8 +7347,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
           var sim = this;
           needGate = commander.batteryIds.some(function (id) {
             // ADR-109: 조기 사수 지정이 켜지면 예측 후보도 「쏠 수 있는 사수」로 쳐서 승인 계선을 먼저 탄다(승인 우회 방지).
-            return (sim.earlyShooterAssignment ? sim._iadsPredictiveEvaluate(sim._nodeById(id), threat, t)
-              : sim._iadsEvaluate(sim._nodeById(id), threat, t)).feasible;
+            var sh = sim._nodeById(id), vw = sim.batteryStatusReporting ? { asOf: sim._iadsStatusAsOf(commander, sh, t) } : null;   // ADR-112
+            return (sim.earlyShooterAssignment ? sim._iadsPredictiveEvaluate(sh, threat, t, vw)
+              : sim._iadsEvaluate(sh, threat, t, vw)).feasible;
           });
         }
       }
@@ -7319,10 +7363,15 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var dtr = threat._trace ? [] : null;   // ADR-111 결심 기록(관측 전용)
     commander.batteryIds.forEach(function (id) {
       var shooter = self._nodeById(id);
-      var ev = self.earlyShooterAssignment ? self._iadsPredictiveEvaluate(shooter, threat, t) : self._iadsEvaluate(shooter, threat, t);   // ADR-109
-      if (dtr) dtr.push(ev.feasible
-        ? { id: id, ok: true, predicted: !!ev.predicted, readyAt: ev.predicted && Number.isFinite(ev.readyAt) ? ev.readyAt : null }
-        : { id: id, ok: false, why: ev.reason, readyAt: Number.isFinite(ev.readyAt) ? ev.readyAt : null });
+      var view = self.batteryStatusReporting ? { asOf: self._iadsStatusAsOf(commander, shooter, t) } : null;   // ADR-112 C2가 아는 상태
+      var ev = self.earlyShooterAssignment ? self._iadsPredictiveEvaluate(shooter, threat, t, view) : self._iadsEvaluate(shooter, threat, t, view);   // ADR-109
+      if (dtr) {
+        var de = ev.feasible
+          ? { id: id, ok: true, predicted: !!ev.predicted, readyAt: ev.predicted && Number.isFinite(ev.readyAt) ? ev.readyAt : null }
+          : { id: id, ok: false, why: ev.reason, readyAt: Number.isFinite(ev.readyAt) ? ev.readyAt : null };
+        if (view) de.age = Math.round((t - view.asOf) * 10) / 10;   // C2가 본 상태의 나이(초)
+        dtr.push(de);
+      }
       if (ev.feasible) {
         var r = self.iadsResources[id], ammoRatio = r.initialAmmo ? ev.ammo / r.initialAmmo : 0;
         var load = r.maxSimultaneous ? r.active / r.maxSimultaneous : 1;
@@ -8034,6 +8083,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       launcher.reloadCompleteAt = t + resource.reloadSec;
       this.schedule(launcher.reloadCompleteAt, PRI.SERVICE_END, 'IADS_RELOAD', { shooterId: shooter.id, launcherId: launcher.id });
     }
+    this._iadsNoteStatus(resource, shooter.id, t);   // ADR-112
 
     this.global.engaged++;
     this.global.shotsFired++;
@@ -8076,6 +8126,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
       this._advanceIadsResource(resource, t);
       resource.active = Math.max(0, resource.active - 1);
       resource.completions++;
+      this._iadsNoteStatus(resource, d.shooterId, t);   // ADR-112
     }
     if (!threat.alive) {
       this._iadsTransitionPlan(plan, 'released', t, 'released');
@@ -8123,6 +8174,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
 
   Simulation.prototype._onIadsReload = function (t, d) {
     this._iadsRefreshLaunchers(d.shooterId, t);
+    this._iadsNoteStatus(this.iadsResources[d.shooterId], d.shooterId, t);   // ADR-112 재장전 완료도 보고된다
   };
 
   Simulation.prototype._pk = function (shooter, threat) {
@@ -9931,6 +9983,7 @@ function features() {
     standbyCue: P.cue,             // ADR-104 — 〃 (이 화면만 기본 ON · bsrc=0이면 엔진이 비활성으로 신고 — 상태줄 경고 칩)
     cueAcquisitionGain: P.cuegain > 0 ? P.cuegain : undefined, // ADR-104 B-3 획득 이득(기본 0 = 없음 · 명시된 근사)
     earlyShooterAssignment: P.ea,  // ADR-109 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 요청 2026-10-01)
+    batteryStatusReporting: !!P.bsr, statusReportPeriodSec: P.bsrp > 0 ? P.bsrp : 4,   // ADR-112 — 포대 상태 보고 지연(엔진 기본 OFF · 이 화면만 기본 ON)
     assignmentFeedback: P.ea && P.cf,  // ADR-110 — 예측 일치 · 사수 CANTCO 회신 · 즉시 재지정 (엔진 기본 OFF · 이 화면만 기본 ON)
     shoradCruiseExclusion: P.nocm, // ADR-107 ① — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-30)
     shoradPkRealism: P.shpk,       // ADR-107 ② — 〃
@@ -10060,6 +10113,8 @@ const PARAMS = [
   //    포대가 준비된 시각). 켜면 결심 지휘소가 항적을 받은 시점에 예상 요격 창이 있는 포대까지 후보에 넣어 사수를 고르고
   //    「준비되면 쏘라」는 명령을 내린다(사용자 요청 2026-10-01). **엔진 기본 OFF · 이 화면만 기본 ON**. 끄려면 ?ea=0.
   { k: 'ea',    d: 1,       t: 'bool', h: '조기 사수 지정 — 예상 요격 창 기준으로 항적 접수 시점에 사수를 정하고 「준비되면 쏘라」 명령 (ADR-109 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  { k: 'bsr',   d: 1,       t: 'bool', h: '포대 상태 보고 — 결심 C2의 후보 평가가 포대의 마지막 보고 상태(잔탄·채널·레이더 등급)를 씀. 보고 주기 bsrp초 + C2→ECS 계선 대표 지연(카탈로그) 만큼 과거 상태 (ADR-112 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  { k: 'bsrp',  d: 4,       t: 'num',  h: '포대 상태 보고 주기(초 · bsr=1일 때). 데이터링크 자동 갱신 개념값 4초 (IADS-STATUS-RPT-01)' },
   { k: 'cf',    d: 1,       t: 'bool', h: '사수 지정 되먹임 — 예측을 실제 발사 평가와 같은 조건으로 계산하고, 지정 사수가 예측 준비 시각 + 30초 안에 못 쏘면 「수행 불가」 회신 후 1초 뒤 재지정 (ADR-110 · ea=1일 때만 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   // ── lx: 이 화면만 **기본 ON**으로 되돌린다(사용자 결정 2026-09-10 — 「출발점은 모든 배치에서
   //    수정」). 2026-09-01에 기본 OFF로 내렸던 결정을 뒤집는 것이라, 근거를 남긴다.
@@ -10176,6 +10231,7 @@ function activeConfigChips() {
   if (P.nocm) out.push('비호 순항 제외·천마 킬웹만');
   if (P.shpk) out.push('단거리방공 Pk 0.7');
   if (P.ea) out.push(P.cf ? '조기 사수지정+되먹임 ON' : '조기 사수지정 ON');
+  if (P.bsr) out.push('포대 상태 보고 ON (주기 ' + (P.bsrp > 0 ? P.bsrp : 4) + '초+계선 지연)');
   if (INTENSITY.x !== 1) out.push('강도 ×' + INTENSITY.x);
   if (P.bsrc) out.push('탄도 보고원 그린파인 ON');
   if (P.cue && !P.bsrc) out.push('⚠ 사전대기 큐 비활성 — bsrc=0');
@@ -10974,7 +11030,9 @@ function decisionView(d) {
     (d.chosen ? ' → ' + nodeName(d.chosen) + ' 선정' : ' → 가능 포대 없음') +
     (d.kind === 'standby' ? ' · 큐 포대 자체 판단' : '') +
     (d.n > 1 ? ' · 같은 판정 ' + d.n + '회(~' + fmt(d.tEnd) + ')' : '');
-  return { text, sub: [okTxt, noTxt].filter(Boolean).join(' · ') || '검토 포대 없음', ok: ok.length, total: cands.length,
+  const ages = cands.map((c) => c.age).filter(Number.isFinite);
+  const ageTxt = ages.length ? ' · C2가 본 상태 나이 ' + Math.min(...ages).toFixed(0) + '~' + Math.max(...ages).toFixed(0) + '초(보고 주기+계선 지연 · ADR-112)' : '';
+  return { text: text + ageTxt, sub: [okTxt, noTxt].filter(Boolean).join(' · ') || '검토 포대 없음', ok: ok.length, total: cands.length,
     raw: 'decision:' + d.kind + ':' + d.c2 + '→' + (d.chosen || '-') };
 }
 

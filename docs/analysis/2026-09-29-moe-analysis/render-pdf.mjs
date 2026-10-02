@@ -30,6 +30,7 @@ while (i < lines.length) {
   if ((m = /^(\s*)([-*]|\d+\.)\s+(.*)$/.exec(L))) { flushPara(); const tag = /\d/.test(m[2]) ? 'ol' : 'ul'; if (inList !== tag) { closeList(); out.push('<' + tag + '>'); inList = tag; }
     let item = m[3]; i++; while (i < lines.length && /^\s{2,}\S/.test(lines[i]) && !/^\s*([-*]|\d+\.)\s/.test(lines[i])) { item += ' ' + lines[i].trim(); i++; }
     out.push('<li>' + inline(item) + '</li>'); continue; }
+  if ((m = /^!\[([^\]]*)\]\(([^)]+)\)\s*$/.exec(L))) { flushPara(); closeList(); out.push(`<figure><img src="${m[2]}" alt="${esc(m[1])}"><figcaption>${inline(m[1])}</figcaption></figure>`); i++; continue; }   // 그림: ![설명](상대경로)
   if (/^```/.test(L)) { flushPara(); closeList(); const code = []; i++; while (i < lines.length && !/^```/.test(lines[i])) { code.push(lines[i]); i++; } i++; out.push('<pre>' + esc(code.join('\n')) + '</pre>'); continue; }
   para.push(L.trim()); i++;
 }
@@ -56,6 +57,9 @@ pre { background: #f0f2f4; padding: 3mm; font-size: 8pt; overflow-wrap: anywhere
 strong { color: #0f2a40; }
 .red { color: #b3261e; font-weight: 700; }
 a { color: inherit; text-decoration: none; }
+figure { margin: 2mm 0 4mm; break-inside: avoid; }
+figure img { width: 100%; border: 1px solid #c9d1d8; }
+figcaption { font-size: 8.4pt; color: #44525e; margin-top: 1mm; }
 </style></head><body>${out.join('\n')}</body></html>`;
 const htmlPath = path.join(HERE, 'report.html'); fs.writeFileSync(htmlPath, html);
 

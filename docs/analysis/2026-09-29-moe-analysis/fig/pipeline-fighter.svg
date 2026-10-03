@@ -1,88 +1,88 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1100" viewBox="0 0 1240 1100" font-family="Apple SD Gothic Neo, Noto Sans KR, Malgun Gothic, WenQuanYi Zen Hei, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1248" viewBox="0 0 1240 1248" font-family="Apple SD Gothic Neo, Noto Sans KR, Malgun Gothic, WenQuanYi Zen Hei, sans-serif">
 <defs><marker id="ah" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 z" fill="#334155"/></marker></defs>
-<rect width="1240" height="1100" fill="#fff"/>
+<rect width="1240" height="1248" fill="#fff"/>
 <text x="16" y="26" font-size="15" font-weight="700" fill="#143d5c">전투기 — 결심 사슬 전수 (seed 29 · 발사에 이른 항적 · 줄마다 관측된 경우 하나)</text>
-<text x="16" y="44" font-size="10.5" fill="#44525e">상자 색: <tspan fill="#0e7490" font-weight="700">레이더</tspan> · <tspan fill="#143d5c" font-weight="700">지휘소</tspan> · <tspan fill="#6b7280" font-weight="700">포대 사격통제소</tspan> · <tspan fill="#1b7f3b" font-weight="700">발사 포대</tspan>  —  화살표: 실선 데이터링크/통합망 · <tspan fill="#b3261e">붉은 점선 음성</tspan> · <tspan fill="#7c3aed">보라 점선 채팅</tspan> · <tspan fill="#1b7f3b">초록 점선 포대 자체 판단(긴급발사)</tspan> · 숫자 = 구간 전송 중앙 지연(초) · 같은 지휘소가 두 번 나오면 협조 왕복</text>
+<text x="16" y="44" font-size="10.5" fill="#44525e">상자 색: <tspan fill="#0e7490" font-weight="700">레이더</tspan> · <tspan fill="#143d5c" font-weight="700">지휘소</tspan> · <tspan fill="#6b7280" font-weight="700">포대 사격통제소</tspan> · <tspan fill="#1b7f3b" font-weight="700">발사 포대</tspan>  —  화살표: 실선 데이터링크/통합망 · <tspan fill="#b3261e">붉은 점선 음성</tspan> · <tspan fill="#7c3aed">보라 점선 채팅</tspan> · <tspan fill="#1b7f3b">초록 점선 포대 자체 판단(긴급발사)</tspan> · <tspan fill="#b3261e">붉은 짧은 점선 자위권 발사(포대 자체 판단 · 명령 없음)</tspan> · 숫자 = 구간 전송 중앙 지연(초) · 같은 지휘소가 두 번 나오면 협조 왕복</text>
 <rect x="8" y="62" width="1224" height="558" rx="8" fill="#fbfcfd" stroke="#d6dde3"/>
 <text x="20" y="86" font-size="13.5" font-weight="700" fill="#143d5c">As-Is (분절형) — 발사 도달 16/16개 · 사슬 7가지</text>
 <text x="18" y="126.0" font-size="12" font-weight="700" fill="#1d2a35">5건</text>
-<text x="18" y="142.0" font-size="9.5" fill="#44525e">노드 9 · 탐지→발사 76초</text>
+<text x="18" y="142.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 37초</text>
 <rect x="150" y="108" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 레이더 수도</text>
+<text x="202.0" y="128.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 레이더</text><text x="202.0" y="142.0" text-anchor="middle" font-size="10" fill="#1d2a35">케이시</text>
 <line x1="254" y1="130.0" x2="282" y2="130.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="269.0" y="124.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
 <rect x="284" y="108" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="336.0" y="128.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="336.0" y="142.0" text-anchor="middle" font-size="10" fill="#1d2a35">수도</text>
+<text x="336.0" y="128.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">미군 Patriot 사격통제소</text><text x="336.0" y="142.0" text-anchor="middle" font-size="10" fill="#1d2a35">케이시</text>
 <line x1="388" y1="130.0" x2="416" y2="130.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="124.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="108" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="470.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
-<line x1="522" y1="130.0" x2="550" y2="130.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="537.0" y="124.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<text x="470.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
+<line x1="522" y1="130.0" x2="550" y2="130.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<text x="537.0" y="124.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">17</text>
 <rect x="552" y="108" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="604.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">중앙방공통제소</text>
-<line x1="656" y1="130.0" x2="684" y2="130.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="671.0" y="124.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">15</text>
+<line x1="656" y1="130.0" x2="684" y2="130.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="671.0" y="124.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="686" y="108" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="738.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
-<line x1="790" y1="130.0" x2="818" y2="130.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="805.0" y="124.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">21</text>
-<rect x="820" y="108" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="872.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">중앙방공통제소</text>
-<line x1="924" y1="130.0" x2="952" y2="130.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="939.0" y="124.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="954" y="108" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="1006.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
-<line x1="1058" y1="130.0" x2="1086" y2="130.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="1073.0" y="124.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="1088" y="108" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="1140.0" y="128.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="1140.0" y="142.0" text-anchor="middle" font-size="10" fill="#1d2a35">인천</text>
-<line x1="1192" y1="130.0" x2="1220" y2="130.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="1207.0" y="124.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="1222" y="108" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1274.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 인천</text>
+<text x="738.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
+<line x1="790" y1="130.0" x2="818" y2="130.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="124.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="820" y="108" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="872.0" y="128.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 사격통제소</text><text x="872.0" y="142.0" text-anchor="middle" font-size="10" fill="#1d2a35">북악산</text>
+<line x1="924" y1="130.0" x2="952" y2="130.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="939.0" y="124.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="954" y="108" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1006.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 북악산</text>
 <text x="18" y="200.0" font-size="12" font-weight="700" fill="#1d2a35">4건</text>
-<text x="18" y="216.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 80초</text>
+<text x="18" y="216.0" font-size="9.5" fill="#44525e">노드 9 · 탐지→발사 87초</text>
 <rect x="150" y="182" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="202.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 레이더</text><text x="202.0" y="216.0" text-anchor="middle" font-size="10" fill="#1d2a35">험프리스</text>
+<text x="202.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 레이더 수도</text>
 <line x1="254" y1="204.0" x2="282" y2="204.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="198.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">1</text>
+<text x="269.0" y="198.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
 <rect x="284" y="182" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="336.0" y="202.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">미군 Patriot 사격통제소</text><text x="336.0" y="216.0" text-anchor="middle" font-size="10" fill="#1d2a35">험프리스</text>
+<text x="336.0" y="202.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="336.0" y="216.0" text-anchor="middle" font-size="10" fill="#1d2a35">수도</text>
 <line x1="388" y1="204.0" x2="416" y2="204.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="198.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="182" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="470.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
-<line x1="522" y1="204.0" x2="550" y2="204.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="537.0" y="198.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">23</text>
+<text x="470.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
+<line x1="522" y1="204.0" x2="550" y2="204.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="537.0" y="198.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="552" y="182" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="604.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">중앙방공통제소</text>
-<line x1="656" y1="204.0" x2="684" y2="204.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="671.0" y="198.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<line x1="656" y1="204.0" x2="684" y2="204.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<text x="671.0" y="198.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">16</text>
 <rect x="686" y="182" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="738.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
-<line x1="790" y1="204.0" x2="818" y2="204.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="805.0" y="198.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="820" y="182" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="872.0" y="202.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="872.0" y="216.0" text-anchor="middle" font-size="10" fill="#1d2a35">김포</text>
-<line x1="924" y1="204.0" x2="952" y2="204.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="939.0" y="198.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="954" y="182" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1006.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 김포</text>
+<text x="738.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
+<line x1="790" y1="204.0" x2="818" y2="204.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<text x="805.0" y="198.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">21</text>
+<rect x="820" y="182" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="872.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">중앙방공통제소</text>
+<line x1="924" y1="204.0" x2="952" y2="204.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="939.0" y="198.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="954" y="182" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="1006.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
+<line x1="1058" y1="204.0" x2="1086" y2="204.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1073.0" y="198.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="1088" y="182" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="1140.0" y="202.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="1140.0" y="216.0" text-anchor="middle" font-size="10" fill="#1d2a35">인천</text>
+<line x1="1192" y1="204.0" x2="1220" y2="204.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1207.0" y="198.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="1222" y="182" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1274.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 인천</text>
 <text x="18" y="274.0" font-size="12" font-weight="700" fill="#1d2a35">3건</text>
-<text x="18" y="290.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 46초</text>
+<text x="18" y="290.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 32초</text>
 <rect x="150" y="256" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="276.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 레이더</text><text x="202.0" y="290.0" text-anchor="middle" font-size="10" fill="#1d2a35">케이시</text>
+<text x="202.0" y="276.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 레이더</text><text x="202.0" y="290.0" text-anchor="middle" font-size="10" fill="#1d2a35">험프리스</text>
 <line x1="254" y1="278.0" x2="282" y2="278.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="272.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
+<text x="269.0" y="272.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">1</text>
 <rect x="284" y="256" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="336.0" y="276.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">미군 Patriot 사격통제소</text><text x="336.0" y="290.0" text-anchor="middle" font-size="10" fill="#1d2a35">케이시</text>
+<text x="336.0" y="276.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">미군 Patriot 사격통제소</text><text x="336.0" y="290.0" text-anchor="middle" font-size="10" fill="#1d2a35">험프리스</text>
 <line x1="388" y1="278.0" x2="416" y2="278.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="272.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="256" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="470.0" y="282.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
 <line x1="522" y1="278.0" x2="550" y2="278.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="537.0" y="272.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">24</text>
+<text x="537.0" y="272.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">18</text>
 <rect x="552" y="256" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="604.0" y="282.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">중앙방공통제소</text>
 <line x1="656" y1="278.0" x2="684" y2="278.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -92,29 +92,29 @@
 <line x1="790" y1="278.0" x2="818" y2="278.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="805.0" y="272.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="820" y="256" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="872.0" y="276.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 사격통제소</text><text x="872.0" y="290.0" text-anchor="middle" font-size="10" fill="#1d2a35">북악산</text>
+<text x="872.0" y="276.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="872.0" y="290.0" text-anchor="middle" font-size="10" fill="#1d2a35">수도</text>
 <line x1="924" y1="278.0" x2="952" y2="278.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="939.0" y="272.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
 <rect x="954" y="256" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1006.0" y="282.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 북악산</text>
+<text x="1006.0" y="282.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 수도</text>
 <text x="18" y="348.0" font-size="12" font-weight="700" fill="#1d2a35">1건</text>
-<text x="18" y="364.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 29초</text>
+<text x="18" y="364.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 24초</text>
 <rect x="150" y="330" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 레이더 중북</text>
+<text x="202.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 레이더 수도</text>
 <line x1="254" y1="352.0" x2="282" y2="352.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="269.0" y="346.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
 <rect x="284" y="330" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="336.0" y="350.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="336.0" y="364.0" text-anchor="middle" font-size="10" fill="#1d2a35">중북</text>
+<text x="336.0" y="350.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="336.0" y="364.0" text-anchor="middle" font-size="10" fill="#1d2a35">수도</text>
 <line x1="388" y1="352.0" x2="416" y2="352.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="346.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="330" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="470.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 2</text>
+<text x="470.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
 <line x1="522" y1="352.0" x2="550" y2="352.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="537.0" y="346.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="552" y="330" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="604.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">중앙방공통제소</text>
 <line x1="656" y1="352.0" x2="684" y2="352.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="671.0" y="346.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">16</text>
+<text x="671.0" y="346.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">17</text>
 <rect x="686" y="330" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="738.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
 <line x1="790" y1="352.0" x2="818" y2="352.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -126,39 +126,47 @@
 <rect x="954" y="330" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
 <text x="1006.0" y="350.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">미군 Patriot</text><text x="1006.0" y="364.0" text-anchor="middle" font-size="10" fill="#1d2a35">케이시</text>
 <text x="18" y="422.0" font-size="12" font-weight="700" fill="#1d2a35">1건</text>
-<text x="18" y="438.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 42초</text>
+<text x="18" y="438.0" font-size="9.5" fill="#44525e">노드 9 · 탐지→발사 75초</text>
 <rect x="150" y="404" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="424.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 레이더</text><text x="202.0" y="438.0" text-anchor="middle" font-size="10" fill="#1d2a35">케이시</text>
+<text x="202.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 레이더 수도</text>
 <line x1="254" y1="426.0" x2="282" y2="426.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="420.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">1</text>
+<text x="269.0" y="420.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
 <rect x="284" y="404" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="336.0" y="424.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">미군 Patriot 사격통제소</text><text x="336.0" y="438.0" text-anchor="middle" font-size="10" fill="#1d2a35">케이시</text>
+<text x="336.0" y="424.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="336.0" y="438.0" text-anchor="middle" font-size="10" fill="#1d2a35">수도</text>
 <line x1="388" y1="426.0" x2="416" y2="426.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="420.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="404" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="470.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
-<line x1="522" y1="426.0" x2="550" y2="426.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="537.0" y="420.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">21</text>
+<text x="470.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
+<line x1="522" y1="426.0" x2="550" y2="426.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="537.0" y="420.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="552" y="404" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="604.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">중앙방공통제소</text>
-<line x1="656" y1="426.0" x2="684" y2="426.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="671.0" y="420.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<line x1="656" y1="426.0" x2="684" y2="426.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<text x="671.0" y="420.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">16</text>
 <rect x="686" y="404" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="738.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
-<line x1="790" y1="426.0" x2="818" y2="426.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="805.0" y="420.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="820" y="404" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="872.0" y="424.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="872.0" y="438.0" text-anchor="middle" font-size="10" fill="#1d2a35">연천</text>
-<line x1="924" y1="426.0" x2="952" y2="426.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="939.0" y="420.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="954" y="404" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1006.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 연천</text>
+<text x="738.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
+<line x1="790" y1="426.0" x2="818" y2="426.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<text x="805.0" y="420.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">24</text>
+<rect x="820" y="404" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="872.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">중앙방공통제소</text>
+<line x1="924" y1="426.0" x2="952" y2="426.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="939.0" y="420.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="954" y="404" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="1006.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
+<line x1="1058" y1="426.0" x2="1086" y2="426.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1073.0" y="420.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="1088" y="404" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="1140.0" y="424.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="1140.0" y="438.0" text-anchor="middle" font-size="10" fill="#1d2a35">김포</text>
+<line x1="1192" y1="426.0" x2="1220" y2="426.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1207.0" y="420.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="1222" y="404" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1274.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 김포</text>
 <text x="18" y="496.0" font-size="12" font-weight="700" fill="#1d2a35">1건</text>
-<text x="18" y="512.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 85초</text>
+<text x="18" y="512.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 95초</text>
 <rect x="150" y="478" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="498.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 레이더</text><text x="202.0" y="512.0" text-anchor="middle" font-size="10" fill="#1d2a35">험프리스</text>
 <line x1="254" y1="500.0" x2="282" y2="500.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="494.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
+<text x="269.0" y="494.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">1</text>
 <rect x="284" y="478" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
 <text x="336.0" y="498.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">미군 Patriot 사격통제소</text><text x="336.0" y="512.0" text-anchor="middle" font-size="10" fill="#1d2a35">험프리스</text>
 <line x1="388" y1="500.0" x2="416" y2="500.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -166,7 +174,7 @@
 <rect x="418" y="478" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="470.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
 <line x1="522" y1="500.0" x2="550" y2="500.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="537.0" y="494.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">17</text>
+<text x="537.0" y="494.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">20</text>
 <rect x="552" y="478" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="604.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">중앙방공통제소</text>
 <line x1="656" y1="500.0" x2="684" y2="500.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -176,51 +184,43 @@
 <line x1="790" y1="500.0" x2="818" y2="500.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="805.0" y="494.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="820" y="478" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="872.0" y="498.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="872.0" y="512.0" text-anchor="middle" font-size="10" fill="#1d2a35">인천</text>
+<text x="872.0" y="498.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="872.0" y="512.0" text-anchor="middle" font-size="10" fill="#1d2a35">김포</text>
 <line x1="924" y1="500.0" x2="952" y2="500.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="939.0" y="494.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
 <rect x="954" y="478" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1006.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 인천</text>
+<text x="1006.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 김포</text>
 <text x="18" y="570.0" font-size="12" font-weight="700" fill="#1d2a35">1건</text>
-<text x="18" y="586.0" font-size="9.5" fill="#44525e">노드 9 · 탐지→발사 145초</text>
+<text x="18" y="586.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 17초</text>
 <rect x="150" y="552" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="572.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 레이더</text><text x="202.0" y="586.0" text-anchor="middle" font-size="10" fill="#1d2a35">케이시</text>
+<text x="202.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 레이더 수도</text>
 <line x1="254" y1="574.0" x2="282" y2="574.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="568.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">1</text>
+<text x="269.0" y="568.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
 <rect x="284" y="552" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="336.0" y="572.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">미군 Patriot 사격통제소</text><text x="336.0" y="586.0" text-anchor="middle" font-size="10" fill="#1d2a35">케이시</text>
+<text x="336.0" y="572.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="336.0" y="586.0" text-anchor="middle" font-size="10" fill="#1d2a35">수도</text>
 <line x1="388" y1="574.0" x2="416" y2="574.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="568.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="552" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="470.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
-<line x1="522" y1="574.0" x2="550" y2="574.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="537.0" y="568.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">21</text>
+<text x="470.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
+<line x1="522" y1="574.0" x2="550" y2="574.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="537.0" y="568.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="552" y="552" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="604.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">중앙방공통제소</text>
-<line x1="656" y1="574.0" x2="684" y2="574.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="671.0" y="568.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">20</text>
+<line x1="656" y1="574.0" x2="684" y2="574.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="671.0" y="568.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="686" y="552" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="738.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
-<line x1="790" y1="574.0" x2="818" y2="574.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="805.0" y="568.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">16</text>
-<rect x="820" y="552" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="872.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">중앙방공통제소</text>
-<line x1="924" y1="574.0" x2="952" y2="574.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="939.0" y="568.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="954" y="552" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="1006.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
-<line x1="1058" y1="574.0" x2="1086" y2="574.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="1073.0" y="568.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="1088" y="552" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="1140.0" y="572.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="1140.0" y="586.0" text-anchor="middle" font-size="10" fill="#1d2a35">청주</text>
-<line x1="1192" y1="574.0" x2="1220" y2="574.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="1207.0" y="568.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="1222" y="552" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1274.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 청주</text>
-<rect x="8" y="636" width="1224" height="410" rx="8" fill="#f6fbf7" stroke="#d6dde3"/>
-<text x="20" y="660" font-size="13.5" font-weight="700" fill="#143d5c">To-Be (Kill-web 통합형) — 발사 도달 16/16개 · 사슬 5가지</text>
+<text x="738.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
+<line x1="790" y1="574.0" x2="818" y2="574.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="568.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="820" y="552" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="872.0" y="572.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="872.0" y="586.0" text-anchor="middle" font-size="10" fill="#1d2a35">연평</text>
+<line x1="924" y1="574.0" x2="952" y2="574.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="939.0" y="568.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="954" y="552" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1006.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 연평</text>
+<rect x="8" y="636" width="1224" height="558" rx="8" fill="#f6fbf7" stroke="#d6dde3"/>
+<text x="20" y="660" font-size="13.5" font-weight="700" fill="#143d5c">To-Be (Kill-web 통합형) — 발사 도달 16/16개 · 사슬 7가지</text>
 <text x="18" y="700.0" font-size="12" font-weight="700" fill="#1d2a35">6건</text>
-<text x="18" y="716.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 11초</text>
+<text x="18" y="716.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 21초</text>
 <rect x="150" y="682" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="702.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 레이더</text><text x="202.0" y="716.0" text-anchor="middle" font-size="10" fill="#1d2a35">케이시</text>
 <line x1="254" y1="704.0" x2="282" y2="704.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -247,14 +247,14 @@
 <text x="939.0" y="698.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
 <rect x="954" y="682" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
 <text x="1006.0" y="702.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">미군 Patriot</text><text x="1006.0" y="716.0" text-anchor="middle" font-size="10" fill="#1d2a35">케이시</text>
-<text x="18" y="774.0" font-size="12" font-weight="700" fill="#1d2a35">5건</text>
-<text x="18" y="790.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 67초</text>
+<text x="18" y="774.0" font-size="12" font-weight="700" fill="#1d2a35">3건</text>
+<text x="18" y="790.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 13초</text>
 <rect x="150" y="756" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="782.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 레이더 수도</text>
+<text x="202.0" y="776.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 레이더</text><text x="202.0" y="790.0" text-anchor="middle" font-size="10" fill="#1d2a35">험프리스</text>
 <line x1="254" y1="778.0" x2="282" y2="778.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="772.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
-<rect x="284" y="756" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="336.0" y="782.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<text x="269.0" y="772.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">1</text>
+<rect x="284" y="756" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="336.0" y="776.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">미군 Patriot 사격통제소</text><text x="336.0" y="790.0" text-anchor="middle" font-size="10" fill="#1d2a35">험프리스</text>
 <line x1="388" y1="778.0" x2="416" y2="778.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="772.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="756" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
@@ -266,19 +266,19 @@
 <line x1="656" y1="778.0" x2="684" y2="778.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="671.0" y="772.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="686" y="756" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="738.0" y="776.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="738.0" y="790.0" text-anchor="middle" font-size="10" fill="#1d2a35">인천</text>
+<text x="738.0" y="776.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="738.0" y="790.0" text-anchor="middle" font-size="10" fill="#1d2a35">수도</text>
 <line x1="790" y1="778.0" x2="818" y2="778.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="805.0" y="772.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
 <rect x="820" y="756" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="872.0" y="782.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 인천</text>
-<text x="18" y="848.0" font-size="12" font-weight="700" fill="#1d2a35">3건</text>
-<text x="18" y="864.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 70초</text>
+<text x="872.0" y="782.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 수도</text>
+<text x="18" y="848.0" font-size="12" font-weight="700" fill="#1d2a35">2건</text>
+<text x="18" y="864.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 78초</text>
 <rect x="150" y="830" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="850.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 레이더</text><text x="202.0" y="864.0" text-anchor="middle" font-size="10" fill="#1d2a35">험프리스</text>
+<text x="202.0" y="856.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 레이더 수도</text>
 <line x1="254" y1="852.0" x2="282" y2="852.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="269.0" y="846.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">1</text>
-<rect x="284" y="830" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="336.0" y="850.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">미군 Patriot 사격통제소</text><text x="336.0" y="864.0" text-anchor="middle" font-size="10" fill="#1d2a35">험프리스</text>
+<rect x="284" y="830" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="336.0" y="856.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
 <line x1="388" y1="852.0" x2="416" y2="852.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="846.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="830" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
@@ -290,13 +290,13 @@
 <line x1="656" y1="852.0" x2="684" y2="852.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="671.0" y="846.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="686" y="830" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="738.0" y="850.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="738.0" y="864.0" text-anchor="middle" font-size="10" fill="#1d2a35">김포</text>
+<text x="738.0" y="850.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="738.0" y="864.0" text-anchor="middle" font-size="10" fill="#1d2a35">인천</text>
 <line x1="790" y1="852.0" x2="818" y2="852.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="805.0" y="846.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
 <rect x="820" y="830" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="872.0" y="856.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 김포</text>
-<text x="18" y="922.0" font-size="12" font-weight="700" fill="#1d2a35">1건</text>
-<text x="18" y="938.0" font-size="9.5" fill="#44525e">노드 4 · 탐지→발사 26초</text>
+<text x="872.0" y="856.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 인천</text>
+<text x="18" y="922.0" font-size="12" font-weight="700" fill="#1d2a35">2건</text>
+<text x="18" y="938.0" font-size="9.5" fill="#44525e">노드 4 · 탐지→발사 24초</text>
 <rect x="150" y="904" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="930.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 레이더 수도</text>
 <line x1="254" y1="926.0" x2="282" y2="926.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -312,13 +312,13 @@
 <rect x="552" y="904" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
 <text x="604.0" y="930.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 연평</text>
 <text x="18" y="996.0" font-size="12" font-weight="700" fill="#1d2a35">1건</text>
-<text x="18" y="1012.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 67초</text>
+<text x="18" y="1012.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 9초</text>
 <rect x="150" y="978" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="998.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 레이더</text><text x="202.0" y="1012.0" text-anchor="middle" font-size="10" fill="#1d2a35">험프리스</text>
+<text x="202.0" y="1004.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 레이더 수도</text>
 <line x1="254" y1="1000.0" x2="282" y2="1000.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="269.0" y="994.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
-<rect x="284" y="978" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="336.0" y="998.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">미군 Patriot 사격통제소</text><text x="336.0" y="1012.0" text-anchor="middle" font-size="10" fill="#1d2a35">험프리스</text>
+<rect x="284" y="978" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="336.0" y="1004.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
 <line x1="388" y1="1000.0" x2="416" y2="1000.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="994.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="978" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
@@ -330,9 +330,57 @@
 <line x1="656" y1="1000.0" x2="684" y2="1000.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="671.0" y="994.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="686" y="978" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="738.0" y="998.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="738.0" y="1012.0" text-anchor="middle" font-size="10" fill="#1d2a35">인천</text>
+<text x="738.0" y="998.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="738.0" y="1012.0" text-anchor="middle" font-size="10" fill="#1d2a35">연평</text>
 <line x1="790" y1="1000.0" x2="818" y2="1000.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="805.0" y="994.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
 <rect x="820" y="978" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="872.0" y="1004.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 인천</text>
+<text x="872.0" y="1004.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 연평</text>
+<text x="18" y="1070.0" font-size="12" font-weight="700" fill="#1d2a35">1건</text>
+<text x="18" y="1086.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 61초</text>
+<rect x="150" y="1052" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
+<text x="202.0" y="1078.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 레이더 수도</text>
+<line x1="254" y1="1074.0" x2="282" y2="1074.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="269.0" y="1068.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
+<rect x="284" y="1052" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="336.0" y="1078.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<line x1="388" y1="1074.0" x2="416" y2="1074.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="403.0" y="1068.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="418" y="1052" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="470.0" y="1078.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
+<line x1="522" y1="1074.0" x2="550" y2="1074.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="537.0" y="1068.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="552" y="1052" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="604.0" y="1078.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<line x1="656" y1="1074.0" x2="684" y2="1074.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="671.0" y="1068.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="686" y="1052" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="738.0" y="1072.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="738.0" y="1086.0" text-anchor="middle" font-size="10" fill="#1d2a35">김포</text>
+<line x1="790" y1="1074.0" x2="818" y2="1074.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="1068.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="820" y="1052" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="872.0" y="1078.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 김포</text>
+<text x="18" y="1144.0" font-size="12" font-weight="700" fill="#1d2a35">1건</text>
+<text x="18" y="1160.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 68초</text>
+<rect x="150" y="1126" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
+<text x="202.0" y="1146.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 레이더</text><text x="202.0" y="1160.0" text-anchor="middle" font-size="10" fill="#1d2a35">험프리스</text>
+<line x1="254" y1="1148.0" x2="282" y2="1148.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="269.0" y="1142.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
+<rect x="284" y="1126" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="336.0" y="1146.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">미군 Patriot 사격통제소</text><text x="336.0" y="1160.0" text-anchor="middle" font-size="10" fill="#1d2a35">험프리스</text>
+<line x1="388" y1="1148.0" x2="416" y2="1148.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="403.0" y="1142.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="418" y="1126" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="470.0" y="1152.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
+<line x1="522" y1="1148.0" x2="550" y2="1148.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="537.0" y="1142.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="552" y="1126" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="604.0" y="1152.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<line x1="656" y1="1148.0" x2="684" y2="1148.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="671.0" y="1142.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="686" y="1126" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="738.0" y="1146.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="738.0" y="1160.0" text-anchor="middle" font-size="10" fill="#1d2a35">인천</text>
+<line x1="790" y1="1148.0" x2="818" y2="1148.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="1142.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="820" y="1126" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="872.0" y="1152.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 인천</text>
 </svg>

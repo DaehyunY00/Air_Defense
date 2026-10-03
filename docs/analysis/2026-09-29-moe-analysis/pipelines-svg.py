@@ -30,7 +30,7 @@ def nm(id_, cat, name):
     if cat=='sensor': return (typ+(' '+l if l else '')).strip() or name
     return (typ+(' '+l if l else '')).strip() or name
 FILL={'sensor':('#e0f7fa','#0e7490'),'c2':('#e8edf1','#143d5c'),'ecs':('#f3f4f6','#6b7280'),'shooter':('#e3f2e8','#1b7f3b')}
-MEDIA={'voice':('#b3261e','6 4','음성'),'chat':('#7c3aed','4 3','채팅'),'voice-vtc':('#b3261e','6 4','음성/VTC'),'datalink':('#143d5c','','데이터링크'),'ifcn':('#143d5c','','통합 사격통제망'),'report-cycle':('#0e7490','','보고 주기'),'internal':('#6b7280','','내부'),'self':('#1b7f3b','2 3','포대 자체 판단'),'kvmf-relay':('#143d5c','3 3','KVMF'),'fanout':('#6b7280','2 3','')}
+MEDIA={'voice':('#b3261e','6 4','음성'),'chat':('#7c3aed','4 3','채팅'),'voice-vtc':('#b3261e','6 4','음성/VTC'),'datalink':('#143d5c','','데이터링크'),'ifcn':('#143d5c','','통합 사격통제망'),'report-cycle':('#0e7490','','보고 주기'),'internal':('#6b7280','','내부'),'self':('#1b7f3b','2 3','포대 자체 판단'),'selfdef':('#b3261e','2 3','자위권 발사(포대 자체 판단)'),'kvmf-relay':('#143d5c','3 3','KVMF'),'fanout':('#6b7280','2 3','')}
 MAXROWS=8
 for ty in ['srbm','mrl_large','cruise','fighter','uav_small']:
     blocks=[]; 
@@ -45,7 +45,7 @@ for ty in ['srbm','mrl_large','cruise','fighter','uav_small']:
        '<defs><marker id="ah" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 z" fill="#334155"/></marker></defs>',
        f'<rect width="{W}" height="{H}" fill="#fff"/>',
        f'<text x="16" y="26" font-size="15" font-weight="700" fill="#143d5c">{html.escape(TYPE_KO[ty])} — 결심 사슬 전수 (seed 29 · 발사에 이른 항적 · 줄마다 관측된 경우 하나)</text>',
-       f'<text x="16" y="44" font-size="10.5" fill="#44525e">상자 색: <tspan fill="#0e7490" font-weight="700">레이더</tspan> · <tspan fill="#143d5c" font-weight="700">지휘소</tspan> · <tspan fill="#6b7280" font-weight="700">포대 사격통제소</tspan> · <tspan fill="#1b7f3b" font-weight="700">발사 포대</tspan>  —  화살표: 실선 데이터링크/통합망 · <tspan fill="#b3261e">붉은 점선 음성</tspan> · <tspan fill="#7c3aed">보라 점선 채팅</tspan> · <tspan fill="#1b7f3b">초록 점선 포대 자체 판단(긴급발사)</tspan> · 숫자 = 구간 전송 중앙 지연(초) · 같은 지휘소가 두 번 나오면 협조 왕복</text>']
+       f'<text x="16" y="44" font-size="10.5" fill="#44525e">상자 색: <tspan fill="#0e7490" font-weight="700">레이더</tspan> · <tspan fill="#143d5c" font-weight="700">지휘소</tspan> · <tspan fill="#6b7280" font-weight="700">포대 사격통제소</tspan> · <tspan fill="#1b7f3b" font-weight="700">발사 포대</tspan>  —  화살표: 실선 데이터링크/통합망 · <tspan fill="#b3261e">붉은 점선 음성</tspan> · <tspan fill="#7c3aed">보라 점선 채팅</tspan> · <tspan fill="#1b7f3b">초록 점선 포대 자체 판단(긴급발사)</tspan> · <tspan fill="#b3261e">붉은 짧은 점선 자위권 발사(포대 자체 판단 · 명령 없음)</tspan> · 숫자 = 구간 전송 중앙 지연(초) · 같은 지휘소가 두 번 나오면 협조 왕복</text>']
     y=62
     for mode,label,T,shown,rest in blocks:
         o.append(f'<rect x="8" y="{y}" width="{W-16}" height="{40+len(shown)*rowh+(22 if rest else 0)}" rx="8" fill="{"#fbfcfd" if mode=="asis" else "#f6fbf7"}" stroke="#d6dde3"/>')
@@ -54,7 +54,7 @@ for ty in ['srbm','mrl_large','cruise','fighter','uav_small']:
         for c in shown:
             cy=yy+bh/2+6
             o.append(f'<text x="18" y="{cy-4}" font-size="12" font-weight="700" fill="#1d2a35">{c["n"]}건</text>')
-            sub=f'노드 {len(c["nodes"])} · 탐지→발사 {round(c["detToFireMed"] or 0)}초'+(f' · 긴급 {c["emergency"]}' if c["emergency"] else '')
+            sub=f'노드 {len(c["nodes"])} · 탐지→발사 {round(c["detToFireMed"] or 0)}초'+(f' · 긴급 {c["emergency"]}' if c["emergency"] else '')+(f' · 자위권 {c.get("selfDefense",0)}' if c.get("selfDefense") else '')
             o.append(f'<text x="18" y="{cy+12}" font-size="9.5" fill="#44525e">{html.escape(sub)}</text>')
             x=left
             for i,(nid,cat,name) in enumerate(zip(c['nodes'],c['categories'],c['names'])):

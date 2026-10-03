@@ -12,7 +12,7 @@ const KJ = globalThis.KJ; installIadsKernel(KJ);
 const BASE = { highResolutionDeployment:true, threatTargetDispersion:true, southernAxes:true, linkSemanticsV2:true, sensorReportParity:true, sawtoothFreshness:true, approvalChain:true, unifiedEngagementState:true, selfDefenseFire:true, ballisticLaunchAxes:true, threatAimpoints:true, c2DecisionTimeParity:true, approvalPipelineRealism:true, iccRelayAuthorization:true, ballisticReportSource:true, standbyCue:true, rokUsfkCoordination:{asis:'voice',tobe:'datalink'}, commanderRouteRetry:true, shoradCruiseExclusion:true, shoradPkRealism:true, earlyShooterAssignment:true, assignmentFeedback:true, batteryStatusReporting:true, statusReportPeriodSec:4, standbyCueAuthority:'prepare' };
 const TYPES = ['srbm','mrl_large','cruise','fighter','uav_small'];
 const med = (a) => { if(!a.length) return null; const s=[...a].sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; };
-const out = { generatedAt: new Date().toISOString(), condition: 'SC3 · FULL · seed 29 · 생성 1800초 · 관측 3600초 · 화면 기본 플래그(bsr 4초 포함)', modes: {} };
+const out = { generatedAt: new Date().toISOString(), condition: 'SC3 · FULL · seed 29 · 생성 1800초 · 관측 3600초 · 화면 기본 플래그(bsr 4초 · 큐 권한 prepare 포함)', modes: {} };
 for (const mode of ['asis','tobe']) {
   const res = KJ.runDES({ scenario: KJ.scenarioById('sc3'), mode, intensity:1, seed:29, endTimeSec:3600, spawnUntilSec:1800, deploymentId:'HANBANDO_FULL_NORMAL', modelFidelity:'iads-c2', trace:true, traceCap:1000, flowTrace:true, flowTraceCap:400000, features:BASE });
   const cat = KJ.resolveModelCatalog({ deploymentId:'HANBANDO_FULL_NORMAL', mode, modelFidelity:'iads-c2', features:BASE });
@@ -26,10 +26,12 @@ for (const mode of ['asis','tobe']) {
     const shooter = fire.name.match(/^발사:([^/]+)/)[1];
     const links = (byTh[tr.id]||[]).filter(l=>l.t1<=fire.t+1e-9 && l.mt!=='fanout');
     const emer = tr.stages.some(s=>s.name==='긴급발사:'+shooter && Math.abs(s.t-fire.t)<1e-6);
+    // 자위권 발사(ADR-071·113 ③): 포대가 「자위권발사:」 결심 표식을 남기고 0.2~2.5초 뒤 쏜다 — 명령 전문이 없다.
+    const selfDef = !emer && tr.stages.some(s=>s.name==='자위권발사:'+shooter && s.t<=fire.t+1e-9 && fire.t-s.t<30);
     let cur = links.filter(l=>l.to===shooter).sort((a,b)=>b.t1-a.t1)[0];
-    // 긴급발사(ADR-104 ②)는 포대로 가는 명령 전문이 없다 — 대기 지시(cue)가 닿은 포대 사격통제소까지를 사슬로 잡고 「포대 자체 판단」 한 칸을 덧붙인다.
+    // 긴급발사(ADR-104 ②)·자위권 발사는 포대로 가는 명령 전문이 없다 — 대기 지시(cue)가 닿은 포대 사격통제소(없으면 사격통제소에 닿은 마지막 전문)까지를 사슬로 잡고 「포대 자체 판단」 한 칸을 덧붙인다.
     let selfTail = null;
-    if (!cur && emer) { const ecs = ecsOf[shooter]; cur = links.filter(l=>l.kind==='cue' && l.to===ecs).sort((a,b)=>b.t1-a.t1)[0]; if (cur) selfTail = { from: ecs, to: shooter, kind: 'self', mt: 'self', t0: fire.t, t1: fire.t }; }
+    if (!cur && (emer || selfDef)) { const ecs = ecsOf[shooter]; cur = links.filter(l=>l.kind==='cue' && l.to===ecs).sort((a,b)=>b.t1-a.t1)[0] || links.filter(l=>l.to===ecs).sort((a,b)=>b.t1-a.t1)[0]; if (cur) selfTail = { from: ecs, to: shooter, kind: selfDef ? 'selfdef' : 'self', mt: selfDef ? 'selfdef' : 'self', t0: fire.t, t1: fire.t }; }
     const chain = []; const seen = new Set();
     while (cur && !seen.has(cur)) { seen.add(cur); chain.unshift(cur); cur = links.filter(l=>l.to===cur.from && l.t1<=cur.t0+1e-9).sort((a,b)=>b.t1-a.t1)[0]; }
     if (selfTail) chain.push(selfTail);
@@ -37,15 +39,15 @@ for (const mode of ['asis','tobe']) {
     const nodes = [chain[0].from, ...chain.map(l=>l.to)];
     const key = nodes.join('>') + '|' + chain.map(l=>l.kind||'').join(',');
     const det = (tr.stages.find(s=>s.name==='탐지')||{t:tr.spawnT}).t;
-    const c = chains[tr.type][key] = chains[tr.type][key] || { nodes, kinds: chain.map(l=>l.kind||null), media: chain.map(l=>l.mt), n:0, detToFire:[], linkDelay: chain.map(()=>[]), gapBefore: chain.map(()=>[]), emergency:0, examples:[] };
+    const c = chains[tr.type][key] = chains[tr.type][key] || { nodes, kinds: chain.map(l=>l.kind||null), media: chain.map(l=>l.mt), n:0, detToFire:[], linkDelay: chain.map(()=>[]), gapBefore: chain.map(()=>[]), emergency:0, selfDefense:0, examples:[] };
     c.n++; c.detToFire.push(fire.t - det);
     chain.forEach((l,i)=>{ c.linkDelay[i].push(l.t1 - l.t0); c.gapBefore[i].push(i ? l.t0 - chain[i-1].t1 : l.t0 - det); });
-    if (emer) c.emergency++;
+    if (emer) c.emergency++; if (selfDef) c.selfDefense++;
     if (c.examples.length < 3) c.examples.push(tr.id);
   });
   const types = {};
   TYPES.forEach(t => {
-    const list = Object.values(chains[t]).map(c => ({ nodes: c.nodes, names: c.nodes.map(id=>(nodeInfo[id]||{}).name||id), categories: c.nodes.map(id=>(nodeInfo[id]||{}).category||'?'), kinds: c.kinds, media: c.media, n: c.n, emergency: c.emergency,
+    const list = Object.values(chains[t]).map(c => ({ nodes: c.nodes, names: c.nodes.map(id=>(nodeInfo[id]||{}).name||id), categories: c.nodes.map(id=>(nodeInfo[id]||{}).category||'?'), kinds: c.kinds, media: c.media, n: c.n, emergency: c.emergency, selfDefense: c.selfDefense,
       detToFireMed: med(c.detToFire), linkDelayMed: c.linkDelay.map(med), gapBeforeMed: c.gapBefore.map(med), examples: c.examples })).sort((a,b)=>b.n-a.n);
     types[t] = { fired: list.reduce((a,c)=>a+c.n,0), total: res.threatTraces.filter(x=>x.type===t).length, chains: list };
   });

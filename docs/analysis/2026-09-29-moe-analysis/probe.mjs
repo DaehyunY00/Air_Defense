@@ -50,7 +50,7 @@ function analyze(res) {
   out.load.topArrivals=nodes.filter(n=>n.category==='c2').sort((a,b)=>b.arrivals-a.arrivals).slice(0,8).map(n=>({id:short(n.id), arrivals:n.arrivals, rho:+(n.rho||0).toFixed(3), kinds:Object.entries(n.arrivalsByKind||{}).filter(([k,v])=>v>0).map(([k,v])=>k+':'+v).join(' ')}));
   out.load.bottlenecks=res.bottlenecks;
   // shooter shots distribution from fire marks
-  const shots={}; res.threatTraces.forEach(tr=>tr.stages.forEach(s=>{ const m=s.name.match(/^(발사|자위권발사):([^/]+)/); if(m) shots[m[2]]=(shots[m[2]]||0)+1; }));
+  const shots={}; res.threatTraces.forEach(tr=>tr.stages.forEach(s=>{ const m=s.name.match(/^발사:([^/]+)/); if(m) shots[m[1]]=(shots[m[1]]||0)+1; }));
   const sv=Object.values(shots).sort((a,b)=>b-a); const tot=sv.reduce((a,b)=>a+b,0); const nBat=cat('shooter').length;
   out.load.shots={ total:tot, batteries:nBat, firing:sv.length, zero:nBat-sv.length, top3Share:tot?sv.slice(0,3).reduce((a,b)=>a+b,0)/tot:0, top5Share:tot?sv.slice(0,5).reduce((a,b)=>a+b,0)/tot:0, top:Object.entries(shots).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,v])=>short(k)+':'+v) };
   // link load

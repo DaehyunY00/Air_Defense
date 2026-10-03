@@ -2,11 +2,11 @@
 <defs><marker id="ah" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 z" fill="#334155"/></marker></defs>
 <rect width="1240" height="1440" fill="#fff"/>
 <text x="16" y="26" font-size="15" font-weight="700" fill="#143d5c">탄도탄 — 결심 사슬 전수 (seed 29 · 발사에 이른 항적 · 줄마다 관측된 경우 하나)</text>
-<text x="16" y="44" font-size="10.5" fill="#44525e">상자 색: <tspan fill="#0e7490" font-weight="700">레이더</tspan> · <tspan fill="#143d5c" font-weight="700">지휘소</tspan> · <tspan fill="#6b7280" font-weight="700">포대 사격통제소</tspan> · <tspan fill="#1b7f3b" font-weight="700">발사 포대</tspan>  —  화살표: 실선 데이터링크/통합망 · <tspan fill="#b3261e">붉은 점선 음성</tspan> · <tspan fill="#7c3aed">보라 점선 채팅</tspan> · <tspan fill="#1b7f3b">초록 점선 포대 자체 판단(긴급발사)</tspan> · 숫자 = 구간 전송 중앙 지연(초) · 같은 지휘소가 두 번 나오면 협조 왕복</text>
+<text x="16" y="44" font-size="10.5" fill="#44525e">상자 색: <tspan fill="#0e7490" font-weight="700">레이더</tspan> · <tspan fill="#143d5c" font-weight="700">지휘소</tspan> · <tspan fill="#6b7280" font-weight="700">포대 사격통제소</tspan> · <tspan fill="#1b7f3b" font-weight="700">발사 포대</tspan>  —  화살표: 실선 데이터링크/통합망 · <tspan fill="#b3261e">붉은 점선 음성</tspan> · <tspan fill="#7c3aed">보라 점선 채팅</tspan> · <tspan fill="#1b7f3b">초록 점선 포대 자체 판단(긴급발사)</tspan> · <tspan fill="#b3261e">붉은 짧은 점선 자위권 발사(포대 자체 판단 · 명령 없음)</tspan> · 숫자 = 구간 전송 중앙 지연(초) · 같은 지휘소가 두 번 나오면 협조 왕복</text>
 <rect x="8" y="62" width="1224" height="654" rx="8" fill="#fbfcfd" stroke="#d6dde3"/>
-<text x="20" y="86" font-size="13.5" font-weight="700" fill="#143d5c">As-Is (분절형) — 발사 도달 53/53개 · 사슬 18가지</text>
-<text x="18" y="126.0" font-size="12" font-weight="700" fill="#1d2a35">25건</text>
-<text x="18" y="142.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 189초</text>
+<text x="20" y="86" font-size="13.5" font-weight="700" fill="#143d5c">As-Is (분절형) — 발사 도달 53/53개 · 사슬 16가지</text>
+<text x="18" y="126.0" font-size="12" font-weight="700" fill="#1d2a35">20건</text>
+<text x="18" y="142.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 188초</text>
 <rect x="150" y="108" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
 <line x1="254" y1="130.0" x2="282" y2="130.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -18,11 +18,11 @@
 <rect x="418" y="108" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="470.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
 <line x1="522" y1="130.0" x2="550" y2="130.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="537.0" y="124.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">20</text>
+<text x="537.0" y="124.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">18</text>
 <rect x="552" y="108" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="604.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
 <line x1="656" y1="130.0" x2="684" y2="130.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="671.0" y="124.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">21</text>
+<text x="671.0" y="124.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">20</text>
 <rect x="686" y="108" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="738.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
 <line x1="790" y1="130.0" x2="818" y2="130.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -33,88 +33,88 @@
 <text x="939.0" y="124.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
 <rect x="954" y="108" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
 <text x="1006.0" y="134.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 성주</text>
-<text x="18" y="200.0" font-size="12" font-weight="700" fill="#1d2a35">4건</text>
-<text x="18" y="216.0" font-size="9.5" fill="#44525e">노드 5 · 탐지→발사 201초</text>
+<text x="18" y="200.0" font-size="12" font-weight="700" fill="#1d2a35">6건</text>
+<text x="18" y="216.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 259초</text>
 <rect x="150" y="182" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">그린파인 충북</text>
+<text x="202.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
 <line x1="254" y1="204.0" x2="282" y2="204.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="198.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">8</text>
-<rect x="284" y="182" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="336.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
-<line x1="388" y1="204.0" x2="416" y2="204.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="403.0" y="198.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">18</text>
+<text x="269.0" y="198.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
+<rect x="284" y="182" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="336.0" y="202.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="336.0" y="216.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
+<line x1="388" y1="204.0" x2="416" y2="204.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="403.0" y="198.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="182" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="470.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
-<line x1="522" y1="204.0" x2="550" y2="204.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="537.0" y="198.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="552" y="182" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="604.0" y="202.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="604.0" y="216.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
-<line x1="656" y1="204.0" x2="684" y2="204.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="671.0" y="198.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="686" y="182" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="738.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 성주</text>
-<text x="18" y="274.0" font-size="12" font-weight="700" fill="#1d2a35">3건</text>
-<text x="18" y="290.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 264초</text>
+<line x1="522" y1="204.0" x2="550" y2="204.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<text x="537.0" y="198.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">20</text>
+<rect x="552" y="182" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="604.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
+<line x1="656" y1="204.0" x2="684" y2="204.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="671.0" y="198.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="686" y="182" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="738.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
+<line x1="790" y1="204.0" x2="818" y2="204.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="198.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="820" y="182" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="872.0" y="202.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="872.0" y="216.0" text-anchor="middle" font-size="10" fill="#1d2a35">수도</text>
+<line x1="924" y1="204.0" x2="952" y2="204.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="939.0" y="198.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="954" y="182" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1006.0" y="208.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 수도</text>
+<text x="18" y="274.0" font-size="12" font-weight="700" fill="#1d2a35">4건</text>
+<text x="18" y="290.0" font-size="9.5" fill="#44525e">노드 5 · 탐지→발사 191초</text>
 <rect x="150" y="256" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="282.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
+<text x="202.0" y="282.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">그린파인 충북</text>
 <line x1="254" y1="278.0" x2="282" y2="278.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="272.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
-<rect x="284" y="256" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="336.0" y="276.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="336.0" y="290.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
-<line x1="388" y1="278.0" x2="416" y2="278.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="403.0" y="272.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<text x="269.0" y="272.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">14</text>
+<rect x="284" y="256" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="336.0" y="282.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
+<line x1="388" y1="278.0" x2="416" y2="278.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<text x="403.0" y="272.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">20</text>
 <rect x="418" y="256" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="470.0" y="282.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
-<line x1="522" y1="278.0" x2="550" y2="278.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="537.0" y="272.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">22</text>
-<rect x="552" y="256" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="604.0" y="282.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
-<line x1="656" y1="278.0" x2="684" y2="278.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="671.0" y="272.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="686" y="256" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="738.0" y="282.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 2</text>
-<line x1="790" y1="278.0" x2="818" y2="278.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="805.0" y="272.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="820" y="256" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="872.0" y="276.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="872.0" y="290.0" text-anchor="middle" font-size="10" fill="#1d2a35">중북</text>
-<line x1="924" y1="278.0" x2="952" y2="278.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="939.0" y="272.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="954" y="256" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1006.0" y="282.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 중북</text>
-<text x="18" y="348.0" font-size="12" font-weight="700" fill="#1d2a35">2건</text>
-<text x="18" y="364.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 295초</text>
+<line x1="522" y1="278.0" x2="550" y2="278.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="537.0" y="272.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="552" y="256" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="604.0" y="276.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="604.0" y="290.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
+<line x1="656" y1="278.0" x2="684" y2="278.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="671.0" y="272.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="686" y="256" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="738.0" y="282.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 성주</text>
+<text x="18" y="348.0" font-size="12" font-weight="700" fill="#1d2a35">3건</text>
+<text x="18" y="364.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 322초</text>
 <rect x="150" y="330" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">그린파인 충북</text>
+<text x="202.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
 <line x1="254" y1="352.0" x2="282" y2="352.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="346.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">11</text>
-<rect x="284" y="330" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="336.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
-<line x1="388" y1="352.0" x2="416" y2="352.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="403.0" y="346.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">25</text>
+<text x="269.0" y="346.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
+<rect x="284" y="330" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="336.0" y="350.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="336.0" y="364.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
+<line x1="388" y1="352.0" x2="416" y2="352.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="403.0" y="346.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="330" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="470.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
+<text x="470.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
 <line x1="522" y1="352.0" x2="550" y2="352.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="537.0" y="346.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">29</text>
+<text x="537.0" y="346.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">21</text>
 <rect x="552" y="330" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="604.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
 <line x1="656" y1="352.0" x2="684" y2="352.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="671.0" y="346.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="686" y="330" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="738.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
+<text x="738.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 1</text>
 <line x1="790" y1="352.0" x2="818" y2="352.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="805.0" y="346.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="820" y="330" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="872.0" y="350.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 사격통제소</text><text x="872.0" y="364.0" text-anchor="middle" font-size="10" fill="#1d2a35">북악산</text>
+<text x="872.0" y="350.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="872.0" y="364.0" text-anchor="middle" font-size="10" fill="#1d2a35">광주</text>
 <line x1="924" y1="352.0" x2="952" y2="352.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="939.0" y="346.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
 <rect x="954" y="330" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1006.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 북악산</text>
-<text x="18" y="422.0" font-size="12" font-weight="700" fill="#1d2a35">2건</text>
-<text x="18" y="438.0" font-size="9.5" fill="#44525e">노드 9 · 탐지→발사 293초</text>
+<text x="1006.0" y="356.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 광주</text>
+<text x="18" y="422.0" font-size="12" font-weight="700" fill="#1d2a35">3건</text>
+<text x="18" y="438.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 288초</text>
 <rect x="150" y="404" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
 <line x1="254" y1="426.0" x2="282" y2="426.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="420.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">1</text>
+<text x="269.0" y="420.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
 <rect x="284" y="404" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
 <text x="336.0" y="424.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="336.0" y="438.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
 <line x1="388" y1="426.0" x2="416" y2="426.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -122,59 +122,59 @@
 <rect x="418" y="404" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="470.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
 <line x1="522" y1="426.0" x2="550" y2="426.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="537.0" y="420.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">25</text>
+<text x="537.0" y="420.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">23</text>
 <rect x="552" y="404" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="604.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
-<line x1="656" y1="426.0" x2="684" y2="426.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="671.0" y="420.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">26</text>
+<line x1="656" y1="426.0" x2="684" y2="426.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="671.0" y="420.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="686" y="404" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="738.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
-<line x1="790" y1="426.0" x2="818" y2="426.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="805.0" y="420.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">24</text>
-<rect x="820" y="404" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="872.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
-<line x1="924" y1="426.0" x2="952" y2="426.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="939.0" y="420.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="954" y="404" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="1006.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
-<line x1="1058" y1="426.0" x2="1086" y2="426.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="1073.0" y="420.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="1088" y="404" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="1140.0" y="424.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 사격통제소</text><text x="1140.0" y="438.0" text-anchor="middle" font-size="10" fill="#1d2a35">북악산</text>
-<line x1="1192" y1="426.0" x2="1220" y2="426.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="1207.0" y="420.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="1222" y="404" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1274.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 북악산</text>
-<text x="18" y="496.0" font-size="12" font-weight="700" fill="#1d2a35">2건</text>
-<text x="18" y="512.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 282초</text>
+<text x="738.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 1</text>
+<line x1="790" y1="426.0" x2="818" y2="426.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="420.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="820" y="404" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="872.0" y="424.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="872.0" y="438.0" text-anchor="middle" font-size="10" fill="#1d2a35">남부</text>
+<line x1="924" y1="426.0" x2="952" y2="426.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="939.0" y="420.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="954" y="404" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1006.0" y="430.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 남부</text>
+<text x="18" y="496.0" font-size="12" font-weight="700" fill="#1d2a35">3건</text>
+<text x="18" y="512.0" font-size="9.5" fill="#44525e">노드 9 · 탐지→발사 202초</text>
 <rect x="150" y="478" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">그린파인 충북</text>
+<text x="202.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
 <line x1="254" y1="500.0" x2="282" y2="500.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="494.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">10</text>
-<rect x="284" y="478" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="336.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
-<line x1="388" y1="500.0" x2="416" y2="500.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="403.0" y="494.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">29</text>
+<text x="269.0" y="494.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
+<rect x="284" y="478" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="336.0" y="498.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="336.0" y="512.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
+<line x1="388" y1="500.0" x2="416" y2="500.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="403.0" y="494.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="478" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="470.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
+<text x="470.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
 <line x1="522" y1="500.0" x2="550" y2="500.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="537.0" y="494.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">20</text>
+<text x="537.0" y="494.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">25</text>
 <rect x="552" y="478" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="604.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
-<line x1="656" y1="500.0" x2="684" y2="500.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="671.0" y="494.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<line x1="656" y1="500.0" x2="684" y2="500.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<text x="671.0" y="494.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">23</text>
 <rect x="686" y="478" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="738.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
-<line x1="790" y1="500.0" x2="818" y2="500.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="805.0" y="494.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="820" y="478" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="872.0" y="498.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="872.0" y="512.0" text-anchor="middle" font-size="10" fill="#1d2a35">수도</text>
-<line x1="924" y1="500.0" x2="952" y2="500.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="939.0" y="494.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="954" y="478" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1006.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 수도</text>
+<text x="738.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
+<line x1="790" y1="500.0" x2="818" y2="500.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<text x="805.0" y="494.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">22</text>
+<rect x="820" y="478" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="872.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
+<line x1="924" y1="500.0" x2="952" y2="500.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<text x="939.0" y="494.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">16</text>
+<rect x="954" y="478" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="1006.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
+<line x1="1058" y1="500.0" x2="1086" y2="500.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1073.0" y="494.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="1088" y="478" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="1140.0" y="498.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="1140.0" y="512.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
+<line x1="1192" y1="500.0" x2="1220" y2="500.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1207.0" y="494.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="1222" y="478" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1274.0" y="504.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 성주</text>
 <text x="18" y="570.0" font-size="12" font-weight="700" fill="#1d2a35">2건</text>
-<text x="18" y="586.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 260초</text>
+<text x="18" y="586.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 264초</text>
 <rect x="150" y="552" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
 <line x1="254" y1="574.0" x2="282" y2="574.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -186,27 +186,27 @@
 <rect x="418" y="552" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="470.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
 <line x1="522" y1="574.0" x2="550" y2="574.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="537.0" y="568.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">29</text>
+<text x="537.0" y="568.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">23</text>
 <rect x="552" y="552" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="604.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
 <line x1="656" y1="574.0" x2="684" y2="574.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="671.0" y="568.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="686" y="552" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="738.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
+<text x="738.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 2</text>
 <line x1="790" y1="574.0" x2="818" y2="574.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="805.0" y="568.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="820" y="552" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="872.0" y="572.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="872.0" y="586.0" text-anchor="middle" font-size="10" fill="#1d2a35">수도</text>
+<text x="872.0" y="572.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="872.0" y="586.0" text-anchor="middle" font-size="10" fill="#1d2a35">중북</text>
 <line x1="924" y1="574.0" x2="952" y2="574.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="939.0" y="568.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
 <rect x="954" y="552" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1006.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 수도</text>
+<text x="1006.0" y="578.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 중북</text>
 <text x="18" y="644.0" font-size="12" font-weight="700" fill="#1d2a35">2건</text>
-<text x="18" y="660.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 322초</text>
+<text x="18" y="660.0" font-size="9.5" fill="#44525e">노드 9 · 탐지→발사 294초</text>
 <rect x="150" y="626" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="652.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
 <line x1="254" y1="648.0" x2="282" y2="648.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="642.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
+<text x="269.0" y="642.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">1</text>
 <rect x="284" y="626" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
 <text x="336.0" y="646.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="336.0" y="660.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
 <line x1="388" y1="648.0" x2="416" y2="648.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -214,26 +214,34 @@
 <rect x="418" y="626" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="470.0" y="652.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
 <line x1="522" y1="648.0" x2="550" y2="648.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<text x="537.0" y="642.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">24</text>
+<text x="537.0" y="642.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">33</text>
 <rect x="552" y="626" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="604.0" y="652.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
-<line x1="656" y1="648.0" x2="684" y2="648.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="671.0" y="642.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<line x1="656" y1="648.0" x2="684" y2="648.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<text x="671.0" y="642.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">25</text>
 <rect x="686" y="626" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="738.0" y="652.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 1</text>
-<line x1="790" y1="648.0" x2="818" y2="648.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="805.0" y="642.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="820" y="626" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="872.0" y="646.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="872.0" y="660.0" text-anchor="middle" font-size="10" fill="#1d2a35">광주</text>
-<line x1="924" y1="648.0" x2="952" y2="648.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="939.0" y="642.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="954" y="626" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1006.0" y="652.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 광주</text>
-<text x="18" y="704" font-size="10" fill="#44525e">그 밖 11건 · 10가지 사슬(각 2건 이하) — fig/pipelines.json에 전부 있음</text>
+<text x="738.0" y="652.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
+<line x1="790" y1="648.0" x2="818" y2="648.0" stroke="#b3261e" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<text x="805.0" y="642.0" text-anchor="middle" font-size="9" fill="#b3261e" font-weight="700">22</text>
+<rect x="820" y="626" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="872.0" y="652.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">탄도탄작전통제소</text>
+<line x1="924" y1="648.0" x2="952" y2="648.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="939.0" y="642.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="954" y="626" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="1006.0" y="652.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">방공여단 통제소 3</text>
+<line x1="1058" y1="648.0" x2="1086" y2="648.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1073.0" y="642.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="1088" y="626" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="1140.0" y="646.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 사격통제소</text><text x="1140.0" y="660.0" text-anchor="middle" font-size="10" fill="#1d2a35">북악산</text>
+<line x1="1192" y1="648.0" x2="1220" y2="648.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1207.0" y="642.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="1222" y="626" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1274.0" y="652.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 북악산</text>
+<text x="18" y="704" font-size="10" fill="#44525e">그 밖 10건 · 8가지 사슬(각 2건 이하) — fig/pipelines.json에 전부 있음</text>
 <rect x="8" y="732" width="1224" height="654" rx="8" fill="#f6fbf7" stroke="#d6dde3"/>
-<text x="20" y="756" font-size="13.5" font-weight="700" fill="#143d5c">To-Be (Kill-web 통합형) — 발사 도달 53/53개 · 사슬 14가지</text>
-<text x="18" y="796.0" font-size="12" font-weight="700" fill="#1d2a35">31건</text>
-<text x="18" y="812.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 190초</text>
+<text x="20" y="756" font-size="13.5" font-weight="700" fill="#143d5c">To-Be (Kill-web 통합형) — 발사 도달 53/53개 · 사슬 15가지</text>
+<text x="18" y="796.0" font-size="12" font-weight="700" fill="#1d2a35">27건</text>
+<text x="18" y="812.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 189초</text>
 <rect x="150" y="778" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="804.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
 <line x1="254" y1="800.0" x2="282" y2="800.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -261,7 +269,7 @@
 <rect x="954" y="778" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
 <text x="1006.0" y="804.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 성주</text>
 <text x="18" y="870.0" font-size="12" font-weight="700" fill="#1d2a35">4건</text>
-<text x="18" y="886.0" font-size="9.5" fill="#44525e">노드 8 · 탐지→발사 294초</text>
+<text x="18" y="886.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 266초</text>
 <rect x="150" y="852" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="878.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
 <line x1="254" y1="874.0" x2="282" y2="874.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -278,28 +286,20 @@
 <text x="604.0" y="878.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
 <line x1="656" y1="874.0" x2="684" y2="874.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="671.0" y="868.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="686" y="852" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="738.0" y="878.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
-<line x1="790" y1="874.0" x2="818" y2="874.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="805.0" y="868.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="820" y="852" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="872.0" y="878.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
-<line x1="924" y1="874.0" x2="952" y2="874.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="939.0" y="868.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="954" y="852" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="1006.0" y="872.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 사격통제소</text><text x="1006.0" y="886.0" text-anchor="middle" font-size="10" fill="#1d2a35">북악산</text>
-<line x1="1058" y1="874.0" x2="1086" y2="874.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="1073.0" y="868.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="1088" y="852" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1140.0" y="878.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 북악산</text>
+<rect x="686" y="852" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="738.0" y="872.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="738.0" y="886.0" text-anchor="middle" font-size="10" fill="#1d2a35">수도</text>
+<line x1="790" y1="874.0" x2="818" y2="874.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="868.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="820" y="852" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="872.0" y="878.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 수도</text>
 <text x="18" y="944.0" font-size="12" font-weight="700" fill="#1d2a35">3건</text>
-<text x="18" y="960.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 262초</text>
+<text x="18" y="960.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 293초</text>
 <rect x="150" y="926" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="952.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
+<text x="202.0" y="952.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">그린파인 충북</text>
 <line x1="254" y1="948.0" x2="282" y2="948.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="942.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
-<rect x="284" y="926" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="336.0" y="946.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="336.0" y="960.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
+<text x="269.0" y="942.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">6</text>
+<rect x="284" y="926" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="336.0" y="952.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
 <line x1="388" y1="948.0" x2="416" y2="948.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="942.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="926" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
@@ -311,19 +311,19 @@
 <line x1="656" y1="948.0" x2="684" y2="948.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="671.0" y="942.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="686" y="926" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="738.0" y="946.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="738.0" y="960.0" text-anchor="middle" font-size="10" fill="#1d2a35">중북</text>
+<text x="738.0" y="946.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 사격통제소</text><text x="738.0" y="960.0" text-anchor="middle" font-size="10" fill="#1d2a35">북악산</text>
 <line x1="790" y1="948.0" x2="818" y2="948.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="805.0" y="942.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
 <rect x="820" y="926" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="872.0" y="952.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 중북</text>
+<text x="872.0" y="952.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 북악산</text>
 <text x="18" y="1018.0" font-size="12" font-weight="700" fill="#1d2a35">3건</text>
-<text x="18" y="1034.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 293초</text>
+<text x="18" y="1034.0" font-size="9.5" fill="#44525e">노드 8 · 탐지→발사 293초</text>
 <rect x="150" y="1000" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">그린파인 충북</text>
+<text x="202.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
 <line x1="254" y1="1022.0" x2="282" y2="1022.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="1016.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">5</text>
-<rect x="284" y="1000" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="336.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<text x="269.0" y="1016.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">1</text>
+<rect x="284" y="1000" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="336.0" y="1020.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="336.0" y="1034.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
 <line x1="388" y1="1022.0" x2="416" y2="1022.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="1016.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="1000" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
@@ -334,20 +334,28 @@
 <text x="604.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
 <line x1="656" y1="1022.0" x2="684" y2="1022.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="671.0" y="1016.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="686" y="1000" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="738.0" y="1020.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 사격통제소</text><text x="738.0" y="1034.0" text-anchor="middle" font-size="10" fill="#1d2a35">북악산</text>
-<line x1="790" y1="1022.0" x2="818" y2="1022.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="805.0" y="1016.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="820" y="1000" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="872.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 북악산</text>
-<text x="18" y="1092.0" font-size="12" font-weight="700" fill="#1d2a35">2건</text>
-<text x="18" y="1108.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 322초</text>
+<rect x="686" y="1000" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="738.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
+<line x1="790" y1="1022.0" x2="818" y2="1022.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="1016.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="820" y="1000" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="872.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<line x1="924" y1="1022.0" x2="952" y2="1022.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="939.0" y="1016.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="954" y="1000" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="1006.0" y="1020.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 사격통제소</text><text x="1006.0" y="1034.0" text-anchor="middle" font-size="10" fill="#1d2a35">북악산</text>
+<line x1="1058" y1="1022.0" x2="1086" y2="1022.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1073.0" y="1016.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="1088" y="1000" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1140.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 북악산</text>
+<text x="18" y="1092.0" font-size="12" font-weight="700" fill="#1d2a35">3건</text>
+<text x="18" y="1108.0" font-size="9.5" fill="#44525e">노드 9 · 탐지→발사 191초</text>
 <rect x="150" y="1074" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">그린파인 충북</text>
+<text x="202.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
 <line x1="254" y1="1096.0" x2="282" y2="1096.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="1090.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">11</text>
-<rect x="284" y="1074" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="336.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<text x="269.0" y="1090.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
+<rect x="284" y="1074" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="336.0" y="1094.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="336.0" y="1108.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
 <line x1="388" y1="1096.0" x2="416" y2="1096.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="1090.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="1074" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
@@ -358,20 +366,32 @@
 <text x="604.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
 <line x1="656" y1="1096.0" x2="684" y2="1096.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="671.0" y="1090.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="686" y="1074" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="738.0" y="1094.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 사격통제소</text><text x="738.0" y="1108.0" text-anchor="middle" font-size="10" fill="#1d2a35">광주</text>
-<line x1="790" y1="1096.0" x2="818" y2="1096.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="805.0" y="1090.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="820" y="1074" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="872.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 광주</text>
+<rect x="686" y="1074" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="738.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
+<line x1="790" y1="1096.0" x2="818" y2="1096.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="1090.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="820" y="1074" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="872.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<line x1="924" y1="1096.0" x2="952" y2="1096.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="939.0" y="1090.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="954" y="1074" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="1006.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
+<line x1="1058" y1="1096.0" x2="1086" y2="1096.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1073.0" y="1090.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="1088" y="1074" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="1140.0" y="1094.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="1140.0" y="1108.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
+<line x1="1192" y1="1096.0" x2="1220" y2="1096.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1207.0" y="1090.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="1222" y="1074" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1274.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 성주</text>
 <text x="18" y="1166.0" font-size="12" font-weight="700" fill="#1d2a35">2건</text>
-<text x="18" y="1182.0" font-size="9.5" fill="#44525e">노드 9 · 탐지→발사 202초</text>
+<text x="18" y="1182.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 281초</text>
 <rect x="150" y="1148" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="1174.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
+<text x="202.0" y="1174.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">그린파인 충북</text>
 <line x1="254" y1="1170.0" x2="282" y2="1170.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="1164.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">1</text>
-<rect x="284" y="1148" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="336.0" y="1168.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="336.0" y="1182.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
+<text x="269.0" y="1164.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">10</text>
+<rect x="284" y="1148" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="336.0" y="1174.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
 <line x1="388" y1="1170.0" x2="416" y2="1170.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="1164.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="1148" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
@@ -382,32 +402,20 @@
 <text x="604.0" y="1174.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
 <line x1="656" y1="1170.0" x2="684" y2="1170.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="671.0" y="1164.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="686" y="1148" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="738.0" y="1174.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
-<line x1="790" y1="1170.0" x2="818" y2="1170.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="805.0" y="1164.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="820" y="1148" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="872.0" y="1174.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
-<line x1="924" y1="1170.0" x2="952" y2="1170.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="939.0" y="1164.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="954" y="1148" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="1006.0" y="1174.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
-<line x1="1058" y1="1170.0" x2="1086" y2="1170.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="1073.0" y="1164.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="1088" y="1148" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="1140.0" y="1168.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="1140.0" y="1182.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
-<line x1="1192" y1="1170.0" x2="1220" y2="1170.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="1207.0" y="1164.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="1222" y="1148" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1274.0" y="1174.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 성주</text>
-<text x="18" y="1240.0" font-size="12" font-weight="700" fill="#1d2a35">1건</text>
-<text x="18" y="1256.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 264초</text>
+<rect x="686" y="1148" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="738.0" y="1168.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="738.0" y="1182.0" text-anchor="middle" font-size="10" fill="#1d2a35">수도</text>
+<line x1="790" y1="1170.0" x2="818" y2="1170.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="1164.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="820" y="1148" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="872.0" y="1174.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 수도</text>
+<text x="18" y="1240.0" font-size="12" font-weight="700" fill="#1d2a35">2건</text>
+<text x="18" y="1256.0" font-size="9.5" fill="#44525e">노드 8 · 탐지→발사 290초</text>
 <rect x="150" y="1222" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">그린파인 충북</text>
+<text x="202.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
 <line x1="254" y1="1244.0" x2="282" y2="1244.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="1238.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">9</text>
-<rect x="284" y="1222" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="336.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<text x="269.0" y="1238.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
+<rect x="284" y="1222" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="336.0" y="1242.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="336.0" y="1256.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
 <line x1="388" y1="1244.0" x2="416" y2="1244.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="1238.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="1222" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
@@ -418,43 +426,39 @@
 <text x="604.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
 <line x1="656" y1="1244.0" x2="684" y2="1244.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="671.0" y="1238.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="686" y="1222" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="738.0" y="1242.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="738.0" y="1256.0" text-anchor="middle" font-size="10" fill="#1d2a35">중북</text>
-<line x1="790" y1="1244.0" x2="818" y2="1244.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="805.0" y="1238.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="820" y="1222" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="872.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 중북</text>
-<text x="18" y="1314.0" font-size="12" font-weight="700" fill="#1d2a35">1건</text>
-<text x="18" y="1330.0" font-size="9.5" fill="#44525e">노드 8 · 탐지→발사 282초</text>
+<rect x="686" y="1222" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="738.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
+<line x1="790" y1="1244.0" x2="818" y2="1244.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="1238.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="820" y="1222" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="872.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<line x1="924" y1="1244.0" x2="952" y2="1244.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="939.0" y="1238.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="954" y="1222" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="1006.0" y="1242.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 사격통제소</text><text x="1006.0" y="1256.0" text-anchor="middle" font-size="10" fill="#1d2a35">천안</text>
+<line x1="1058" y1="1244.0" x2="1086" y2="1244.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="1073.0" y="1238.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="1088" y="1222" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1140.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">PAC-3 천안</text>
+<text x="18" y="1314.0" font-size="12" font-weight="700" fill="#1d2a35">2건</text>
+<text x="18" y="1330.0" font-size="9.5" fill="#44525e">노드 5 · 탐지→발사 189초</text>
 <rect x="150" y="1296" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
+<text x="202.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">그린파인 충북</text>
 <line x1="254" y1="1318.0" x2="282" y2="1318.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="1312.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
-<rect x="284" y="1296" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="336.0" y="1316.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="336.0" y="1330.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
+<text x="269.0" y="1312.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">14</text>
+<rect x="284" y="1296" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="336.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
 <line x1="388" y1="1318.0" x2="416" y2="1318.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="1312.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="1296" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
 <text x="470.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
 <line x1="522" y1="1318.0" x2="550" y2="1318.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="537.0" y="1312.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="552" y="1296" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="604.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
-<line x1="656" y1="1318.0" x2="684" y2="1318.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="671.0" y="1312.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="686" y="1296" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="738.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
-<line x1="790" y1="1318.0" x2="818" y2="1318.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="805.0" y="1312.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="820" y="1296" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="872.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
-<line x1="924" y1="1318.0" x2="952" y2="1318.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="939.0" y="1312.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="954" y="1296" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="1006.0" y="1316.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="1006.0" y="1330.0" text-anchor="middle" font-size="10" fill="#1d2a35">수도</text>
-<line x1="1058" y1="1318.0" x2="1086" y2="1318.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="1073.0" y="1312.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="1088" y="1296" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="1140.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 수도</text>
-<text x="18" y="1374" font-size="10" fill="#44525e">그 밖 6건 · 6가지 사슬(각 1건 이하) — fig/pipelines.json에 전부 있음</text>
+<rect x="552" y="1296" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="604.0" y="1316.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="604.0" y="1330.0" text-anchor="middle" font-size="10" fill="#1d2a35">성주</text>
+<line x1="656" y1="1318.0" x2="684" y2="1318.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="671.0" y="1312.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="686" y="1296" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="738.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">THAAD 성주</text>
+<text x="18" y="1374" font-size="10" fill="#44525e">그 밖 7건 · 7가지 사슬(각 1건 이하) — fig/pipelines.json에 전부 있음</text>
 </svg>

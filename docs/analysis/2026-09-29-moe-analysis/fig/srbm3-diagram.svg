@@ -1,39 +1,119 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="560" viewBox="0 0 1180 560" font-family="Apple SD Gothic Neo, Noto Sans KR, Malgun Gothic, WenQuanYi Zen Hei, sans-serif">
-<defs><marker id="ah" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#143d5c"/></marker></defs>
-<rect width="1180" height="560" fill="#ffffff"/>
-<text x="20" y="28" font-size="15" font-weight="700" fill="#143d5c">As-Is (분절형) — srbm#3 · 노드 7개 · 음성 협조 왕복</text>
-<rect x="20" y="60" width="150" height="54" rx="6" fill="#e8edf1" stroke="#143d5c" stroke-width="1.5"/><text x="95.0" y="87.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">그린파인 충북</text><text x="95.0" y="104.0" text-anchor="middle" font-size="10.5" fill="#44525e">탐지 레이더 · 20.6초</text>
-<line x1="170" y1="87" x2="230" y2="87" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/><text x="200.0" y="80.0" text-anchor="middle" font-size="10.5" fill="#143d5c" font-weight="600">보고 주기 4.7초</text>
-<rect x="230" y="60" width="170" height="54" rx="6" fill="#e8edf1" stroke="#143d5c" stroke-width="1.5"/><text x="315.0" y="87.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">KAMDOC</text><text x="315.0" y="104.0" text-anchor="middle" font-size="10.5" fill="#44525e">탄도탄작전통제소 · 접수 25.3초</text>
-<line x1="400" y1="87" x2="470" y2="87" stroke="#b3261e" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ah)"/><text x="435.0" y="80.0" text-anchor="middle" font-size="10.5" fill="#b3261e" font-weight="600">음성 협조 27초</text>
-<rect x="470" y="60" width="150" height="54" rx="6" fill="#e8edf1" stroke="#143d5c" stroke-width="1.5"/><text x="545.0" y="87.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">THAAD 지휘소</text><text x="545.0" y="104.0" text-anchor="middle" font-size="10.5" fill="#44525e">제안 비교 · 63.2초 결심</text>
-<line x1="620" y1="87" x2="690" y2="87" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/><text x="655.0" y="80.0" text-anchor="middle" font-size="10.5" fill="#143d5c" font-weight="600">데이터링크 1초</text>
-<rect x="690" y="60" width="150" height="54" rx="6" fill="#e8edf1" stroke="#143d5c" stroke-width="1.5"/><text x="765.0" y="87.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text><text x="765.0" y="104.0" text-anchor="middle" font-size="10.5" fill="#44525e">명령 접수 65.2초</text>
-<line x1="840" y1="87" x2="910" y2="87" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/><text x="875.0" y="80.0" text-anchor="middle" font-size="10.5" fill="#143d5c" font-weight="600">내부 1초</text>
-<rect x="910" y="60" width="150" height="54" rx="6" fill="#fde7e7" stroke="#b3261e" stroke-width="1.5"/><text x="985.0" y="87.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">THAAD 성주</text><text x="985.0" y="104.0" text-anchor="middle" font-size="10.5" fill="#44525e">사수 대기 → 209.2초 발사</text>
-<rect x="230" y="130" width="170" height="54" rx="6" fill="#f7f7f7" stroke="#8a97a3" stroke-width="1.5"/><text x="315.0" y="157.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">Patriot 지휘소</text><text x="315.0" y="174.0" text-anchor="middle" font-size="10.5" fill="#44525e">음성 협조 23초 · 「동의」</text>
-<line x1="315" y1="114" x2="315" y2="130" stroke="#b3261e" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ah)"/>
-<rect x="470" y="130" width="150" height="54" rx="6" fill="#f7f7f7" stroke="#8a97a3" stroke-width="1.5"/><text x="545.0" y="157.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">ICC 1·2·3여단</text><text x="545.0" y="174.0" text-anchor="middle" font-size="10.5" fill="#44525e">대기 지시 중계 1초</text>
-<line x1="400" y1="87" x2="470" y2="157" stroke="#8a97a3" stroke-width="1.5" stroke-dasharray="2 3" marker-end="url(#ah)"/>
-<rect x="690" y="130" width="150" height="54" rx="6" fill="#f7f7f7" stroke="#8a97a3" stroke-width="1.5"/><text x="765.0" y="157.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">L-SAM 남부·중북·수도</text><text x="765.0" y="174.0" text-anchor="middle" font-size="10.5" fill="#44525e">대기 지시 수신 27.3초</text>
-<line x1="620" y1="157" x2="690" y2="157" stroke="#8a97a3" stroke-width="1.5" stroke-dasharray="2 3" marker-end="url(#ah)"/>
-<text x="20" y="210" font-size="11.5" fill="#44525e">THAAD 1발 실패(273.7초) 뒤 KAMDOC → ICC 2여단 → L-SAM 중북 재지정(275.9초), 대기 지시를 받은 L-SAM 남부가 296.2초 긴급발사 → 325.9초 격추. 결심 지휘소가 2곳(KAMDOC·THAAD 지휘소), 음성 왕복 4회.</text>
-<text x="20" y="268" font-size="15" font-weight="700" fill="#143d5c">To-Be (Kill-web 통합형) — srbm#3 · 노드 5개 · 데이터링크 협조 1초</text>
-<rect x="20" y="300" width="150" height="54" rx="6" fill="#e8edf1" stroke="#143d5c" stroke-width="1.5"/><text x="95.0" y="327.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">그린파인 충북</text><text x="95.0" y="344.0" text-anchor="middle" font-size="10.5" fill="#44525e">탐지 레이더 · 20.6초</text>
-<line x1="170" y1="327" x2="230" y2="327" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/><text x="200.0" y="320.0" text-anchor="middle" font-size="10.5" fill="#143d5c" font-weight="600">보고 주기 4.7초</text>
-<rect x="230" y="300" width="170" height="54" rx="6" fill="#e8edf1" stroke="#143d5c" stroke-width="1.5"/><text x="315.0" y="327.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">IAOC</text><text x="315.0" y="344.0" text-anchor="middle" font-size="10.5" fill="#44525e">통합공중작전통제소 · 접수 25.3초</text>
-<line x1="400" y1="327" x2="470" y2="327" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/><text x="435.0" y="320.0" text-anchor="middle" font-size="10.5" fill="#143d5c" font-weight="600">데이터링크 1초</text>
-<rect x="470" y="300" width="150" height="54" rx="6" fill="#e8edf1" stroke="#143d5c" stroke-width="1.5"/><text x="545.0" y="327.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">THAAD 지휘소</text><text x="545.0" y="344.0" text-anchor="middle" font-size="10.5" fill="#44525e">제안 51.7초 → 「상대 자산이 최적」 양보</text>
-<line x1="470" y1="340" x2="400" y2="340" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
-<line x1="400" y1="380" x2="690" y2="380" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/><text x="545.0" y="373.0" text-anchor="middle" font-size="10.5" fill="#143d5c" font-weight="600">통합 사격통제망 1초 · 사수 지정 52.7초</text>
-<line x1="315" y1="354" x2="315" y2="380" stroke="#143d5c" stroke-width="2"/>
-<rect x="690" y="355" width="150" height="54" rx="6" fill="#e8edf1" stroke="#143d5c" stroke-width="1.5"/><text x="765.0" y="382.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">L-SAM 중북 사격통제소</text><text x="765.0" y="399.0" text-anchor="middle" font-size="10.5" fill="#44525e">명령 접수 54.7초</text>
-<line x1="840" y1="382" x2="910" y2="382" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/><text x="875.0" y="375.0" text-anchor="middle" font-size="10.5" fill="#143d5c" font-weight="600">내부 1초</text>
-<rect x="910" y="355" width="150" height="54" rx="6" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.5"/><text x="985.0" y="382.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">L-SAM 중북</text><text x="985.0" y="399.0" text-anchor="middle" font-size="10.5" fill="#44525e">사수 대기 → 282.9초 발사</text>
-<rect x="690" y="295" width="150" height="54" rx="6" fill="#f7f7f7" stroke="#8a97a3" stroke-width="1.5"/><text x="765.0" y="322.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">L-SAM 남부·중북·수도</text><text x="765.0" y="339.0" text-anchor="middle" font-size="10.5" fill="#44525e">대기 지시 수신 26.3초</text>
-<line x1="400" y1="310" x2="690" y2="315" stroke="#8a97a3" stroke-width="1.5" stroke-dasharray="2 3" marker-end="url(#ah)"/>
-<rect x="470" y="400" width="150" height="54" rx="6" fill="#f7f7f7" stroke="#8a97a3" stroke-width="1.5"/><text x="545.0" y="427.0" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a35">Patriot 지휘소</text><text x="545.0" y="444.0" text-anchor="middle" font-size="10.5" fill="#44525e">데이터링크 통보 1초</text>
-<line x1="400" y1="345" x2="470" y2="420" stroke="#8a97a3" stroke-width="1.5" stroke-dasharray="2 3" marker-end="url(#ah)"/>
-<text x="20" y="490" font-size="11.5" fill="#44525e">결심 지휘소 1곳(IAOC). 협조 왕복이 1초라 THAAD 지휘소의 제안 즉시 IAOC가 「내 자산이 최적」으로 L-SAM 중북을 지정하고 THAAD는 양보. 324.4초 격추. 방공여단 통제소(ICC) 중계 없음.</text>
-<text x="20" y="542" font-size="10.5" fill="#8a97a3">실선 = 데이터링크/통합 사격통제망 · 붉은 점선 = 음성 · 회색 점선 = 대기 지시(명령 아님) · 시각은 seed 29 실행의 실측(초)</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="760" viewBox="0 0 1180 760" font-family="Apple SD Gothic Neo, Noto Sans KR, Malgun Gothic, WenQuanYi Zen Hei, sans-serif">
+<defs><marker id="ah" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#143d5c"/></marker><marker id="ahr" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#b3261e"/></marker><marker id="ahg" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#8a97a3"/></marker></defs>
+<rect width="1180" height="760" fill="#ffffff"/>
+<text x="20" y="26" font-size="15" font-weight="700" fill="#143d5c">As-Is (분절형) — srbm#3 · 결심 지휘소 2곳이 음성 전문 엇갈림 속에 각자 사수를 지정 → 한미 중복 교전(THAAD + L-SAM 중북) · 둘 다 빗나가 360.2초 누수</text>
+<rect x="20" y="48" width="130" height="54" rx="6" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.5"/>
+<text x="85.0" y="75.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">그린파인 충북</text>
+<text x="85.0" y="91.0" text-anchor="middle" font-size="9.6" fill="#44525e">탐지 20.6초</text>
+<line x1="150" y1="75" x2="215" y2="75" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<text x="182.5" y="68.0" text-anchor="middle" font-size="10" fill="#143d5c" font-weight="600">보고 4.7초</text>
+<rect x="215" y="48" width="190" height="54" rx="6" fill="#e8edf1" stroke="#143d5c" stroke-width="1.5"/>
+<text x="310.0" y="75.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">KAMDOC</text>
+<text x="310.0" y="91.0" text-anchor="middle" font-size="9.6" fill="#44525e">탄도탄작전통제소 · 접수 25.3 · 식별 35.9</text>
+<line x1="405" y1="75" x2="470" y2="75" stroke="#b3261e" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ahr)"/>
+<text x="437.5" y="68.0" text-anchor="middle" font-size="10" fill="#b3261e" font-weight="600">음성 제안 18초</text>
+<text x="437.5" y="89" text-anchor="middle" font-size="10" fill="#b3261e" font-weight="600">(54.0 도착)</text>
+<rect x="470" y="48" width="170" height="54" rx="6" fill="#e8edf1" stroke="#143d5c" stroke-width="1.5"/>
+<text x="555.0" y="75.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
+<text x="555.0" y="91.0" text-anchor="middle" font-size="9.6" fill="#44525e">54.0 「내 자산이 최적」 → THAAD 지정</text>
+<line x1="640" y1="75" x2="720" y2="75" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<text x="680.0" y="68.0" text-anchor="middle" font-size="10" fill="#143d5c" font-weight="600">데이터링크 1초</text>
+<rect x="720" y="48" width="160" height="54" rx="6" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+<text x="800.0" y="75.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text>
+<text x="800.0" y="91.0" text-anchor="middle" font-size="9.6" fill="#44525e">명령 접수 56.0</text>
+<line x1="880" y1="75" x2="950" y2="75" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<text x="915.0" y="68.0" text-anchor="middle" font-size="10" fill="#143d5c" font-weight="600">내부 1초</text>
+<rect x="950" y="48" width="210" height="54" rx="6" fill="#fde7e7" stroke="#b3261e" stroke-width="1.5"/>
+<text x="1055.0" y="75.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">THAAD 성주</text>
+<text x="1055.0" y="91.0" text-anchor="middle" font-size="9.6" fill="#44525e">사수 대기 → 208.7 발사 · 272.8 빗나감</text>
+<rect x="20" y="124" width="130" height="54" rx="6" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.5"/>
+<text x="85.0" y="151.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
+<text x="85.0" y="167.0" text-anchor="middle" font-size="9.6" fill="#44525e">탐지 48.8초</text>
+<line x1="150" y1="151" x2="215" y2="151" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<text x="182.5" y="144.0" text-anchor="middle" font-size="10" fill="#143d5c" font-weight="600">보고 1초</text>
+<rect x="215" y="124" width="190" height="54" rx="6" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+<text x="310.0" y="151.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text>
+<text x="310.0" y="167.0" text-anchor="middle" font-size="9.6" fill="#44525e">→ THAAD 지휘소 접수 51.1 · 제안 52.6</text>
+<line x1="405" y1="151" x2="490" y2="104" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<rect x="20" y="200" width="130" height="54" rx="6" fill="#f7f7f7" stroke="#8a97a3" stroke-width="1.5"/>
+<text x="85.0" y="227.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
+<text x="85.0" y="243.0" text-anchor="middle" font-size="9.6" fill="#44525e">음성 15초 · 50.5 「동의」</text>
+<line x1="245" y1="102" x2="130" y2="200" stroke="#b3261e" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ahr)"/>
+<rect x="215" y="200" width="190" height="54" rx="6" fill="#e8edf1" stroke="#143d5c" stroke-width="1.5"/>
+<text x="310.0" y="227.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">KAMDOC</text>
+<text x="310.0" y="243.0" text-anchor="middle" font-size="9.6" fill="#44525e">75.8 「내 자산이 최적」 → L-SAM 중북 지정</text>
+<line x1="405" y1="227" x2="470" y2="227" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<text x="437.5" y="220.0" text-anchor="middle" font-size="10" fill="#143d5c" font-weight="600">데이터링크 1초</text>
+<rect x="470" y="200" width="170" height="54" rx="6" fill="#f7f7f7" stroke="#8a97a3" stroke-width="1.5"/>
+<text x="555.0" y="227.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">ICC 2여단</text>
+<text x="555.0" y="243.0" text-anchor="middle" font-size="9.6" fill="#44525e">중계 접수 76.8 · 인가 85.2</text>
+<line x1="640" y1="227" x2="720" y2="227" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<text x="680.0" y="220.0" text-anchor="middle" font-size="10" fill="#143d5c" font-weight="600">데이터링크 1초</text>
+<rect x="720" y="200" width="160" height="54" rx="6" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+<text x="800.0" y="227.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">L-SAM 중북 사격통제소</text>
+<text x="800.0" y="243.0" text-anchor="middle" font-size="9.6" fill="#44525e">명령 접수 87.2</text>
+<line x1="880" y1="227" x2="950" y2="227" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<text x="915.0" y="220.0" text-anchor="middle" font-size="10" fill="#143d5c" font-weight="600">내부 1초</text>
+<rect x="950" y="200" width="210" height="54" rx="6" fill="#fde7e7" stroke="#b3261e" stroke-width="1.5"/>
+<text x="1055.0" y="227.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">L-SAM 중북</text>
+<text x="1055.0" y="243.0" text-anchor="middle" font-size="9.6" fill="#44525e">사수 대기 → 282.7 발사 · 324.1 빗나감</text>
+<line x1="510" y1="102" x2="375" y2="200" stroke="#b3261e" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ahr)"/>
+<text x="452" y="150" text-anchor="start" font-size="10" fill="#b3261e" font-weight="600">THAAD 제안 음성 23초</text><text x="452" y="163" text-anchor="start" font-size="10" fill="#b3261e" font-weight="600">(75.8 도착)</text>
+<rect x="470" y="272" width="170" height="54" rx="6" fill="#f7f7f7" stroke="#8a97a3" stroke-width="1.5"/>
+<text x="555.0" y="299.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">ICC 1·2·3여단</text>
+<text x="555.0" y="315.0" text-anchor="middle" font-size="9.6" fill="#44525e">대기 지시 중계 1초</text>
+<line x1="640" y1="299" x2="720" y2="299" stroke="#8a97a3" stroke-width="2" stroke-dasharray="2 3" marker-end="url(#ahg)"/>
+<rect x="720" y="272" width="440" height="54" rx="6" fill="#f7f7f7" stroke="#8a97a3" stroke-width="1.5"/>
+<text x="940.0" y="299.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">L-SAM 남부·중북·수도 · 천궁-II 대구</text>
+<text x="940.0" y="315.0" text-anchor="middle" font-size="9.6" fill="#44525e">대기 지시 수신 27.3 — 준비만 · 발사 권한 아님</text>
+<line x1="395" y1="102" x2="480" y2="272" stroke="#8a97a3" stroke-width="2" stroke-dasharray="2 3" marker-end="url(#ahg)"/>
+<text x="20" y="352" font-size="11.2" fill="#44525e">KAMDOC의 제안(35.9 발신)이 THAAD 지휘소에 54.0에, THAAD 지휘소의 제안(52.6 발신)이 KAMDOC에 75.8에 닿아 서로 「내 자산이 최적」으로 회신 — 음성 지연 속에 두 지휘소가 각자 사수를 지정합니다.</text>
+<text x="20" y="369" font-size="11.2" fill="#44525e">THAAD 1발 빗나간 뒤 재협조(273.3 → 291.9 → 308.2)도 음성이라 늦고, 그 사이 L-SAM 중북이 282.7에 쏘아 역시 빗나감. 결심 지휘소 2곳 · 음성 왕복 4회 · 교신 노드 11 · 발사 2 · 격추 실패.</text>
+<text x="20" y="404" font-size="15" font-weight="700" fill="#143d5c">To-Be (Kill-web 통합형) — srbm#3 · 통합공중작전통제소가 THAAD 제안에 1초 만에 동의해 결심이 1곳으로 수렴 · 빗나간 뒤 재협조·재발사 5초 · 312.8초 격추</text>
+<rect x="20" y="426" width="130" height="54" rx="6" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.5"/>
+<text x="85.0" y="453.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">AN/TPY-2 성주</text>
+<text x="85.0" y="469.0" text-anchor="middle" font-size="9.6" fill="#44525e">탐지 48.8초</text>
+<line x1="150" y1="453" x2="215" y2="453" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<text x="182.5" y="446.0" text-anchor="middle" font-size="10" fill="#143d5c" font-weight="600">보고 1초</text>
+<rect x="215" y="426" width="190" height="54" rx="6" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+<text x="310.0" y="453.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text>
+<text x="310.0" y="469.0" text-anchor="middle" font-size="9.6" fill="#44525e">→ 지휘소 접수 51.1</text>
+<line x1="405" y1="453" x2="470" y2="453" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<text x="437.5" y="446.0" text-anchor="middle" font-size="10" fill="#143d5c" font-weight="600">내부 1초</text>
+<rect x="470" y="426" width="170" height="54" rx="6" fill="#e8edf1" stroke="#143d5c" stroke-width="1.5"/>
+<text x="555.0" y="453.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">THAAD 지휘소</text>
+<text x="555.0" y="469.0" text-anchor="middle" font-size="9.6" fill="#44525e">제안 52.4 → 54.4 THAAD 지정</text>
+<line x1="640" y1="440" x2="720" y2="440" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<text x="680.0" y="433.0" text-anchor="middle" font-size="10" fill="#143d5c" font-weight="600">데이터링크 1초</text>
+<rect x="720" y="426" width="180" height="54" rx="6" fill="#e8edf1" stroke="#143d5c" stroke-width="1.5"/>
+<text x="810.0" y="453.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">IAOC</text>
+<text x="810.0" y="469.0" text-anchor="middle" font-size="9.6" fill="#44525e">통합공중작전통제소 · 53.4 「동의」</text>
+<line x1="720" y1="466" x2="640" y2="466" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<text x="680.0" y="480.0" text-anchor="middle" font-size="10" fill="#143d5c" font-weight="600">회신 1초</text>
+<rect x="950" y="426" width="210" height="54" rx="6" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.5"/>
+<text x="1055.0" y="453.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">그린파인 충북</text>
+<text x="1055.0" y="469.0" text-anchor="middle" font-size="9.6" fill="#44525e">탐지 20.6 → 접수 25.3</text>
+<line x1="950" y1="453" x2="900" y2="453" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<text x="925.0" y="446.0" text-anchor="middle" font-size="10" fill="#143d5c" font-weight="600">보고 4.7초</text>
+<rect x="470" y="506" width="170" height="54" rx="6" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+<text x="555.0" y="533.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">THAAD 사격통제소</text>
+<text x="555.0" y="549.0" text-anchor="middle" font-size="9.6" fill="#44525e">명령 접수 56.4</text>
+<line x1="555.0" y1="480" x2="555.0" y2="506" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<text x="555.0" y="497.0" text-anchor="middle" font-size="10" fill="#143d5c" font-weight="600">통합망 1초</text>
+<line x1="640" y1="533" x2="720" y2="533" stroke="#143d5c" stroke-width="2" marker-end="url(#ah)"/>
+<text x="680.0" y="526.0" text-anchor="middle" font-size="10" fill="#143d5c" font-weight="600">내부 1초</text>
+<rect x="720" y="506" width="250" height="54" rx="6" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.5"/>
+<text x="845.0" y="533.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">THAAD 성주</text>
+<text x="845.0" y="549.0" text-anchor="middle" font-size="9.6" fill="#44525e">208.6 발사(빗나감) · 278.2 재발사 · 312.8 격추</text>
+<rect x="990" y="506" width="170" height="54" rx="6" fill="#f7f7f7" stroke="#8a97a3" stroke-width="1.5"/>
+<text x="1075.0" y="533.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">L-SAM 3곳 · 천궁-II 대구</text>
+<text x="1075.0" y="549.0" text-anchor="middle" font-size="9.6" fill="#44525e">대기 지시 26.3 · 준비만</text>
+<line x1="890" y1="480" x2="1010" y2="506" stroke="#8a97a3" stroke-width="2" stroke-dasharray="2 3" marker-end="url(#ahg)"/>
+<rect x="990" y="582" width="170" height="54" rx="6" fill="#f7f7f7" stroke="#8a97a3" stroke-width="1.5"/>
+<text x="1075.0" y="609.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d2a35">Patriot 지휘소</text>
+<text x="1075.0" y="625.0" text-anchor="middle" font-size="9.6" fill="#44525e">데이터링크 통보 1초</text>
+<line x1="900" y1="480" x2="1020" y2="582" stroke="#8a97a3" stroke-width="2" stroke-dasharray="2 3" marker-end="url(#ahg)"/>
+<text x="20" y="666" font-size="11.2" fill="#44525e">IAOC는 그린파인으로 25.3에 알고 대기 지시만 내린 뒤, THAAD 지휘소의 제안(52.4)에 1초 만에 「동의」하고 자기 포대는 지정하지 않습니다(공유 교전 현황). 사수 지정 54.4 — As-Is와 같은 시각이지만 결심 지휘소는 1곳.</text>
+<text x="20" y="683" font-size="11.2" fill="#44525e">THAAD 1발 빗나감(272.8) → 재제안 273.3 → 동의 274.3 → 재지정 275.3 → 2발째 278.2 → 312.8 격추. 음성 없음 · 교신 노드 8 · 발사 2 · 중복 없음 · 방공여단 통제소(ICC) 중계 없음.</text>
+<text x="20" y="746" font-size="10.5" fill="#8a97a3">실선 = 데이터링크/통합 사격통제망 · 붉은 점선 = 음성 · 회색 점선 = 대기 지시(준비 지시 · 발사 권한 아님) · 시각은 seed 29 실행의 실측(초) · 큐 권한 「준비만」 조건</text>
 </svg>

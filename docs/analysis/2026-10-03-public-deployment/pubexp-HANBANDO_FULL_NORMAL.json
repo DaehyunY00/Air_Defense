@@ -1,0 +1,1571 @@
+{
+ "asis#29": {
+  "g": {
+   "spawned": 228,
+   "killed": 211,
+   "leaked": 17,
+   "shots": 281,
+   "mttk": 195.4,
+   "mtte": 161.2,
+   "leakReasons": {
+    "ammo_depleted": 5,
+    "missed": 11,
+    "timeout:engage": 1
+   },
+   "cantco": 61,
+   "dup": 1
+  },
+  "byType": {
+   "srbm": {
+    "n": 53,
+    "k": 51,
+    "fired": 53,
+    "emer": 4,
+    "dec": 58,
+    "total": 287,
+    "shooters": [
+     [
+      "THAAD_SEONGJU",
+      36
+     ],
+     [
+      "PAC3_BUKAKSAN",
+      5
+     ],
+     [
+      "LSAM_CAPITAL",
+      5
+     ],
+     [
+      "MSAM2_GWANGJU",
+      4
+     ]
+    ]
+   },
+   "mrl_large": {
+    "n": 90,
+    "k": 87,
+    "fired": 90,
+    "emer": 75,
+    "dec": 40,
+    "total": 107,
+    "shooters": [
+     [
+      "LSAM_CAPITAL",
+      37
+     ],
+     [
+      "LSAM_MID_NORTH",
+      24
+     ],
+     [
+      "PAC3_BUKAKSAN",
+      11
+     ],
+     [
+      "PAC3_WONJU",
+      8
+     ]
+    ]
+   },
+   "cruise": {
+    "n": 16,
+    "k": 16,
+    "fired": 16,
+    "emer": 0,
+    "dec": 26,
+    "total": 59,
+    "shooters": [
+     [
+      "PAC3_BUKAKSAN",
+      6
+     ],
+     [
+      "PAC3_CHEONAN",
+      3
+     ],
+     [
+      "MSAM2_YEONCHEON",
+      2
+     ],
+     [
+      "USFK_PATRIOT_CASEY",
+      2
+     ]
+    ]
+   },
+   "fighter": {
+    "n": 16,
+    "k": 16,
+    "fired": 16,
+    "emer": 0,
+    "dec": 41,
+    "total": 110,
+    "shooters": [
+     [
+      "MSAM2_GIMPO",
+      7
+     ],
+     [
+      "MSAM2_INCHEON",
+      6
+     ],
+     [
+      "PAC3_BUKAKSAN",
+      3
+     ],
+     [
+      "USFK_PATRIOT_CASEY",
+      2
+     ]
+    ]
+   },
+   "uav_small": {
+    "n": 53,
+    "k": 41,
+    "fired": 48,
+    "emer": 0,
+    "dec": 64,
+    "total": 337,
+    "shooters": [
+     [
+      "CHUNMA_CO1",
+      25
+     ],
+     [
+      "CHUNMA_CO3",
+      12
+     ],
+     [
+      "CHUNMA_CO8",
+      10
+     ],
+     [
+      "LSAM_CAPITAL",
+      6
+     ]
+    ]
+   }
+  },
+  "shots": {
+   "total": 281,
+   "batteries": 84,
+   "firing": 30,
+   "zero": 54,
+   "top3Share": 0.395,
+   "top": [
+    [
+     "LSAM_CAPITAL",
+     48
+    ],
+    [
+     "THAAD_SEONGJU",
+     36
+    ],
+    [
+     "LSAM_MID_NORTH",
+     27
+    ],
+    [
+     "PAC3_BUKAKSAN",
+     25
+    ],
+    [
+     "CHUNMA_CO1",
+     25
+    ],
+    [
+     "CHUNMA_CO3",
+     12
+    ],
+    [
+     "PAC3_CHEONAN",
+     10
+    ],
+    [
+     "USFK_PATRIOT_CASEY",
+     10
+    ]
+   ]
+  },
+  "nodes": 180,
+  "idle": 103,
+  "lad": [
+   {
+    "name": "육군 서부전방 군단 AOC/C2A",
+    "msgs": 303,
+    "arrivals": 102,
+    "rho": 0.013
+   },
+   {
+    "name": "육군 중부전방 군단 AOC/C2A",
+    "msgs": 225,
+    "arrivals": 80,
+    "rho": 0.009
+   },
+   {
+    "name": "육군 동부전방 군단 AOC/C2A",
+    "msgs": 102,
+    "arrivals": 69,
+    "rho": 0.009
+   },
+   {
+    "name": "수방사 AOC/C2A",
+    "msgs": 0,
+    "arrivals": 0,
+    "rho": 0
+   },
+   {
+    "name": "해병 서북도서 방공 AOC/C2A",
+    "msgs": 0,
+    "arrivals": 0,
+    "rho": 0
+   }
+  ],
+  "c2top": [
+   {
+    "name": "KAMD_OPS",
+    "rho": 0.257,
+    "arrivals": 143,
+    "Wq": 1.4
+   },
+   {
+    "name": "MCRC 중앙방공통제소",
+    "rho": 0.138,
+    "arrivals": 130,
+    "Wq": 0
+   },
+   {
+    "name": "ICC 3여단",
+    "rho": 0.061,
+    "arrivals": 110,
+    "Wq": 0
+   },
+   {
+    "name": "ICC 2여단",
+    "rho": 0.03,
+    "arrivals": 52,
+    "Wq": 0
+   },
+   {
+    "name": "육군 서부전방 군단 AOC/C2A",
+    "rho": 0.013,
+    "arrivals": 102,
+    "Wq": 0
+   },
+   {
+    "name": "USFK Patriot C2",
+    "rho": 0.012,
+    "arrivals": 175,
+    "Wq": 0
+   }
+  ]
+ },
+ "tobe#29": {
+  "g": {
+   "spawned": 228,
+   "killed": 205,
+   "leaked": 23,
+   "shots": 290,
+   "mttk": 189.1,
+   "mtte": 153.4,
+   "leakReasons": {
+    "missed": 16,
+    "correlation_failed": 2,
+    "ammo_depleted": 5
+   },
+   "cantco": 22,
+   "dup": 13
+  },
+  "byType": {
+   "srbm": {
+    "n": 53,
+    "k": 47,
+    "fired": 53,
+    "emer": 8,
+    "dec": 23,
+    "total": 281,
+    "shooters": [
+     [
+      "THAAD_SEONGJU",
+      41
+     ],
+     [
+      "PAC3_BUKAKSAN",
+      7
+     ],
+     [
+      "LSAM_MID_NORTH",
+      4
+     ],
+     [
+      "USFK_PATRIOT_KUNSAN",
+      3
+     ]
+    ]
+   },
+   "mrl_large": {
+    "n": 90,
+    "k": 84,
+    "fired": 90,
+    "emer": 72,
+    "dec": 30,
+    "total": 102,
+    "shooters": [
+     [
+      "LSAM_CAPITAL",
+      45
+     ],
+     [
+      "LSAM_MID_NORTH",
+      24
+     ],
+     [
+      "LSAM_SOUTH",
+      8
+     ],
+     [
+      "PAC3_BUKAKSAN",
+      7
+     ]
+    ]
+   },
+   "cruise": {
+    "n": 16,
+    "k": 16,
+    "fired": 16,
+    "emer": 0,
+    "dec": 3,
+    "total": 22,
+    "shooters": [
+     [
+      "USFK_PATRIOT_CASEY",
+      14
+     ],
+     [
+      "CHUNMA_CO8",
+      11
+     ],
+     [
+      "MSAM2_CHUNGJU",
+      1
+     ],
+     [
+      "CHUNMA_CO7",
+      1
+     ]
+    ]
+   },
+   "fighter": {
+    "n": 16,
+    "k": 15,
+    "fired": 16,
+    "emer": 0,
+    "dec": 15,
+    "total": 68,
+    "shooters": [
+     [
+      "MSAM2_INCHEON",
+      7
+     ],
+     [
+      "USFK_PATRIOT_CASEY",
+      6
+     ],
+     [
+      "MSAM2_GIMPO",
+      6
+     ],
+     [
+      "MSAM2_YEONPYEONG",
+      1
+     ]
+    ]
+   },
+   "uav_small": {
+    "n": 53,
+    "k": 43,
+    "fired": 48,
+    "emer": 0,
+    "dec": 12,
+    "total": 346,
+    "shooters": [
+     [
+      "CHUNMA_CO1",
+      24
+     ],
+     [
+      "CHUNMA_CO3",
+      14
+     ],
+     [
+      "CHUNMA_CO8",
+      12
+     ],
+     [
+      "BIHO_CO1",
+      5
+     ]
+    ]
+   }
+  },
+  "shots": {
+   "total": 290,
+   "batteries": 84,
+   "firing": 30,
+   "zero": 54,
+   "top3Share": 0.41,
+   "top": [
+    [
+     "LSAM_CAPITAL",
+     50
+    ],
+    [
+     "THAAD_SEONGJU",
+     41
+    ],
+    [
+     "LSAM_MID_NORTH",
+     28
+    ],
+    [
+     "CHUNMA_CO1",
+     24
+    ],
+    [
+     "CHUNMA_CO8",
+     23
+    ],
+    [
+     "USFK_PATRIOT_CASEY",
+     22
+    ],
+    [
+     "PAC3_BUKAKSAN",
+     14
+    ],
+    [
+     "CHUNMA_CO3",
+     14
+    ]
+   ]
+  },
+  "nodes": 181,
+  "idle": 106,
+  "lad": [
+   {
+    "name": "육군 서부전방 군단 AOC/C2A",
+    "msgs": 282,
+    "arrivals": 85,
+    "rho": 0.01
+   },
+   {
+    "name": "육군 중부전방 군단 AOC/C2A",
+    "msgs": 244,
+    "arrivals": 85,
+    "rho": 0.012
+   },
+   {
+    "name": "육군 동부전방 군단 AOC/C2A",
+    "msgs": 85,
+    "arrivals": 85,
+    "rho": 0.01
+   },
+   {
+    "name": "수방사 AOC/C2A",
+    "msgs": 0,
+    "arrivals": 0,
+    "rho": 0
+   },
+   {
+    "name": "해병 서북도서 방공 AOC/C2A",
+    "msgs": 0,
+    "arrivals": 0,
+    "rho": 0
+   }
+  ],
+  "c2top": [
+   {
+    "name": "KAMD_OPS",
+    "rho": 0.245,
+    "arrivals": 143,
+    "Wq": 0.3
+   },
+   {
+    "name": "통합공중작전통제소",
+    "rho": 0.106,
+    "arrivals": 228,
+    "Wq": 0
+   },
+   {
+    "name": "MCRC 중앙방공통제소",
+    "rho": 0.085,
+    "arrivals": 85,
+    "Wq": 0
+   },
+   {
+    "name": "USFK Patriot C2",
+    "rho": 0.016,
+    "arrivals": 175,
+    "Wq": 0
+   },
+   {
+    "name": "육군 중부전방 군단 AOC/C2A",
+    "rho": 0.012,
+    "arrivals": 85,
+    "Wq": 0
+   },
+   {
+    "name": "육군 서부전방 군단 AOC/C2A",
+    "rho": 0.01,
+    "arrivals": 85,
+    "Wq": 0
+   }
+  ]
+ },
+ "asis#30": {
+  "g": {
+   "spawned": 237,
+   "killed": 223,
+   "leaked": 14,
+   "shots": 294,
+   "mttk": 219.8,
+   "mtte": 182.5,
+   "leakReasons": {
+    "missed": 12,
+    "timeout:engage": 1,
+    "ammo_depleted": 1
+   },
+   "cantco": 69,
+   "dup": 3
+  },
+  "byType": {
+   "srbm": {
+    "n": 65,
+    "k": 57,
+    "fired": 65,
+    "emer": 8,
+    "dec": 55,
+    "total": 285,
+    "shooters": [
+     [
+      "THAAD_SEONGJU",
+      48
+     ],
+     [
+      "LSAM_MID_NORTH",
+      6
+     ],
+     [
+      "LSAM_CAPITAL",
+      5
+     ],
+     [
+      "USFK_PATRIOT_HUMPHREYS",
+      5
+     ]
+    ]
+   },
+   "mrl_large": {
+    "n": 76,
+    "k": 74,
+    "fired": 76,
+    "emer": 60,
+    "dec": 38,
+    "total": 111,
+    "shooters": [
+     [
+      "LSAM_CAPITAL",
+      28
+     ],
+     [
+      "LSAM_MID_NORTH",
+      26
+     ],
+     [
+      "LSAM_SOUTH",
+      8
+     ],
+     [
+      "PAC3_BUKAKSAN",
+      7
+     ]
+    ]
+   },
+   "cruise": {
+    "n": 9,
+    "k": 9,
+    "fired": 9,
+    "emer": 0,
+    "dec": 26,
+    "total": 53,
+    "shooters": [
+     [
+      "PAC3_BUKAKSAN",
+      6
+     ],
+     [
+      "USFK_PATRIOT_CASEY",
+      1
+     ],
+     [
+      "MSAM2_YEONCHEON",
+      1
+     ],
+     [
+      "PAC3_CHEONAN",
+      1
+     ]
+    ]
+   },
+   "fighter": {
+    "n": 28,
+    "k": 28,
+    "fired": 28,
+    "emer": 0,
+    "dec": 34,
+    "total": 82,
+    "shooters": [
+     [
+      "PAC3_BUKAKSAN",
+      7
+     ],
+     [
+      "MSAM2_INCHEON",
+      7
+     ],
+     [
+      "MSAM2_GIMPO",
+      5
+     ],
+     [
+      "USFK_PATRIOT_CASEY",
+      4
+     ]
+    ]
+   },
+   "uav_small": {
+    "n": 59,
+    "k": 55,
+    "fired": 58,
+    "emer": 0,
+    "dec": 84,
+    "total": 382,
+    "shooters": [
+     [
+      "CHUNMA_CO1",
+      26
+     ],
+     [
+      "CHUNMA_CO3",
+      11
+     ],
+     [
+      "LSAM_CAPITAL",
+      11
+     ],
+     [
+      "CHUNMA_CO8",
+      11
+     ]
+    ]
+   }
+  },
+  "shots": {
+   "total": 294,
+   "batteries": 84,
+   "firing": 31,
+   "zero": 53,
+   "top3Share": 0.425,
+   "top": [
+    [
+     "THAAD_SEONGJU",
+     48
+    ],
+    [
+     "LSAM_CAPITAL",
+     45
+    ],
+    [
+     "LSAM_MID_NORTH",
+     32
+    ],
+    [
+     "CHUNMA_CO1",
+     26
+    ],
+    [
+     "PAC3_BUKAKSAN",
+     21
+    ],
+    [
+     "CHUNMA_CO3",
+     11
+    ],
+    [
+     "CHUNMA_CO8",
+     11
+    ],
+    [
+     "LSAM_SOUTH",
+     10
+    ]
+   ]
+  },
+  "nodes": 180,
+  "idle": 100,
+  "lad": [
+   {
+    "name": "육군 서부전방 군단 AOC/C2A",
+    "msgs": 339,
+    "arrivals": 128,
+    "rho": 0.017
+   },
+   {
+    "name": "육군 중부전방 군단 AOC/C2A",
+    "msgs": 268,
+    "arrivals": 92,
+    "rho": 0.01
+   },
+   {
+    "name": "육군 동부전방 군단 AOC/C2A",
+    "msgs": 123,
+    "arrivals": 86,
+    "rho": 0.011
+   },
+   {
+    "name": "수방사 AOC/C2A",
+    "msgs": 0,
+    "arrivals": 0,
+    "rho": 0
+   },
+   {
+    "name": "해병 서북도서 방공 AOC/C2A",
+    "msgs": 0,
+    "arrivals": 0,
+    "rho": 0
+   }
+  ],
+  "c2top": [
+   {
+    "name": "KAMD_OPS",
+    "rho": 0.205,
+    "arrivals": 141,
+    "Wq": 0
+   },
+   {
+    "name": "MCRC 중앙방공통제소",
+    "rho": 0.16,
+    "arrivals": 151,
+    "Wq": 0
+   },
+   {
+    "name": "ICC 3여단",
+    "rho": 0.067,
+    "arrivals": 150,
+    "Wq": 2.8
+   },
+   {
+    "name": "ICC 2여단",
+    "rho": 0.025,
+    "arrivals": 55,
+    "Wq": 0
+   },
+   {
+    "name": "육군 서부전방 군단 AOC/C2A",
+    "rho": 0.017,
+    "arrivals": 128,
+    "Wq": 0
+   },
+   {
+    "name": "USFK Patriot C2",
+    "rho": 0.014,
+    "arrivals": 178,
+    "Wq": 0
+   }
+  ]
+ },
+ "tobe#30": {
+  "g": {
+   "spawned": 237,
+   "killed": 222,
+   "leaked": 15,
+   "shots": 311,
+   "mttk": 208.3,
+   "mtte": 180.9,
+   "leakReasons": {
+    "missed": 13,
+    "ammo_depleted": 1,
+    "timeout:engage": 1
+   },
+   "cantco": 28,
+   "dup": 9
+  },
+  "byType": {
+   "srbm": {
+    "n": 65,
+    "k": 60,
+    "fired": 65,
+    "emer": 7,
+    "dec": 20,
+    "total": 290,
+    "shooters": [
+     [
+      "THAAD_SEONGJU",
+      48
+     ],
+     [
+      "LSAM_MID_NORTH",
+      6
+     ],
+     [
+      "USFK_PATRIOT_HUMPHREYS",
+      6
+     ],
+     [
+      "MSAM2_GWANGJU",
+      5
+     ]
+    ]
+   },
+   "mrl_large": {
+    "n": 76,
+    "k": 76,
+    "fired": 76,
+    "emer": 55,
+    "dec": 30,
+    "total": 110,
+    "shooters": [
+     [
+      "LSAM_MID_NORTH",
+      25
+     ],
+     [
+      "LSAM_CAPITAL",
+      23
+     ],
+     [
+      "PAC3_BUKAKSAN",
+      10
+     ],
+     [
+      "PAC3_CHEONAN",
+      7
+     ]
+    ]
+   },
+   "cruise": {
+    "n": 9,
+    "k": 9,
+    "fired": 9,
+    "emer": 0,
+    "dec": 3,
+    "total": 19,
+    "shooters": [
+     [
+      "USFK_PATRIOT_CASEY",
+      7
+     ],
+     [
+      "CHUNMA_CO8",
+      7
+     ],
+     [
+      "CHUNMA_CO7",
+      1
+     ]
+    ]
+   },
+   "fighter": {
+    "n": 28,
+    "k": 28,
+    "fired": 28,
+    "emer": 0,
+    "dec": 12,
+    "total": 64,
+    "shooters": [
+     [
+      "USFK_PATRIOT_CASEY",
+      15
+     ],
+     [
+      "MSAM2_GIMPO",
+      7
+     ],
+     [
+      "LSAM_CAPITAL",
+      5
+     ],
+     [
+      "MSAM2_INCHEON",
+      5
+     ]
+    ]
+   },
+   "uav_small": {
+    "n": 59,
+    "k": 49,
+    "fired": 58,
+    "emer": 0,
+    "dec": 32,
+    "total": 362,
+    "shooters": [
+     [
+      "CHUNMA_CO1",
+      30
+     ],
+     [
+      "CHUNMA_CO3",
+      15
+     ],
+     [
+      "CHUNMA_CO8",
+      12
+     ],
+     [
+      "BIHO_CO1",
+      12
+     ]
+    ]
+   }
+  },
+  "shots": {
+   "total": 311,
+   "batteries": 84,
+   "firing": 30,
+   "zero": 54,
+   "top3Share": 0.383,
+   "top": [
+    [
+     "THAAD_SEONGJU",
+     48
+    ],
+    [
+     "LSAM_CAPITAL",
+     40
+    ],
+    [
+     "LSAM_MID_NORTH",
+     31
+    ],
+    [
+     "CHUNMA_CO1",
+     30
+    ],
+    [
+     "USFK_PATRIOT_CASEY",
+     25
+    ],
+    [
+     "CHUNMA_CO8",
+     19
+    ],
+    [
+     "CHUNMA_CO3",
+     15
+    ],
+    [
+     "BIHO_CO1",
+     12
+    ]
+   ]
+  },
+  "nodes": 181,
+  "idle": 106,
+  "lad": [
+   {
+    "name": "육군 서부전방 군단 AOC/C2A",
+    "msgs": 342,
+    "arrivals": 96,
+    "rho": 0.011
+   },
+   {
+    "name": "육군 중부전방 군단 AOC/C2A",
+    "msgs": 210,
+    "arrivals": 96,
+    "rho": 0.011
+   },
+   {
+    "name": "육군 동부전방 군단 AOC/C2A",
+    "msgs": 96,
+    "arrivals": 96,
+    "rho": 0.012
+   },
+   {
+    "name": "수방사 AOC/C2A",
+    "msgs": 0,
+    "arrivals": 0,
+    "rho": 0
+   },
+   {
+    "name": "해병 서북도서 방공 AOC/C2A",
+    "msgs": 0,
+    "arrivals": 0,
+    "rho": 0
+   }
+  ],
+  "c2top": [
+   {
+    "name": "KAMD_OPS",
+    "rho": 0.228,
+    "arrivals": 141,
+    "Wq": 0.3
+   },
+   {
+    "name": "MCRC 중앙방공통제소",
+    "rho": 0.099,
+    "arrivals": 96,
+    "Wq": 0
+   },
+   {
+    "name": "통합공중작전통제소",
+    "rho": 0.097,
+    "arrivals": 237,
+    "Wq": 0
+   },
+   {
+    "name": "USFK Patriot C2",
+    "rho": 0.015,
+    "arrivals": 178,
+    "Wq": 0
+   },
+   {
+    "name": "육군 동부전방 군단 AOC/C2A",
+    "rho": 0.012,
+    "arrivals": 96,
+    "Wq": 0
+   },
+   {
+    "name": "육군 서부전방 군단 AOC/C2A",
+    "rho": 0.011,
+    "arrivals": 96,
+    "Wq": 0
+   }
+  ]
+ },
+ "asis#31": {
+  "g": {
+   "spawned": 232,
+   "killed": 217,
+   "leaked": 15,
+   "shots": 278,
+   "mttk": 209.9,
+   "mtte": 178,
+   "leakReasons": {
+    "missed": 11,
+    "ammo_depleted": 2,
+    "timeout:engage": 2
+   },
+   "cantco": 65,
+   "dup": 3
+  },
+  "byType": {
+   "srbm": {
+    "n": 47,
+    "k": 42,
+    "fired": 47,
+    "emer": 3,
+    "dec": 56,
+    "total": 286,
+    "shooters": [
+     [
+      "THAAD_SEONGJU",
+      33
+     ],
+     [
+      "PAC3_BUKAKSAN",
+      5
+     ],
+     [
+      "USFK_PATRIOT_KUNSAN",
+      4
+     ],
+     [
+      "LSAM_CAPITAL",
+      2
+     ]
+    ]
+   },
+   "mrl_large": {
+    "n": 88,
+    "k": 86,
+    "fired": 88,
+    "emer": 69,
+    "dec": 40,
+    "total": 108,
+    "shooters": [
+     [
+      "LSAM_MID_NORTH",
+      29
+     ],
+     [
+      "LSAM_CAPITAL",
+      27
+     ],
+     [
+      "PAC3_BUKAKSAN",
+      15
+     ],
+     [
+      "PAC3_CHEONAN",
+      10
+     ]
+    ]
+   },
+   "cruise": {
+    "n": 12,
+    "k": 12,
+    "fired": 12,
+    "emer": 0,
+    "dec": 25,
+    "total": 73,
+    "shooters": [
+     [
+      "PAC3_BUKAKSAN",
+      4
+     ],
+     [
+      "MSAM2_CHUNGJU",
+      3
+     ],
+     [
+      "MSAM2_YEONCHEON",
+      2
+     ],
+     [
+      "PAC3_WONJU",
+      2
+     ]
+    ]
+   },
+   "fighter": {
+    "n": 21,
+    "k": 21,
+    "fired": 21,
+    "emer": 0,
+    "dec": 47,
+    "total": 99,
+    "shooters": [
+     [
+      "MSAM2_INCHEON",
+      8
+     ],
+     [
+      "MSAM2_GIMPO",
+      8
+     ],
+     [
+      "MSAM2_YEONCHEON",
+      3
+     ],
+     [
+      "PAC3_BUKAKSAN",
+      2
+     ]
+    ]
+   },
+   "uav_small": {
+    "n": 64,
+    "k": 56,
+    "fired": 62,
+    "emer": 0,
+    "dec": 95,
+    "total": 368,
+    "shooters": [
+     [
+      "CHUNMA_CO1",
+      29
+     ],
+     [
+      "CHUNMA_CO3",
+      15
+     ],
+     [
+      "LSAM_CAPITAL",
+      15
+     ],
+     [
+      "CHUNMA_CO8",
+      10
+     ]
+    ]
+   }
+  },
+  "shots": {
+   "total": 278,
+   "batteries": 84,
+   "firing": 29,
+   "zero": 55,
+   "top3Share": 0.396,
+   "top": [
+    [
+     "LSAM_CAPITAL",
+     46
+    ],
+    [
+     "THAAD_SEONGJU",
+     33
+    ],
+    [
+     "LSAM_MID_NORTH",
+     31
+    ],
+    [
+     "CHUNMA_CO1",
+     29
+    ],
+    [
+     "PAC3_BUKAKSAN",
+     26
+    ],
+    [
+     "CHUNMA_CO3",
+     15
+    ],
+    [
+     "PAC3_CHEONAN",
+     11
+    ],
+    [
+     "CHUNMA_CO8",
+     10
+    ]
+   ]
+  },
+  "nodes": 180,
+  "idle": 102,
+  "lad": [
+   {
+    "name": "육군 서부전방 군단 AOC/C2A",
+    "msgs": 368,
+    "arrivals": 127,
+    "rho": 0.014
+   },
+   {
+    "name": "육군 중부전방 군단 AOC/C2A",
+    "msgs": 256,
+    "arrivals": 95,
+    "rho": 0.012
+   },
+   {
+    "name": "육군 동부전방 군단 AOC/C2A",
+    "msgs": 124,
+    "arrivals": 85,
+    "rho": 0.012
+   },
+   {
+    "name": "수방사 AOC/C2A",
+    "msgs": 0,
+    "arrivals": 0,
+    "rho": 0
+   },
+   {
+    "name": "해병 서북도서 방공 AOC/C2A",
+    "msgs": 0,
+    "arrivals": 0,
+    "rho": 0
+   }
+  ],
+  "c2top": [
+   {
+    "name": "KAMD_OPS",
+    "rho": 0.237,
+    "arrivals": 135,
+    "Wq": 1.1
+   },
+   {
+    "name": "MCRC 중앙방공통제소",
+    "rho": 0.191,
+    "arrivals": 151,
+    "Wq": 0
+   },
+   {
+    "name": "ICC 3여단",
+    "rho": 0.068,
+    "arrivals": 130,
+    "Wq": 1.3
+   },
+   {
+    "name": "ICC 2여단",
+    "rho": 0.031,
+    "arrivals": 48,
+    "Wq": 0
+   },
+   {
+    "name": "육군 서부전방 군단 AOC/C2A",
+    "rho": 0.014,
+    "arrivals": 127,
+    "Wq": 0
+   },
+   {
+    "name": "USFK Patriot C2",
+    "rho": 0.013,
+    "arrivals": 168,
+    "Wq": 0
+   }
+  ]
+ },
+ "tobe#31": {
+  "g": {
+   "spawned": 232,
+   "killed": 217,
+   "leaked": 15,
+   "shots": 296,
+   "mttk": 202.4,
+   "mtte": 169.8,
+   "leakReasons": {
+    "missed": 11,
+    "timeout:engage": 1,
+    "ammo_depleted": 2,
+    "correlation_failed": 1
+   },
+   "cantco": 33,
+   "dup": 10
+  },
+  "byType": {
+   "srbm": {
+    "n": 47,
+    "k": 45,
+    "fired": 47,
+    "emer": 6,
+    "dec": 21,
+    "total": 286,
+    "shooters": [
+     [
+      "THAAD_SEONGJU",
+      33
+     ],
+     [
+      "PAC3_BUKAKSAN",
+      5
+     ],
+     [
+      "LSAM_CAPITAL",
+      4
+     ],
+     [
+      "MSAM2_GWANGJU",
+      4
+     ]
+    ]
+   },
+   "mrl_large": {
+    "n": 88,
+    "k": 86,
+    "fired": 88,
+    "emer": 65,
+    "dec": 35,
+    "total": 108,
+    "shooters": [
+     [
+      "LSAM_MID_NORTH",
+      30
+     ],
+     [
+      "LSAM_CAPITAL",
+      28
+     ],
+     [
+      "PAC3_BUKAKSAN",
+      13
+     ],
+     [
+      "PAC3_CHEONAN",
+      9
+     ]
+    ]
+   },
+   "cruise": {
+    "n": 12,
+    "k": 12,
+    "fired": 12,
+    "emer": 0,
+    "dec": 4,
+    "total": 24,
+    "shooters": [
+     [
+      "CHUNMA_CO8",
+      8
+     ],
+     [
+      "USFK_PATRIOT_CASEY",
+      8
+     ],
+     [
+      "CHUNMA_CO9",
+      2
+     ],
+     [
+      "MSAM2_CHUNGJU",
+      2
+     ]
+    ]
+   },
+   "fighter": {
+    "n": 21,
+    "k": 20,
+    "fired": 21,
+    "emer": 0,
+    "dec": 17,
+    "total": 59,
+    "shooters": [
+     [
+      "MSAM2_INCHEON",
+      6
+     ],
+     [
+      "MSAM2_YEONPYEONG",
+      6
+     ],
+     [
+      "USFK_PATRIOT_CASEY",
+      5
+     ],
+     [
+      "MSAM2_GIMPO",
+      5
+     ]
+    ]
+   },
+   "uav_small": {
+    "n": 64,
+    "k": 54,
+    "fired": 62,
+    "emer": 0,
+    "dec": 24,
+    "total": 363,
+    "shooters": [
+     [
+      "CHUNMA_CO1",
+      28
+     ],
+     [
+      "CHUNMA_CO3",
+      22
+     ],
+     [
+      "CHUNMA_CO8",
+      15
+     ],
+     [
+      "LSAM_CAPITAL",
+      9
+     ]
+    ]
+   }
+  },
+  "shots": {
+   "total": 296,
+   "batteries": 84,
+   "firing": 29,
+   "zero": 55,
+   "top3Share": 0.361,
+   "top": [
+    [
+     "LSAM_CAPITAL",
+     43
+    ],
+    [
+     "THAAD_SEONGJU",
+     33
+    ],
+    [
+     "LSAM_MID_NORTH",
+     31
+    ],
+    [
+     "CHUNMA_CO1",
+     28
+    ],
+    [
+     "CHUNMA_CO8",
+     23
+    ],
+    [
+     "CHUNMA_CO3",
+     22
+    ],
+    [
+     "PAC3_BUKAKSAN",
+     18
+    ],
+    [
+     "USFK_PATRIOT_CASEY",
+     18
+    ]
+   ]
+  },
+  "nodes": 181,
+  "idle": 108,
+  "lad": [
+   {
+    "name": "육군 서부전방 군단 AOC/C2A",
+    "msgs": 347,
+    "arrivals": 97,
+    "rho": 0.012
+   },
+   {
+    "name": "육군 중부전방 군단 AOC/C2A",
+    "msgs": 238,
+    "arrivals": 97,
+    "rho": 0.013
+   },
+   {
+    "name": "육군 동부전방 군단 AOC/C2A",
+    "msgs": 97,
+    "arrivals": 97,
+    "rho": 0.012
+   },
+   {
+    "name": "수방사 AOC/C2A",
+    "msgs": 0,
+    "arrivals": 0,
+    "rho": 0
+   },
+   {
+    "name": "해병 서북도서 방공 AOC/C2A",
+    "msgs": 0,
+    "arrivals": 0,
+    "rho": 0
+   }
+  ],
+  "c2top": [
+   {
+    "name": "KAMD_OPS",
+    "rho": 0.228,
+    "arrivals": 135,
+    "Wq": 0.3
+   },
+   {
+    "name": "MCRC 중앙방공통제소",
+    "rho": 0.113,
+    "arrivals": 97,
+    "Wq": 0
+   },
+   {
+    "name": "통합공중작전통제소",
+    "rho": 0.106,
+    "arrivals": 232,
+    "Wq": 0
+   },
+   {
+    "name": "육군 중부전방 군단 AOC/C2A",
+    "rho": 0.013,
+    "arrivals": 97,
+    "Wq": 0
+   },
+   {
+    "name": "USFK Patriot C2",
+    "rho": 0.013,
+    "arrivals": 168,
+    "Wq": 0
+   },
+   {
+    "name": "육군 서부전방 군단 AOC/C2A",
+    "rho": 0.012,
+    "arrivals": 97,
+    "Wq": 0
+   }
+  ]
+ }
+}

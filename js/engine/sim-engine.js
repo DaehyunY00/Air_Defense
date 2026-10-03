@@ -385,6 +385,10 @@
     this.standbyCue = ff('standbyCue', false);
     this.standbyCueActive = !!(this.standbyCue && this.ballisticReportSource);
     this.standbyCueGateMode = f.standbyCueGateMode === 'decision_done' ? 'decision_done' : 'awareness';
+    // ADR-113: 큐의 권한 — 'fire'(현행 · 큐를 받은 포대가 자기 조건이 갖춰지면 정식 명령 없이 쏨 = 긴급발사 ②) /
+    // 'prepare'(표준 절차 · 큐는 표적 정보·준비 지시만. 발사는 지휘소의 사수 지정 명령으로만 하고, 포대 자체 발사는
+    // 자위권 ③(낙하점 반경 내·자기 MFR·마감 직전)에 한한다. 큐를 받은 포대도 ③을 탈 수 있다). 기본 'fire'(bit-exact).
+    this.standbyCueAuthority = f.standbyCueAuthority === 'prepare' ? 'prepare' : 'fire';
     // B-3 획득 이득(명시된 근사 — codex filter2 운용 모드 전환의 대체, 근거 없음·등급 C). 기본 0 = 이득 없음.
     this.cueAcquisitionGain = (typeof f.cueAcquisitionGain === 'number' && f.cueAcquisitionGain > 0)
       ? Math.min(0.95, f.cueAcquisitionGain) : 0;
@@ -569,6 +573,7 @@
       this.features.standbyCue = this.standbyCueActive ? true : 'disabled_without_ballisticReportSource';
       if (this.standbyCueActive) {
         this.features.standbyCueGateMode = this.standbyCueGateMode;
+        this.features.standbyCueAuthority = this.standbyCueAuthority;   // ADR-113
         this.features.cueAcquisitionGain = this.cueAcquisitionGain;
       }
     }
@@ -1801,7 +1806,8 @@
     });
     for (var i = 0; i < shooters.length; i++) {
       var shooter = shooters[i];
-      if (threat._cueReady && threat._cueReady[shooter.id]) continue;   // ADR-104: 큐를 받은 포대는 ③을 타지 않는다(②와 상호배타)
+      // ADR-104: 큐가 발사 권한을 줄 때(②)는 큐를 받은 포대가 ③을 타지 않는다(상호배타). ADR-113 'prepare'에서는 ②가 없으므로 큐 포대도 ③을 탄다.
+      if (this.standbyCueAuthority === 'fire' && threat._cueReady && threat._cueReady[shooter.id]) continue;
       // ① 정보 조건 — 자기 MFR의 자체 추적 성립(상부 트랙 원용 금지)
       var own = shooter.mfrSensorId && threat._sensorTracks
         ? threat._sensorTracks[shooter.mfrSensorId] : null;
@@ -1930,6 +1936,7 @@
    */
   Simulation.prototype._tryIadsStandbyFire = function (threat, t) {
     if (!this.standbyCueActive || !threat.alive || threat.pipelineDead || !threat._cueReady) return;
+    if (this.standbyCueAuthority === 'prepare') return;   // ADR-113: 큐는 준비 지시일 뿐 — 발사는 지휘소 명령(정식)·자위권 ③만
     if (threat.tries >= this.iadsMaxShots) return;
     var self = this, plans = threat._iadsPlans || [];
     var formalActive = plans.some(function (p) {

@@ -608,6 +608,9 @@
      주황 점선 = 긴급발사 ②(큐만 받고 정식 명령 전에 자기 사통으로 쏨). 넘침 섬광(.flash 붉은색)과 구분. */
   .flash.fire { stroke: #dbe4f0; }
   .flash.emer { stroke: var(--warn); stroke-dasharray: 4 3; }
+  /* 자위권 ③(ADR-071·113) — 낙하점 반경 내 포대가 마감 직전에 자기 레이더로 쏨: 붉은 점선 링 + 「자위권 ③」 */
+  .flash.sdf { stroke: var(--bad); stroke-dasharray: 2 3; }
+  .flashlab.sdf { fill: var(--bad); }
   .flashlab { font-size: 9px; fill: var(--warn); paint-order: stroke; stroke: #0b1017; stroke-width: 2.5; pointer-events: none; }
   /* ADR-111 후보 검토 — 전문이 아닌 「C2 계산」이라 흐르는 점이 없고 보라 점선으로만 잇는다. */
   .revline { fill: none; stroke: #a78bfa; stroke-width: 1; stroke-dasharray: 2 4; opacity: .55; pointer-events: none; }
@@ -1099,7 +1102,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20261002b';
+const V = '?v=20261003b';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -1486,6 +1489,7 @@ function features() {
     uavLocalSelfEngage: P.uavsd, // ADR-087
     earlyWarningReport: P.ew,    // ADR-090 — 엔진 기본 OFF (이 화면도 같다 — 아래 PARAMS 주석)
     ballisticReportSource: P.bsrc, // ADR-103 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-28, ADR-103 §프로토타입 기본값)
+    standbyCueAuthority: P.cuefire ? 'fire' : 'prepare',   // ADR-113 — 표준 절차(준비만)가 이 화면의 기본
     standbyCue: P.cue,             // ADR-104 — 〃 (이 화면만 기본 ON · bsrc=0이면 엔진이 비활성으로 신고 — 상태줄 경고 칩)
     cueAcquisitionGain: P.cuegain > 0 ? P.cuegain : undefined, // ADR-104 B-3 획득 이득(기본 0 = 없음 · 명시된 근사)
     earlyShooterAssignment: P.ea,  // ADR-109 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 요청 2026-10-01)
@@ -1599,7 +1603,8 @@ const PARAMS = [
   //    전이라도 자기 MFR 사통이 잡히면 쏜다. 기본 OFF(사용자 확인 대기 — bsrc와 같은 사유). cuegain은 큐 도착 포대
   //    MFR의 전이 시간을 (1−gain)배로 줄이는 근사(기본 0 · 근거 없음 · 등급 C).
   //    **추기(2026-09-28, 사용자 결정)**: 화면 기본 **ON**(bsrc와 함께). cuegain은 근사라 기본 0 유지. 끄려면 ?cue=0.
-  { k: 'cue',   d: 1,       t: 'bool', h: '사전대기 큐 + 긴급발사 — KAMDOC/IAOC 인지 시 상층 포대에 큐, 큐 받은 포대는 정식 명령 전 발사 가능 (ADR-104 · bsrc=1 전제 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  { k: 'cue',   d: 1,       t: 'bool', h: '사전대기 큐 — KAMDOC/IAOC 인지 시 요격 창이 있는 상층 포대 전부에 표적 정보·준비 지시 (ADR-104 · bsrc=1 전제 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐). 발사 권한은 cuefire가 정함' },
+  { k: 'cuefire', d: 0,     t: 'bool', h: '큐에 발사 권한 포함 — 1이면 큐를 받은 포대가 자기 조건이 갖춰지면 정식 명령 없이 쏨(긴급발사 ② · 종전 기본). 0이면 표준 절차: 큐는 준비만, 발사는 지휘소의 사수 지정 명령으로, 포대 자체 발사는 자위권 ③(낙하점 10km 이내·자기 레이더·마감 직전)만 (ADR-113)' },
   { k: 'cuegain', d: 0,     t: 'num',  h: '큐 획득 이득 0~0.95 — 큐 도착 포대 MFR의 탐지→추적→사통 전이 시간을 (1−gain)배 (ADR-104 B-3 · 명시된 근사 · 기본 0)' },
   // ── coal(ADR-105): 한미 교전 협조(음성). 미군 C2(THAAD·Patriot C2)와 한국군 결심 C2(KAMDOC·MCRC / IAOC)가
   //    같은 위협에 「내 최적 사수 제안 → 상대 평가 → 회신」을 음성(20초 ±5)으로 주고받아 한 사수를 정한다.
@@ -1741,7 +1746,7 @@ function activeConfigChips() {
   if (INTENSITY.x !== 1) out.push('강도 ×' + INTENSITY.x);
   if (P.bsrc) out.push('탄도 보고원 그린파인 ON');
   if (P.cue && !P.bsrc) out.push('⚠ 사전대기 큐 비활성 — bsrc=0');
-  if (P.cue && P.bsrc) out.push('사전대기 큐 ON' + (P.cuegain > 0 ? ` (획득이득 ${P.cuegain})` : ''));
+  if (P.cue && P.bsrc) out.push('사전대기 큐 ON' + (P.cuefire ? ' (발사 권한 포함 · 긴급발사 ②)' : ' (준비만 · 발사는 지휘소 명령/자위권)') + (P.cuegain > 0 ? ` (획득이득 ${P.cuegain})` : ''));
   if (P.lx) out.push('발사점 연장 ON');
   if (P.aim) out.push('표적 카탈로그 ON');
   if (P.par) out.push('결심 시간 동일화 ON');
@@ -1934,9 +1939,11 @@ function buildTracks(res) {
     t.shots = []; t.noFire = [];
     t.stages.forEach((s) => {
       let m = s.name.match(/^발사:([^/]+)\/([^/]+)\/PIP([\d.]+)km$/);
-      if (m) { t.shots.push({ t0: s.t, shooter: m[1], launcher: m[2], pipKm: +m[3], t1: null, hit: null }); return; }
+      if (m) { const sdT = t._sdAt && t._sdAt[m[1]]; t.shots.push({ t0: s.t, shooter: m[1], launcher: m[2], pipKm: +m[3], t1: null, hit: null, sd: Number.isFinite(sdT) && s.t - sdT >= -1e-6 && s.t - sdT <= 30 }); if (Number.isFinite(sdT)) delete t._sdAt[m[1]]; return; }
       m = s.name.match(/^자위권발사:(.+)$/);
-      if (m) { t.shots.push({ t0: s.t, shooter: m[1], launcher: null, pipKm: null, t1: null, hit: null, sd: true }); return; }
+      // ADR-071·113: `자위권발사:<사수>`는 포대 자체 **결심**이고 실제 발사는 같은 시각의 `발사:<사수>/…` 마크다(없으면 같은 시각
+      // `발사불가:`가 있다). 긴급발사 ②와 같은 규율로 같은 시각 발사에 sd 표식만 붙인다 — 종전처럼 별도 shot을 만들면 이중 계수·유령 발사가 된다.
+      if (m) { (t._sdAt = t._sdAt || {})[m[1]] = s.t; return; }   // 사수별 마지막 자위권 결심 시각
       m = s.name.match(/^BDA:(HIT|MISS):(.+)$/);
       if (m) {
         const w = t.shots.find((x) => x.shooter === m[2] && x.t1 == null);
@@ -2433,6 +2440,10 @@ function markView(name, trk, axis) {
   // ── 발사 ── `발사:<사수>/<발사대>/PIP<거리>km`. 자위권발사는 사수만 물고 꼬리가 없다.
   if ((m = /^(발사|자위권발사):([^/]+)(?:\/(.*))?$/.exec(name))) {
     const pip = /PIP([\d.]+)km/.exec(m[3] || '');
+    if (m[1] === '자위권발사') {
+      return { text: '자위권 발사 ③ — ' + nodeName(m[2].trim()) + ' · 포대 자체 판단', cls: 'shot', raw: name,
+        sub: '낙하 예측점이 이 포대 10km 이내 · 자기 레이더 사격통제 · 요격 창 마감 직전 · 지휘소 명령 없음(ADR-071) — 「내가 맞을 것 같다」의 자위권' };
+    }
     return { text: m[1] + ' — ' + nodeName(m[2].trim()) +
       (pip ? ' · 요격점 ' + pip[1] + 'km' : ''), cls: 'shot', raw: name };
   }
@@ -2566,6 +2577,8 @@ function buildLogRows(t) {
   // 두 줄로 찍으면 두 번 쏜 것처럼 읽히므로 발사 줄에 표식을 붙이고 긴급발사 줄은 접는다.
   const emerAt = {};
   t.stages.forEach((s) => { const m = s.name.match(/^긴급발사:(.+)$/); if (m) emerAt[m[1] + '@' + s.t.toFixed(3)] = true; });
+  // ADR-071·113: `자위권발사:<사수>`는 포대 자체 결심이고 실제 발사는 ECS 접수 뒤(0.2~2.5초) 같은 사수의 `발사:`로 온다(막히면 `발사불가:`).
+  const sdDecided = (shooter, at) => t.stages.some((x) => x.name === '자위권발사:' + shooter && at - x.t >= -1e-6 && at - x.t <= 30);
   const threatValueM = (KJ.threatType(t.type) || {}).unitCostM;
   const fireOf = (shooter, at) => t.stages.some((x) => Math.abs(x.t - at) < 1e-6 && x.name.startsWith('발사:' + shooter));
   t.stages.forEach((s) => {
@@ -2589,10 +2602,18 @@ function buildLogRows(t) {
     //    거르는 기준과 어긋나 체크박스를 꺼도 로그에만 센서 줄이 남는다.
     const mv = markView(s.name, t, s.axis);
     if (/^긴급발사:/.test(s.name) && fireOf(s.name.slice('긴급발사:'.length), s.t)) return;   // 발사 줄에 병합됨
+    if (/^자위권발사:/.test(s.name)) {   // ADR-071·113: 포대 자체 결심 줄 — 실제 발사 여부는 뒤따르는 발사:/발사불가: 줄이 말한다
+      const sh = s.name.slice('자위권발사:'.length);
+      const fired = t.stages.some((x) => x.name.startsWith('발사:' + sh) && x.t - s.t >= -1e-6 && x.t - s.t <= 30);
+      rows.push({ t: s.t, kind: 'mark', sensor: false, cls: fired ? 'cue' : 'fail', text: '자위권 결심 ③ — ' + nodeName(sh) + ' · 포대 자체 판단' + (fired ? '' : ' · 발사 못함(아래 발사불가 참조)'), raw: s.name,
+        sub: '낙하 예측점이 이 포대 10km 이내 · 자기 레이더 사격통제 · 요격 창 마감 직전 · 지휘소 명령 없음(ADR-071) — 「내가 맞을 것 같다」의 자위권', tail: '', lane: laneTag(s.axis) });
+      return;
+    }
     const emer = !!(fire && emerAt[fire[1] + '@' + s.t.toFixed(3)]);
+    const sdf = !!(fire && sdDecided(fire[1], s.t));
     rows.push({ t: s.t, kind: 'mark', sensor: /^SENSOR_/.test(s.name),
-      text: mv.text + (emer ? ' · 긴급발사 ② (정식 명령 전 · 사전대기 큐)' : ''),
-      raw: mv.raw, sub: emer ? '사전대기 큐만 받은 상태에서 자기 MFR 사통·PIP·잔탄이 갖춰져 쏨(ADR-104)' : (mv.sub || null),
+      text: mv.text + (emer ? ' · 긴급발사 ② (정식 명령 전 · 사전대기 큐)' : '') + (sdf ? ' · 자위권 ③ (포대 자체 판단 · 명령 없음)' : ''),
+      raw: mv.raw, sub: emer ? '사전대기 큐만 받은 상태에서 자기 MFR 사통·PIP·잔탄이 갖춰져 쏨(ADR-104)' : sdf ? '낙하 예측점이 이 포대 10km 이내 · 자기 레이더 사격통제 · 요격 창 마감 직전 · 지휘소 명령 없음(ADR-071) — 「내가 맞을 것 같다」의 자위권' : (mv.sub || null),
       note: mv.note || null, cls: mv.cls || null, emer: emer,
       tail: '', lane: laneTag(s.axis), cost: cost });
   });
@@ -2819,7 +2840,7 @@ function buildLanes() {
   (view === 'all' ? run.tracks : [sel]).forEach((t) => {
     const stg = (t && t.stages) || [];
     for (let i = 0; i < stg.length; i++) {
-      if (!/^(발사|자위권발사):/.test(stg[i].name)) continue;
+      if (!/^발사:/.test(stg[i].name)) continue;
       let end = stg[i].t + 2;
       for (let j = i + 1; j < stg.length; j++) {
         if (/^BDA:/.test(stg[j].name)) { end = stg[j].t; break; }
@@ -4212,11 +4233,11 @@ function fireFlashSvg(tracks, geoRef, simT) {
       const p = slotPos(geoRef, sh.shooter);
       if (!p) return;
       const age = (simT - sh.t0) / span;
-      out += `<circle class="flash ${sh.emer ? 'emer' : 'fire'}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}"` +
+      out += `<circle class="flash ${sh.sd ? 'sdf' : sh.emer ? 'emer' : 'fire'}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}"` +
         ` r="${(p.r + 3 + age * 9).toFixed(1)}" opacity="${(0.95 * (1 - age)).toFixed(2)}"></circle>`;
-      if (sh.emer) {
-        out += `<text class="flashlab" x="${(p.x + p.r + 6).toFixed(1)}" y="${(p.y - p.r - 2).toFixed(1)}"` +
-          ` opacity="${(1 - age * .6).toFixed(2)}">긴급발사 ②</text>`;
+      if (sh.emer || sh.sd) {
+        out += `<text class="flashlab${sh.sd ? ' sdf' : ''}" x="${(p.x + p.r + 6).toFixed(1)}" y="${(p.y - p.r - 2).toFixed(1)}"` +
+          ` opacity="${(1 - age * .6).toFixed(2)}">${sh.sd ? '자위권 ③' : '긴급발사 ②'}</text>`;
       }
     });
   });
@@ -6261,18 +6282,24 @@ function buildRecordEvents(t) {
         const view = markView(name, t, s.axis);
         add(s, 'launch', view.text, view.sub || '');
       }
-    } else if ((m = /^(발사|자위권발사):([^/]+)/.exec(name))) {
+    } else if ((m = /^자위권발사:(.+)$/.exec(name))) {
+      // ADR-071·113: 포대 자체 결심 행 — 실제 발사는 ECS 접수 뒤 같은 사수의 발사: 행(막히면 발사불가: 행)
+      const fired = (t.stages || []).some((x) => x.name.startsWith('발사:' + m[1]) && x.t - s.t >= -1e-6 && x.t - s.t <= 30);
+      add(s, fired ? 'selection' : 'no-fire', '자위권 결심 ③ — ' + nodeName(m[1]) + ' · 포대 자체 판단' + (fired ? '' : ' · 발사 못함'), '낙하점 10km 이내 · 자기 레이더 사격통제 · 요격 창 마감 직전 · 지휘소 명령 없음(ADR-071)' + (fired ? '' : ' — 발사 직전 재검증에서 막힘(발사불가 기록 참조)'));
+    } else if ((m = /^발사:([^/]+)/.exec(name))) {
       const view = markView(name, t, s.axis);
-      const emer = m[1] === '발사' && (t.stages || []).some((x) => Math.abs(x.t - s.t) < 1e-6 && x.name === '긴급발사:' + m[2]);
-      add(s, 'launch', view.text + (emer ? ' · 긴급발사 ②' : ''),
-        emer ? '정식 명령 전 자기 사통 발사 — 사전대기 큐만 받은 상태(ADR-104)' : '실제 발사 단계 기록');
+      const same = (x) => Math.abs(x.t - s.t) < 1e-6;
+      const emer = (t.stages || []).some((x) => same(x) && x.name === '긴급발사:' + m[1]);
+      const sdf = (t.stages || []).some((x) => x.name === '자위권발사:' + m[1] && s.t - x.t >= -1e-6 && s.t - x.t <= 30);
+      add(s, 'launch', view.text + (emer ? ' · 긴급발사 ②' : '') + (sdf ? ' · 자위권 ③' : ''),
+        emer ? '정식 명령 전 자기 사통 발사 — 사전대기 큐만 받은 상태(ADR-104)' : sdf ? '포대 자체 판단 — 낙하점 10km 이내·자기 레이더·마감 직전·지휘소 명령 없음(ADR-071)' : '실제 발사 단계 기록');
     } else if (/^BDA:(HIT|MISS):/.test(name)) {
       const view = markView(name, t, s.axis);
       add(s, 'result', view.text, '발사 후 결과 기록');
     } else if (/^누수:/.test(name)) {
       const reason = name.slice('누수:'.length);
       const launched = (t.stages || []).some((stage) =>
-        stage.t <= s.t && /^(발사|자위권발사):/.test(stage.name));
+        stage.t <= s.t && /^발사:/.test(stage.name));
       add(s, 'exit', '항적 종결 — ' + leakText(reason),
         launched ? '발사 기록 있음 · 항적을 막지 못한 결과' : '발사 기록 없음 · 미발사와 명중 실패를 구분');
     } else if (/^관측종료/.test(name)) {
@@ -6330,7 +6357,7 @@ let recordPaintKey = '';
 function recordCurrentState(t) {
   if (!t || simT < t.spawnT) return { text: '항적 생성 전', cls: '' };
   const stages = (t.stages || []).filter(s => s.t <= simT);
-  const fired = stages.filter(s => /^(발사|자위권발사):/.test(s.name)).length;
+  const fired = stages.filter(s => /^발사:/.test(s.name)).length;
   if (t.exitT != null && simT >= t.exitT) {
     if (t.outcome === 'killed') return { text: '격추 · 발사 ' + fired + '회', cls: 'kill' };
     if (String(t.outcome || '').startsWith('leaked:')) {
@@ -6350,7 +6377,7 @@ function recordCurrentState(t) {
   if (/^BDA:HIT:/.test(last.name)) return { text: '격추 결과 기록', cls: 'kill' };
   if (/^BDA:MISS:/.test(last.name)) return { text: '명중 실패 기록 · 후속 기록 확인', cls: 'leak' };
   if (/^발사불가:/.test(last.name)) return { text: '발사 불가 기록 · 후속 기록 확인', cls: 'leak' };
-  if (/^(발사|자위권발사):/.test(last.name)) return { text: '발사 완료 · 결과 대기', cls: '' };
+  if (/^발사:/.test(last.name)) return { text: '발사 완료 · 결과 대기', cls: '' };
   return { text: '선정·명령 처리 기록 · 발사 ' + fired + '회', cls: '' };
 }
 
@@ -6600,8 +6627,8 @@ function buildNodeReview(track, at) {
           '해당 ECS 처리 완료와 포대 발사불가의 시각 일치. 탄약 보고 전문을 뜻하지 않음');
         mark(ecs,m[2]==='ammo_depleted'?'접수 후 고갈 이력':'접수 후 미발사 이력','review',70);
       }
-    } else if((m=/^(발사|자위권발사):([^/]+)/.exec(s.name))) {
-      add(m[2],'launch','발사 기록',s.t,s.name);
+    } else if((m=/^발사:([^/]+)/.exec(s.name))) {
+      add(m[1],'launch','발사 기록',s.t,s.name);
     }
   });
   const ammo=((track.failure||{}).evidence||track.evidence||{}).ammo_depleted;
@@ -6641,7 +6668,7 @@ function buildTrackDiagnosis(track, at) {
   const command = (track.flows || []).filter(f => f.kind === 'command' && f.t0 <= at);
   const receipts = stages.filter(s => /^(교전명령중계접수|교전명령접수):/.test(s.name));
   const directives = stages.filter(s => /^(사수선정·표적할당|교전명령발령|교전명령중계접수|교전명령인가|교전명령접수|교전명령재배정|교전명령반송):/.test(s.name));
-  const launches = stages.filter(s => /^(발사|자위권발사):/.test(s.name));
+  const launches = stages.filter(s => /^발사:/.test(s.name));
   const noFire = stages.map(s => ({s, m:/^발사불가:([^(]+)\(([^)]*)\)$/.exec(s.name)})).filter(x => x.m);
   const allEvidence = (track.failure && track.failure.evidence) || track.evidence || {};
   const ammo = allEvidence.ammo_depleted;

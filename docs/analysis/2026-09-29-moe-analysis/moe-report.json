@@ -3,34 +3,42 @@
   "asis": {
    "g": {
     "spawned": 228,
-    "killed": 211,
-    "leaked": 17,
+    "killed": 176,
+    "leaked": 52,
     "unresolved": 0,
-    "shots": 281,
-    "mttk": 195.4192250303353,
-    "mtte": 161.1633631434392,
-    "decision": 157.5929595559947,
-    "coord": 7.712067526240337,
+    "shots": 236,
+    "mttk": 222.34573401692595,
+    "mtte": 197.52971578286247,
+    "decision": 193.98352288946097,
+    "coord": 8.680969751432595,
     "leakReasons": {
-     "ammo_depleted": 5,
-     "missed": 11,
-     "timeout:engage": 1
+     "window_lost_due_to_c2": 2,
+     "timeout:c2": 9,
+     "timeout:engage": 10,
+     "missed": 9,
+     "correlation_failed": 3,
+     "no_fire_control": 1,
+     "ammo_depleted": 18
     },
     "failure": {
-     "ammo_depleted": 5,
-     "missed": 11,
-     "timeout:engage": 1
+     "window_lost_due_to_c2": 2,
+     "timeout:c2": 9,
+     "timeout:engage": 10,
+     "missed": 9,
+     "correlation_failed": 3,
+     "no_fire_control": 1,
+     "ammo_depleted": 18
     },
     "coalition": {
-     "proposals": 174,
-     "allocRok": 66,
-     "allocUsfk": 50,
-     "dup": 1,
-     "skipped": 18
+     "proposals": 171,
+     "allocRok": 78,
+     "allocUsfk": 45,
+     "dup": 7,
+     "skipped": 72
     },
     "cue": {
      "cued": 143,
-     "emergency": 92
+     "emergency": 0
     },
     "routeRetry": {
      "scheduled": 50,
@@ -45,19 +53,19 @@
      "mis": 67,
      "failed": 191,
      "stale": 0,
-     "identified": 663
+     "identified": 658
     },
     "cost": {
-     "interceptM": 1272.200000000002,
-     "killedThreatM": 664.4099999999996,
-     "exchange": 1.9147815354976638,
-     "interceptSatM": 722.2000000000005,
-     "killedThreatSatM": 87.41000000000005,
-     "exchangeSat": 8.26221256149182,
-     "duplicateInterceptM": 9.2,
-     "leakedThreatM": 9.12,
-     "defenseEfficiency": 0.9864594004721393,
-     "defenseEfficiencySat": 0.9655362863139291
+     "interceptM": 1000.0000000000018,
+     "killedThreatM": 604.4799999999996,
+     "exchange": 1.6543144520910578,
+     "interceptSatM": 438.9999999999993,
+     "killedThreatSatM": 54.479999999999976,
+     "exchangeSat": 8.058002936857553,
+     "duplicateInterceptM": 35,
+     "leakedThreatM": 69.05000000000001,
+     "defenseEfficiency": 0.8974804388817128,
+     "defenseEfficiencySat": 0.6017894620567766
     }
    },
    "time": {
@@ -75,23 +83,23 @@
      },
      "dec": {
       "n": 53,
-      "med": 51.00585216822378,
-      "p90": 76.09718658390943
+      "med": 50.22015473577562,
+      "p90": 77.34889326740358
      },
      "fire": {
       "n": 53,
-      "med": 146.02564496723318,
-      "p90": 245.9936967335027
+      "med": 154.33513440705724,
+      "p90": 250.88202292467963
      },
      "kill": {
-      "n": 51,
-      "med": 57.834518592481345,
-      "p90": 66.16097752016503
+      "n": 42,
+      "med": 57.92139024287508,
+      "p90": 78.11039421028505
      },
      "total": {
-      "n": 51,
-      "med": 295.7493114830127,
-      "p90": 329.3245809876719
+      "n": 42,
+      "med": 302.30061923128824,
+      "p90": 318.0785873308898
      }
     },
     "mrl_large": {
@@ -107,24 +115,24 @@
       "p90": 20.259520624824745
      },
      "dec": {
-      "n": 90,
-      "med": 27.61528780134381,
-      "p90": 81.76611918853791
+      "n": 79,
+      "med": 66.74927597687133,
+      "p90": 131.15442640451965
      },
      "fire": {
-      "n": 90,
-      "med": 0,
-      "p90": 43.67882505000736
+      "n": 59,
+      "med": 16.653124058083563,
+      "p90": 56.51299345816301
      },
      "kill": {
-      "n": 87,
-      "med": 45.99587089234615,
-      "p90": 73.4550304326267
+      "n": 54,
+      "med": 23.35106371708912,
+      "p90": 45.869387331418125
      },
      "total": {
-      "n": 87,
-      "med": 98.18928876462951,
-      "p90": 167.73555288087795
+      "n": 54,
+      "med": 130.23405816816955,
+      "p90": 155.38729271651914
      }
     },
     "cruise": {
@@ -141,23 +149,23 @@
      },
      "dec": {
       "n": 16,
-      "med": 27.477829571670625,
-      "p90": 32.73123891592354
+      "med": 25.09212857066666,
+      "p90": 30.501572138260826
      },
      "fire": {
       "n": 16,
-      "med": 15.99475250046828,
-      "p90": 27.80580949418254
+      "med": 14.093812536455516,
+      "p90": 27.583891249132193
      },
      "kill": {
       "n": 16,
-      "med": 14.832483666320286,
-      "p90": 21.312172806872695
+      "med": 14.169455068410798,
+      "p90": 22.10468410362705
      },
      "total": {
       "n": 16,
-      "med": 58.69731634370373,
-      "p90": 72.3296585912924
+      "med": 53.0893496189417,
+      "p90": 76.87700715113851
      }
     },
     "fighter": {
@@ -174,23 +182,23 @@
      },
      "dec": {
       "n": 16,
-      "med": 35.94346061940223,
-      "p90": 73.81358834963999
+      "med": 25.228740138163857,
+      "p90": 67.51453187880293
      },
      "fire": {
       "n": 16,
-      "med": 19.06967573941074,
-      "p90": 60.16079907861899
+      "med": 15.621593218619182,
+      "p90": 42.191270826773916
      },
      "kill": {
       "n": 16,
-      "med": 19.599586102357534,
-      "p90": 87.30517426775998
+      "med": 24.090656049742165,
+      "p90": 79.09373441612343
      },
      "total": {
       "n": 16,
-      "med": 101.23802773645752,
-      "p90": 153.06683284772691
+      "med": 91.17149164481918,
+      "p90": 113.93560057255422
      }
     },
     "uav_small": {
@@ -207,23 +215,23 @@
      },
      "dec": {
       "n": 53,
-      "med": 33.81877158009593,
-      "p90": 132.85216307482074
+      "med": 49.78049242682141,
+      "p90": 138.00622405215768
      },
      "fire": {
-      "n": 48,
-      "med": 195.21337820318126,
-      "p90": 473.12776068335165
+      "n": 53,
+      "med": 328.62084460274673,
+      "p90": 514.6127297612953
      },
      "kill": {
-      "n": 41,
-      "med": 11.999532457364921,
-      "p90": 39.29733549798175
+      "n": 48,
+      "med": 11.999097861504879,
+      "p90": 31.618039176001503
      },
      "total": {
-      "n": 41,
-      "med": 450.87516721597206,
-      "p90": 529.3660396488267
+      "n": 48,
+      "med": 454.2115015651291,
+      "p90": 638.9727022530412
      }
     }
    },
@@ -233,8 +241,8 @@
      "chains": 53,
      "media": {
       "report-cycle": 53,
-      "voice": 97,
-      "datalink": 115,
+      "voice": 101,
+      "datalink": 119,
       "internal": 53
      },
      "hopsMed": 6,
@@ -242,25 +250,25 @@
      "c2Med": 2
     },
     "mrl_large": {
-     "voice": 17,
-     "chains": 19,
+     "voice": 26,
+     "chains": 57,
      "media": {
-      "report-cycle": 19,
-      "voice": 26,
-      "datalink": 34,
-      "internal": 19
+      "report-cycle": 57,
+      "datalink": 115,
+      "internal": 57,
+      "voice": 43
      },
-     "hopsMed": 6,
+     "hopsMed": 4,
      "hopsMax": 6,
-     "c2Med": 3
+     "c2Med": 2
     },
     "cruise": {
      "voice": 16,
      "chains": 16,
      "media": {
       "report-cycle": 16,
-      "datalink": 48,
-      "voice": 16,
+      "datalink": 47,
+      "voice": 17,
       "internal": 16
      },
      "hopsMed": 6,
@@ -268,12 +276,12 @@
      "c2Med": 3
     },
     "fighter": {
-     "voice": 16,
+     "voice": 15,
      "chains": 16,
      "media": {
       "report-cycle": 16,
-      "datalink": 53,
-      "voice": 23,
+      "datalink": 54,
+      "voice": 20,
       "internal": 16
      },
      "hopsMed": 6,
@@ -282,13 +290,13 @@
     },
     "uav_small": {
      "voice": 44,
-     "chains": 48,
+     "chains": 53,
      "media": {
-      "report-cycle": 48,
-      "datalink": 148,
+      "report-cycle": 53,
+      "datalink": 166,
+      "internal": 53,
       "chat": 43,
-      "voice": 86,
-      "internal": 48
+      "voice": 88
      },
      "hopsMed": 8,
      "hopsMax": 8,
@@ -298,35 +306,28 @@
    "load": {
     "c2": {
      "n": 96,
-     "rhoMax": 0.25725139702991506,
-     "rhoMean": 0.006041326254088695,
-     "WqMax": 1.376279552508799,
+     "rhoMax": 0.259017203232648,
+     "rhoMean": 0.006347002003208841,
+     "WqMax": 1.9085195276273887,
      "drops": 0,
-     "maxIn": 10,
+     "maxIn": 12,
      "stressed": [
       "ARMY_LOCAL_AD:idle",
       "ARMY_LOCAL_AD:idle",
       "MSAM2_ANDONG:idle",
-      "MSAM2_DAEGU:idle",
       "MSAM2_BUSAN:idle",
       "MSAM2_ULSAN:idle",
       "MSAM2_YEOSU:idle",
       "MSAM2_MOKPO:idle",
-      "MSAM2_CHEONAN:idle",
-      "MSAM2_DANGJIN:idle",
       "MSAM2_WONJU:idle",
       "MSAM2_GANGNEUNG:idle",
       "MSAM2_SOKCHO:idle",
       "MSAM2_SUWON:idle",
       "MSAM2_BAENGNYEONG:idle",
-      "MSAM2_YEONPYEONG:idle",
       "PAC3_BUSAN:idle",
-      "PAC3_DANGJIN:idle",
-      "PAC3_CHEONGJU:idle",
-      "PAC3_WONJU:idle",
+      "PAC3_CHUNGJU:idle",
       "PAC3_GANGNEUNG:idle",
       "BIHO_CO2:idle",
-      "BIHO_CO3:idle",
       "BIHO_CO4:idle",
       "BIHO_CO5:idle",
       "BIHO_CO6:idle",
@@ -368,29 +369,26 @@
     },
     "shooter": {
      "n": 84,
-     "rhoMax": 0.09711803124877591,
-     "rhoMean": 0.0030959312787394036,
+     "rhoMax": 0.091534602071217,
+     "rhoMean": 0.0023800047249233434,
      "WqMax": 0,
-     "drops": 0,
+     "drops": 23,
      "maxIn": 0,
      "stressed": [
       "MSAM2_ANDONG:idle",
-      "MSAM2_DAEGU:idle",
       "MSAM2_BUSAN:idle",
       "MSAM2_ULSAN:idle",
       "MSAM2_YEOSU:idle",
       "MSAM2_MOKPO:idle",
-      "MSAM2_CHEONAN:idle",
-      "MSAM2_DANGJIN:idle",
       "MSAM2_WONJU:idle",
       "MSAM2_GANGNEUNG:idle",
       "MSAM2_SOKCHO:idle",
       "MSAM2_SUWON:idle",
       "MSAM2_BAENGNYEONG:idle",
-      "MSAM2_YEONPYEONG:idle",
+      "PAC3_BUSAN:idle",
+      "PAC3_CHUNGJU:idle",
       "PAC3_GANGNEUNG:idle",
       "BIHO_CO2:idle",
-      "BIHO_CO3:idle",
       "BIHO_CO4:idle",
       "BIHO_CO5:idle",
       "BIHO_CO6:idle",
@@ -427,6 +425,7 @@
       "CHUNMA_CO15:idle",
       "CHUNMA_CO16:idle",
       "CHUNMA_CO17:idle",
+      "THAAD_SEONGJU:saturated",
       "USFK_PATRIOT_CAMP_WALKER:idle"
      ]
     },
@@ -447,16 +446,16 @@
      {
       "id": "KAMD_OPS",
       "cat": "c2",
-      "rho": 0.257,
+      "rho": 0.259,
       "arrivals": 143,
-      "Wq": 1.4,
-      "maxIn": 10,
+      "Wq": 1.9,
+      "maxIn": 12,
       "level": "normal"
      },
      {
       "id": "MCRC",
       "cat": "c2",
-      "rho": 0.138,
+      "rho": 0.137,
       "arrivals": 130,
       "Wq": 0,
       "maxIn": 8,
@@ -465,26 +464,35 @@
      {
       "id": "THAAD_SEONGJU",
       "cat": "shooter",
-      "rho": 0.097,
-      "arrivals": 820,
+      "rho": 0.092,
+      "arrivals": 744,
       "Wq": 0,
       "maxIn": 0,
-      "level": "normal"
+      "level": "saturated"
      },
      {
       "id": "ICC",
       "cat": "c2",
-      "rho": 0.061,
-      "arrivals": 110,
+      "rho": 0.066,
+      "arrivals": 126,
       "Wq": 0,
       "maxIn": 5,
       "level": "normal"
      },
      {
+      "id": "ICC",
+      "cat": "c2",
+      "rho": 0.043,
+      "arrivals": 76,
+      "Wq": 0.1,
+      "maxIn": 7,
+      "level": "normal"
+     },
+     {
       "id": "LSAM_CAPITAL",
       "cat": "shooter",
-      "rho": 0.056,
-      "arrivals": 2094,
+      "rho": 0.029,
+      "arrivals": 2623,
       "Wq": 0,
       "maxIn": 0,
       "level": "normal"
@@ -492,17 +500,17 @@
      {
       "id": "LSAM_MID_NORTH",
       "cat": "shooter",
-      "rho": 0.032,
-      "arrivals": 7014,
+      "rho": 0.027,
+      "arrivals": 7352,
       "Wq": 0,
       "maxIn": 0,
       "level": "normal"
      },
      {
-      "id": "ICC",
+      "id": "USFK_PATRIOT_C2",
       "cat": "c2",
-      "rho": 0.03,
-      "arrivals": 52,
+      "rho": 0.015,
+      "arrivals": 175,
       "Wq": 0,
       "maxIn": 4,
       "level": "normal"
@@ -510,8 +518,8 @@
      {
       "id": "PAC3_BUKAKSAN",
       "cat": "shooter",
-      "rho": 0.017,
-      "arrivals": 849,
+      "rho": 0.013,
+      "arrivals": 1222,
       "Wq": 0,
       "maxIn": 0,
       "level": "normal"
@@ -519,19 +527,10 @@
      {
       "id": "ARMY_LOCAL_AD",
       "cat": "c2",
-      "rho": 0.013,
+      "rho": 0.011,
       "arrivals": 102,
       "Wq": 0,
       "maxIn": 3,
-      "level": "normal"
-     },
-     {
-      "id": "USFK_PATRIOT_C2",
-      "cat": "c2",
-      "rho": 0.012,
-      "arrivals": 175,
-      "Wq": 0,
-      "maxIn": 4,
       "level": "normal"
      }
     ],
@@ -539,78 +538,93 @@
      {
       "id": "USFK_PATRIOT_C2",
       "arrivals": 175,
-      "rho": 0.012,
+      "rho": 0.015,
       "kinds": "iads_track:175"
      },
      {
       "id": "KAMD_OPS",
       "arrivals": 143,
-      "rho": 0.257,
+      "rho": 0.259,
       "kinds": "iads_track:143"
      },
      {
       "id": "MCRC",
       "arrivals": 130,
-      "rho": 0.138,
+      "rho": 0.137,
       "kinds": "approval:45 iads_track:85"
      },
      {
       "id": "ICC",
-      "arrivals": 110,
-      "rho": 0.061,
-      "kinds": "directive_relay:110"
+      "arrivals": 126,
+      "rho": 0.066,
+      "kinds": "directive_relay:126"
      },
      {
       "id": "ARMY_LOCAL_AD",
       "arrivals": 102,
-      "rho": 0.013,
-      "kinds": "iads_track:69 approval_return:33"
-     },
-     {
-      "id": "ARMY_LOCAL_AD",
-      "arrivals": 80,
-      "rho": 0.009,
-      "kinds": "iads_track:69 approval_return:11"
-     },
-     {
-      "id": "ARMY_LOCAL_AD",
-      "arrivals": 69,
-      "rho": 0.009,
-      "kinds": "iads_track:69"
+      "rho": 0.011,
+      "kinds": "iads_track:68 approval_return:34"
      },
      {
       "id": "LSAM_CAPITAL",
-      "arrivals": 65,
+      "arrivals": 80,
+      "rho": 0.01,
+      "kinds": "directive_reception:80"
+     },
+     {
+      "id": "ARMY_LOCAL_AD",
+      "arrivals": 78,
       "rho": 0.009,
-      "kinds": "directive_reception:65"
+      "kinds": "iads_track:67 approval_return:11"
+     },
+     {
+      "id": "ICC",
+      "arrivals": 76,
+      "rho": 0.043,
+      "kinds": "directive_relay:76"
      }
     ],
-    "bottlenecks": [],
+    "bottlenecks": [
+     {
+      "kind": "node",
+      "severity": 3,
+      "id": "BATTERY_THAAD_SEONGJU",
+      "name": "USFK THAAD (THAAD_SEONGJU)",
+      "detail": "관측 ρ=0.09 · 용량차단 23건 — 동시교전 채널 초과"
+     },
+     {
+      "kind": "gap",
+      "severity": 3,
+      "id": "window_lost_due_to_c2",
+      "name": "C2 지연으로 PIP·교전창 상실",
+      "detail": "누수 2건 (architecture · structural)"
+     }
+    ],
     "shots": {
-     "total": 281,
+     "total": 236,
      "batteries": 84,
-     "firing": 30,
-     "zero": 54,
-     "top3Share": 0.39501779359430605,
-     "top5Share": 0.5729537366548043,
+     "firing": 31,
+     "zero": 53,
+     "top3Share": 0.3771186440677966,
+     "top5Share": 0.5677966101694916,
      "top": [
-      "LSAM_CAPITAL:48",
-      "THAAD_SEONGJU:36",
-      "LSAM_MID_NORTH:27",
-      "CHUNMA_CO1:25",
-      "PAC3_BUKAKSAN:25",
-      "CHUNMA_CO3:12",
-      "USFK_PATRIOT_CASEY:10",
-      "PAC3_CHEONAN:10"
+      "THAAD_SEONGJU:34",
+      "LSAM_CAPITAL:29",
+      "LSAM_MID_NORTH:26",
+      "CHUNMA_CO1:26",
+      "PAC3_BUKAKSAN:19",
+      "USFK_PATRIOT_KUNSAN:11",
+      "CHUNMA_CO8:11",
+      "CHUNMA_CO3:11"
      ]
     },
     "topLinks": [
-     "KAMD_OPS→ICC cue/datalink ×438",
-     "KAMD_OPS→ICC cue/datalink ×357",
+     "KAMD_OPS→ICC cue/datalink ×454",
+     "KAMD_OPS→ICC cue/datalink ×386",
      "ICC→MCRC coord/datalink ×231",
-     "KAMD_OPS→ICC cue/datalink ×219",
-     "ICC→LSAM_CAPITAL cue/datalink ×187",
-     "ICC→LSAM_MID_NORTH cue/datalink ×161"
+     "KAMD_OPS→ICC cue/datalink ×229",
+     "ICC→LSAM_CAPITAL cue/datalink ×202",
+     "ICC→LSAM_MID_NORTH cue/datalink ×171"
     ]
    },
    "sensor": {
@@ -662,54 +676,54 @@
     "anySeen": [
      [
       "SENSOR_MSAM2_GIMPO_MFR",
-      795
+      781
      ],
      [
       "SENSOR_MSAM2_CHEONGJU_MFR",
-      748
+      721
      ],
      [
       "SENSOR_MSAM2_SUWON_MFR",
-      715
+      706
      ],
      [
       "SENSOR_MSAM2_INCHEON_MFR",
-      672
-     ],
-     [
-      "SENSOR_PATRIOT_MFR_WONJU",
-      608
-     ],
-     [
-      "SENSOR_MSAM2_ICHEON_MFR",
-      608
+      639
      ],
      [
       "SENSOR_MSAM2_YEONCHEON_MFR",
-      591
+      614
+     ],
+     [
+      "SENSOR_PATRIOT_MFR_WONJU",
+      600
+     ],
+     [
+      "SENSOR_MSAM2_ICHEON_MFR",
+      585
      ],
      [
       "SENSOR_PATRIOT_MFR_USFK_OSAN",
-      518
+      516
      ]
     ]
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 51,
+     "killed": 42,
      "leaked": 0,
-     "unresolved": 2,
+     "unresolved": 11,
      "fired": 53,
-     "emergency": 4,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 87,
+     "killed": 54,
      "leaked": 0,
-     "unresolved": 3,
-     "fired": 90,
-     "emergency": 75,
-     "selfdef": 0
+     "unresolved": 36,
+     "fired": 59,
+     "emergency": 0,
+     "selfdef": 12
     },
     "cruise": {
      "killed": 16,
@@ -728,10 +742,10 @@
      "selfdef": 0
     },
     "uav_small": {
-     "killed": 41,
+     "killed": 48,
      "leaked": 0,
-     "unresolved": 12,
-     "fired": 48,
+     "unresolved": 5,
+     "fired": 53,
      "emergency": 0,
      "selfdef": 0
     }
@@ -740,41 +754,49 @@
   "tobe": {
    "g": {
     "spawned": 228,
-    "killed": 205,
-    "leaked": 23,
+    "killed": 194,
+    "leaked": 34,
     "unresolved": 0,
-    "shots": 290,
-    "mttk": 189.09998270330968,
-    "mtte": 153.38119195409382,
-    "decision": 149.81078836664943,
+    "shots": 266,
+    "mttk": 218.587304226766,
+    "mtte": 180.32636235847718,
+    "decision": 176.78946915459335,
     "coord": 0,
     "leakReasons": {
-     "missed": 16,
+     "window_lost_due_to_c2": 3,
+     "timeout:engage": 6,
+     "timeout:c2": 5,
+     "missed": 6,
+     "ammo_depleted": 11,
      "correlation_failed": 2,
-     "ammo_depleted": 5
+     "no_fire_control": 1
     },
     "failure": {
-     "missed": 16,
+     "window_lost_due_to_c2": 3,
+     "timeout:engage": 6,
+     "timeout:c2": 5,
+     "missed": 6,
+     "ammo_depleted": 11,
      "correlation_failed": 2,
-     "ammo_depleted": 5
+     "no_fire_control": 1
     },
     "coalition": {
-     "proposals": 137,
-     "allocRok": 53,
-     "allocUsfk": 62,
-     "dup": 13,
-     "skipped": 18
+     "proposals": 149,
+     "allocRok": 59,
+     "allocUsfk": 71,
+     "dup": 17,
+     "skipped": 76
     },
     "cue": {
      "cued": 143,
-     "emergency": 92
+     "emergency": 0
     },
     "routeRetry": {
      "scheduled": 50,
      "attempts": 24,
      "commandersDeferred": 46,
      "commandersRecovered": 46,
-     "recoveryDelaySum": 289.800000000027,
+     "recoveryDelaySum": 289.60000000002697,
      "recoveryDelayMax": 48.400000000011005
     },
     "trackQuality": {
@@ -785,16 +807,16 @@
      "identified": 711
     },
     "cost": {
-     "interceptM": 1305.6000000000024,
-     "killedThreatM": 624.4299999999997,
-     "exchange": 2.090866870585979,
-     "interceptSatM": 750.0000000000005,
-     "killedThreatSatM": 84.43000000000005,
-     "exchangeSat": 8.883098424730546,
-     "duplicateInterceptM": 39.4,
-     "leakedThreatM": 49.09999999999998,
-     "defenseEfficiency": 0.9271005003489079,
-     "defenseEfficiencySat": 0.9326190213189
+     "interceptM": 1124.200000000002,
+     "killedThreatM": 615.4899999999996,
+     "exchange": 1.8265122097840791,
+     "interceptSatM": 516.1999999999994,
+     "killedThreatSatM": 63.48999999999996,
+     "exchangeSat": 8.130414238462745,
+     "duplicateInterceptM": 51.4,
+     "leakedThreatM": 58.04,
+     "defenseEfficiency": 0.9138271494959394,
+     "defenseEfficiencySat": 0.7013144813873853
     }
    },
    "time": {
@@ -812,23 +834,23 @@
      },
      "dec": {
       "n": 53,
-      "med": 17.42735499709397,
-      "p90": 37.24550515056353
+      "med": 16.07429331894309,
+      "p90": 37.73983013227678
      },
      "fire": {
       "n": 53,
-      "med": 177.05556484090653,
-      "p90": 264.8094863478441
+      "med": 181.5831296632001,
+      "p90": 267.891602441297
      },
      "kill": {
-      "n": 47,
-      "med": 58.28672492983105,
-      "p90": 113.02032754516824
+      "n": 51,
+      "med": 60.06398786648367,
+      "p90": 112.55829004762927
      },
      "total": {
-      "n": 47,
-      "med": 266.272397528282,
-      "p90": 316.58324036340196
+      "n": 51,
+      "med": 299.6674738925304,
+      "p90": 330.23953196540265
      }
     },
     "mrl_large": {
@@ -844,24 +866,24 @@
       "p90": 20.259520624824745
      },
      "dec": {
-      "n": 90,
-      "med": 18.34826218812401,
-      "p90": 76.18467806405056
+      "n": 80,
+      "med": 44.47014995965549,
+      "p90": 130.5919154700423
      },
      "fire": {
-      "n": 90,
-      "med": 0,
-      "p90": 41.963032521144214
+      "n": 69,
+      "med": 5.687103169272859,
+      "p90": 44.6927519683918
      },
      "kill": {
-      "n": 84,
-      "med": 46.54623190633305,
-      "p90": 62.8261359019661
+      "n": 63,
+      "med": 35.87060448668433,
+      "p90": 56.87227062920914
      },
      "total": {
-      "n": 84,
-      "med": 88.23926541808169,
-      "p90": 155.44958735655587
+      "n": 63,
+      "med": 117.63783318890114,
+      "p90": 177.22844745937732
      }
     },
     "cruise": {
@@ -878,23 +900,23 @@
      },
      "dec": {
       "n": 16,
-      "med": 3.4568562060280783,
-      "p90": 5.559344052739107
+      "med": 3.3253988551505245,
+      "p90": 4.377193704465071
      },
      "fire": {
       "n": 16,
-      "med": 5.658587434508945,
-      "p90": 17.21921000355664
+      "med": 5.803489711854581,
+      "p90": 11.272563948214156
      },
      "kill": {
       "n": 16,
-      "med": 8.68731933868662,
-      "p90": 17.092943576633708
+      "med": 7.06687452745382,
+      "p90": 20.32917268133201
      },
      "total": {
       "n": 16,
-      "med": 18.20598102709073,
-      "p90": 41.768840983785026
+      "med": 16.632527017214215,
+      "p90": 34.97231501183251
      }
     },
     "fighter": {
@@ -911,23 +933,23 @@
      },
      "dec": {
       "n": 16,
-      "med": 14.933307183373017,
-      "p90": 33.20796440191248
+      "med": 5.425881004055668,
+      "p90": 43.15433214803022
      },
      "fire": {
       "n": 16,
-      "med": 32.964109541194375,
-      "p90": 71.97188414304719
+      "med": 10.706364198362962,
+      "p90": 51.931945091575585
      },
      "kill": {
       "n": 15,
-      "med": 19.52103300694921,
-      "p90": 39.33286576980231
+      "med": 19.486680083562987,
+      "p90": 58.91515991096753
      },
      "total": {
       "n": 15,
-      "med": 82.79917869036728,
-      "p90": 108.99370781956623
+      "med": 56.70079368434574,
+      "p90": 97.86591727272412
      }
     },
     "uav_small": {
@@ -944,35 +966,35 @@
      },
      "dec": {
       "n": 53,
-      "med": 4.307964488728658,
-      "p90": 23.725027416329567
+      "med": 4.633223700666804,
+      "p90": 15.557402730741046
      },
      "fire": {
-      "n": 48,
-      "med": 415.5364040689424,
-      "p90": 523.5712828717631
+      "n": 52,
+      "med": 425.32168802865533,
+      "p90": 539.2067626702387
      },
      "kill": {
-      "n": 43,
-      "med": 11.999115393666898,
-      "p90": 32.98242955562296
+      "n": 49,
+      "med": 11.99747768444422,
+      "p90": 29.66729493805201
      },
      "total": {
-      "n": 43,
-      "med": 430.6818257406227,
-      "p90": 546.5824063350544
+      "n": 49,
+      "med": 451.4514499890405,
+      "p90": 638.982456327639
      }
     }
    },
    "path": {
     "srbm": {
      "voice": 0,
-     "chains": 52,
+     "chains": 53,
      "media": {
-      "report-cycle": 52,
+      "report-cycle": 53,
       "ifcn": 97,
       "datalink": 112,
-      "internal": 52
+      "internal": 53
      },
      "hopsMed": 6,
      "hopsMax": 8,
@@ -980,25 +1002,25 @@
     },
     "mrl_large": {
      "voice": 0,
-     "chains": 21,
+     "chains": 66,
      "media": {
-      "report-cycle": 21,
-      "ifcn": 23,
-      "datalink": 36,
-      "internal": 21
+      "report-cycle": 66,
+      "ifcn": 72,
+      "internal": 66,
+      "datalink": 61
      },
-     "hopsMed": 5,
+     "hopsMed": 4,
      "hopsMax": 6,
-     "c2Med": 2
+     "c2Med": 1
     },
     "cruise": {
      "voice": 0,
      "chains": 16,
      "media": {
       "report-cycle": 16,
-      "ifcn": 25,
+      "ifcn": 23,
       "internal": 16,
-      "datalink": 9
+      "datalink": 4
      },
      "hopsMed": 4,
      "hopsMax": 6,
@@ -1010,7 +1032,7 @@
      "media": {
       "report-cycle": 16,
       "ifcn": 26,
-      "datalink": 26,
+      "datalink": 24,
       "internal": 16
      },
      "hopsMed": 5,
@@ -1019,11 +1041,11 @@
     },
     "uav_small": {
      "voice": 0,
-     "chains": 48,
+     "chains": 52,
      "media": {
-      "report-cycle": 48,
-      "ifcn": 75,
-      "internal": 48
+      "report-cycle": 52,
+      "ifcn": 80,
+      "internal": 52
      },
      "hopsMed": 4,
      "hopsMax": 4,
@@ -1033,36 +1055,29 @@
    "load": {
     "c2": {
      "n": 97,
-     "rhoMax": 0.24455490075406375,
-     "rhoMean": 0.005358565849236895,
-     "WqMax": 0.28830958302329684,
+     "rhoMax": 0.2625001229181767,
+     "rhoMean": 0.005660529813527451,
+     "WqMax": 1.3611529648643677,
      "drops": 0,
-     "maxIn": 15,
+     "maxIn": 12,
      "stressed": [
       "ICC:idle",
       "ICC:idle",
       "ICC:idle",
       "ARMY_LOCAL_AD:idle",
       "ARMY_LOCAL_AD:idle",
-      "LSAM_SOUTH:idle",
       "MSAM2_ANDONG:idle",
-      "MSAM2_DAEGU:idle",
-      "MSAM2_BUSAN:idle",
       "MSAM2_ULSAN:idle",
       "MSAM2_YEOSU:idle",
       "MSAM2_MOKPO:idle",
-      "MSAM2_CHEONAN:idle",
       "MSAM2_DANGJIN:idle",
-      "MSAM2_CHEONGJU:idle",
       "MSAM2_WONJU:idle",
       "MSAM2_GANGNEUNG:idle",
       "MSAM2_SOKCHO:idle",
       "MSAM2_SUWON:idle",
       "MSAM2_BAENGNYEONG:idle",
       "PAC3_BUSAN:idle",
-      "PAC3_DANGJIN:idle",
       "PAC3_CHUNGJU:idle",
-      "PAC3_CHEONGJU:idle",
       "PAC3_WONJU:idle",
       "PAC3_GANGNEUNG:idle",
       "BIHO_CO2:idle",
@@ -1107,27 +1122,26 @@
     },
     "shooter": {
      "n": 84,
-     "rhoMax": 0.110947452267375,
-     "rhoMean": 0.0032724906574591018,
+     "rhoMax": 0.11214723704328816,
+     "rhoMean": 0.0028307198910098386,
      "WqMax": 0,
-     "drops": 0,
+     "drops": 21,
      "maxIn": 0,
      "stressed": [
       "MSAM2_ANDONG:idle",
-      "MSAM2_DAEGU:idle",
       "MSAM2_BUSAN:idle",
       "MSAM2_ULSAN:idle",
       "MSAM2_YEOSU:idle",
       "MSAM2_MOKPO:idle",
-      "MSAM2_CHEONAN:idle",
       "MSAM2_DANGJIN:idle",
       "MSAM2_WONJU:idle",
       "MSAM2_GANGNEUNG:idle",
       "MSAM2_SOKCHO:idle",
       "MSAM2_SUWON:idle",
       "MSAM2_BAENGNYEONG:idle",
-      "PAC3_DANGJIN:idle",
+      "PAC3_BUSAN:idle",
       "PAC3_CHUNGJU:idle",
+      "PAC3_WONJU:idle",
       "PAC3_GANGNEUNG:idle",
       "BIHO_CO2:idle",
       "BIHO_CO3:idle",
@@ -1158,6 +1172,7 @@
       "CHUNMA_CO4:idle",
       "CHUNMA_CO5:idle",
       "CHUNMA_CO6:idle",
+      "CHUNMA_CO7:idle",
       "CHUNMA_CO10:idle",
       "CHUNMA_CO11:idle",
       "CHUNMA_CO12:idle",
@@ -1166,6 +1181,7 @@
       "CHUNMA_CO15:idle",
       "CHUNMA_CO16:idle",
       "CHUNMA_CO17:idle",
+      "THAAD_SEONGJU:saturated",
       "USFK_PATRIOT_CAMP_WALKER:idle"
      ]
     },
@@ -1186,28 +1202,28 @@
      {
       "id": "KAMD_OPS",
       "cat": "c2",
-      "rho": 0.245,
+      "rho": 0.263,
       "arrivals": 143,
-      "Wq": 0.3,
-      "maxIn": 8,
+      "Wq": 1.4,
+      "maxIn": 10,
       "level": "normal"
      },
      {
       "id": "THAAD_SEONGJU",
       "cat": "shooter",
-      "rho": 0.111,
-      "arrivals": 1223,
+      "rho": 0.112,
+      "arrivals": 1180,
       "Wq": 0,
       "maxIn": 0,
-      "level": "normal"
+      "level": "saturated"
      },
      {
       "id": "IAOC",
       "cat": "c2",
-      "rho": 0.106,
+      "rho": 0.103,
       "arrivals": 228,
       "Wq": 0,
-      "maxIn": 15,
+      "maxIn": 12,
       "level": "normal"
      },
      {
@@ -1220,19 +1236,19 @@
       "level": "normal"
      },
      {
-      "id": "LSAM_CAPITAL",
+      "id": "LSAM_MID_NORTH",
       "cat": "shooter",
-      "rho": 0.06,
-      "arrivals": 1651,
+      "rho": 0.042,
+      "arrivals": 3785,
       "Wq": 0,
       "maxIn": 0,
       "level": "normal"
      },
      {
-      "id": "LSAM_MID_NORTH",
+      "id": "LSAM_CAPITAL",
       "cat": "shooter",
-      "rho": 0.035,
-      "arrivals": 3620,
+      "rho": 0.029,
+      "arrivals": 2279,
       "Wq": 0,
       "maxIn": 0,
       "level": "normal"
@@ -1240,37 +1256,37 @@
      {
       "id": "USFK_PATRIOT_C2",
       "cat": "c2",
-      "rho": 0.016,
+      "rho": 0.015,
       "arrivals": 175,
       "Wq": 0,
       "maxIn": 3,
       "level": "normal"
      },
      {
-      "id": "ARMY_LOCAL_AD",
-      "cat": "c2",
-      "rho": 0.012,
-      "arrivals": 85,
-      "Wq": 0,
-      "maxIn": 3,
-      "level": "normal"
-     },
-     {
-      "id": "LSAM_SOUTH",
-      "cat": "shooter",
-      "rho": 0.012,
-      "arrivals": 9,
-      "Wq": 0,
-      "maxIn": 0,
-      "level": "normal"
-     },
-     {
       "id": "USFK_PATRIOT_CASEY",
       "cat": "shooter",
-      "rho": 0.011,
-      "arrivals": 121,
+      "rho": 0.013,
+      "arrivals": 192,
       "Wq": 0,
       "maxIn": 0,
+      "level": "normal"
+     },
+     {
+      "id": "USFK_THAAD_C2",
+      "cat": "c2",
+      "rho": 0.011,
+      "arrivals": 53,
+      "Wq": 0,
+      "maxIn": 2,
+      "level": "normal"
+     },
+     {
+      "id": "ARMY_LOCAL_AD",
+      "cat": "c2",
+      "rho": 0.01,
+      "arrivals": 85,
+      "Wq": 0,
+      "maxIn": 2,
       "level": "normal"
      }
     ],
@@ -1278,19 +1294,19 @@
      {
       "id": "IAOC",
       "arrivals": 228,
-      "rho": 0.106,
+      "rho": 0.103,
       "kinds": "iads_track:228"
      },
      {
       "id": "USFK_PATRIOT_C2",
       "arrivals": 175,
-      "rho": 0.016,
+      "rho": 0.015,
       "kinds": "iads_track:175"
      },
      {
       "id": "KAMD_OPS",
       "arrivals": 143,
-      "rho": 0.245,
+      "rho": 0.263,
       "kinds": "iads_track:143"
      },
      {
@@ -1308,47 +1324,62 @@
      {
       "id": "ARMY_LOCAL_AD",
       "arrivals": 85,
-      "rho": 0.012,
+      "rho": 0.009,
       "kinds": "iads_track:85"
      },
      {
       "id": "ARMY_LOCAL_AD",
       "arrivals": 85,
-      "rho": 0.01,
+      "rho": 0.008,
       "kinds": "iads_track:85"
      },
      {
-      "id": "USFK_THAAD_C2",
-      "arrivals": 53,
+      "id": "LSAM_CAPITAL",
+      "arrivals": 74,
       "rho": 0.008,
-      "kinds": "iads_track:53"
+      "kinds": "directive_reception:74"
      }
     ],
-    "bottlenecks": [],
+    "bottlenecks": [
+     {
+      "kind": "node",
+      "severity": 3,
+      "id": "BATTERY_THAAD_SEONGJU",
+      "name": "USFK THAAD (THAAD_SEONGJU)",
+      "detail": "관측 ρ=0.11 · 용량차단 21건 — 동시교전 채널 초과"
+     },
+     {
+      "kind": "gap",
+      "severity": 3,
+      "id": "window_lost_due_to_c2",
+      "name": "C2 지연으로 PIP·교전창 상실",
+      "detail": "누수 3건 (architecture · structural)"
+     }
+    ],
     "shots": {
-     "total": 290,
+     "total": 266,
      "batteries": 84,
-     "firing": 30,
-     "zero": 54,
-     "top3Share": 0.4103448275862069,
-     "top5Share": 0.5724137931034483,
+     "firing": 28,
+     "zero": 56,
+     "top3Share": 0.39097744360902253,
+     "top5Share": 0.5789473684210527,
      "top": [
-      "LSAM_CAPITAL:50",
-      "THAAD_SEONGJU:41",
-      "LSAM_MID_NORTH:28",
+      "THAAD_SEONGJU:43",
+      "LSAM_MID_NORTH:33",
+      "LSAM_CAPITAL:28",
+      "USFK_PATRIOT_CASEY:25",
+      "CHUNMA_CO8:25",
       "CHUNMA_CO1:24",
-      "CHUNMA_CO8:23",
-      "USFK_PATRIOT_CASEY:22",
-      "PAC3_BUKAKSAN:14",
-      "CHUNMA_CO3:14"
+      "CHUNMA_CO3:13",
+      "PAC3_BUKAKSAN:11"
      ]
     },
     "topLinks": [
-     "IAOC→LSAM_CAPITAL coord/ifcn ×163",
-     "IAOC→LSAM_MID_NORTH cue/ifcn ×149",
+     "IAOC→LSAM_CAPITAL coord/ifcn ×196",
+     "IAOC→LSAM_MID_NORTH cue/ifcn ×166",
+     "IAOC→USFK_PATRIOT_C2 coord/datalink ×141",
      "GREEN_PINE_CHUNGBUK→IAOC report/report-cycle ×140",
-     "ARMY_LOCAL_AD→IAOC status/ifcn ×135",
-     "IAOC→USFK_PATRIOT_C2 coord/datalink ×131",
+     "ARMY_LOCAL_AD→IAOC status/ifcn ×126",
      "PATRIOT_MFR_USFK_CASEY→USFK_PATRIOT_CASEY report/report-cycle ×113"
     ]
    },
@@ -1400,55 +1431,55 @@
     },
     "anySeen": [
      [
-      "SENSOR_MSAM2_GIMPO_MFR",
-      575
+      "SENSOR_MSAM2_YEONCHEON_MFR",
+      580
      ],
      [
-      "SENSOR_MSAM2_YEONCHEON_MFR",
-      569
+      "SENSOR_MSAM2_GIMPO_MFR",
+      567
      ],
      [
       "SENSOR_PATRIOT_MFR_USFK_OSAN",
-      420
+      429
      ],
      [
       "SENSOR_MSAM2_CHEONGJU_MFR",
-      388
-     ],
-     [
-      "SENSOR_MSAM2_SUWON_MFR",
-      383
+      384
      ],
      [
       "SENSOR_PATRIOT_MFR_WONJU",
-      368
+      375
+     ],
+     [
+      "SENSOR_MSAM2_SUWON_MFR",
+      357
      ],
      [
       "SENSOR_MSAM2_CHUNGJU_MFR",
-      355
+      338
      ],
      [
       "SENSOR_MSAM2_INCHEON_MFR",
-      333
+      331
      ]
     ]
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 47,
+     "killed": 51,
      "leaked": 0,
-     "unresolved": 6,
+     "unresolved": 2,
      "fired": 53,
-     "emergency": 8,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 84,
+     "killed": 63,
      "leaked": 0,
-     "unresolved": 6,
-     "fired": 90,
-     "emergency": 72,
-     "selfdef": 0
+     "unresolved": 27,
+     "fired": 69,
+     "emergency": 0,
+     "selfdef": 9
     },
     "cruise": {
      "killed": 16,
@@ -1467,10 +1498,10 @@
      "selfdef": 0
     },
     "uav_small": {
-     "killed": 43,
+     "killed": 49,
      "leaked": 0,
-     "unresolved": 10,
-     "fired": 48,
+     "unresolved": 4,
+     "fired": 52,
      "emergency": 0,
      "selfdef": 0
     }
@@ -1481,34 +1512,40 @@
   "asis#30": {
    "g": {
     "spawned": 237,
-    "killed": 223,
-    "leaked": 14,
+    "killed": 196,
+    "leaked": 41,
     "unresolved": 0,
-    "shots": 294,
-    "mttk": 219.80674787351506,
-    "mtte": 182.53866796195916,
-    "decision": 178.91239677551795,
-    "coord": 8.815076500581583,
+    "shots": 260,
+    "mttk": 234.99430708551202,
+    "mtte": 201.1926532204581,
+    "decision": 197.51514125873518,
+    "coord": 10.273617935520516,
     "leakReasons": {
-     "missed": 12,
-     "timeout:engage": 1,
-     "ammo_depleted": 1
+     "no_fire_control": 2,
+     "timeout:engage": 8,
+     "timeout:c2": 9,
+     "window_lost_due_to_c2": 3,
+     "missed": 5,
+     "ammo_depleted": 14
     },
     "failure": {
-     "missed": 12,
-     "timeout:engage": 1,
-     "ammo_depleted": 1
+     "no_fire_control": 2,
+     "timeout:engage": 8,
+     "timeout:c2": 9,
+     "window_lost_due_to_c2": 3,
+     "missed": 5,
+     "ammo_depleted": 14
     },
     "coalition": {
-     "proposals": 207,
-     "allocRok": 76,
-     "allocUsfk": 65,
-     "dup": 3,
-     "skipped": 18
+     "proposals": 209,
+     "allocRok": 86,
+     "allocUsfk": 67,
+     "dup": 6,
+     "skipped": 67
     },
     "cue": {
      "cued": 141,
-     "emergency": 77
+     "emergency": 0
     },
     "routeRetry": {
      "scheduled": 29,
@@ -1519,23 +1556,23 @@
      "recoveryDelayMax": 26.00000000000591
     },
     "trackQuality": {
-     "correct": 3532,
-     "mis": 132,
+     "correct": 3531,
+     "mis": 133,
      "failed": 247,
      "stale": 0,
-     "identified": 732
+     "identified": 730
     },
     "cost": {
-     "interceptM": 1383.4000000000021,
-     "killedThreatM": 959.0499999999995,
-     "exchange": 1.44246911005683,
-     "interceptSatM": 683.4000000000005,
-     "killedThreatSatM": 74.55000000000007,
-     "exchangeSat": 9.167002012072434,
-     "duplicateInterceptM": 32.400000000000006,
-     "leakedThreatM": 26.040000000000003,
-     "defenseEfficiency": 0.973565867078135,
-     "defenseEfficiencySat": 0.9733646690168428
+     "interceptM": 1158.6000000000022,
+     "killedThreatM": 936.0499999999995,
+     "exchange": 1.2377543934618906,
+     "interceptSatM": 453.5999999999993,
+     "killedThreatSatM": 45.54999999999997,
+     "exchangeSat": 9.95828759604829,
+     "duplicateInterceptM": 49.60000000000001,
+     "leakedThreatM": 49.03999999999999,
+     "defenseEfficiency": 0.9502177466018333,
+     "defenseEfficiencySat": 0.594725159942551
     }
    },
    "time": {
@@ -1553,23 +1590,23 @@
      },
      "dec": {
       "n": 65,
-      "med": 52.0545527514916,
-      "p90": 83.17775755756134
+      "med": 58.66453727098974,
+      "p90": 82.53925320375129
      },
      "fire": {
-      "n": 65,
-      "med": 140.80801867105356,
-      "p90": 242.9809523761046
+      "n": 64,
+      "med": 148.85069352444066,
+      "p90": 244.32534085171892
      },
      "kill": {
-      "n": 57,
-      "med": 61.512577382488644,
-      "p90": 85.03079662297023
+      "n": 59,
+      "med": 64.00421226050025,
+      "p90": 113.56359598348718
      },
      "total": {
-      "n": 57,
-      "med": 294.1043997958167,
-      "p90": 331.04388820545404
+      "n": 59,
+      "med": 298.7938928977787,
+      "p90": 330.4409218613621
      }
     },
     "mrl_large": {
@@ -1585,24 +1622,24 @@
       "p90": 21.142359539851213
      },
      "dec": {
-      "n": 76,
-      "med": 34.44207527076003,
-      "p90": 65.40296421365679
+      "n": 63,
+      "med": 51.97250547882004,
+      "p90": 118.89978625731851
      },
      "fire": {
-      "n": 76,
-      "med": 0,
-      "p90": 49.919963058132
+      "n": 51,
+      "med": 10.637716480796826,
+      "p90": 71.30822000304295
      },
      "kill": {
-      "n": 74,
-      "med": 46.96207185667015,
-      "p90": 77.88150922271473
+      "n": 45,
+      "med": 29.163254571845755,
+      "p90": 58.3639717739286
      },
      "total": {
-      "n": 74,
-      "med": 104.53364792225852,
-      "p90": 169.392118824745
+      "n": 45,
+      "med": 122.7607591103329,
+      "p90": 175.75263657675555
      }
     },
     "cruise": {
@@ -1619,23 +1656,23 @@
      },
      "dec": {
       "n": 9,
-      "med": 24.052801890630576,
-      "p90": 38.01467009416808
+      "med": 23.911012367407693,
+      "p90": 31.708938316619367
      },
      "fire": {
       "n": 9,
-      "med": 7.537300653473267,
-      "p90": 26.7244118952064
+      "med": 8.833871999785572,
+      "p90": 21.514784496127277
      },
      "kill": {
       "n": 9,
-      "med": 17.565829074981593,
-      "p90": 21.117006953152668
+      "med": 12.597591521572724,
+      "p90": 17.448058697805664
      },
      "total": {
       "n": 9,
-      "med": 54.37305277686431,
-      "p90": 62.10356031787114
+      "med": 50.46233342159769,
+      "p90": 60.77364532485194
      }
     },
     "fighter": {
@@ -1652,23 +1689,23 @@
      },
      "dec": {
       "n": 28,
-      "med": 26.85126011547257,
-      "p90": 74.56034062563072
+      "med": 23.939668574165353,
+      "p90": 57.30644358182258
      },
      "fire": {
       "n": 28,
-      "med": 19.63863860596487,
-      "p90": 38.51770923328604
+      "med": 15.168439892900892,
+      "p90": 68.30744930988703
      },
      "kill": {
       "n": 28,
-      "med": 19.401006690798113,
-      "p90": 73.28082603647832
+      "med": 19.522851981706935,
+      "p90": 54.086868579967586
      },
      "total": {
       "n": 28,
-      "med": 83.14627054722564,
-      "p90": 126.08107750153692
+      "med": 82.10659801480506,
+      "p90": 132.92016632417122
      }
     },
     "uav_small": {
@@ -1685,42 +1722,42 @@
      },
      "dec": {
       "n": 59,
-      "med": 59.708579698982476,
-      "p90": 137.39997010094112
+      "med": 59.20811858763136,
+      "p90": 133.97484023195761
      },
      "fire": {
-      "n": 58,
-      "med": 322.71329743028537,
-      "p90": 459.5912982589507
+      "n": 57,
+      "med": 338.58257975429865,
+      "p90": 476.8784947760337
      },
      "kill": {
       "n": 55,
-      "med": 11.996688438141064,
-      "p90": 45.104353158982576
+      "med": 11.996323943836728,
+      "p90": 45.876744034973626
      },
      "total": {
       "n": 55,
-      "med": 458.0735229765559,
-      "p90": 573.6437554749876
+      "med": 454.05402333220013,
+      "p90": 543.7160321987274
      }
     }
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 57,
+     "killed": 59,
      "leaked": 0,
-     "unresolved": 8,
-     "fired": 65,
-     "emergency": 8,
+     "unresolved": 6,
+     "fired": 64,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 74,
+     "killed": 45,
      "leaked": 0,
-     "unresolved": 2,
-     "fired": 76,
-     "emergency": 60,
-     "selfdef": 0
+     "unresolved": 31,
+     "fired": 51,
+     "emergency": 0,
+     "selfdef": 4
     },
     "cruise": {
      "killed": 9,
@@ -1742,7 +1779,7 @@
      "killed": 55,
      "leaked": 0,
      "unresolved": 4,
-     "fired": 58,
+     "fired": 57,
      "emergency": 0,
      "selfdef": 0
     }
@@ -1751,34 +1788,38 @@
   "tobe#30": {
    "g": {
     "spawned": 237,
-    "killed": 222,
-    "leaked": 15,
+    "killed": 215,
+    "leaked": 22,
     "unresolved": 0,
-    "shots": 311,
-    "mttk": 208.34063858139348,
-    "mtte": 180.90881049494453,
-    "decision": 177.2825393085033,
+    "shots": 282,
+    "mttk": 223.69226002216263,
+    "mtte": 186.82788469013676,
+    "decision": 183.15851532076684,
     "coord": 0,
     "leakReasons": {
-     "missed": 13,
-     "ammo_depleted": 1,
-     "timeout:engage": 1
+     "missed": 4,
+     "timeout:engage": 3,
+     "ammo_depleted": 13,
+     "window_lost_due_to_c2": 1,
+     "timeout:c2": 1
     },
     "failure": {
-     "missed": 13,
-     "ammo_depleted": 1,
-     "timeout:engage": 1
+     "missed": 4,
+     "timeout:engage": 3,
+     "ammo_depleted": 13,
+     "window_lost_due_to_c2": 1,
+     "timeout:c2": 1
     },
     "coalition": {
-     "proposals": 182,
-     "allocRok": 61,
-     "allocUsfk": 92,
+     "proposals": 176,
+     "allocRok": 70,
+     "allocUsfk": 84,
      "dup": 9,
-     "skipped": 25
+     "skipped": 61
     },
     "cue": {
      "cued": 141,
-     "emergency": 68
+     "emergency": 0
     },
     "routeRetry": {
      "scheduled": 29,
@@ -1796,16 +1837,16 @@
      "identified": 768
     },
     "cost": {
-     "interceptM": 1354.6000000000024,
-     "killedThreatM": 969.9899999999996,
-     "exchange": 1.3965092423633265,
-     "interceptSatM": 621.0000000000002,
-     "killedThreatSatM": 76.49000000000005,
-     "exchangeSat": 8.118708327885996,
-     "duplicateInterceptM": 56.00000000000001,
-     "leakedThreatM": 15.099999999999998,
-     "defenseEfficiency": 0.9846714513394715,
-     "defenseEfficiencySat": 0.9986943465204335
+     "interceptM": 1190.4000000000021,
+     "killedThreatM": 965.0499999999995,
+     "exchange": 1.2335112170353897,
+     "interceptSatM": 484.7999999999992,
+     "killedThreatSatM": 59.54999999999995,
+     "exchangeSat": 8.14105793450881,
+     "duplicateInterceptM": 40.2,
+     "leakedThreatM": 20.040000000000003,
+     "defenseEfficiency": 0.9796566811154311,
+     "defenseEfficiencySat": 0.7775166470818643
     }
    },
    "time": {
@@ -1823,23 +1864,23 @@
      },
      "dec": {
       "n": 65,
-      "med": 17.642733846563146,
-      "p90": 33.514081000135775
+      "med": 16.837539847373137,
+      "p90": 33.487294630137
      },
      "fire": {
       "n": 65,
-      "med": 188.99952545835083,
-      "p90": 275.08298866807945
+      "med": 186.6274389795442,
+      "p90": 275.1117012541463
      },
      "kill": {
-      "n": 60,
-      "med": 64.06153568214995,
-      "p90": 107.59164977383125
+      "n": 64,
+      "med": 64.17139102017882,
+      "p90": 69.88502320118005
      },
      "total": {
-      "n": 60,
-      "med": 296.5668777951015,
-      "p90": 329.4617892885983
+      "n": 64,
+      "med": 292.2238360873787,
+      "p90": 330.05134313029157
      }
     },
     "mrl_large": {
@@ -1855,24 +1896,24 @@
       "p90": 21.142359539851213
      },
      "dec": {
-      "n": 76,
-      "med": 18.699785256872474,
-      "p90": 62.226691789606775
+      "n": 69,
+      "med": 23.32817111373174,
+      "p90": 115.00133462081226
      },
      "fire": {
-      "n": 76,
-      "med": 0,
-      "p90": 104.19777379946527
+      "n": 63,
+      "med": 7.411324412756699,
+      "p90": 137.40873032871582
      },
      "kill": {
-      "n": 76,
-      "med": 47.223190564557,
-      "p90": 58.61358013952099
+      "n": 59,
+      "med": 39.23961858455641,
+      "p90": 77.21830483077838
      },
      "total": {
-      "n": 76,
-      "med": 98.58359277224838,
-      "p90": 178.68584719652245
+      "n": 59,
+      "med": 112.35387813967833,
+      "p90": 179.32552183200755
      }
     },
     "cruise": {
@@ -1889,23 +1930,23 @@
      },
      "dec": {
       "n": 9,
-      "med": 3.2398716337313544,
-      "p90": 5.583185739541705
+      "med": 4.140159177748842,
+      "p90": 4.857106108542212
      },
      "fire": {
       "n": 9,
-      "med": 4.631151801529086,
-      "p90": 8.073141638463312
+      "med": 4.878222569509035,
+      "p90": 8.711881612835896
      },
      "kill": {
       "n": 9,
-      "med": 8.572093140666766,
-      "p90": 19.725260945550758
+      "med": 14.610643675043718,
+      "p90": 23.40543087647029
      },
      "total": {
       "n": 9,
-      "med": 16.20087092069764,
-      "p90": 26.979002925504574
+      "med": 25.422213865678486,
+      "p90": 29.925540764173547
      }
     },
     "fighter": {
@@ -1922,23 +1963,23 @@
      },
      "dec": {
       "n": 28,
-      "med": 7.139428297033419,
-      "p90": 37.46739865075597
+      "med": 5.7392409933631825,
+      "p90": 42.27484050943275
      },
      "fire": {
       "n": 28,
-      "med": 7.573922144073094,
-      "p90": 56.72791386061965
+      "med": 7.328640111036975,
+      "p90": 56.90110706498831
      },
      "kill": {
       "n": 28,
-      "med": 19.60277799602909,
-      "p90": 57.73552977355706
+      "med": 19.537288372397768,
+      "p90": 57.73176301999837
      },
      "total": {
       "n": 28,
-      "med": 73.76827349669898,
-      "p90": 97.8048463269484
+      "med": 68.10689697984719,
+      "p90": 100.90174073232072
      }
     },
     "uav_small": {
@@ -1954,43 +1995,43 @@
       "p90": 0.9495031787544121
      },
      "dec": {
-      "n": 59,
-      "med": 3.869740527727572,
-      "p90": 14.119375658985177
+      "n": 58,
+      "med": 3.80293408085015,
+      "p90": 10.723648849525603
      },
      "fire": {
-      "n": 58,
-      "med": 430.6104268089705,
-      "p90": 521.9631837621155
+      "n": 57,
+      "med": 434.34288674374307,
+      "p90": 525.570990609916
      },
      "kill": {
-      "n": 49,
-      "med": 11.997483301904822,
-      "p90": 27.946083242139593
+      "n": 55,
+      "med": 11.99794446840906,
+      "p90": 30.736803952402624
      },
      "total": {
-      "n": 49,
-      "med": 447.79693829017947,
-      "p90": 569.3187065331437
+      "n": 55,
+      "med": 458.17377284279866,
+      "p90": 557.188534133488
      }
     }
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 60,
+     "killed": 64,
      "leaked": 0,
-     "unresolved": 5,
+     "unresolved": 1,
      "fired": 65,
-     "emergency": 7,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 76,
+     "killed": 59,
      "leaked": 0,
-     "unresolved": 0,
-     "fired": 76,
-     "emergency": 55,
-     "selfdef": 0
+     "unresolved": 17,
+     "fired": 63,
+     "emergency": 0,
+     "selfdef": 4
     },
     "cruise": {
      "killed": 9,
@@ -2009,10 +2050,10 @@
      "selfdef": 0
     },
     "uav_small": {
-     "killed": 49,
+     "killed": 55,
      "leaked": 0,
-     "unresolved": 10,
-     "fired": 58,
+     "unresolved": 4,
+     "fired": 57,
      "emergency": 0,
      "selfdef": 0
     }
@@ -2021,34 +2062,42 @@
   "asis#31": {
    "g": {
     "spawned": 232,
-    "killed": 217,
-    "leaked": 15,
+    "killed": 189,
+    "leaked": 43,
     "unresolved": 0,
-    "shots": 278,
-    "mttk": 209.9218353960677,
-    "mtte": 178.02077917628247,
-    "decision": 174.89990961106454,
-    "coord": 9.13035748346703,
+    "shots": 241,
+    "mttk": 231.17472303693717,
+    "mtte": 198.8933363769425,
+    "decision": 195.79333637694205,
+    "coord": 10.790189254682293,
     "leakReasons": {
-     "missed": 11,
-     "ammo_depleted": 2,
-     "timeout:engage": 2
+     "timeout:c2": 10,
+     "no_fire_control": 4,
+     "window_lost_due_to_c2": 4,
+     "timeout:engage": 9,
+     "missed": 4,
+     "correlation_failed": 1,
+     "ammo_depleted": 11
     },
     "failure": {
-     "missed": 11,
-     "ammo_depleted": 2,
-     "timeout:engage": 2
+     "timeout:c2": 10,
+     "no_fire_control": 4,
+     "window_lost_due_to_c2": 4,
+     "timeout:engage": 9,
+     "missed": 4,
+     "correlation_failed": 1,
+     "ammo_depleted": 11
     },
     "coalition": {
-     "proposals": 154,
-     "allocRok": 63,
-     "allocUsfk": 45,
-     "dup": 3,
-     "skipped": 28
+     "proposals": 176,
+     "allocRok": 77,
+     "allocUsfk": 41,
+     "dup": 7,
+     "skipped": 80
     },
     "cue": {
      "cued": 135,
-     "emergency": 82
+     "emergency": 0
     },
     "routeRetry": {
      "scheduled": 50,
@@ -2063,19 +2112,19 @@
      "mis": 113,
      "failed": 256,
      "stale": 0,
-     "identified": 700
+     "identified": 695
     },
     "cost": {
-     "interceptM": 1232.6000000000022,
-     "killedThreatM": 755.5599999999996,
-     "exchange": 1.6313727566308471,
-     "interceptSatM": 746.6000000000005,
-     "killedThreatSatM": 86.56000000000012,
-     "exchangeSat": 8.62523105360443,
-     "duplicateInterceptM": 23.4,
-     "leakedThreatM": 17.080000000000002,
-     "defenseEfficiency": 0.9778939739076413,
-     "defenseEfficiencySat": 0.9765342960288809
+     "interceptM": 982.2000000000019,
+     "killedThreatM": 722.6099999999996,
+     "exchange": 1.3592394237555563,
+     "interceptSatM": 507.1999999999994,
+     "killedThreatSatM": 53.60999999999995,
+     "exchangeSat": 9.460921469875021,
+     "duplicateInterceptM": 38.2,
+     "leakedThreatM": 50.03,
+     "defenseEfficiency": 0.9352479809484365,
+     "defenseEfficiencySat": 0.6048059566787001
     }
    },
    "time": {
@@ -2093,23 +2142,23 @@
      },
      "dec": {
       "n": 47,
-      "med": 55.37020727531899,
-      "p90": 96.33961928910776
+      "med": 51.83859836140982,
+      "p90": 80.61316091637957
      },
      "fire": {
       "n": 47,
-      "med": 157.42197388284956,
-      "p90": 275.439235902155
+      "med": 156.79977840481422,
+      "p90": 267.51662264125207
      },
      "kill": {
       "n": 42,
-      "med": 62.90243676847467,
-      "p90": 64.50017342152591
+      "med": 62.13791089138931,
+      "p90": 64.44787315871281
      },
      "total": {
       "n": 42,
-      "med": 290.32672454712133,
-      "p90": 331.4614230685372
+      "med": 286.5565090313187,
+      "p90": 326.6559777870134
      }
     },
     "mrl_large": {
@@ -2125,24 +2174,24 @@
       "p90": 20.88792289193907
      },
      "dec": {
-      "n": 88,
-      "med": 41.77830631248388,
-      "p90": 71.39608608778849
+      "n": 73,
+      "med": 62.735570182921066,
+      "p90": 125.51045534203155
      },
      "fire": {
-      "n": 88,
-      "med": 0,
-      "p90": 38.104177051348415
+      "n": 59,
+      "med": 11.538705120354962,
+      "p90": 65.42337860409327
      },
      "kill": {
-      "n": 86,
-      "med": 45.65490512953011,
-      "p90": 74.9545001218371
+      "n": 53,
+      "med": 25.00259130552172,
+      "p90": 71.46081180500035
      },
      "total": {
-      "n": 86,
-      "med": 107.36191925087553,
-      "p90": 169.82396468579134
+      "n": 53,
+      "med": 127.93422308802917,
+      "p90": 149.8627224737462
      }
     },
     "cruise": {
@@ -2159,23 +2208,23 @@
      },
      "dec": {
       "n": 12,
-      "med": 25.218691398501278,
-      "p90": 34.267240053074204
+      "med": 24.930051630689775,
+      "p90": 33.525289783143535
      },
      "fire": {
       "n": 12,
-      "med": 28.23865998136256,
-      "p90": 63.15291941996719
+      "med": 11.495476306778755,
+      "p90": 23.572245047698857
      },
      "kill": {
       "n": 12,
-      "med": 13.351405424430169,
-      "p90": 36.93934769817565
+      "med": 16.00857746066697,
+      "p90": 21.625832922631957
      },
      "total": {
       "n": 12,
-      "med": 66.9795057294498,
-      "p90": 107.78924393760087
+      "med": 55.976279802686804,
+      "p90": 64.24672344534096
      }
     },
     "fighter": {
@@ -2192,23 +2241,23 @@
      },
      "dec": {
       "n": 21,
-      "med": 45.86958179942462,
-      "p90": 81.10440544638618
+      "med": 31.25525213878542,
+      "p90": 75.7460562978548
      },
      "fire": {
       "n": 21,
-      "med": 20.205436155337907,
-      "p90": 29.72833630438936
+      "med": 16.29105230757159,
+      "p90": 46.44277956347241
      },
      "kill": {
       "n": 21,
-      "med": 16.77747099889143,
-      "p90": 70.18481036423452
+      "med": 19.379360780397747,
+      "p90": 84.93109133117082
      },
      "total": {
       "n": 21,
-      "med": 100.3092772814432,
-      "p90": 145.08046357418937
+      "med": 106.39926191990372,
+      "p90": 137.22547760404143
      }
     },
     "uav_small": {
@@ -2225,23 +2274,23 @@
      },
      "dec": {
       "n": 64,
-      "med": 77.5888331588817,
-      "p90": 137.29029691341464
+      "med": 77.44760480561968,
+      "p90": 175.73397478373295
      },
      "fire": {
-      "n": 62,
-      "med": 246.27198506907075,
-      "p90": 496.512523172559
+      "n": 63,
+      "med": 206.8257766158008,
+      "p90": 440.4236623336898
      },
      "kill": {
-      "n": 56,
-      "med": 11.99893812619348,
-      "p90": 43.22169892348734
+      "n": 61,
+      "med": 11.999368708825841,
+      "p90": 46.4173013266884
      },
      "total": {
-      "n": 56,
-      "med": 451.5941029792682,
-      "p90": 568.5139519961813
+      "n": 61,
+      "med": 450.22201258921234,
+      "p90": 583.1645036709647
      }
     }
    },
@@ -2251,16 +2300,16 @@
      "leaked": 0,
      "unresolved": 5,
      "fired": 47,
-     "emergency": 3,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 86,
+     "killed": 53,
      "leaked": 0,
-     "unresolved": 2,
-     "fired": 88,
-     "emergency": 69,
-     "selfdef": 0
+     "unresolved": 35,
+     "fired": 59,
+     "emergency": 0,
+     "selfdef": 11
     },
     "cruise": {
      "killed": 12,
@@ -2279,10 +2328,10 @@
      "selfdef": 0
     },
     "uav_small": {
-     "killed": 56,
+     "killed": 61,
      "leaked": 0,
-     "unresolved": 8,
-     "fired": 62,
+     "unresolved": 3,
+     "fired": 63,
      "emergency": 0,
      "selfdef": 0
     }
@@ -2291,36 +2340,42 @@
   "tobe#31": {
    "g": {
     "spawned": 232,
-    "killed": 217,
-    "leaked": 15,
+    "killed": 195,
+    "leaked": 37,
     "unresolved": 0,
-    "shots": 296,
-    "mttk": 202.42670197763275,
-    "mtte": 169.7610220909139,
-    "decision": 166.64015252569607,
+    "shots": 271,
+    "mttk": 221.62644428567856,
+    "mtte": 187.0617124012209,
+    "decision": 183.9217124012204,
     "coord": 0,
     "leakReasons": {
-     "missed": 11,
-     "timeout:engage": 1,
-     "ammo_depleted": 2,
-     "correlation_failed": 1
+     "timeout:c2": 2,
+     "timeout:engage": 5,
+     "window_lost_due_to_c2": 5,
+     "no_fire_control": 1,
+     "missed": 10,
+     "correlation_failed": 1,
+     "ammo_depleted": 13
     },
     "failure": {
-     "missed": 11,
-     "timeout:engage": 1,
-     "ammo_depleted": 2,
-     "correlation_failed": 1
+     "timeout:c2": 2,
+     "timeout:engage": 5,
+     "window_lost_due_to_c2": 5,
+     "no_fire_control": 1,
+     "missed": 10,
+     "correlation_failed": 1,
+     "ammo_depleted": 13
     },
     "coalition": {
-     "proposals": 137,
-     "allocRok": 57,
-     "allocUsfk": 52,
-     "dup": 10,
-     "skipped": 18
+     "proposals": 141,
+     "allocRok": 63,
+     "allocUsfk": 54,
+     "dup": 12,
+     "skipped": 76
     },
     "cue": {
      "cued": 135,
-     "emergency": 82
+     "emergency": 0
     },
     "routeRetry": {
      "scheduled": 50,
@@ -2338,16 +2393,16 @@
      "identified": 738
     },
     "cost": {
-     "interceptM": 1230.0000000000027,
-     "killedThreatM": 739.5399999999996,
-     "exchange": 1.6631960407821123,
-     "interceptSatM": 737.0000000000009,
-     "killedThreatSatM": 86.5400000000001,
-     "exchangeSat": 8.516293043679223,
-     "duplicateInterceptM": 35.6,
-     "leakedThreatM": 33.099999999999994,
-     "defenseEfficiency": 0.9571598674673845,
-     "defenseEfficiencySat": 0.9763086642599279
+     "interceptM": 1050.6000000000024,
+     "killedThreatM": 687.5799999999996,
+     "exchange": 1.5279676546729153,
+     "interceptSatM": 550.1999999999998,
+     "killedThreatSatM": 62.579999999999934,
+     "exchangeSat": 8.791946308724839,
+     "duplicateInterceptM": 47.400000000000006,
+     "leakedThreatM": 85.06,
+     "defenseEfficiency": 0.8899099192379374,
+     "defenseEfficiencySat": 0.7060018050541513
     }
    },
    "time": {
@@ -2365,23 +2420,23 @@
      },
      "dec": {
       "n": 47,
-      "med": 19.25222539122501,
-      "p90": 34.18925821497578
+      "med": 18.68777700528358,
+      "p90": 32.80687308238089
      },
      "fire": {
       "n": 47,
-      "med": 182.8231740350793,
-      "p90": 298.5049946722688
+      "med": 182.05629638705284,
+      "p90": 286.60679310324167
      },
      "kill": {
-      "n": 45,
-      "med": 61.98282078858347,
-      "p90": 64.50235426998802
+      "n": 44,
+      "med": 62.26521590217783,
+      "p90": 97.11536819765661
      },
      "total": {
-      "n": 45,
-      "med": 287.7963310123316,
-      "p90": 332.46123610551695
+      "n": 44,
+      "med": 294.15078181298566,
+      "p90": 330.29591458947993
      }
     },
     "mrl_large": {
@@ -2397,24 +2452,24 @@
       "p90": 20.88792289193907
      },
      "dec": {
-      "n": 88,
-      "med": 21.303310934433966,
-      "p90": 73.53364144100215
+      "n": 76,
+      "med": 40.17519285251262,
+      "p90": 123.53402717594167
      },
      "fire": {
-      "n": 88,
-      "med": 0,
-      "p90": 30.658846721506052
+      "n": 68,
+      "med": 4.983200581398364,
+      "p90": 40.912030165959095
      },
      "kill": {
-      "n": 86,
-      "med": 47.196719511950505,
-      "p90": 79.72953673447597
+      "n": 62,
+      "med": 36.1733156161057,
+      "p90": 76.82550242016873
      },
      "total": {
-      "n": 86,
-      "med": 101.5947778122653,
-      "p90": 149.80858959923455
+      "n": 62,
+      "med": 119.89358197595425,
+      "p90": 148.92699421592397
      }
     },
     "cruise": {
@@ -2431,23 +2486,23 @@
      },
      "dec": {
       "n": 12,
-      "med": 3.8124305767462374,
-      "p90": 6.502496838273146
+      "med": 2.1373434219145224,
+      "p90": 3.939311416125065
      },
      "fire": {
       "n": 12,
-      "med": 4.127062089166316,
-      "p90": 14.215479046236169
+      "med": 3.7217668590202493,
+      "p90": 13.736944423220166
      },
      "kill": {
       "n": 12,
-      "med": 15.116646431471054,
-      "p90": 17.763984776529355
+      "med": 13.980851996679917,
+      "p90": 22.47306196698696
      },
      "total": {
       "n": 12,
-      "med": 24.21473277998939,
-      "p90": 38.257882448730584
+      "med": 20.657604861193164,
+      "p90": 35.85024852819686
      }
     },
     "fighter": {
@@ -2464,23 +2519,23 @@
      },
      "dec": {
       "n": 21,
-      "med": 7.9456443568774375,
-      "p90": 46.48260224825833
+      "med": 9.653301626901907,
+      "p90": 50.21066083861456
      },
      "fire": {
       "n": 21,
-      "med": 8.359671557446319,
-      "p90": 29.962909405894948
+      "med": 15.753616705578224,
+      "p90": 51.6291576243309
      },
      "kill": {
-      "n": 20,
-      "med": 19.393367715867498,
-      "p90": 58.46537289113712
+      "n": 19,
+      "med": 19.488894749600604,
+      "p90": 57.28112197928135
      },
      "total": {
-      "n": 20,
-      "med": 47.612853968236095,
-      "p90": 99.93012554410166
+      "n": 19,
+      "med": 80.38330793766465,
+      "p90": 100.02049501439001
      }
     },
     "uav_small": {
@@ -2497,42 +2552,42 @@
      },
      "dec": {
       "n": 64,
-      "med": 4.878153863601028,
-      "p90": 17.3257346550447
+      "med": 4.297596732151533,
+      "p90": 47.37086434812727
      },
      "fire": {
       "n": 62,
-      "med": 433.454960974552,
-      "p90": 524.0133145699259
+      "med": 394.85521804342125,
+      "p90": 497.0203738018249
      },
      "kill": {
-      "n": 54,
-      "med": 11.999721664969002,
-      "p90": 30.222895753695866
+      "n": 58,
+      "med": 11.998758274514785,
+      "p90": 31.69009110008642
      },
      "total": {
-      "n": 54,
-      "med": 460.3668032319426,
-      "p90": 568.5193734334321
+      "n": 58,
+      "med": 451.5727314715948,
+      "p90": 744.5696316826734
      }
     }
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 45,
+     "killed": 44,
      "leaked": 0,
-     "unresolved": 2,
+     "unresolved": 3,
      "fired": 47,
-     "emergency": 6,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 86,
+     "killed": 62,
      "leaked": 0,
-     "unresolved": 2,
-     "fired": 88,
-     "emergency": 65,
-     "selfdef": 0
+     "unresolved": 26,
+     "fired": 68,
+     "emergency": 0,
+     "selfdef": 8
     },
     "cruise": {
      "killed": 12,
@@ -2543,17 +2598,17 @@
      "selfdef": 0
     },
     "fighter": {
-     "killed": 20,
+     "killed": 19,
      "leaked": 0,
-     "unresolved": 1,
+     "unresolved": 2,
      "fired": 21,
      "emergency": 0,
      "selfdef": 0
     },
     "uav_small": {
-     "killed": 54,
+     "killed": 58,
      "leaked": 0,
-     "unresolved": 10,
+     "unresolved": 6,
      "fired": 62,
      "emergency": 0,
      "selfdef": 0
@@ -2565,38 +2620,40 @@
   "ea OFF / asis": {
    "g": {
     "spawned": 228,
-    "killed": 216,
-    "leaked": 12,
+    "killed": 185,
+    "leaked": 43,
     "unresolved": 0,
-    "shots": 279,
-    "mttk": 213.3767179401768,
-    "mtte": 178.80935161955878,
-    "decision": 175.2389480321144,
-    "coord": 7.197456828880264,
+    "shots": 243,
+    "mttk": 234.62234085826344,
+    "mtte": 205.71997071903874,
+    "decision": 202.15791943698693,
+    "coord": 6.984452785046524,
     "leakReasons": {
-     "missed": 6,
-     "ammo_depleted": 3,
-     "correlation_failed": 1,
-     "window_lost_due_to_c2": 1,
-     "timeout:c2": 1
+     "missed": 7,
+     "timeout:c2": 8,
+     "timeout:engage": 3,
+     "window_lost_due_to_c2": 3,
+     "correlation_failed": 2,
+     "ammo_depleted": 20
     },
     "failure": {
-     "missed": 6,
-     "ammo_depleted": 3,
-     "correlation_failed": 1,
-     "window_lost_due_to_c2": 1,
-     "timeout:c2": 1
+     "missed": 7,
+     "timeout:c2": 8,
+     "timeout:engage": 3,
+     "window_lost_due_to_c2": 3,
+     "correlation_failed": 2,
+     "ammo_depleted": 20
     },
     "coalition": {
-     "proposals": 100,
-     "allocRok": 20,
-     "allocUsfk": 57,
-     "dup": 18,
-     "skipped": 61
+     "proposals": 114,
+     "allocRok": 30,
+     "allocUsfk": 61,
+     "dup": 17,
+     "skipped": 123
     },
     "cue": {
      "cued": 143,
-     "emergency": 106
+     "emergency": 0
     },
     "routeRetry": {
      "scheduled": 51,
@@ -2611,43 +2668,43 @@
      "mis": 67,
      "failed": 192,
      "stale": 0,
-     "identified": 662
+     "identified": 659
     },
     "cost": {
-     "interceptM": 1411.6000000000017,
-     "killedThreatM": 661.4799999999996,
-     "exchange": 2.1340025397593316,
-     "interceptSatM": 811.6000000000006,
-     "killedThreatSatM": 87.48000000000006,
-     "exchangeSat": 9.277549154092364,
-     "duplicateInterceptM": 74.4,
-     "leakedThreatM": 12.049999999999999,
-     "defenseEfficiency": 0.9821091859308421,
-     "defenseEfficiencySat": 0.9663095106594499
+     "interceptM": 1154.2000000000014,
+     "killedThreatM": 621.4999999999997,
+     "exchange": 1.8571198712791666,
+     "interceptSatM": 563.1999999999998,
+     "killedThreatSatM": 56.49999999999997,
+     "exchangeSat": 9.968141592920356,
+     "duplicateInterceptM": 69.60000000000001,
+     "leakedThreatM": 52.029999999999994,
+     "defenseEfficiency": 0.9227502858076106,
+     "defenseEfficiencySat": 0.6241025074560917
     }
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 51,
+     "killed": 47,
      "leaked": 0,
-     "unresolved": 2,
+     "unresolved": 6,
      "fired": 53,
-     "emergency": 10,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 87,
+     "killed": 56,
      "leaked": 0,
-     "unresolved": 3,
-     "fired": 90,
-     "emergency": 82,
-     "selfdef": 0
+     "unresolved": 34,
+     "fired": 58,
+     "emergency": 0,
+     "selfdef": 12
     },
     "cruise": {
-     "killed": 14,
+     "killed": 16,
      "leaked": 0,
-     "unresolved": 2,
-     "fired": 14,
+     "unresolved": 0,
+     "fired": 16,
      "emergency": 0,
      "selfdef": 0
     },
@@ -2660,51 +2717,59 @@
      "selfdef": 0
     },
     "uav_small": {
-     "killed": 48,
+     "killed": 50,
      "leaked": 0,
-     "unresolved": 5,
-     "fired": 50,
+     "unresolved": 3,
+     "fired": 52,
      "emergency": 0,
      "selfdef": 0
     }
    },
    "timeTotal": {
-    "srbm": 287.412264417851,
-    "mrl_large": 91.81475941136767,
-    "cruise": 80.88025305364044,
-    "fighter": 145.74083167710933,
-    "uav_small": 355.8257083038793
+    "srbm": 284.14247176434355,
+    "mrl_large": 135.33774752494116,
+    "cruise": 80.24820233311902,
+    "fighter": 131.37588674478127,
+    "uav_small": 483.0838235074898
    }
   },
   "ea OFF / tobe": {
    "g": {
     "spawned": 228,
-    "killed": 218,
-    "leaked": 10,
+    "killed": 189,
+    "leaked": 39,
     "unresolved": 0,
-    "shots": 279,
-    "mttk": 193.754272721676,
-    "mtte": 151.13950085317475,
-    "decision": 147.6284876373153,
+    "shots": 248,
+    "mttk": 200.95832560337303,
+    "mtte": 170.07666100062644,
+    "decision": 166.5791485628151,
     "coord": 0,
     "leakReasons": {
-     "missed": 9,
-     "ammo_depleted": 1
+     "timeout:engage": 4,
+     "timeout:c2": 4,
+     "window_lost_due_to_c2": 3,
+     "missed": 8,
+     "ammo_depleted": 18,
+     "correlation_failed": 2
     },
     "failure": {
-     "missed": 9,
-     "ammo_depleted": 1
+     "timeout:engage": 4,
+     "timeout:c2": 4,
+     "window_lost_due_to_c2": 3,
+     "missed": 8,
+     "ammo_depleted": 18,
+     "correlation_failed": 2
     },
     "coalition": {
-     "proposals": 87,
-     "allocRok": 17,
-     "allocUsfk": 63,
-     "dup": 14,
-     "skipped": 43
+     "proposals": 98,
+     "allocRok": 34,
+     "allocUsfk": 58,
+     "dup": 18,
+     "skipped": 101
     },
     "cue": {
      "cued": 143,
-     "emergency": 97
+     "emergency": 0
     },
     "routeRetry": {
      "scheduled": 51,
@@ -2722,142 +2787,152 @@
      "identified": 711
     },
     "cost": {
-     "interceptM": 1427.800000000002,
-     "killedThreatM": 636.4999999999997,
-     "exchange": 2.243205027494113,
-     "interceptSatM": 814.0000000000005,
-     "killedThreatSatM": 87.50000000000009,
-     "exchangeSat": 9.302857142857139,
-     "duplicateInterceptM": 55,
-     "leakedThreatM": 37.03,
-     "defenseEfficiency": 0.9450210087152763,
-     "defenseEfficiencySat": 0.9665304319010273
+     "interceptM": 1126.4000000000021,
+     "killedThreatM": 633.4799999999997,
+     "exchange": 1.7781145418955653,
+     "interceptSatM": 537.1999999999998,
+     "killedThreatSatM": 59.47999999999997,
+     "exchangeSat": 9.03160726294553,
+     "duplicateInterceptM": 67,
+     "leakedThreatM": 40.05,
+     "defenseEfficiency": 0.9405371698365329,
+     "defenseEfficiencySat": 0.657019772451121
     }
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 50,
-     "leaked": 0,
-     "unresolved": 3,
-     "fired": 53,
-     "emergency": 10,
-     "selfdef": 0
-    },
-    "mrl_large": {
-     "killed": 87,
-     "leaked": 0,
-     "unresolved": 3,
-     "fired": 90,
-     "emergency": 77,
-     "selfdef": 0
-    },
-    "cruise": {
-     "killed": 16,
-     "leaked": 0,
-     "unresolved": 0,
-     "fired": 16,
-     "emergency": 0,
-     "selfdef": 0
-    },
-    "fighter": {
-     "killed": 15,
-     "leaked": 0,
-     "unresolved": 1,
-     "fired": 16,
-     "emergency": 0,
-     "selfdef": 0
-    },
-    "uav_small": {
      "killed": 50,
      "leaked": 0,
      "unresolved": 3,
      "fired": 52,
      "emergency": 0,
      "selfdef": 0
+    },
+    "mrl_large": {
+     "killed": 59,
+     "leaked": 0,
+     "unresolved": 31,
+     "fired": 64,
+     "emergency": 0,
+     "selfdef": 11
+    },
+    "cruise": {
+     "killed": 16,
+     "leaked": 0,
+     "unresolved": 0,
+     "fired": 16,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "fighter": {
+     "killed": 16,
+     "leaked": 0,
+     "unresolved": 0,
+     "fired": 16,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "uav_small": {
+     "killed": 48,
+     "leaked": 0,
+     "unresolved": 5,
+     "fired": 53,
+     "emergency": 0,
+     "selfdef": 0
     }
    },
    "timeTotal": {
-    "srbm": 262.077161633849,
-    "mrl_large": 91.5963432700778,
-    "cruise": 18.596975889932935,
-    "fighter": 55.123269625470584,
-    "uav_small": 447.13781646971415
+    "srbm": 268.8782976348856,
+    "mrl_large": 118.48186874182852,
+    "cruise": 18.44397949262344,
+    "fighter": 78.14074719407131,
+    "uav_small": 193.19302596376383
    }
   },
   "shorad 현실화 OFF / asis": {
    "g": {
     "spawned": 228,
-    "killed": 215,
-    "leaked": 13,
+    "killed": 186,
+    "leaked": 42,
     "unresolved": 0,
-    "shots": 259,
-    "mttk": 194.38071479547676,
-    "mtte": 157.82869555769742,
-    "decision": 154.2582919702529,
-    "coord": 8.141481711107652,
+    "shots": 220,
+    "mttk": 233.6155446223217,
+    "mtte": 200.86200725027638,
+    "decision": 197.30405853232708,
+    "coord": 9.30689757607162,
     "leakReasons": {
-     "missed": 8,
-     "ammo_depleted": 5
+     "window_lost_due_to_c2": 2,
+     "timeout:c2": 12,
+     "no_fire_control": 1,
+     "timeout:engage": 5,
+     "missed": 3,
+     "correlation_failed": 2,
+     "ammo_depleted": 17
     },
     "failure": {
-     "missed": 8,
-     "ammo_depleted": 5
+     "window_lost_due_to_c2": 2,
+     "timeout:c2": 12,
+     "no_fire_control": 1,
+     "timeout:engage": 5,
+     "missed": 3,
+     "correlation_failed": 2,
+     "ammo_depleted": 17
     },
     "coalition": {
-     "proposals": 176,
-     "allocRok": 63,
-     "allocUsfk": 52,
-     "dup": 1,
-     "skipped": 15
+     "proposals": 187,
+     "allocRok": 73,
+     "allocUsfk": 58,
+     "dup": 6,
+     "skipped": 74
     },
     "cue": {
      "cued": 143,
-     "emergency": 93
+     "emergency": 0
     },
     "routeRetry": {
-     "scheduled": 50,
-     "attempts": 24,
-     "commandersDeferred": 46,
-     "commandersRecovered": 46,
-     "recoveryDelaySum": 289.60000000002697,
+     "scheduled": 51,
+     "attempts": 25,
+     "commandersDeferred": 47,
+     "commandersRecovered": 47,
+     "recoveryDelaySum": 290.00000000002706,
      "recoveryDelayMax": 48.400000000011005
     },
     "trackQuality": {
      "correct": 3142,
      "mis": 85,
-     "failed": 239,
+     "failed": 240,
      "stale": 0,
-     "identified": 695
+     "identified": 693
     },
     "cost": {
-     "interceptM": 1246.6000000000015,
-     "killedThreatM": 633.4799999999996,
-     "exchange": 1.9678600745090649,
-     "interceptSatM": 706.6000000000003,
-     "killedThreatSatM": 87.48000000000008,
-     "exchangeSat": 8.077274805669862,
-     "duplicateInterceptM": 12.2,
-     "leakedThreatM": 40.05,
-     "defenseEfficiency": 0.9405371698365329,
-     "defenseEfficiencySat": 0.9663095106594499
+     "interceptM": 1012.4000000000013,
+     "killedThreatM": 573.5299999999996,
+     "exchange": 1.765208445940059,
+     "interceptSatM": 454.3999999999995,
+     "killedThreatSatM": 55.52999999999997,
+     "exchangeSat": 8.182964163515212,
+     "duplicateInterceptM": 27,
+     "leakedThreatM": 100,
+     "defenseEfficiency": 0.8515285139488961,
+     "defenseEfficiencySat": 0.613387827239589
     }
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 49,
+     "killed": 48,
      "leaked": 0,
-     "unresolved": 4,
+     "unresolved": 5,
      "fired": 53,
-     "emergency": 6,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 87,
+     "killed": 55,
      "leaked": 0,
-     "unresolved": 3,
-     "fired": 90,
-     "emergency": 75,
-     "selfdef": 0
+     "unresolved": 35,
+     "fired": 58,
+     "emergency": 0,
+     "selfdef": 11
     },
     "cruise": {
      "killed": 16,
@@ -2868,104 +2943,114 @@
      "selfdef": 0
     },
     "fighter": {
-     "killed": 15,
+     "killed": 14,
      "leaked": 0,
-     "unresolved": 1,
-     "fired": 16,
+     "unresolved": 2,
+     "fired": 15,
      "emergency": 0,
      "selfdef": 0
     },
     "uav_small": {
-     "killed": 48,
+     "killed": 53,
      "leaked": 0,
-     "unresolved": 5,
-     "fired": 48,
+     "unresolved": 0,
+     "fired": 53,
      "emergency": 0,
      "selfdef": 0
     }
    },
    "timeTotal": {
-    "srbm": 265.82081411194895,
-    "mrl_large": 98.62623711439596,
-    "cruise": 53.191180170873395,
-    "fighter": 89.96059379923804,
-    "uav_small": 430.7128781326986
+    "srbm": 287.13516731919447,
+    "mrl_large": 133.99739321046565,
+    "cruise": 60.45412626104735,
+    "fighter": 84.78097534171837,
+    "uav_small": 451.3589541843521
    }
   },
   "shorad 현실화 OFF / tobe": {
    "g": {
     "spawned": 228,
-    "killed": 219,
-    "leaked": 9,
+    "killed": 188,
+    "leaked": 40,
     "unresolved": 0,
-    "shots": 270,
-    "mttk": 190.19303327674496,
-    "mtte": 151.65587678182615,
-    "decision": 148.08547319438182,
+    "shots": 236,
+    "mttk": 215.50054994454652,
+    "mtte": 180.92650898972173,
+    "decision": 177.37196353517578,
     "coord": 0,
     "leakReasons": {
-     "missed": 4,
-     "ammo_depleted": 5
+     "window_lost_due_to_c2": 2,
+     "timeout:engage": 8,
+     "timeout:c2": 5,
+     "missed": 2,
+     "ammo_depleted": 20,
+     "correlation_failed": 2,
+     "no_fire_control": 1
     },
     "failure": {
-     "missed": 4,
-     "ammo_depleted": 5
+     "window_lost_due_to_c2": 2,
+     "timeout:engage": 8,
+     "timeout:c2": 5,
+     "missed": 2,
+     "ammo_depleted": 20,
+     "correlation_failed": 2,
+     "no_fire_control": 1
     },
     "coalition": {
-     "proposals": 134,
-     "allocRok": 53,
-     "allocUsfk": 66,
-     "dup": 14,
-     "skipped": 12
+     "proposals": 141,
+     "allocRok": 60,
+     "allocUsfk": 62,
+     "dup": 18,
+     "skipped": 67
     },
     "cue": {
      "cued": 143,
-     "emergency": 87
+     "emergency": 0
     },
     "routeRetry": {
-     "scheduled": 50,
-     "attempts": 24,
-     "commandersDeferred": 46,
-     "commandersRecovered": 46,
-     "recoveryDelaySum": 289.800000000027,
+     "scheduled": 49,
+     "attempts": 23,
+     "commandersDeferred": 45,
+     "commandersRecovered": 45,
+     "recoveryDelaySum": 289.4000000000269,
      "recoveryDelayMax": 48.400000000011005
     },
     "trackQuality": {
-     "correct": 3142,
-     "mis": 85,
-     "failed": 239,
+     "correct": 3144,
+     "mis": 83,
+     "failed": 238,
      "stale": 0,
      "identified": 711
     },
     "cost": {
-     "interceptM": 1272.0000000000018,
-     "killedThreatM": 645.4799999999997,
-     "exchange": 1.970626510503815,
-     "interceptSatM": 745.2000000000005,
-     "killedThreatSatM": 87.48000000000006,
-     "exchangeSat": 8.518518518518519,
-     "duplicateInterceptM": 42.599999999999994,
-     "leakedThreatM": 28.050000000000008,
-     "defenseEfficiency": 0.9583537481626654,
-     "defenseEfficiencySat": 0.9663095106594499
+     "interceptM": 1012.2000000000019,
+     "killedThreatM": 628.5199999999995,
+     "exchange": 1.610449945904669,
+     "interceptSatM": 454.9999999999995,
+     "killedThreatSatM": 54.51999999999997,
+     "exchangeSat": 8.345561261922226,
+     "duplicateInterceptM": 51.6,
+     "leakedThreatM": 45.01,
+     "defenseEfficiency": 0.9331729841283981,
+     "defenseEfficiencySat": 0.6022313045399313
     }
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 53,
+     "killed": 50,
      "leaked": 0,
-     "unresolved": 0,
+     "unresolved": 3,
      "fired": 53,
-     "emergency": 3,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 87,
+     "killed": 54,
      "leaked": 0,
-     "unresolved": 3,
-     "fired": 90,
-     "emergency": 70,
-     "selfdef": 0
+     "unresolved": 36,
+     "fired": 61,
+     "emergency": 0,
+     "selfdef": 11
     },
     "cruise": {
      "killed": 16,
@@ -2976,28 +3061,28 @@
      "selfdef": 0
     },
     "fighter": {
-     "killed": 15,
+     "killed": 16,
      "leaked": 0,
-     "unresolved": 1,
+     "unresolved": 0,
      "fired": 16,
      "emergency": 0,
      "selfdef": 0
     },
     "uav_small": {
-     "killed": 48,
+     "killed": 52,
      "leaked": 0,
-     "unresolved": 5,
-     "fired": 48,
+     "unresolved": 1,
+     "fired": 52,
      "emergency": 0,
      "selfdef": 0
     }
    },
    "timeTotal": {
-    "srbm": 276.6580811716183,
-    "mrl_large": 89.82613590196456,
-    "cruise": 18.203736344376466,
-    "fighter": 79.43347950914927,
-    "uav_small": 430.70920700627596
+    "srbm": 297.9939791751267,
+    "mrl_large": 117.79180778683865,
+    "cruise": 16.566764675881814,
+    "fighter": 72.4514148971474,
+    "uav_small": 440.06732902628664
    }
   },
   "bsrc+cue OFF / asis": {
@@ -3227,70 +3312,80 @@
   "coal OFF / asis": {
    "g": {
     "spawned": 228,
-    "killed": 214,
-    "leaked": 14,
+    "killed": 169,
+    "leaked": 59,
     "unresolved": 0,
-    "shots": 288,
-    "mttk": 182.77325288280156,
-    "mtte": 147.20245545662917,
-    "decision": 143.63205186918475,
-    "coord": 8.375287348507255,
+    "shots": 258,
+    "mttk": 213.8933937291282,
+    "mtte": 182.98111381843452,
+    "decision": 179.43795592369722,
+    "coord": 9.594895155813006,
     "leakReasons": {
-     "missed": 9,
-     "ammo_depleted": 5
+     "window_lost_due_to_c2": 2,
+     "timeout:c2": 10,
+     "missed": 19,
+     "timeout:engage": 2,
+     "no_fire_control": 4,
+     "correlation_failed": 3,
+     "ammo_depleted": 19
     },
     "failure": {
-     "missed": 9,
-     "ammo_depleted": 5
+     "window_lost_due_to_c2": 2,
+     "timeout:c2": 10,
+     "missed": 19,
+     "timeout:engage": 2,
+     "no_fire_control": 4,
+     "correlation_failed": 3,
+     "ammo_depleted": 19
     },
     "cue": {
      "cued": 143,
-     "emergency": 90
+     "emergency": 0
     },
     "routeRetry": {
      "scheduled": 57,
      "attempts": 27,
      "commandersDeferred": 49,
-     "commandersRecovered": 47,
-     "recoveryDelaySum": 1177.4000000001035,
-     "recoveryDelayMax": 252.6000000000219
+     "commandersRecovered": 46,
+     "recoveryDelaySum": 924.8000000000816,
+     "recoveryDelayMax": 215.20000000000852
     },
     "trackQuality": {
-     "correct": 2472,
+     "correct": 2471,
      "mis": 61,
      "failed": 189,
      "stale": 0,
-     "identified": 634
+     "identified": 640
     },
     "cost": {
-     "interceptM": 1364.4000000000021,
-     "killedThreatM": 659.4499999999996,
-     "exchange": 2.068996891348856,
-     "interceptSatM": 750.4000000000005,
-     "killedThreatSatM": 88.45000000000005,
-     "exchangeSat": 8.483889202939515,
-     "duplicateInterceptM": 91,
-     "leakedThreatM": 14.079999999999998,
-     "defenseEfficiency": 0.9790952147640045,
-     "defenseEfficiencySat": 0.9770241908759527
+     "interceptM": 1152.200000000002,
+     "killedThreatM": 577.4399999999996,
+     "exchange": 1.9953588251593288,
+     "interceptSatM": 491.19999999999936,
+     "killedThreatSatM": 52.439999999999976,
+     "exchangeSat": 9.366895499618604,
+     "duplicateInterceptM": 133.4,
+     "leakedThreatM": 96.09000000000005,
+     "defenseEfficiency": 0.8573337490534941,
+     "defenseEfficiencySat": 0.5792554954158842
     }
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 49,
+     "killed": 42,
      "leaked": 0,
-     "unresolved": 4,
-     "fired": 53,
-     "emergency": 4,
+     "unresolved": 11,
+     "fired": 52,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 88,
+     "killed": 52,
      "leaked": 0,
-     "unresolved": 2,
-     "fired": 90,
-     "emergency": 72,
-     "selfdef": 0
+     "unresolved": 38,
+     "fired": 54,
+     "emergency": 0,
+     "selfdef": 11
     },
     "cruise": {
      "killed": 16,
@@ -3301,52 +3396,62 @@
      "selfdef": 0
     },
     "fighter": {
-     "killed": 16,
+     "killed": 15,
      "leaked": 0,
-     "unresolved": 0,
+     "unresolved": 1,
      "fired": 16,
      "emergency": 0,
      "selfdef": 0
     },
     "uav_small": {
-     "killed": 45,
+     "killed": 44,
      "leaked": 0,
-     "unresolved": 8,
-     "fired": 48,
+     "unresolved": 9,
+     "fired": 52,
      "emergency": 0,
      "selfdef": 0
     }
    },
    "timeTotal": {
-    "srbm": 255.8484162786208,
-    "mrl_large": 88.60269398827336,
-    "cruise": 26.825976834885523,
-    "fighter": 79.49258511634719,
-    "uav_small": 246.4027011034775
+    "srbm": 256.604628350246,
+    "mrl_large": 122.5170167094488,
+    "cruise": 25.58085448453369,
+    "fighter": 86.27313406831195,
+    "uav_small": 451.3361569086745
    }
   },
   "coal OFF / tobe": {
    "g": {
     "spawned": 228,
-    "killed": 216,
-    "leaked": 12,
+    "killed": 188,
+    "leaked": 40,
     "unresolved": 0,
-    "shots": 299,
-    "mttk": 199.11163188360436,
-    "mtte": 162.070879675313,
-    "decision": 158.55986645945347,
+    "shots": 264,
+    "mttk": 205.91563075129787,
+    "mtte": 177.37395942123976,
+    "decision": 173.86139660716898,
     "coord": 0,
     "leakReasons": {
-     "missed": 11,
-     "ammo_depleted": 1
+     "window_lost_due_to_c2": 2,
+     "timeout:engage": 2,
+     "no_fire_control": 3,
+     "timeout:c2": 4,
+     "ammo_depleted": 18,
+     "correlation_failed": 3,
+     "missed": 8
     },
     "failure": {
-     "missed": 11,
-     "ammo_depleted": 1
+     "window_lost_due_to_c2": 2,
+     "timeout:engage": 2,
+     "no_fire_control": 3,
+     "timeout:c2": 4,
+     "ammo_depleted": 18,
+     "correlation_failed": 3,
+     "missed": 8
     },
     "cue": {
      "cued": 143,
-     "emergency": 85
+     "emergency": 0
     },
     "routeRetry": {
      "scheduled": 57,
@@ -3364,138 +3469,34 @@
      "identified": 703
     },
     "cost": {
-     "interceptM": 1392.2000000000023,
-     "killedThreatM": 649.0099999999995,
-     "exchange": 2.145113326451061,
-     "interceptSatM": 783.0000000000005,
-     "killedThreatSatM": 88.51000000000009,
-     "exchangeSat": 8.846458027341539,
-     "duplicateInterceptM": 105.4,
-     "leakedThreatM": 24.52,
-     "defenseEfficiency": 0.9635947916202693,
-     "defenseEfficiencySat": 0.9776869546006849
+     "interceptM": 1088.6000000000024,
+     "killedThreatM": 613.4499999999997,
+     "exchange": 1.774553753362137,
+     "interceptSatM": 480.5999999999993,
+     "killedThreatSatM": 61.44999999999997,
+     "exchangeSat": 7.820992676973141,
+     "duplicateInterceptM": 105.80000000000001,
+     "leakedThreatM": 60.08,
+     "defenseEfficiency": 0.9107983311804967,
+     "defenseEfficiencySat": 0.6787805147464927
     }
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 46,
-     "leaked": 0,
-     "unresolved": 7,
-     "fired": 53,
-     "emergency": 2,
-     "selfdef": 0
-    },
-    "mrl_large": {
-     "killed": 88,
-     "leaked": 0,
-     "unresolved": 2,
-     "fired": 90,
-     "emergency": 70,
-     "selfdef": 0
-    },
-    "cruise": {
-     "killed": 15,
-     "leaked": 0,
-     "unresolved": 1,
-     "fired": 16,
-     "emergency": 0,
-     "selfdef": 0
-    },
-    "fighter": {
-     "killed": 16,
-     "leaked": 0,
-     "unresolved": 0,
-     "fired": 16,
-     "emergency": 0,
-     "selfdef": 0
-    },
-    "uav_small": {
      "killed": 51,
      "leaked": 0,
      "unresolved": 2,
      "fired": 52,
      "emergency": 0,
      "selfdef": 0
-    }
-   },
-   "timeTotal": {
-    "srbm": 254.87567763026436,
-    "mrl_large": 98.46540871004947,
-    "cruise": 17.08154497560986,
-    "fighter": 82.65744075590078,
-    "uav_small": 451.25993265850036
-   }
-  },
-  "rr OFF / asis": {
-   "g": {
-    "spawned": 228,
-    "killed": 215,
-    "leaked": 13,
-    "unresolved": 0,
-    "shots": 272,
-    "mttk": 197.16658597135114,
-    "mtte": 160.42907858765875,
-    "decision": 156.85867500021436,
-    "coord": 7.9686599806510285,
-    "leakReasons": {
-     "correlation_failed": 1,
-     "timeout:engage": 1,
-     "ammo_depleted": 5,
-     "missed": 6
-    },
-    "failure": {
-     "correlation_failed": 1,
-     "timeout:engage": 1,
-     "ammo_depleted": 5,
-     "missed": 6
-    },
-    "coalition": {
-     "proposals": 174,
-     "allocRok": 65,
-     "allocUsfk": 57,
-     "dup": 2,
-     "skipped": 20
-    },
-    "cue": {
-     "cued": 143,
-     "emergency": 91
-    },
-    "trackQuality": {
-     "correct": 2557,
-     "mis": 69,
-     "failed": 191,
-     "stale": 0,
-     "identified": 661
-    },
-    "cost": {
-     "interceptM": 1338.8000000000018,
-     "killedThreatM": 640.4499999999997,
-     "exchange": 2.0904051838551054,
-     "interceptSatM": 752.8000000000004,
-     "killedThreatSatM": 88.45000000000006,
-     "exchangeSat": 8.51102317693612,
-     "duplicateInterceptM": 23,
-     "leakedThreatM": 33.080000000000005,
-     "defenseEfficiency": 0.9508856324142948,
-     "defenseEfficiencySat": 0.9770241908759527
-    }
-   },
-   "outcomeByType": {
-    "srbm": {
-     "killed": 51,
-     "leaked": 0,
-     "unresolved": 2,
-     "fired": 53,
-     "emergency": 11,
-     "selfdef": 0
     },
     "mrl_large": {
-     "killed": 88,
+     "killed": 61,
      "leaked": 0,
-     "unresolved": 2,
-     "fired": 90,
-     "emergency": 72,
-     "selfdef": 0
+     "unresolved": 29,
+     "fired": 63,
+     "emergency": 0,
+     "selfdef": 10
     },
     "cruise": {
      "killed": 16,
@@ -3517,69 +3518,187 @@
      "killed": 45,
      "leaked": 0,
      "unresolved": 8,
-     "fired": 48,
+     "fired": 52,
      "emergency": 0,
      "selfdef": 0
     }
    },
    "timeTotal": {
-    "srbm": 292.2587209946555,
-    "mrl_large": 93.68273221337802,
-    "cruise": 54.54119542677199,
-    "fighter": 98.53554292899196,
-    "uav_small": 430.6372831581033
+    "srbm": 256.68030492851545,
+    "mrl_large": 114.20197432944815,
+    "cruise": 20.942694343473192,
+    "fighter": 70.25130779421681,
+    "uav_small": 430.69647106248783
+   }
+  },
+  "rr OFF / asis": {
+   "g": {
+    "spawned": 228,
+    "killed": 179,
+    "leaked": 49,
+    "unresolved": 0,
+    "shots": 234,
+    "mttk": 230.32865540535363,
+    "mtte": 198.04975730258562,
+    "decision": 194.46755834970583,
+    "coord": 9.543482321043735,
+    "leakReasons": {
+     "window_lost_due_to_c2": 4,
+     "timeout:engage": 7,
+     "timeout:c2": 7,
+     "missed": 5,
+     "no_fire_control": 2,
+     "correlation_failed": 3,
+     "ammo_depleted": 21
+    },
+    "failure": {
+     "window_lost_due_to_c2": 4,
+     "timeout:engage": 7,
+     "timeout:c2": 7,
+     "missed": 5,
+     "no_fire_control": 2,
+     "correlation_failed": 3,
+     "ammo_depleted": 21
+    },
+    "coalition": {
+     "proposals": 171,
+     "allocRok": 72,
+     "allocUsfk": 54,
+     "dup": 9,
+     "skipped": 82
+    },
+    "cue": {
+     "cued": 143,
+     "emergency": 0
+    },
+    "trackQuality": {
+     "correct": 2557,
+     "mis": 69,
+     "failed": 191,
+     "stale": 0,
+     "identified": 661
+    },
+    "cost": {
+     "interceptM": 1018.6000000000017,
+     "killedThreatM": 615.4999999999995,
+     "exchange": 1.654914703493099,
+     "interceptSatM": 458.5999999999994,
+     "killedThreatSatM": 50.49999999999997,
+     "exchangeSat": 9.081188118811875,
+     "duplicateInterceptM": 44.2,
+     "leakedThreatM": 58.029999999999994,
+     "defenseEfficiency": 0.9138419966445444,
+     "defenseEfficiencySat": 0.5578261349828785
+    }
+   },
+   "outcomeByType": {
+    "srbm": {
+     "killed": 47,
+     "leaked": 0,
+     "unresolved": 6,
+     "fired": 53,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "mrl_large": {
+     "killed": 50,
+     "leaked": 0,
+     "unresolved": 40,
+     "fired": 54,
+     "emergency": 0,
+     "selfdef": 10
+    },
+    "cruise": {
+     "killed": 16,
+     "leaked": 0,
+     "unresolved": 0,
+     "fired": 16,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "fighter": {
+     "killed": 16,
+     "leaked": 0,
+     "unresolved": 0,
+     "fired": 16,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "uav_small": {
+     "killed": 50,
+     "leaked": 0,
+     "unresolved": 3,
+     "fired": 52,
+     "emergency": 0,
+     "selfdef": 0
+    }
+   },
+   "timeTotal": {
+    "srbm": 284.84807050209133,
+    "mrl_large": 135.42572393145014,
+    "cruise": 54.42484485831474,
+    "fighter": 87.97736982429586,
+    "uav_small": 451.5371775095982
    }
   },
   "rr OFF / tobe": {
    "g": {
     "spawned": 228,
-    "killed": 218,
-    "leaked": 10,
+    "killed": 194,
+    "leaked": 34,
     "unresolved": 0,
-    "shots": 282,
-    "mttk": 199.50844352266785,
-    "mtte": 165.27897138782905,
-    "decision": 161.76795817196952,
+    "shots": 267,
+    "mttk": 212.55997147634818,
+    "mtte": 180.91995546401563,
+    "decision": 177.39859624071414,
     "coord": 0,
     "leakReasons": {
-     "missed": 8,
-     "timeout:engage": 1,
-     "ammo_depleted": 1
+     "timeout:engage": 5,
+     "no_fire_control": 3,
+     "correlation_failed": 3,
+     "missed": 7,
+     "ammo_depleted": 9,
+     "window_lost_due_to_c2": 3,
+     "timeout:c2": 4
     },
     "failure": {
-     "missed": 8,
-     "timeout:engage": 1,
-     "ammo_depleted": 1
+     "timeout:engage": 5,
+     "no_fire_control": 3,
+     "correlation_failed": 3,
+     "missed": 7,
+     "ammo_depleted": 9,
+     "window_lost_due_to_c2": 3,
+     "timeout:c2": 4
     },
     "coalition": {
-     "proposals": 144,
-     "allocRok": 56,
-     "allocUsfk": 64,
-     "dup": 12,
-     "skipped": 23
+     "proposals": 147,
+     "allocRok": 63,
+     "allocUsfk": 60,
+     "dup": 17,
+     "skipped": 68
     },
     "cue": {
      "cued": 143,
-     "emergency": 83
+     "emergency": 0
     },
     "trackQuality": {
-     "correct": 3144,
-     "mis": 85,
-     "failed": 240,
+     "correct": 3142,
+     "mis": 87,
+     "failed": 239,
      "stale": 0,
      "identified": 711
     },
     "cost": {
-     "interceptM": 1296.200000000002,
+     "interceptM": 1139.8000000000025,
      "killedThreatM": 636.4799999999996,
-     "exchange": 2.036513323278034,
-     "interceptSatM": 710.6000000000004,
-     "killedThreatSatM": 90.48000000000009,
-     "exchangeSat": 7.853669319186557,
-     "duplicateInterceptM": 30.999999999999996,
+     "exchange": 1.7907868275515386,
+     "interceptSatM": 543.7999999999997,
+     "killedThreatSatM": 65.48000000000003,
+     "exchangeSat": 8.304825901038477,
+     "duplicateInterceptM": 54.599999999999994,
      "leakedThreatM": 37.05,
      "defenseEfficiency": 0.944991314418066,
-     "defenseEfficiencySat": 0.9994476968960566
+     "defenseEfficiencySat": 0.7232961449243346
     }
    },
    "outcomeByType": {
@@ -3588,16 +3707,16 @@
      "leaked": 0,
      "unresolved": 4,
      "fired": 53,
-     "emergency": 6,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 90,
+     "killed": 65,
      "leaked": 0,
-     "unresolved": 0,
-     "fired": 90,
-     "emergency": 70,
-     "selfdef": 0
+     "unresolved": 25,
+     "fired": 68,
+     "emergency": 0,
+     "selfdef": 9
     },
     "cruise": {
      "killed": 16,
@@ -3608,9 +3727,9 @@
      "selfdef": 0
     },
     "fighter": {
-     "killed": 15,
+     "killed": 16,
      "leaked": 0,
-     "unresolved": 1,
+     "unresolved": 0,
      "fired": 16,
      "emergency": 0,
      "selfdef": 0
@@ -3619,270 +3738,58 @@
      "killed": 48,
      "leaked": 0,
      "unresolved": 5,
-     "fired": 52,
+     "fired": 53,
      "emergency": 0,
      "selfdef": 0
     }
    },
    "timeTotal": {
-    "srbm": 284.4586822923022,
-    "mrl_large": 99.3414558870038,
-    "cruise": 18.752092116254744,
-    "fighter": 35.12121745572904,
-    "uav_small": 451.45358471516454
+    "srbm": 294.5447345388244,
+    "mrl_large": 98.92576984367815,
+    "cruise": 23.563691549908924,
+    "fighter": 74.43902452420457,
+    "uav_small": 451.2615619911621
    }
   },
   "par OFF / asis": {
    "g": {
     "spawned": 228,
-    "killed": 211,
-    "leaked": 17,
+    "killed": 176,
+    "leaked": 52,
     "unresolved": 0,
-    "shots": 281,
-    "mttk": 195.4192250303353,
-    "mtte": 161.1633631434392,
-    "decision": 157.5929595559947,
-    "coord": 7.712067526240337,
+    "shots": 236,
+    "mttk": 222.34573401692595,
+    "mtte": 197.52971578286247,
+    "decision": 193.98352288946097,
+    "coord": 8.680969751432595,
     "leakReasons": {
-     "ammo_depleted": 5,
-     "missed": 11,
-     "timeout:engage": 1
+     "window_lost_due_to_c2": 2,
+     "timeout:c2": 9,
+     "timeout:engage": 10,
+     "missed": 9,
+     "correlation_failed": 3,
+     "no_fire_control": 1,
+     "ammo_depleted": 18
     },
     "failure": {
-     "ammo_depleted": 5,
-     "missed": 11,
-     "timeout:engage": 1
+     "window_lost_due_to_c2": 2,
+     "timeout:c2": 9,
+     "timeout:engage": 10,
+     "missed": 9,
+     "correlation_failed": 3,
+     "no_fire_control": 1,
+     "ammo_depleted": 18
     },
     "coalition": {
-     "proposals": 174,
-     "allocRok": 66,
-     "allocUsfk": 50,
-     "dup": 1,
-     "skipped": 18
+     "proposals": 171,
+     "allocRok": 78,
+     "allocUsfk": 45,
+     "dup": 7,
+     "skipped": 72
     },
     "cue": {
      "cued": 143,
-     "emergency": 92
-    },
-    "routeRetry": {
-     "scheduled": 50,
-     "attempts": 24,
-     "commandersDeferred": 46,
-     "commandersRecovered": 46,
-     "recoveryDelaySum": 289.60000000002697,
-     "recoveryDelayMax": 48.400000000011005
-    },
-    "trackQuality": {
-     "correct": 2557,
-     "mis": 67,
-     "failed": 191,
-     "stale": 0,
-     "identified": 663
-    },
-    "cost": {
-     "interceptM": 1272.200000000002,
-     "killedThreatM": 664.4099999999996,
-     "exchange": 1.9147815354976638,
-     "interceptSatM": 722.2000000000005,
-     "killedThreatSatM": 87.41000000000005,
-     "exchangeSat": 8.26221256149182,
-     "duplicateInterceptM": 9.2,
-     "leakedThreatM": 9.12,
-     "defenseEfficiency": 0.9864594004721393,
-     "defenseEfficiencySat": 0.9655362863139291
-    }
-   },
-   "outcomeByType": {
-    "srbm": {
-     "killed": 51,
-     "leaked": 0,
-     "unresolved": 2,
-     "fired": 53,
-     "emergency": 4,
-     "selfdef": 0
-    },
-    "mrl_large": {
-     "killed": 87,
-     "leaked": 0,
-     "unresolved": 3,
-     "fired": 90,
-     "emergency": 75,
-     "selfdef": 0
-    },
-    "cruise": {
-     "killed": 16,
-     "leaked": 0,
-     "unresolved": 0,
-     "fired": 16,
-     "emergency": 0,
-     "selfdef": 0
-    },
-    "fighter": {
-     "killed": 16,
-     "leaked": 0,
-     "unresolved": 0,
-     "fired": 16,
-     "emergency": 0,
-     "selfdef": 0
-    },
-    "uav_small": {
-     "killed": 41,
-     "leaked": 0,
-     "unresolved": 12,
-     "fired": 48,
-     "emergency": 0,
-     "selfdef": 0
-    }
-   },
-   "timeTotal": {
-    "srbm": 295.7493114830127,
-    "mrl_large": 98.18928876462951,
-    "cruise": 58.69731634370373,
-    "fighter": 101.23802773645752,
-    "uav_small": 450.87516721597206
-   }
-  },
-  "par OFF / tobe": {
-   "g": {
-    "spawned": 228,
-    "killed": 208,
-    "leaked": 20,
-    "unresolved": 0,
-    "shots": 272,
-    "mttk": 188.9809210048802,
-    "mtte": 154.1273998430274,
-    "decision": 150.5418142574414,
-    "coord": 0,
-    "leakReasons": {
-     "missed": 13,
-     "timeout:engage": 1,
-     "ammo_depleted": 6
-    },
-    "failure": {
-     "missed": 13,
-     "timeout:engage": 1,
-     "ammo_depleted": 6
-    },
-    "coalition": {
-     "proposals": 175,
-     "allocRok": 73,
-     "allocUsfk": 64,
-     "dup": 12,
-     "skipped": 17
-    },
-    "cue": {
-     "cued": 143,
-     "emergency": 55
-    },
-    "routeRetry": {
-     "scheduled": 49,
-     "attempts": 23,
-     "commandersDeferred": 44,
-     "commandersRecovered": 44,
-     "recoveryDelaySum": 283.80000000002735,
-     "recoveryDelayMax": 48.400000000011005
-    },
-    "trackQuality": {
-     "correct": 3144,
-     "mis": 83,
-     "failed": 237,
-     "stale": 0,
-     "identified": 711
-    },
-    "cost": {
-     "interceptM": 1237.800000000002,
-     "killedThreatM": 606.4199999999996,
-     "exchange": 2.0411595923617343,
-     "interceptSatM": 681.2000000000004,
-     "killedThreatSatM": 88.42000000000007,
-     "exchangeSat": 7.704139334992082,
-     "duplicateInterceptM": 25.2,
-     "leakedThreatM": 67.11000000000003,
-     "defenseEfficiency": 0.9003607857111041,
-     "defenseEfficiencySat": 0.9766928090135867
-    }
-   },
-   "outcomeByType": {
-    "srbm": {
-     "killed": 48,
-     "leaked": 0,
-     "unresolved": 5,
-     "fired": 53,
-     "emergency": 4,
-     "selfdef": 0
-    },
-    "mrl_large": {
-     "killed": 88,
-     "leaked": 0,
-     "unresolved": 2,
-     "fired": 90,
-     "emergency": 45,
-     "selfdef": 0
-    },
-    "cruise": {
-     "killed": 16,
-     "leaked": 0,
-     "unresolved": 0,
-     "fired": 16,
-     "emergency": 0,
-     "selfdef": 0
-    },
-    "fighter": {
-     "killed": 14,
-     "leaked": 0,
-     "unresolved": 2,
-     "fired": 16,
-     "emergency": 0,
-     "selfdef": 0
-    },
-    "uav_small": {
-     "killed": 42,
-     "leaked": 0,
-     "unresolved": 11,
-     "fired": 47,
-     "emergency": 0,
-     "selfdef": 0
-    }
-   },
-   "timeTotal": {
-    "srbm": 282.0947550336398,
-    "mrl_large": 89.20436229040934,
-    "cruise": 17.169126439236322,
-    "fighter": 33.32227813823596,
-    "uav_small": 451.26597107554585
-   }
-  },
-  "pipe+icc OFF / asis": {
-   "g": {
-    "spawned": 228,
-    "killed": 214,
-    "leaked": 14,
-    "unresolved": 0,
-    "shots": 262,
-    "mttk": 187.48482587256865,
-    "mtte": 153.41021657508793,
-    "decision": 149.8246309895018,
-    "coord": 15.597699285095558,
-    "leakReasons": {
-     "correlation_failed": 2,
-     "missed": 6,
-     "ammo_depleted": 6
-    },
-    "failure": {
-     "correlation_failed": 2,
-     "missed": 6,
-     "ammo_depleted": 6
-    },
-    "coalition": {
-     "proposals": 169,
-     "allocRok": 60,
-     "allocUsfk": 52,
-     "dup": 4,
-     "skipped": 20
-    },
-    "cue": {
-     "cued": 143,
-     "emergency": 89
+     "emergency": 0
     },
     "routeRetry": {
      "scheduled": 50,
@@ -3900,34 +3807,34 @@
      "identified": 658
     },
     "cost": {
-     "interceptM": 1271.0000000000018,
-     "killedThreatM": 663.4299999999996,
-     "exchange": 1.9158012148983352,
-     "interceptSatM": 714.0000000000005,
-     "killedThreatSatM": 89.43000000000008,
-     "exchangeSat": 7.983898020798388,
-     "duplicateInterceptM": 33.2,
-     "leakedThreatM": 10.099999999999998,
-     "defenseEfficiency": 0.9850043799088385,
-     "defenseEfficiencySat": 0.9878493317132443
+     "interceptM": 1000.0000000000018,
+     "killedThreatM": 604.4799999999996,
+     "exchange": 1.6543144520910578,
+     "interceptSatM": 438.9999999999993,
+     "killedThreatSatM": 54.479999999999976,
+     "exchangeSat": 8.058002936857553,
+     "duplicateInterceptM": 35,
+     "leakedThreatM": 69.05000000000001,
+     "defenseEfficiency": 0.8974804388817128,
+     "defenseEfficiencySat": 0.6017894620567766
     }
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 50,
+     "killed": 42,
      "leaked": 0,
-     "unresolved": 3,
+     "unresolved": 11,
      "fired": 53,
-     "emergency": 6,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 89,
+     "killed": 54,
      "leaked": 0,
-     "unresolved": 1,
-     "fired": 90,
-     "emergency": 74,
-     "selfdef": 0
+     "unresolved": 36,
+     "fired": 59,
+     "emergency": 0,
+     "selfdef": 12
     },
     "cruise": {
      "killed": 16,
@@ -3946,78 +3853,322 @@
      "selfdef": 0
     },
     "uav_small": {
-     "killed": 43,
+     "killed": 48,
      "leaked": 0,
-     "unresolved": 10,
-     "fired": 47,
+     "unresolved": 5,
+     "fired": 53,
      "emergency": 0,
      "selfdef": 0
     }
    },
    "timeTotal": {
-    "srbm": 283.3609301265765,
-    "mrl_large": 92.14390527146963,
-    "cruise": 50.34360636171118,
-    "fighter": 88.74832030563823,
-    "uav_small": 268.3129675067678
+    "srbm": 302.30061923128824,
+    "mrl_large": 130.23405816816955,
+    "cruise": 53.0893496189417,
+    "fighter": 91.17149164481918,
+    "uav_small": 454.2115015651291
    }
   },
-  "pipe+icc OFF / tobe": {
+  "par OFF / tobe": {
    "g": {
     "spawned": 228,
-    "killed": 213,
-    "leaked": 15,
+    "killed": 192,
+    "leaked": 36,
     "unresolved": 0,
-    "shots": 302,
-    "mttk": 201.48017362327366,
-    "mtte": 165.12282159361374,
-    "decision": 161.6263303655432,
+    "shots": 259,
+    "mttk": 207.4282192420197,
+    "mtte": 173.49328392883902,
+    "decision": 169.94424546730005,
     "coord": 0,
     "leakReasons": {
-     "missed": 14,
-     "correlation_failed": 1
+     "timeout:engage": 7,
+     "ammo_depleted": 13,
+     "timeout:c2": 2,
+     "correlation_failed": 2,
+     "window_lost_due_to_c2": 3,
+     "missed": 9
     },
     "failure": {
-     "missed": 14,
-     "correlation_failed": 1
+     "timeout:engage": 7,
+     "ammo_depleted": 13,
+     "timeout:c2": 2,
+     "correlation_failed": 2,
+     "window_lost_due_to_c2": 3,
+     "missed": 9
     },
     "coalition": {
-     "proposals": 151,
-     "allocRok": 58,
-     "allocUsfk": 67,
+     "proposals": 174,
+     "allocRok": 75,
+     "allocUsfk": 61,
      "dup": 12,
-     "skipped": 22
+     "skipped": 59
     },
     "cue": {
      "cued": 143,
-     "emergency": 83
+     "emergency": 0
     },
     "routeRetry": {
-     "scheduled": 51,
-     "attempts": 25,
-     "commandersDeferred": 47,
-     "commandersRecovered": 47,
-     "recoveryDelaySum": 290.00000000002706,
+     "scheduled": 49,
+     "attempts": 23,
+     "commandersDeferred": 44,
+     "commandersRecovered": 44,
+     "recoveryDelaySum": 283.80000000002735,
      "recoveryDelayMax": 48.400000000011005
     },
     "trackQuality": {
      "correct": 3142,
      "mis": 85,
-     "failed": 240,
+     "failed": 237,
      "stale": 0,
      "identified": 711
     },
     "cost": {
-     "interceptM": 1337.6000000000026,
-     "killedThreatM": 631.4599999999996,
-     "exchange": 2.1182656066892656,
-     "interceptSatM": 749.6000000000006,
-     "killedThreatSatM": 88.46000000000006,
-     "exchangeSat": 8.473886502373954,
+     "interceptM": 1173.800000000002,
+     "killedThreatM": 628.4599999999996,
+     "exchange": 1.8677401903064679,
+     "interceptSatM": 606.1999999999998,
+     "killedThreatSatM": 69.46000000000004,
+     "exchangeSat": 8.727325079182256,
      "duplicateInterceptM": 30.799999999999997,
-     "leakedThreatM": 42.069999999999986,
-     "defenseEfficiency": 0.9375380458183007,
-     "defenseEfficiencySat": 0.9771346514967415
+     "leakedThreatM": 45.07,
+     "defenseEfficiency": 0.9330839012367673,
+     "defenseEfficiencySat": 0.7672594719982326
+    }
+   },
+   "outcomeByType": {
+    "srbm": {
+     "killed": 45,
+     "leaked": 0,
+     "unresolved": 8,
+     "fired": 53,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "mrl_large": {
+     "killed": 69,
+     "leaked": 0,
+     "unresolved": 21,
+     "fired": 73,
+     "emergency": 0,
+     "selfdef": 6
+    },
+    "cruise": {
+     "killed": 16,
+     "leaked": 0,
+     "unresolved": 0,
+     "fired": 16,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "fighter": {
+     "killed": 16,
+     "leaked": 0,
+     "unresolved": 0,
+     "fired": 16,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "uav_small": {
+     "killed": 46,
+     "leaked": 0,
+     "unresolved": 7,
+     "fired": 50,
+     "emergency": 0,
+     "selfdef": 0
+    }
+   },
+   "timeTotal": {
+    "srbm": 283.9446274772497,
+    "mrl_large": 86.06091095281863,
+    "cruise": 21.24433556107033,
+    "fighter": 70.76845870187503,
+    "uav_small": 455.18459859169434
+   }
+  },
+  "pipe+icc OFF / asis": {
+   "g": {
+    "spawned": 228,
+    "killed": 187,
+    "leaked": 41,
+    "unresolved": 0,
+    "shots": 256,
+    "mttk": 226.45710589871484,
+    "mtte": 192.9713542827868,
+    "decision": 189.42807070069694,
+    "coord": 17.12250966160262,
+    "leakReasons": {
+     "timeout:engage": 8,
+     "window_lost_due_to_c2": 4,
+     "missed": 6,
+     "no_fire_control": 1,
+     "timeout:c2": 4,
+     "correlation_failed": 3,
+     "ammo_depleted": 15
+    },
+    "failure": {
+     "timeout:engage": 8,
+     "window_lost_due_to_c2": 4,
+     "missed": 6,
+     "no_fire_control": 1,
+     "timeout:c2": 4,
+     "correlation_failed": 3,
+     "ammo_depleted": 15
+    },
+    "coalition": {
+     "proposals": 182,
+     "allocRok": 83,
+     "allocUsfk": 53,
+     "dup": 8,
+     "skipped": 79
+    },
+    "cue": {
+     "cued": 143,
+     "emergency": 0
+    },
+    "routeRetry": {
+     "scheduled": 50,
+     "attempts": 24,
+     "commandersDeferred": 46,
+     "commandersRecovered": 46,
+     "recoveryDelaySum": 289.800000000027,
+     "recoveryDelayMax": 48.400000000011005
+    },
+    "trackQuality": {
+     "correct": 2557,
+     "mis": 67,
+     "failed": 191,
+     "stale": 0,
+     "identified": 659
+    },
+    "cost": {
+     "interceptM": 1067.8000000000018,
+     "killedThreatM": 616.5099999999995,
+     "exchange": 1.7320075911177477,
+     "interceptSatM": 481.7999999999994,
+     "killedThreatSatM": 60.50999999999997,
+     "exchangeSat": 7.962320277640053,
+     "duplicateInterceptM": 38,
+     "leakedThreatM": 57.019999999999996,
+     "defenseEfficiency": 0.9153415586536605,
+     "defenseEfficiencySat": 0.6683972163923559
+    }
+   },
+   "outcomeByType": {
+    "srbm": {
+     "killed": 44,
+     "leaked": 0,
+     "unresolved": 9,
+     "fired": 53,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "mrl_large": {
+     "killed": 60,
+     "leaked": 0,
+     "unresolved": 30,
+     "fired": 63,
+     "emergency": 0,
+     "selfdef": 9
+    },
+    "cruise": {
+     "killed": 16,
+     "leaked": 0,
+     "unresolved": 0,
+     "fired": 16,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "fighter": {
+     "killed": 16,
+     "leaked": 0,
+     "unresolved": 0,
+     "fired": 16,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "uav_small": {
+     "killed": 51,
+     "leaked": 0,
+     "unresolved": 2,
+     "fired": 53,
+     "emergency": 0,
+     "selfdef": 0
+    }
+   },
+   "timeTotal": {
+    "srbm": 303.39127971340815,
+    "mrl_large": 129.5853162053495,
+    "cruise": 50.46437682666573,
+    "fighter": 97.92005040969968,
+    "uav_small": 452.93235321743987
+   }
+  },
+  "pipe+icc OFF / tobe": {
+   "g": {
+    "spawned": 228,
+    "killed": 188,
+    "leaked": 40,
+    "unresolved": 0,
+    "shots": 252,
+    "mttk": 209.75853378185877,
+    "mtte": 179.90574322398982,
+    "decision": 176.38907655732285,
+    "coord": 0,
+    "leakReasons": {
+     "window_lost_due_to_c2": 3,
+     "missed": 9,
+     "timeout:engage": 7,
+     "timeout:c2": 6,
+     "ammo_depleted": 12,
+     "correlation_failed": 2,
+     "no_fire_control": 1
+    },
+    "failure": {
+     "window_lost_due_to_c2": 3,
+     "missed": 9,
+     "timeout:engage": 7,
+     "timeout:c2": 6,
+     "ammo_depleted": 12,
+     "correlation_failed": 2,
+     "no_fire_control": 1
+    },
+    "coalition": {
+     "proposals": 146,
+     "allocRok": 58,
+     "allocUsfk": 65,
+     "dup": 15,
+     "skipped": 69
+    },
+    "cue": {
+     "cued": 143,
+     "emergency": 0
+    },
+    "routeRetry": {
+     "scheduled": 50,
+     "attempts": 24,
+     "commandersDeferred": 46,
+     "commandersRecovered": 46,
+     "recoveryDelaySum": 289.800000000027,
+     "recoveryDelayMax": 48.400000000011005
+    },
+    "trackQuality": {
+     "correct": 3144,
+     "mis": 83,
+     "failed": 239,
+     "stale": 0,
+     "identified": 711
+    },
+    "cost": {
+     "interceptM": 1088.8000000000025,
+     "killedThreatM": 628.4799999999996,
+     "exchange": 1.7324338085539766,
+     "interceptSatM": 536.1999999999998,
+     "killedThreatSatM": 60.479999999999976,
+     "exchangeSat": 8.86574074074074,
+     "duplicateInterceptM": 45.400000000000006,
+     "leakedThreatM": 45.05,
+     "defenseEfficiency": 0.9331135955339778,
+     "defenseEfficiencySat": 0.66806583452999
     }
    },
    "outcomeByType": {
@@ -4026,15 +4177,131 @@
      "leaked": 0,
      "unresolved": 5,
      "fired": 53,
-     "emergency": 5,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 88,
+     "killed": 60,
      "leaked": 0,
-     "unresolved": 2,
-     "fired": 90,
-     "emergency": 70,
+     "unresolved": 30,
+     "fired": 66,
+     "emergency": 0,
+     "selfdef": 10
+    },
+    "cruise": {
+     "killed": 16,
+     "leaked": 0,
+     "unresolved": 0,
+     "fired": 16,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "fighter": {
+     "killed": 16,
+     "leaked": 0,
+     "unresolved": 0,
+     "fired": 16,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "uav_small": {
+     "killed": 48,
+     "leaked": 0,
+     "unresolved": 5,
+     "fired": 53,
+     "emergency": 0,
+     "selfdef": 0
+    }
+   },
+   "timeTotal": {
+    "srbm": 284.02023026285246,
+    "mrl_large": 115.63530622235717,
+    "cruise": 19.445572760982998,
+    "fighter": 72.5302231592051,
+    "uav_small": 451.37247220607424
+   }
+  },
+  "sdf OFF / asis": {
+   "g": {
+    "spawned": 228,
+    "killed": 182,
+    "leaked": 46,
+    "unresolved": 0,
+    "shots": 229,
+    "mttk": 229.27920652035854,
+    "mtte": 196.28554933975843,
+    "decision": 192.7313826730912,
+    "coord": 9.383269587411904,
+    "leakReasons": {
+     "timeout:c2": 11,
+     "no_fire_control": 3,
+     "correlation_failed": 4,
+     "timeout:engage": 4,
+     "missed": 5,
+     "ammo_depleted": 19
+    },
+    "failure": {
+     "timeout:c2": 11,
+     "no_fire_control": 3,
+     "correlation_failed": 4,
+     "timeout:engage": 4,
+     "missed": 5,
+     "ammo_depleted": 19
+    },
+    "coalition": {
+     "proposals": 184,
+     "allocRok": 80,
+     "allocUsfk": 55,
+     "dup": 7,
+     "skipped": 69
+    },
+    "cue": {
+     "cued": 143,
+     "emergency": 0
+    },
+    "routeRetry": {
+     "scheduled": 50,
+     "attempts": 24,
+     "commandersDeferred": 46,
+     "commandersRecovered": 46,
+     "recoveryDelaySum": 289.800000000027,
+     "recoveryDelayMax": 48.400000000011005
+    },
+    "trackQuality": {
+     "correct": 2557,
+     "mis": 67,
+     "failed": 191,
+     "stale": 0,
+     "identified": 660
+    },
+    "cost": {
+     "interceptM": 996.4000000000016,
+     "killedThreatM": 592.5199999999995,
+     "exchange": 1.6816309997974792,
+     "interceptSatM": 421.3999999999994,
+     "killedThreatSatM": 52.51999999999997,
+     "exchangeSat": 8.023610053313018,
+     "duplicateInterceptM": 35,
+     "leakedThreatM": 81.00999999999999,
+     "defenseEfficiency": 0.8797232491500007,
+     "defenseEfficiencySat": 0.5801391803821936
+    }
+   },
+   "outcomeByType": {
+    "srbm": {
+     "killed": 47,
+     "leaked": 0,
+     "unresolved": 6,
+     "fired": 53,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "mrl_large": {
+     "killed": 52,
+     "leaked": 0,
+     "unresolved": 38,
+     "fired": 54,
+     "emergency": 0,
      "selfdef": 0
     },
     "cruise": {
@@ -4054,163 +4321,61 @@
      "selfdef": 0
     },
     "uav_small": {
-     "killed": 46,
+     "killed": 52,
      "leaked": 0,
-     "unresolved": 7,
+     "unresolved": 1,
      "fired": 53,
      "emergency": 0,
      "selfdef": 0
     }
    },
    "timeTotal": {
-    "srbm": 292.13263946330767,
-    "mrl_large": 98.62623711439596,
-    "cruise": 16.878923831654674,
-    "fighter": 74.10396550116343,
-    "uav_small": 458.4998945499203
-   }
-  },
-  "sdf OFF / asis": {
-   "g": {
-    "spawned": 228,
-    "killed": 211,
-    "leaked": 17,
-    "unresolved": 0,
-    "shots": 281,
-    "mttk": 195.4192250303353,
-    "mtte": 161.1633631434392,
-    "decision": 157.5929595559947,
-    "coord": 7.712067526240337,
-    "leakReasons": {
-     "ammo_depleted": 5,
-     "missed": 11,
-     "timeout:engage": 1
-    },
-    "failure": {
-     "ammo_depleted": 5,
-     "missed": 11,
-     "timeout:engage": 1
-    },
-    "coalition": {
-     "proposals": 174,
-     "allocRok": 66,
-     "allocUsfk": 50,
-     "dup": 1,
-     "skipped": 18
-    },
-    "cue": {
-     "cued": 143,
-     "emergency": 92
-    },
-    "routeRetry": {
-     "scheduled": 50,
-     "attempts": 24,
-     "commandersDeferred": 46,
-     "commandersRecovered": 46,
-     "recoveryDelaySum": 289.60000000002697,
-     "recoveryDelayMax": 48.400000000011005
-    },
-    "trackQuality": {
-     "correct": 2557,
-     "mis": 67,
-     "failed": 191,
-     "stale": 0,
-     "identified": 663
-    },
-    "cost": {
-     "interceptM": 1272.200000000002,
-     "killedThreatM": 664.4099999999996,
-     "exchange": 1.9147815354976638,
-     "interceptSatM": 722.2000000000005,
-     "killedThreatSatM": 87.41000000000005,
-     "exchangeSat": 8.26221256149182,
-     "duplicateInterceptM": 9.2,
-     "leakedThreatM": 9.12,
-     "defenseEfficiency": 0.9864594004721393,
-     "defenseEfficiencySat": 0.9655362863139291
-    }
-   },
-   "outcomeByType": {
-    "srbm": {
-     "killed": 51,
-     "leaked": 0,
-     "unresolved": 2,
-     "fired": 53,
-     "emergency": 4,
-     "selfdef": 0
-    },
-    "mrl_large": {
-     "killed": 87,
-     "leaked": 0,
-     "unresolved": 3,
-     "fired": 90,
-     "emergency": 75,
-     "selfdef": 0
-    },
-    "cruise": {
-     "killed": 16,
-     "leaked": 0,
-     "unresolved": 0,
-     "fired": 16,
-     "emergency": 0,
-     "selfdef": 0
-    },
-    "fighter": {
-     "killed": 16,
-     "leaked": 0,
-     "unresolved": 0,
-     "fired": 16,
-     "emergency": 0,
-     "selfdef": 0
-    },
-    "uav_small": {
-     "killed": 41,
-     "leaked": 0,
-     "unresolved": 12,
-     "fired": 48,
-     "emergency": 0,
-     "selfdef": 0
-    }
-   },
-   "timeTotal": {
-    "srbm": 295.7493114830127,
-    "mrl_large": 98.18928876462951,
-    "cruise": 58.69731634370373,
-    "fighter": 101.23802773645752,
-    "uav_small": 450.87516721597206
+    "srbm": 281.2493602626255,
+    "mrl_large": 129.6586461383304,
+    "cruise": 58.01095712235366,
+    "fighter": 88.38738743417832,
+    "uav_small": 453.689570080081
    }
   },
   "sdf OFF / tobe": {
    "g": {
     "spawned": 228,
-    "killed": 205,
-    "leaked": 23,
+    "killed": 185,
+    "leaked": 43,
     "unresolved": 0,
-    "shots": 290,
-    "mttk": 189.09998270330968,
-    "mtte": 153.38119195409382,
-    "decision": 149.81078836664943,
+    "shots": 266,
+    "mttk": 221.77013476489776,
+    "mtte": 182.77357826309108,
+    "decision": 179.2290238076453,
     "coord": 0,
     "leakReasons": {
-     "missed": 16,
+     "window_lost_due_to_c2": 2,
+     "timeout:engage": 4,
+     "timeout:c2": 5,
+     "missed": 13,
+     "ammo_depleted": 15,
      "correlation_failed": 2,
-     "ammo_depleted": 5
+     "no_fire_control": 2
     },
     "failure": {
-     "missed": 16,
+     "window_lost_due_to_c2": 2,
+     "timeout:engage": 4,
+     "timeout:c2": 5,
+     "missed": 13,
+     "ammo_depleted": 15,
      "correlation_failed": 2,
-     "ammo_depleted": 5
+     "no_fire_control": 2
     },
     "coalition": {
-     "proposals": 137,
-     "allocRok": 53,
-     "allocUsfk": 62,
-     "dup": 13,
-     "skipped": 18
+     "proposals": 151,
+     "allocRok": 63,
+     "allocUsfk": 69,
+     "dup": 14,
+     "skipped": 70
     },
     "cue": {
      "cued": 143,
-     "emergency": 92
+     "emergency": 0
     },
     "routeRetry": {
      "scheduled": 50,
@@ -4228,44 +4393,36 @@
      "identified": 711
     },
     "cost": {
-     "interceptM": 1305.6000000000024,
-     "killedThreatM": 624.4299999999997,
-     "exchange": 2.090866870585979,
-     "interceptSatM": 750.0000000000005,
-     "killedThreatSatM": 84.43000000000005,
-     "exchangeSat": 8.883098424730546,
-     "duplicateInterceptM": 39.4,
-     "leakedThreatM": 49.09999999999998,
-     "defenseEfficiency": 0.9271005003489079,
-     "defenseEfficiencySat": 0.9326190213189
+     "interceptM": 1101.8000000000025,
+     "killedThreatM": 585.9499999999996,
+     "exchange": 1.8803652188753361,
+     "interceptSatM": 501.5999999999993,
+     "killedThreatSatM": 60.44999999999997,
+     "exchangeSat": 8.297766749379646,
+     "duplicateInterceptM": 42.4,
+     "leakedThreatM": 87.58000000000001,
+     "defenseEfficiency": 0.869968672516443,
+     "defenseEfficiencySat": 0.6677344526676239
     }
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 47,
+     "killed": 51,
      "leaked": 0,
-     "unresolved": 6,
+     "unresolved": 2,
      "fired": 53,
-     "emergency": 8,
-     "selfdef": 0
-    },
-    "mrl_large": {
-     "killed": 84,
-     "leaked": 0,
-     "unresolved": 6,
-     "fired": 90,
-     "emergency": 72,
-     "selfdef": 0
-    },
-    "cruise": {
-     "killed": 16,
-     "leaked": 0,
-     "unresolved": 0,
-     "fired": 16,
      "emergency": 0,
      "selfdef": 0
     },
-    "fighter": {
+    "mrl_large": {
+     "killed": 60,
+     "leaked": 0,
+     "unresolved": 30,
+     "fired": 65,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "cruise": {
      "killed": 15,
      "leaked": 0,
      "unresolved": 1,
@@ -4273,54 +4430,68 @@
      "emergency": 0,
      "selfdef": 0
     },
-    "uav_small": {
-     "killed": 43,
+    "fighter": {
+     "killed": 14,
      "leaked": 0,
-     "unresolved": 10,
-     "fired": 48,
+     "unresolved": 2,
+     "fired": 16,
+     "emergency": 0,
+     "selfdef": 0
+    },
+    "uav_small": {
+     "killed": 45,
+     "leaked": 0,
+     "unresolved": 8,
+     "fired": 52,
      "emergency": 0,
      "selfdef": 0
     }
    },
    "timeTotal": {
-    "srbm": 266.272397528282,
-    "mrl_large": 88.23926541808169,
-    "cruise": 18.20598102709073,
-    "fighter": 82.79917869036728,
-    "uav_small": 430.6818257406227
+    "srbm": 298.43791668170206,
+    "mrl_large": 115.63530622235717,
+    "cruise": 15.928022052682536,
+    "fighter": 71.93828253938364,
+    "uav_small": 456.0135433770132
    }
   },
   "share=datalink ON / asis": {
    "g": {
     "spawned": 228,
-    "killed": 215,
-    "leaked": 13,
+    "killed": 175,
+    "leaked": 53,
     "unresolved": 0,
-    "shots": 276,
-    "mttk": 198.94209385514398,
-    "mtte": 167.62341084336092,
-    "decision": 164.0977471265462,
-    "coord": 8.084761462001595,
+    "shots": 231,
+    "mttk": 224.28687835131905,
+    "mtte": 199.6414412353058,
+    "decision": 196.06956623530536,
+    "coord": 8.986668234538717,
     "leakReasons": {
-     "timeout:engage": 2,
-     "missed": 9,
-     "ammo_depleted": 2
+     "correlation_failed": 3,
+     "missed": 8,
+     "no_fire_control": 4,
+     "timeout:engage": 7,
+     "timeout:c2": 7,
+     "ammo_depleted": 24
     },
     "failure": {
-     "timeout:engage": 2,
-     "missed": 9,
-     "ammo_depleted": 2
+     "correlation_failed": 3,
+     "missed": 8,
+     "no_fire_control": 4,
+     "timeout:engage": 7,
+     "timeout:c2": 7,
+     "ammo_depleted": 24
     },
     "coalition": {
-     "proposals": 172,
-     "allocRok": 71,
-     "allocUsfk": 48,
-     "dup": 2,
-     "skipped": 21
+     "proposals": 189,
+     "allocRok": 81,
+     "allocUsfk": 50,
+     "dup": 3,
+     "skipped": 79
     },
     "cue": {
      "cued": 143,
-     "emergency": 87
+     "emergency": 0
     },
     "routeRetry": {
      "scheduled": 13,
@@ -4335,42 +4506,42 @@
      "mis": 65,
      "failed": 188,
      "stale": 0,
-     "identified": 657
+     "identified": 656
     },
     "cost": {
-     "interceptM": 1285.600000000002,
-     "killedThreatM": 658.4699999999996,
-     "exchange": 1.9524048172278203,
-     "interceptSatM": 733.6000000000006,
-     "killedThreatSatM": 87.47000000000006,
-     "exchangeSat": 8.386875500171488,
-     "duplicateInterceptM": 17.2,
-     "leakedThreatM": 15.059999999999999,
-     "defenseEfficiency": 0.9776401942007038,
-     "defenseEfficiencySat": 0.9661990500386612
+     "interceptM": 1050.2000000000016,
+     "killedThreatM": 609.9699999999996,
+     "exchange": 1.7217240192140637,
+     "interceptSatM": 473.1999999999994,
+     "killedThreatSatM": 52.46999999999997,
+     "exchangeSat": 9.018486754335806,
+     "duplicateInterceptM": 31,
+     "leakedThreatM": 63.55999999999999,
+     "defenseEfficiency": 0.9056315234659184,
+     "defenseEfficiencySat": 0.5795868772782502
     }
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 49,
+     "killed": 45,
      "leaked": 0,
-     "unresolved": 4,
+     "unresolved": 8,
      "fired": 53,
-     "emergency": 6,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 87,
+     "killed": 52,
      "leaked": 0,
-     "unresolved": 3,
-     "fired": 90,
-     "emergency": 72,
-     "selfdef": 0
+     "unresolved": 38,
+     "fired": 55,
+     "emergency": 0,
+     "selfdef": 12
     },
     "cruise": {
-     "killed": 16,
+     "killed": 15,
      "leaked": 0,
-     "unresolved": 0,
+     "unresolved": 1,
      "fired": 16,
      "emergency": 0,
      "selfdef": 0
@@ -4387,48 +4558,56 @@
      "killed": 47,
      "leaked": 0,
      "unresolved": 6,
-     "fired": 51,
+     "fired": 52,
      "emergency": 0,
      "selfdef": 0
     }
    },
    "timeTotal": {
-    "srbm": 292.90356685174345,
-    "mrl_large": 100.04618087181166,
-    "cruise": 49.66328961015887,
-    "fighter": 90.75626287635089,
-    "uav_small": 411.6904290779653
+    "srbm": 298.38972438897986,
+    "mrl_large": 120.47740440536086,
+    "cruise": 51.30723884615338,
+    "fighter": 95.98148377593952,
+    "uav_small": 430.57458822670935
    }
   },
   "share=datalink ON / tobe": {
    "g": {
     "spawned": 228,
-    "killed": 212,
-    "leaked": 16,
+    "killed": 193,
+    "leaked": 35,
     "unresolved": 0,
-    "shots": 295,
-    "mttk": 195.56842054851674,
-    "mtte": 164.3094447213584,
-    "decision": 160.78378100454375,
+    "shots": 263,
+    "mttk": 216.6519007712722,
+    "mtte": 183.4656674564995,
+    "decision": 179.92499760003986,
     "coord": 0,
     "leakReasons": {
-     "missed": 14,
-     "ammo_depleted": 2
+     "missed": 12,
+     "correlation_failed": 1,
+     "timeout:c2": 3,
+     "ammo_depleted": 14,
+     "timeout:engage": 3,
+     "no_fire_control": 2
     },
     "failure": {
-     "missed": 14,
-     "ammo_depleted": 2
+     "missed": 12,
+     "correlation_failed": 1,
+     "timeout:c2": 3,
+     "ammo_depleted": 14,
+     "timeout:engage": 3,
+     "no_fire_control": 2
     },
     "coalition": {
-     "proposals": 136,
-     "allocRok": 55,
-     "allocUsfk": 65,
+     "proposals": 148,
+     "allocRok": 65,
+     "allocUsfk": 67,
      "dup": 15,
-     "skipped": 21
+     "skipped": 76
     },
     "cue": {
      "cued": 143,
-     "emergency": 86
+     "emergency": 0
     },
     "routeRetry": {
      "scheduled": 13,
@@ -4446,34 +4625,34 @@
      "identified": 711
     },
     "cost": {
-     "interceptM": 1322.8000000000025,
-     "killedThreatM": 652.4599999999996,
-     "exchange": 2.027403978787977,
-     "interceptSatM": 723.8000000000005,
-     "killedThreatSatM": 87.46000000000006,
-     "exchangeSat": 8.275783215184084,
-     "duplicateInterceptM": 50.4,
-     "leakedThreatM": 21.07,
-     "defenseEfficiency": 0.9687170578890323,
-     "defenseEfficiencySat": 0.9660885894178727
+     "interceptM": 1120.8000000000022,
+     "killedThreatM": 562.4699999999996,
+     "exchange": 1.992639607445736,
+     "interceptSatM": 527.1999999999994,
+     "killedThreatSatM": 69.47000000000004,
+     "exchangeSat": 7.588887289477459,
+     "duplicateInterceptM": 48.400000000000006,
+     "leakedThreatM": 111.06000000000003,
+     "defenseEfficiency": 0.8351075675916438,
+     "defenseEfficiencySat": 0.7673699326190213
     }
    },
    "outcomeByType": {
     "srbm": {
-     "killed": 47,
+     "killed": 48,
      "leaked": 0,
-     "unresolved": 6,
+     "unresolved": 5,
      "fired": 53,
-     "emergency": 4,
+     "emergency": 0,
      "selfdef": 0
     },
     "mrl_large": {
-     "killed": 87,
+     "killed": 69,
      "leaked": 0,
-     "unresolved": 3,
-     "fired": 90,
-     "emergency": 67,
-     "selfdef": 0
+     "unresolved": 21,
+     "fired": 72,
+     "emergency": 0,
+     "selfdef": 8
     },
     "cruise": {
      "killed": 16,
@@ -4484,28 +4663,28 @@
      "selfdef": 0
     },
     "fighter": {
-     "killed": 16,
+     "killed": 13,
      "leaked": 0,
-     "unresolved": 0,
+     "unresolved": 3,
      "fired": 16,
      "emergency": 0,
      "selfdef": 0
     },
     "uav_small": {
-     "killed": 46,
+     "killed": 47,
      "leaked": 0,
-     "unresolved": 7,
-     "fired": 51,
+     "unresolved": 6,
+     "fired": 52,
      "emergency": 0,
      "selfdef": 0
     }
    },
    "timeTotal": {
-    "srbm": 293.0441238944852,
-    "mrl_large": 97.91908289071193,
-    "cruise": 16.589088159675043,
-    "fighter": 51.65660091329022,
-    "uav_small": 451.26078631844473
+    "srbm": 289.9952859013507,
+    "mrl_large": 115.69280061274583,
+    "cruise": 16.243687864336152,
+    "fighter": 38.85759445984996,
+    "uav_small": 455.3004157048424
    }
   }
  }

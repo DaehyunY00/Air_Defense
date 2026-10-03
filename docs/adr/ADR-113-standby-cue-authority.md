@@ -41,7 +41,20 @@ ADR-104의 대기 지시(큐)는 표적 정보와 **발사 권한**을 함께 �
 
 ## 수치 영향
 
-`docs/analysis/2026-09-29-moe-analysis/README.md` 5판(이 ADR 이후 재산출)과 `tests/standby-cue-authority.test.mjs` 참조.
+`docs/analysis/2026-09-29-moe-analysis/README.md` 5판(이 ADR 이후 재산출 · 6장 14항)과 `tests/standby-cue-authority.test.mjs` 참조.
+
+SC3 · FULL · 화면 기본 플래그(bsr 포함) · 생성 1800초 · 관측 3600초, 'fire'(4판) → 'prepare'(5판):
+
+| seed | As-Is 격추 | To-Be 격추 | 비고 |
+|---|---|---|---|
+| 29 | 211 → 176 | 205 → 194 | 긴급발사 0 · 자위권 결심 12·9건 중 발사 2·3건 · CANTCO 52·35 · 한미 중복 7·17 |
+| 30 | 223 → 196 | 222 → 215 | |
+| 31 | 217 → 189 | 217 → 195 | |
+| 평균 | 217 → 187 | 215 → 201 | 두 체계 차이 −2 → +14 |
+
+줄어든 몫은 방사포(seed 29 As-Is 87 → 54 · To-Be 84 → 63)와 As-Is 탄도탄(51 → 42)이며, 누수 사유에 `timeout:c2`(9·5)·`timeout:engage`(10·6)가 새로 나타난다 —
+긴급발사가 명령 지연을 메우던 자리다. 'fire'에서 비슷하던 두 체계가 'prepare'에서 갈라지는 것은 포대 자체 발사가 As-Is의 음성 협조·ICC 중계 지연을
+덮고 있었기 때문이다.
 
 ## 검증
 

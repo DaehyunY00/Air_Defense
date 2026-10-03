@@ -757,6 +757,162 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   c2Nodes: Object.freeze([MCRC_LEGACY_ENTRY, ...HANBANDO_LEGACY_C2_BASE]),
 });
 
+
+// ════════════════════════════════════════════════════════════════
+// HANBANDO_PUBLIC — 공개자료 기반 배치 (2026-10-03 · 실험 브랜치)
+// ════════════════════════════════════════════════════════════════
+// FULL 배치는 비호·천마 45개 중대를 휴전선 남쪽 9km 띠에 등간격으로 생성하고 서울 시내에는 단거리 포대를 두지 않는다
+// (사용자 지적 2026-10-03: "너무 촘촘하고 정작 서울에는 없다"). 이 배치는 **언론·공개자료에 널리 알려진 도시 수준**의
+// 부대 위치만으로 다시 구성한다. 모든 좌표는 도시·기지 중심 수준의 개념값이며 실제 진지 좌표가 아니다.
+//   · 공군: 방공유도탄사령부 예하 1·2·3여단 ICC(대구·천안·서울 금천 — ADR-022), PAC-3 8개(서울공항·수원·수도권 북부·충주·
+//     청주·대구·광주·김해), 천궁-II 8개(수도권 벨트 5 + 중부 3 — 옛 호크 벨트 승계 가정), L-SAM 2개(2030 가정 · 수도권·중부)
+//   · 육군: 군단 방공단/수방사 방공여단 — 수방사(서울 4개 중대), 1군단(고양·파주·김포 4), 5군단(포천·연천·철원·동두천 4),
+//     2군단(화천·춘천·양구 3), 3군단(인제·고성·속초 3), 해병 서북도서(백령·연평 2) = 비호 12 · 천마 8, 20개 중대(각 6대)
+//   · 국지방공레이더 TPS-880K 10기(군단·수방사·서북도서 소속), FPS-117 본토·도서 12기, 그린파인 4기
+//   · 미군: Patriot 오산·험프리스·군산·케이시 4개, THAAD 성주(독립축) — FULL과 같되 캠프워커 제외
+// 군단 번호는 공개된 편제명(1·2·3·5군단, 수방사)을 쓰되 2030 시점의 개편은 반영하지 않는다(등급 C).
+
+const PUB_PICK = (keys) => Object.fromEntries(keys.map((k) => [k, HANBANDO_FULL_POSITIONS[k]]));
+const pubPos = (lon, lat, alt, confidence, sourceNote) => ({ lon, lat, alt, confidence, sourceNote });
+const PUB_MSAM_SITES = Object.freeze([
+  msam('MSAM2_PAJU', 126.80, 37.78, 3, false, '공개자료 기반 수도권 북서 벨트(파주) 도시 수준 개념 노드 — 옛 호크 벨트 승계 가정'),
+  msam('MSAM2_YANGJU', 127.05, 37.80, 3, false, '공개자료 기반 수도권 북 벨트(양주) 도시 수준 개념 노드'),
+  msam('MSAM2_INCHEON', 126.70, 37.50, 3, false, '공개자료 기반 수도권 서 벨트(인천) 도시 수준 개념 노드'),
+  msam('MSAM2_GWACHEON', 127.00, 37.43, 3, false, '공개자료 기반 수도권 남 벨트(과천·안양) 도시 수준 개념 노드'),
+  msam('MSAM2_YONGIN', 127.18, 37.24, 3, false, '공개자료 기반 수도권 남동 벨트(용인) 도시 수준 개념 노드'),
+  msam('MSAM2_CHEONGJU', 127.50, 36.64, 2, false, '공개자료 기반 중부(청주 기지 권역) 도시 수준 개념 노드'),
+  msam('MSAM2_WONJU', 127.95, 37.34, 2, false, '공개자료 기반 중부(원주 기지 권역) 도시 수준 개념 노드'),
+  msam('MSAM2_DAEJEON', 127.38, 36.35, 2, false, '공개자료 기반 중부(대전·계룡 권역) 도시 수준 개념 노드'),
+]);
+const PUB_SHORAD_SITES = Object.freeze([
+  // 수방사 방공여단 — 서울 시내 4개 중대
+  ['CHUNMA_SEOUL_N', 'CHUNMA', 126.98, 37.63, 'ARMY_CAPITAL_AD', '수방사 방공여단 천마 중대 — 서울 북부 도시 수준 개념 노드'],
+  ['CHUNMA_SEOUL_S', 'CHUNMA', 126.95, 37.47, 'ARMY_CAPITAL_AD', '수방사 방공여단 천마 중대 — 서울 남부(관악) 도시 수준 개념 노드'],
+  ['BIHO_SEOUL_W', 'BIHO', 126.86, 37.56, 'ARMY_CAPITAL_AD', '수방사 방공여단 비호 중대 — 서울 서부(강서) 도시 수준 개념 노드'],
+  ['BIHO_SEOUL_E', 'BIHO', 127.10, 37.56, 'ARMY_CAPITAL_AD', '수방사 방공여단 비호 중대 — 서울 동부(광진·강동) 도시 수준 개념 노드'],
+  // 1군단(고양) — 고양·파주·김포
+  ['CHUNMA_GOYANG', 'CHUNMA', 126.84, 37.66, 'ARMY_CORPS1_AD', '1군단 방공단 천마 중대 — 고양 도시 수준 개념 노드'],
+  ['BIHO_PAJU', 'BIHO', 126.78, 37.76, 'ARMY_CORPS1_AD', '1군단 방공단 비호 중대 — 파주 도시 수준 개념 노드'],
+  ['CHUNMA_PAJU_N', 'CHUNMA', 126.74, 37.86, 'ARMY_CORPS1_AD', '1군단 방공단 천마 중대 — 파주 북부(문산) 도시 수준 개념 노드'],
+  ['BIHO_GIMPO', 'BIHO', 126.63, 37.62, 'ARMY_CORPS1_AD', '1군단 방공단 비호 중대 — 김포 도시 수준 개념 노드'],
+  // 5군단(포천) — 포천·연천·철원·동두천
+  ['CHUNMA_POCHEON', 'CHUNMA', 127.20, 37.95, 'ARMY_CORPS5_AD', '5군단 방공단 천마 중대 — 포천 도시 수준 개념 노드'],
+  ['BIHO_YEONCHEON', 'BIHO', 127.08, 38.08, 'ARMY_CORPS5_AD', '5군단 방공단 비호 중대 — 연천 도시 수준 개념 노드'],
+  ['BIHO_CHEORWON', 'BIHO', 127.31, 38.14, 'ARMY_CORPS5_AD', '5군단 방공단 비호 중대 — 철원 도시 수준 개념 노드'],
+  ['CHUNMA_DONGDUCHEON', 'CHUNMA', 127.06, 37.90, 'ARMY_CORPS5_AD', '5군단 방공단 천마 중대 — 동두천 도시 수준 개념 노드'],
+  // 2군단(춘천) — 화천·춘천·양구
+  ['BIHO_HWACHEON', 'BIHO', 127.70, 38.10, 'ARMY_CORPS2_AD', '2군단 방공단 비호 중대 — 화천 도시 수준 개념 노드'],
+  ['CHUNMA_CHUNCHEON', 'CHUNMA', 127.73, 37.90, 'ARMY_CORPS2_AD', '2군단 방공단 천마 중대 — 춘천 도시 수준 개념 노드'],
+  ['BIHO_YANGGU', 'BIHO', 127.98, 38.10, 'ARMY_CORPS2_AD', '2군단 방공단 비호 중대 — 양구 도시 수준 개념 노드'],
+  // 3군단(인제) — 인제·고성·속초
+  ['BIHO_INJE', 'BIHO', 128.17, 38.07, 'ARMY_CORPS3_AD', '3군단 방공단 비호 중대 — 인제 도시 수준 개념 노드'],
+  ['CHUNMA_GOSEONG', 'CHUNMA', 128.42, 38.33, 'ARMY_CORPS3_AD', '3군단 방공단 천마 중대 — 고성 도시 수준 개념 노드'],
+  ['BIHO_SOKCHO', 'BIHO', 128.55, 38.20, 'ARMY_CORPS3_AD', '3군단 방공단 비호 중대 — 속초 도시 수준 개념 노드'],
+  // 해병 서북도서
+  ['BIHO_BAENGNYEONG', 'BIHO', 124.71, 37.97, 'MARINE_NW_AD', '해병 서북도서 비호 중대 — 백령도(공개) 개념 노드'],
+  ['BIHO_YEONPYEONG', 'BIHO', 125.70, 37.66, 'MARINE_NW_AD', '해병 서북도서 비호 중대 — 연평도(공개) 개념 노드'],
+].map(([posKey, shooterTypeId, lon, lat, localAdPosKey, sourceNote]) => Object.freeze({ posKey, shooterTypeId, lon, lat, localAdPosKey, quantity: 6, sourceNote })));
+
+const HANBANDO_PUBLIC_POSITIONS = ({
+  ...PUB_PICK(['KAMD_OPS', 'MCRC', 'ICC_BRIGADE_1', 'ICC_BRIGADE_2', 'ICC_BRIGADE_3', 'USFK_THAAD_C2', 'USFK_PATRIOT_C2', 'MARINE_NW_AD', 'IAOC',
+    'GREEN_PINE_CHUNGNAM', 'GREEN_PINE_CHUNGBUK', 'GREEN_PINE_BUSAN', 'GREEN_PINE_JEONNAM',
+    'FPS117_BAENGNYEONG', 'FPS117_ULLEUNG', 'FPS117_JEJU', 'FPS117_GANGWON_N', 'FPS117_GANGWON_S', 'FPS117_GYEONGGI', 'FPS117_CHUNGBUK',
+    'FPS117_CHUNGNAM', 'FPS117_JEONBUK', 'FPS117_JEONNAM_W', 'FPS117_GYEONGBUK_S', 'FPS117_GYEONGNAM',
+    'TPS880K_YEONPYEONG', 'TPS880K_BAENGNYEONG', 'TPS880K_GANGHWA', 'TPS880K_PAJU', 'TPS880K_YEONCHEON', 'TPS880K_CHEORWON', 'TPS880K_HWACHEON',
+    'TPS880K_SEOHWA', 'TPS880K_GOSEONG', 'TPS880K_SEOUL',
+    'LSAM_CAPITAL', 'LSAM_MFR_CAPITAL', 'PAC3_BUSAN', 'PATRIOT_MFR_BUSAN', 'PAC3_CHEONGJU', 'PATRIOT_MFR_CHEONGJU', 'PAC3_BUKAKSAN', 'PATRIOT_MFR_BUKAKSAN',
+    'USFK_PATRIOT_OSAN', 'USFK_PATRIOT_HUMPHREYS', 'USFK_PATRIOT_KUNSAN', 'USFK_PATRIOT_CASEY',
+    'PATRIOT_MFR_USFK_OSAN', 'PATRIOT_MFR_USFK_HUMPHREYS', 'PATRIOT_MFR_USFK_KUNSAN', 'PATRIOT_MFR_USFK_CASEY',
+    'THAAD_SEONGJU', 'AN_TPY2_SEONGJU', 'SRBM_ORIGIN', 'SRBM_TARGET']),
+  // 육군 방공 지휘소 — 공개된 사령부 소재지(도시 수준)
+  ARMY_CAPITAL_AD: pubPos(126.98, 37.47, 80, 'public', '수도방위사령부(서울 관악) 방공여단 상황실 — 도시 수준 개념 노드'),
+  ARMY_CORPS1_AD: pubPos(126.84, 37.69, 60, 'public', '1군단(고양) 방공단 상황실 — 도시 수준 개념 노드'),
+  ARMY_CORPS5_AD: pubPos(127.20, 37.89, 80, 'public', '5군단(포천) 방공단 상황실 — 도시 수준 개념 노드'),
+  ARMY_CORPS2_AD: pubPos(127.73, 37.88, 100, 'public', '2군단(춘천) 방공단 상황실 — 도시 수준 개념 노드'),
+  ARMY_CORPS3_AD: pubPos(128.17, 38.07, 200, 'public', '3군단(인제) 방공단 상황실 — 도시 수준 개념 노드'),
+  // 공군 PAC-3 — 언론에 널리 보도된 기지 권역(도시 수준)
+  PAC3_SEONGNAM: pubPos(127.11, 37.44, 80, 'public', '서울공항(성남) 권역 PAC-3 — 도시 수준 개념 노드'),
+  PATRIOT_MFR_SEONGNAM: pubPos(127.115, 37.445, 90, 'public', '포대별 Patriot radar near 서울공항'),
+  PAC3_SUWON: pubPos(127.01, 37.24, 60, 'public', '수원 기지 권역 PAC-3 — 도시 수준 개념 노드'),
+  PATRIOT_MFR_SUWON: pubPos(127.015, 37.245, 70, 'public', '포대별 Patriot radar near 수원'),
+  PAC3_CHUNGJU: pubPos(127.93, 36.97, 120, 'public', '충주 기지 권역 PAC-3 — 도시 수준 개념 노드'),
+  PATRIOT_MFR_CHUNGJU: pubPos(127.935, 36.975, 130, 'public', '포대별 Patriot radar near 충주'),
+  PAC3_DAEGU: pubPos(128.64, 35.89, 60, 'public', '대구 기지 권역 PAC-3 — 도시 수준 개념 노드'),
+  PATRIOT_MFR_DAEGU: pubPos(128.645, 35.895, 70, 'public', '포대별 Patriot radar near 대구'),
+  PAC3_GWANGJU: pubPos(126.81, 35.13, 40, 'public', '광주 기지 권역 PAC-3 — 도시 수준 개념 노드'),
+  PATRIOT_MFR_GWANGJU: pubPos(126.815, 35.135, 50, 'public', '포대별 Patriot radar near 광주'),
+  // L-SAM 2030 가정 2개
+  LSAM_CENTRAL: pubPos(127.95, 36.95, 150, 'estimated', 'L-SAM 중부 포대(충주 권역) — 2030 가정 개념 노드'),
+  LSAM_MFR_CENTRAL: pubPos(127.955, 36.955, 170, 'estimated', '포대별 L-SAM MFR near 충주'),
+});
+for (const site of PUB_MSAM_SITES) { HANBANDO_PUBLIC_POSITIONS[site.posKey] = Object.freeze(site.pos); HANBANDO_PUBLIC_POSITIONS[site.mfrKey] = Object.freeze(site.mfr); }
+for (const site of PUB_SHORAD_SITES) { HANBANDO_PUBLIC_POSITIONS[site.posKey] = Object.freeze({ lon: site.lon, lat: site.lat, alt: 80, confidence: 'estimated', sourceNote: site.sourceNote }); }
+Object.freeze(HANBANDO_PUBLIC_POSITIONS);
+
+const HANBANDO_PUBLIC_TPS880K_LOCAL_AD = Object.freeze({
+  TPS880K_YEONPYEONG: 'MARINE_NW_AD', TPS880K_BAENGNYEONG: 'MARINE_NW_AD',
+  TPS880K_GANGHWA: 'ARMY_CORPS1_AD', TPS880K_PAJU: 'ARMY_CORPS1_AD',
+  TPS880K_YEONCHEON: 'ARMY_CORPS5_AD', TPS880K_CHEORWON: 'ARMY_CORPS5_AD',
+  TPS880K_HWACHEON: 'ARMY_CORPS2_AD', TPS880K_SEOHWA: 'ARMY_CORPS3_AD', TPS880K_GOSEONG: 'ARMY_CORPS3_AD',
+  TPS880K_SEOUL: 'ARMY_CAPITAL_AD',
+});
+
+const HANBANDO_PUBLIC_BATTERIES = Object.freeze([
+  Object.freeze({ shooterTypeId: 'LSAM', posKey: 'LSAM_CAPITAL', mfrSensorTypeId: 'LSAM_MFR', mfrSensorPosKey: 'LSAM_MFR_CAPITAL', maxSimultaneous: 10, totalRounds: { ABM: 12, AAM: 12 }, iccPosKey: 'ICC_BRIGADE_3', confidence: 'estimated' }),
+  Object.freeze({ shooterTypeId: 'LSAM', posKey: 'LSAM_CENTRAL', mfrSensorTypeId: 'LSAM_MFR', mfrSensorPosKey: 'LSAM_MFR_CENTRAL', maxSimultaneous: 10, totalRounds: { ABM: 12, AAM: 12 }, iccPosKey: 'ICC_BRIGADE_2', confidence: 'estimated' }),
+  ...PUB_MSAM_SITES.map(site => Object.freeze({ shooterTypeId: 'CHEONGUNG2', posKey: site.posKey, mfrSensorTypeId: 'MSAM_MFR', mfrSensorPosKey: site.mfrKey, maxSimultaneous: 10, totalRounds: { ABM: 16, AAM: 16 }, iccPosKey: iccForBrigade(site.brigade), confidence: 'estimated' })),
+  ...[['PAC3_SEONGNAM', 'PATRIOT_MFR_SEONGNAM', 3], ['PAC3_SUWON', 'PATRIOT_MFR_SUWON', 3], ['PAC3_BUKAKSAN', 'PATRIOT_MFR_BUKAKSAN', 3],
+      ['PAC3_CHUNGJU', 'PATRIOT_MFR_CHUNGJU', 2], ['PAC3_CHEONGJU', 'PATRIOT_MFR_CHEONGJU', 2],
+      ['PAC3_DAEGU', 'PATRIOT_MFR_DAEGU', 1], ['PAC3_GWANGJU', 'PATRIOT_MFR_GWANGJU', 1], ['PAC3_BUSAN', 'PATRIOT_MFR_BUSAN', 1]]
+    .map(([posKey, mfrKey, brigade]) => Object.freeze({ shooterTypeId: 'PAC3', posKey, mfrSensorTypeId: 'PATRIOT_RADAR', mfrSensorPosKey: mfrKey, maxSimultaneous: 9, totalRounds: { ABM: 72 }, iccPosKey: iccForBrigade(brigade), confidence: HANBANDO_PUBLIC_POSITIONS[posKey].confidence })),
+  ...PUB_SHORAD_SITES.map(site => { const pv = SHORAD_PER_VEHICLE_SPEC[site.shooterTypeId]; const v = site.quantity; return Object.freeze({
+    shooterTypeId: site.shooterTypeId, posKey: site.posKey, mfrSensorTypeId: null, mfrSensorPosKey: null,
+    maxSimultaneous: pv.perVehicleConcurrency * v, totalRounds: Object.freeze({ AAM: pv.roundsPerLauncher * v }),
+    batteryConfig: Object.freeze({ mfr: null, launchers: Object.freeze({ AAM: v }), roundsPerLauncher: pv.roundsPerLauncher, perVehicleConcurrency: pv.perVehicleConcurrency, reloadDurationSec: 900 }),
+    iccPosKey: null, commandC2PosKey: site.localAdPosKey, c2Axis: 'LOCAL_AD', forceOwner: 'ROK_LOCAL_AD', localAdPosKey: site.localAdPosKey, quantity: v, confidence: 'estimated', sourceNote: site.sourceNote }); }),
+  ...HANBANDO_FULL_THAAD_BATTERIES,
+  ...HANBANDO_FULL_USFK_PATRIOT_BATTERIES.filter(b => b.posKey !== 'USFK_PATRIOT_CAMP_WALKER'),
+]);
+
+const HANBANDO_PUBLIC_SENSORS = Object.freeze([
+  ...HANBANDO_FULL_SENSORS.filter(s => /^GREEN_PINE_/.test(s.posKey)),
+  ...['FPS117_BAENGNYEONG', 'FPS117_ULLEUNG', 'FPS117_JEJU', 'FPS117_GANGWON_N', 'FPS117_GANGWON_S', 'FPS117_GYEONGGI', 'FPS117_CHUNGBUK', 'FPS117_CHUNGNAM',
+      'FPS117_JEONBUK', 'FPS117_JEONNAM_W', 'FPS117_GYEONGBUK_S', 'FPS117_GYEONGNAM']
+    .map(posKey => Object.freeze({ typeId: 'FPS117', posKey, radarRangeKm: 470, radarColor: '#88ccff', confidence: HANBANDO_PUBLIC_POSITIONS[posKey].confidence })),
+  ...Object.entries(HANBANDO_PUBLIC_TPS880K_LOCAL_AD).map(([posKey, localAdPosKey]) => Object.freeze({ typeId: 'TPS880K', posKey, radarRangeKm: 40, radarColor: '#ccff88', confidence: HANBANDO_PUBLIC_POSITIONS[posKey].confidence, sourceNote: HANBANDO_PUBLIC_POSITIONS[posKey].sourceNote, localAdPosKey })),
+  ...['LSAM_MFR_CAPITAL', 'LSAM_MFR_CENTRAL'].map(posKey => Object.freeze({ typeId: 'LSAM_MFR', posKey, radarRangeKm: 310, radarColor: '#00aaff', confidence: 'estimated' })),
+  ...PUB_MSAM_SITES.map(site => Object.freeze({ typeId: 'MSAM_MFR', posKey: site.mfrKey, radarRangeKm: 100, radarColor: '#ff66cc', confidence: 'estimated' })),
+  ...['PATRIOT_MFR_SEONGNAM', 'PATRIOT_MFR_SUWON', 'PATRIOT_MFR_BUKAKSAN', 'PATRIOT_MFR_CHUNGJU', 'PATRIOT_MFR_CHEONGJU', 'PATRIOT_MFR_DAEGU', 'PATRIOT_MFR_GWANGJU', 'PATRIOT_MFR_BUSAN']
+    .map(posKey => Object.freeze({ typeId: 'PATRIOT_RADAR', posKey, radarRangeKm: 180, radarColor: '#ffaa00', confidence: HANBANDO_PUBLIC_POSITIONS[posKey].confidence })),
+  ...HANBANDO_FULL_SENSORS.filter(s => s.forceOwner === 'USFK' && s.posKey !== 'PATRIOT_MFR_USFK_CAMP_WALKER'),
+]);
+
+const HANBANDO_PUBLIC_C2_BASE = Object.freeze([
+  Object.freeze({ typeId: 'ICC', posKey: 'ICC_BRIGADE_1', showNetworkNode: true, instanceLabel: 'ICC 1여단' }),
+  Object.freeze({ typeId: 'ICC', posKey: 'ICC_BRIGADE_2', showNetworkNode: true, instanceLabel: 'ICC 2여단' }),
+  Object.freeze({ typeId: 'ICC', posKey: 'ICC_BRIGADE_3', showNetworkNode: true, instanceLabel: 'ICC 3여단' }),
+  Object.freeze({ typeId: 'USFK_THAAD_C2', posKey: 'USFK_THAAD_C2', showNetworkNode: true, instanceLabel: 'USFK THAAD C2', c2Axis: 'USFK_THAAD', forceOwner: 'USFK' }),
+  Object.freeze({ typeId: 'USFK_PATRIOT_C2', posKey: 'USFK_PATRIOT_C2', showNetworkNode: true, instanceLabel: 'USFK Patriot C2', c2Axis: 'USFK_PATRIOT', forceOwner: 'USFK' }),
+  Object.freeze({ typeId: 'ARMY_LOCAL_AD', posKey: 'ARMY_CAPITAL_AD', showNetworkNode: true, instanceLabel: '수방사 방공여단 상황실' }),
+  Object.freeze({ typeId: 'ARMY_LOCAL_AD', posKey: 'ARMY_CORPS1_AD', showNetworkNode: true, instanceLabel: '1군단 방공단 상황실' }),
+  Object.freeze({ typeId: 'ARMY_LOCAL_AD', posKey: 'ARMY_CORPS5_AD', showNetworkNode: true, instanceLabel: '5군단 방공단 상황실' }),
+  Object.freeze({ typeId: 'ARMY_LOCAL_AD', posKey: 'ARMY_CORPS2_AD', showNetworkNode: true, instanceLabel: '2군단 방공단 상황실' }),
+  Object.freeze({ typeId: 'ARMY_LOCAL_AD', posKey: 'ARMY_CORPS3_AD', showNetworkNode: true, instanceLabel: '3군단 방공단 상황실' }),
+  Object.freeze({ typeId: 'ARMY_LOCAL_AD', posKey: 'MARINE_NW_AD', showNetworkNode: true, instanceLabel: '해병 서북도서 방공 상황실' }),
+  ...HANBANDO_PUBLIC_BATTERIES.map(b => Object.freeze({ typeId: 'ECS', posKey: b.posKey, showNetworkNode: true, instanceLabel: `ECS ${b.shooterTypeId} ${b.posKey}` })),
+  Object.freeze({ typeId: 'IAOC', posKey: 'IAOC', showNetworkNode: false }),
+]);
+
+const RAW_DEPLOYMENT_HANBANDO_PUBLIC_NORMAL = Object.freeze({
+  id: 'HANBANDO_PUBLIC_NORMAL',
+  name: '한반도 공개자료 배치 — 정상',
+  description: '2026-10-03 실험: 언론·공개자료에 알려진 도시 수준 부대 위치로 재구성(수방사 서울 4개 중대 · 1·2·3·5군단 방공단 · PAC-3 8 · 천궁-II 8 · L-SAM 2). KAMDOC + MCRC 정상, THAAD는 USFK 독립축.',
+  positions: HANBANDO_PUBLIC_POSITIONS,
+  batteries: HANBANDO_PUBLIC_BATTERIES,
+  sensors: HANBANDO_PUBLIC_SENSORS,
+  c2Nodes: Object.freeze([KAMDOC_FULL_ENTRY, MCRC_FULL_ENTRY, ...HANBANDO_PUBLIC_C2_BASE]),
+});
+
 // ════════════════════════════════════════════════════════════════
 // DEPLOYMENTS — 레지스트리 (index.html 토글)
 // ════════════════════════════════════════════════════════════════
@@ -900,6 +1056,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   const DEPLOYMENT_HANBANDO_LEGACY_NORMAL = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_LEGACY_NORMAL);
   const DEPLOYMENT_HANBANDO_LEGACY_MCRC_DOWN = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_LEGACY_MCRC_DOWN);
   const DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN);
+  const DEPLOYMENT_HANBANDO_PUBLIC_NORMAL = normalizeDeployment(RAW_DEPLOYMENT_HANBANDO_PUBLIC_NORMAL);
 
   KJ.DEPLOYMENTS = Object.freeze({
     HANBANDO_FULL_NORMAL: DEPLOYMENT_HANBANDO_FULL_NORMAL,
@@ -907,7 +1064,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     HANBANDO_FULL_KAMDOC_DOWN: DEPLOYMENT_HANBANDO_FULL_KAMDOC_DOWN,
     HANBANDO_LEGACY_NORMAL: DEPLOYMENT_HANBANDO_LEGACY_NORMAL,
     HANBANDO_LEGACY_MCRC_DOWN: DEPLOYMENT_HANBANDO_LEGACY_MCRC_DOWN,
-    HANBANDO_LEGACY_KAMDOC_DOWN: DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN
+    HANBANDO_LEGACY_KAMDOC_DOWN: DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN,
+    HANBANDO_PUBLIC_NORMAL: DEPLOYMENT_HANBANDO_PUBLIC_NORMAL
   });
   KJ.deploymentById = function (id) { return KJ.DEPLOYMENTS[id] || null; };
   KJ.DEPLOYMENT_IDS = Object.freeze(Object.keys(KJ.DEPLOYMENTS));

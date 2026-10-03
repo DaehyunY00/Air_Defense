@@ -930,7 +930,7 @@
        +8 vs +15로 갈린다(PARAMS 주석 실측). 어느 배치의 수치인지 모르고 읽는 것이 이 화면의
        가장 큰 오독 위험이라, 고정하는 대신 **늘 보이게** 해서 막는다. -->
   <span class="modesw" id="depsw">
-    <button id="dep-legacy">LEGACY</button><button id="dep-full" class="on">FULL</button>
+    <button id="dep-legacy">LEGACY</button><button id="dep-full" class="on">FULL</button><button id="dep-public" title="공개자료 기반 도시 수준 배치 — 수방사 서울 4개 중대·1·2·3·5군단 방공단·PAC-3 8·천궁-II 8·L-SAM 2 (실험 브랜치)">PUBLIC</button>
   </span>
   <span id="dep-fixed"></span>
   <span class="modesw">
@@ -1099,7 +1099,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20261002b';
+const V = '?v=20261003a';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -1548,7 +1548,7 @@ const PARAMS = [
   // ⚠️ 대가: 기본 실행(SC3·1800초·FULL)이 메인 스레드에서 24~31초 걸린다(ADR-101 실측 31초).
   //    renderDep()이 「계산 20초+」를 미리 알린다. 재현용 seed 29·관측 1800초는 그대로다.
   { k: 'dep',   d: 'HANBANDO_FULL_NORMAL', t: 'str',
-    h: '배치 (HANBANDO_FULL_NORMAL(기본)|HANBANDO_LEGACY_NORMAL|…_MCRC_DOWN|…_KAMDOC_DOWN)' },
+    h: '배치 (HANBANDO_FULL_NORMAL(기본)|HANBANDO_LEGACY_NORMAL|HANBANDO_PUBLIC_NORMAL(공개자료 배치)|…_MCRC_DOWN|…_KAMDOC_DOWN)' },
   { k: 'mode',  d: 'asis',  t: 'str',  h: '체계 모드 (asis|tobe)' },
   // seed 기본값은 **대표 표본**이다(사용자 결정 2026-09-03). 종전 12345는 이 화면의 조건에서
   // 32 seed 중 가장 심한 이상치였다 — KAMDOC 도착 75건·ρ 0.81(중앙값 50건·ρ 0.48)이라 한 노드가
@@ -5758,6 +5758,7 @@ function renderDep() {
   const d = KJ.deploymentById(DEPLOYMENT);
   el('dep-legacy').classList.toggle('on', DEPLOYMENT === 'HANBANDO_LEGACY_NORMAL');
   el('dep-full').classList.toggle('on', DEPLOYMENT === 'HANBANDO_FULL_NORMAL');
+  el('dep-public').classList.toggle('on', DEPLOYMENT === 'HANBANDO_PUBLIC_NORMAL');
   const c = depNodeCount(DEPLOYMENT, mode);
   // 계산 시간은 노드 수가 아니라 **관측 시간 × 배치 규모**에서 온다 — 둘 다 반영해 어림한다.
   const heavy = c && c.n > 150 && P.dur > 900;
@@ -5780,6 +5781,7 @@ function setDeployment(id) {
 }
 el('dep-legacy').addEventListener('click', () => setDeployment('HANBANDO_LEGACY_NORMAL'));
 el('dep-full').addEventListener('click', () => setDeployment('HANBANDO_FULL_NORMAL'));
+el('dep-public').addEventListener('click', () => setDeployment('HANBANDO_PUBLIC_NORMAL'));
 renderDep();
 el('seed').value = String(P.seed);
 el('dur').value = String(P.dur);

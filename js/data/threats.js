@@ -20,6 +20,8 @@
  *
  * ── 발사권역·사거리 정합(정밀화 Phase A) ──
  * rangeBandKm: 공개자료 기반 개념 사거리대 {min,max} (실제 제원 아님 — docs/params.md THR-*-RNG-*).
+ * launchStandoffKm: ADR-114 — 공중 위협의 발사·이륙 원점에서 축선 진입점까지의 개념 이격거리(km, 등급 C). airLaunchAxes ON일 때
+ *   이 거리만큼 진입점 뒤쪽에서 비행을 시작한다(탄도의 ADR-091 rangeBandKm 중앙값 규칙과 같은 자리).
  * originZones: 이 위협이 발사될 수 있는 개념 발사권역 태그 목록. axes.js의 축선별
  *   launchZones와 대조해 "축선 배분이 사거리·발사권역과 모순되지 않는지"를
  *   KJ.checkAxisThreatFit(axes.js)가 검증한다(회귀 어서션 포함).
@@ -45,6 +47,7 @@
   KJ.THREAT_TYPES = {
     uav_small: {
       key: 'uav_small', name: '소형 무인기 (2m급)',
+      launchStandoffKm: 10, standoffRef: 'THR-UAV-STANDOFF-01',   // ADR-114 공중 발사점 연장 — 발사·이륙 원점에서 축선 진입점까지의 개념 이격거리
       speedKmh: 100, altBand: 'low', dwellSec: 900,
       detectFactor: 0.4, paramRef: 'THR-UAV-RCS-01',
       rangeBandKm: { min: 50, max: 300 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-UAV-RNG-01',
@@ -55,6 +58,7 @@
     },
     ac_low: {
       key: 'ac_low', name: '저속 침투기 (AN-2급)',
+      launchStandoffKm: 30, standoffRef: 'THR-AN2-STANDOFF-01',   // ADR-114 공중 발사점 연장 — 발사·이륙 원점에서 축선 진입점까지의 개념 이격거리
       speedKmh: 180, altBand: 'low', dwellSec: 600,
       detectFactor: 0.6, paramRef: 'THR-AN2-RCS-01',
       rangeBandKm: { min: 100, max: 900 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-AN2-RNG-01',
@@ -64,6 +68,7 @@
     },
     heli: {
       key: 'heli', name: '헬기 (저고도 침투)',
+      launchStandoffKm: 20, standoffRef: 'THR-HELI-STANDOFF-01',   // ADR-114 공중 발사점 연장 — 발사·이륙 원점에서 축선 진입점까지의 개념 이격거리
       speedKmh: 250, altBand: 'low', dwellSec: 420,
       detectFactor: 0.7, paramRef: 'THR-HELI-RCS-01',
       rangeBandKm: { min: 50, max: 500 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-HELI-RNG-01',
@@ -73,6 +78,7 @@
     },
     fighter: {
       key: 'fighter', name: '전투기',
+      launchStandoffKm: 80, standoffRef: 'THR-FTR-STANDOFF-01',   // ADR-114 공중 발사점 연장 — 발사·이륙 원점에서 축선 진입점까지의 개념 이격거리
       speedKmh: 900, altBand: 'medium', dwellSec: 180,
       detectFactor: 0.9, paramRef: 'SEN-ACR-PD-01',
       rangeBandKm: { min: 200, max: 1500 }, originZones: ['dmz', 'coastal', 'deep'], rangeRef: 'THR-FTR-RNG-01',
@@ -82,6 +88,7 @@
     },
     cruise: {
       key: 'cruise', name: '순항미사일',
+      launchStandoffKm: 100, standoffRef: 'THR-CM-STANDOFF-01',   // ADR-114 공중 발사점 연장 — 발사·이륙 원점에서 축선 진입점까지의 개념 이격거리
       speedKmh: 800, altBand: 'low', dwellSec: 120,
       detectFactor: 0.5, paramRef: 'THR-CM-RCS-01',
       rangeBandKm: { min: 150, max: 2000 }, originZones: ['dmz', 'coastal', 'deep'], rangeRef: 'THR-CM-RNG-01',

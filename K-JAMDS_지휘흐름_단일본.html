@@ -2535,6 +2535,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
  *
  * ── 발사권역·사거리 정합(정밀화 Phase A) ──
  * rangeBandKm: 공개자료 기반 개념 사거리대 {min,max} (실제 제원 아님 — docs/params.md THR-*-RNG-*).
+ * launchStandoffKm: ADR-114 — 공중 위협의 발사·이륙 원점에서 축선 진입점까지의 개념 이격거리(km, 등급 C). airLaunchAxes ON일 때
+ *   이 거리만큼 진입점 뒤쪽에서 비행을 시작한다(탄도의 ADR-091 rangeBandKm 중앙값 규칙과 같은 자리).
  * originZones: 이 위협이 발사될 수 있는 개념 발사권역 태그 목록. axes.js의 축선별
  *   launchZones와 대조해 "축선 배분이 사거리·발사권역과 모순되지 않는지"를
  *   KJ.checkAxisThreatFit(axes.js)가 검증한다(회귀 어서션 포함).
@@ -2560,6 +2562,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
   KJ.THREAT_TYPES = {
     uav_small: {
       key: 'uav_small', name: '소형 무인기 (2m급)',
+      launchStandoffKm: 10, standoffRef: 'THR-UAV-STANDOFF-01',   // ADR-114 공중 발사점 연장 — 발사·이륙 원점에서 축선 진입점까지의 개념 이격거리
       speedKmh: 100, altBand: 'low', dwellSec: 900,
       detectFactor: 0.4, paramRef: 'THR-UAV-RCS-01',
       rangeBandKm: { min: 50, max: 300 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-UAV-RNG-01',
@@ -2570,6 +2573,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     },
     ac_low: {
       key: 'ac_low', name: '저속 침투기 (AN-2급)',
+      launchStandoffKm: 30, standoffRef: 'THR-AN2-STANDOFF-01',   // ADR-114 공중 발사점 연장 — 발사·이륙 원점에서 축선 진입점까지의 개념 이격거리
       speedKmh: 180, altBand: 'low', dwellSec: 600,
       detectFactor: 0.6, paramRef: 'THR-AN2-RCS-01',
       rangeBandKm: { min: 100, max: 900 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-AN2-RNG-01',
@@ -2579,6 +2583,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     },
     heli: {
       key: 'heli', name: '헬기 (저고도 침투)',
+      launchStandoffKm: 20, standoffRef: 'THR-HELI-STANDOFF-01',   // ADR-114 공중 발사점 연장 — 발사·이륙 원점에서 축선 진입점까지의 개념 이격거리
       speedKmh: 250, altBand: 'low', dwellSec: 420,
       detectFactor: 0.7, paramRef: 'THR-HELI-RCS-01',
       rangeBandKm: { min: 50, max: 500 }, originZones: ['dmz', 'coastal'], rangeRef: 'THR-HELI-RNG-01',
@@ -2588,6 +2593,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     },
     fighter: {
       key: 'fighter', name: '전투기',
+      launchStandoffKm: 80, standoffRef: 'THR-FTR-STANDOFF-01',   // ADR-114 공중 발사점 연장 — 발사·이륙 원점에서 축선 진입점까지의 개념 이격거리
       speedKmh: 900, altBand: 'medium', dwellSec: 180,
       detectFactor: 0.9, paramRef: 'SEN-ACR-PD-01',
       rangeBandKm: { min: 200, max: 1500 }, originZones: ['dmz', 'coastal', 'deep'], rangeRef: 'THR-FTR-RNG-01',
@@ -2597,6 +2603,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     },
     cruise: {
       key: 'cruise', name: '순항미사일',
+      launchStandoffKm: 100, standoffRef: 'THR-CM-STANDOFF-01',   // ADR-114 공중 발사점 연장 — 발사·이륙 원점에서 축선 진입점까지의 개념 이격거리
       speedKmh: 800, altBand: 'low', dwellSec: 120,
       detectFactor: 0.5, paramRef: 'THR-CM-RCS-01',
       rangeBandKm: { min: 150, max: 2000 }, originZones: ['dmz', 'coastal', 'deep'], rangeRef: 'THR-CM-RNG-01',
@@ -2877,6 +2884,23 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     var rep = (tt.rangeBandKm.min + tt.rangeBandKm.max) / 2;
     var ext = Math.max(0, rep - a.conceptReachKm);
     if (!ext) return null;
+    return { extKm: ext, reachKm: a.conceptReachKm,
+      scale: (a.conceptReachKm + ext) / a.conceptReachKm };
+  };
+
+  /**
+   * ADR-114: 공중 위협 발사점 연장 — 탄도의 ADR-091과 같은 규율을 공중 위협에 적용한다.
+   * 공중 위협의 대표 거리는 사거리밴드가 아니라(전투기 항속거리는 이격거리가 아니다) 위협 제원의
+   * launchStandoffKm(발사·이륙 원점 → 축선 진입점 개념 이격거리, 등급 C)이다. 그 거리만큼 진입점
+   * 뒤쪽(축선 연장선 위)에서 비행을 시작하고, 체공시간은 동비율로 늘려 함의 속도를 유지한다.
+   * 탄도·비탄도 판정은 호출부(엔진 iadsThreatCategory)가 지킨다 — 이 함수는 standoff가 있으면 값을 낸다.
+   * @returns {extKm, reachKm, scale} — standoff가 없거나 0이면 null
+   */
+  KJ.airLaunchExtension = function (type, axisKey) {
+    var tt = KJ.threatType(type), a = KJ.AXES[axisKey];
+    if (!tt || !a || !a.conceptReachKm) return null;
+    var ext = Number(tt.launchStandoffKm) || 0;
+    if (!(ext > 0)) return null;
     return { extKm: ext, reachKm: a.conceptReachKm,
       scale: (a.conceptReachKm + ext) / a.conceptReachKm };
   };
@@ -4400,6 +4424,9 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 종전 종말 구간 모델에서는 모든 센서가 스폰 즉시 볼 수 있어 탐지 선착이 난수 추첨이었다.
     // 켜면 탐지 시각·교전 기하가 전부 이동한다 — 기본 OFF(불변 규칙 1 · 재기준선 대상).
     this.ballisticLaunchAxes = ff('ballisticLaunchAxes', false);
+    // ADR-114: 공중 위협(순항·전투기·무인기·저속기·헬기)도 발사·이륙 원점에서 비행을 시작한다 — 「생성」의 기준을
+    // 탄도(발사 시각)와 같게 맞춘다. 종전에는 감시 공역 진입점에서 생성돼 생성→탐지가 0이었다. 기본 OFF(bit-exact).
+    this.airLaunchAxes = ff('airLaunchAxes', false);
     // ADR-103: 탄도 위협 **시작 보고원 고정** — IADS_codex `kamd_ballistic`(startNode GREEN_PINE_B) 정합.
     // 탄도 위협(srbm·mrl_large)의 탄도 책임 C2(As-Is KAMD_OPS / KAMDOC 무력화 시 권역 ICC · To-Be IAOC)로
     // 가는 시작 보고 번들은 role `ballistic_early_warning`인 센서(그린파인)만 낸다. FPS-117·TPS-880K·
@@ -4598,6 +4625,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     if (this.threatTargetDispersion) this.features.targetSpreadKm = this.targetSpreadKm;
     // wire shape 규율 — 켜졌을 때만 키가 실린다(OFF 골든 불변).
     if (this.threatAimpoints) this.features.threatAimpoints = true;
+    if (this.airLaunchAxes) this.features.airLaunchAxes = true;   // ADR-114 (OFF wire shape 보존)
     if (this.ballisticReportSource) this.features.ballisticReportSource = true; // ADR-103 (OFF wire shape 보존)
     if (this.rokUsfkCoordination) {   // ADR-105 — 요청했을 때만 신고(OFF wire shape 보존)
       this.features.rokUsfkCoordination = this.coalitionActive ? this.rokUsfkCoordination : 'disabled_no_coalition_links';
@@ -8252,6 +8280,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
         threat._launchExtKm = lx.extKm;
         threat.dwellSec = threat.dwellSec * lx.scale;
       }
+    } else if (this.airLaunchAxes && iadsThreatCategory(entry.type) !== 'ballistic') {
+      // ADR-114: 공중 위협 발사점 연장 — 같은 재매개변수화(iadsThreatPosition의 _launchExtKm 갈래)를 그대로 탄다.
+      // 새 난수 소비 없음(유형 상수) · 탐지는 레이더가 실제로 닿는 지점에서 일어나므로 생성→탐지가 0이 아니게 된다.
+      var ax = KJ.airLaunchExtension && KJ.airLaunchExtension(entry.type, entry.axis);
+      if (ax) {
+        threat._launchExtKm = ax.extKm;
+        threat.dwellSec = threat.dwellSec * ax.scale;
+      }
     }
     this._metricEvent('THREAT_SPAWNED', t, threat, { threatType: threat.type, axis: threat.axis });
     // ADR-074 B-2: 위협 **전수**에 대한 교전창 원장. 결심에 도달한 위협만 보면 생존 편향이
@@ -10001,6 +10037,7 @@ function features() {
     commanderRouteRetry: P.rr,     // ADR-106 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 요청 2026-09-29)
     rokUsfkCoordination: P.coal ? { asis: 'voice', tobe: 'datalink' } : null, // ADR-105 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-29) · To-Be는 데이터링크(사용자 결정 2026-10-01)
     ballisticLaunchAxes: P.lx,   // ADR-091 — 〃
+    airLaunchAxes: P.alx,        // ADR-114 — 공중 위협도 발사·이륙 원점부터(생성 기준을 탄도와 동일하게) · 엔진 기본 OFF(이 화면만 기본 ON)
     threatAimpoints: P.aim,      // ADR-097 — 〃 (이 화면만 기본 켜짐)
     c2DecisionTimeParity: P.par, // ADR-099 — 〃 (이 화면만 기본 켜짐 · codex 정합)
     c2ServiceFloor: P.floor,     // ADR-092 — 〃 (C2 처리 로그의 「처리 0초」가 이 화면에서 드러난 문제)
@@ -10155,6 +10192,7 @@ const PARAMS = [
   //   조기경보가 As-Is의 약점(느린 C2)을 일부 보상해 주기 때문이다. 그것도 사실이다.
   // 끄려면 ?lx=0. 켜진 동안은 상태줄 칩으로 상시 표기한다(엔진 기본은 여전히 OFF).
   { k: 'lx',    d: 1,       t: 'bool', h: '탄도 축선 발사점 연장 — 대표 사거리부터 비행, 탐지 선착이 기하에서 나옴 (ADR-091 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  { k: 'alx',   d: 1,       t: 'bool', h: '공중 위협 발사점 연장 — 순항·전투기·무인기도 발사·이륙 원점(위협 제원 launchStandoffKm)부터 비행, 생성 기준을 탄도와 같게 (ADR-114 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   { k: 'floor', d: 0,       t: 'bool', h: 'C2 처리 시간 바닥 — 체계 처리 구간 + 운용자 판단을 따로 추첨, 평균 불변 (ADR-092 · 기본 꺼짐)' },
   // ⚠️ pipe는 위 규율의 **유일한 예외**다(사용자 결정 2026-09-01, ADR-093 추기). 이 화면의 존재 이유가
   //    C2 처리 로그로 결심 파이프라인을 읽는 것인데, OFF에서는 AOC·JAOC에 「승인 회신 처리」 줄이
@@ -10249,6 +10287,7 @@ function activeConfigChips() {
   if (P.cue && !P.bsrc) out.push('⚠ 사전대기 큐 비활성 — bsrc=0');
   if (P.cue && P.bsrc) out.push('사전대기 큐 ON' + (P.cuefire ? ' (발사 권한 포함 · 긴급발사 ②)' : ' (준비만 · 발사는 지휘소 명령/자위권)') + (P.cuegain > 0 ? ` (획득이득 ${P.cuegain})` : ''));
   if (P.lx) out.push('발사점 연장 ON');
+  if (P.alx) out.push('공중 발사점 연장 ON');
   if (P.aim) out.push('표적 카탈로그 ON');
   if (P.par) out.push('결심 시간 동일화 ON');
   if (P.floor) out.push('처리 바닥 ON');

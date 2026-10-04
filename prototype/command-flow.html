@@ -1102,7 +1102,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20261003b';
+const V = '?v=20261004a';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -1500,6 +1500,7 @@ function features() {
     commanderRouteRetry: P.rr,     // ADR-106 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 요청 2026-09-29)
     rokUsfkCoordination: P.coal ? { asis: 'voice', tobe: 'datalink' } : null, // ADR-105 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-29) · To-Be는 데이터링크(사용자 결정 2026-10-01)
     ballisticLaunchAxes: P.lx,   // ADR-091 — 〃
+    airLaunchAxes: P.alx,        // ADR-114 — 공중 위협도 발사·이륙 원점부터(생성 기준을 탄도와 동일하게) · 엔진 기본 OFF(이 화면만 기본 ON)
     threatAimpoints: P.aim,      // ADR-097 — 〃 (이 화면만 기본 켜짐)
     c2DecisionTimeParity: P.par, // ADR-099 — 〃 (이 화면만 기본 켜짐 · codex 정합)
     c2ServiceFloor: P.floor,     // ADR-092 — 〃 (C2 처리 로그의 「처리 0초」가 이 화면에서 드러난 문제)
@@ -1654,6 +1655,7 @@ const PARAMS = [
   //   조기경보가 As-Is의 약점(느린 C2)을 일부 보상해 주기 때문이다. 그것도 사실이다.
   // 끄려면 ?lx=0. 켜진 동안은 상태줄 칩으로 상시 표기한다(엔진 기본은 여전히 OFF).
   { k: 'lx',    d: 1,       t: 'bool', h: '탄도 축선 발사점 연장 — 대표 사거리부터 비행, 탐지 선착이 기하에서 나옴 (ADR-091 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  { k: 'alx',   d: 1,       t: 'bool', h: '공중 위협 발사점 연장 — 순항·전투기·무인기도 발사·이륙 원점(위협 제원 launchStandoffKm)부터 비행, 생성 기준을 탄도와 같게 (ADR-114 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   { k: 'floor', d: 0,       t: 'bool', h: 'C2 처리 시간 바닥 — 체계 처리 구간 + 운용자 판단을 따로 추첨, 평균 불변 (ADR-092 · 기본 꺼짐)' },
   // ⚠️ pipe는 위 규율의 **유일한 예외**다(사용자 결정 2026-09-01, ADR-093 추기). 이 화면의 존재 이유가
   //    C2 처리 로그로 결심 파이프라인을 읽는 것인데, OFF에서는 AOC·JAOC에 「승인 회신 처리」 줄이
@@ -1748,6 +1750,7 @@ function activeConfigChips() {
   if (P.cue && !P.bsrc) out.push('⚠ 사전대기 큐 비활성 — bsrc=0');
   if (P.cue && P.bsrc) out.push('사전대기 큐 ON' + (P.cuefire ? ' (발사 권한 포함 · 긴급발사 ②)' : ' (준비만 · 발사는 지휘소 명령/자위권)') + (P.cuegain > 0 ? ` (획득이득 ${P.cuegain})` : ''));
   if (P.lx) out.push('발사점 연장 ON');
+  if (P.alx) out.push('공중 발사점 연장 ON');
   if (P.aim) out.push('표적 카탈로그 ON');
   if (P.par) out.push('결심 시간 동일화 ON');
   if (P.floor) out.push('처리 바닥 ON');

@@ -197,11 +197,11 @@ function c2Types() {
   return rows;
 }
 function threatTypes() {
-  const rows = [['type', '이름', '속도km/h', '고도대', '체공창s', '탐지계수', '사거리min km', '사거리max km', '발사권역', '단가M$', '교전권 보유 C2 As-Is', '교전권 보유 C2 To-Be', '자동화 As-Is', '자동화 To-Be', '조준점 대상', '출처(paramRef)', '사거리출처', '단가출처', '비고']];
+  const rows = [['type', '이름', '속도km/h', '고도대', '체공창s', '탐지계수', '사거리min km', '사거리max km', '발사·이륙 이격거리 km(ADR-114)', '발사권역', '단가M$', '교전권 보유 C2 As-Is', '교전권 보유 C2 To-Be', '자동화 As-Is', '자동화 To-Be', '조준점 대상', '출처(paramRef)', '사거리출처', '단가출처', '비고']];
   const aimTypes = new Set(KJ.AIMPOINT_TYPES || []);
   Object.keys(KJ.THREAT_TYPES || {}).forEach((k) => {
     const t = KJ.threatType(k); if (!t) return;
-    rows.push([k, t.name, t.speedKmh, t.altBand, t.dwellSec, t.detectFactor ?? '', t.rangeBandKm ? t.rangeBandKm.min : '', t.rangeBandKm ? t.rangeBandKm.max : '',
+    rows.push([k, t.name, t.speedKmh, t.altBand, t.dwellSec, t.detectFactor ?? '', t.rangeBandKm ? t.rangeBandKm.min : '', t.rangeBandKm ? t.rangeBandKm.max : '', t.launchStandoffKm ?? '',
       j(t.originZones), t.unitCostM ?? '', t.approvalLevel ? t.approvalLevel.asis ?? '' : '', t.approvalLevel ? t.approvalLevel.tobe ?? '' : '',
       t.automation ? t.automation.asis : '', t.automation ? t.automation.tobe : '', aimTypes.has(k) ? 'Y' : 'N', t.paramRef || '', t.rangeRef || '', t.costRef || '', t.note || '']);
   });

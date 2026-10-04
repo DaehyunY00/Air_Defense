@@ -122,6 +122,23 @@
   };
 
   /**
+   * ADR-114: 공중 위협 발사점 연장 — 탄도의 ADR-091과 같은 규율을 공중 위협에 적용한다.
+   * 공중 위협의 대표 거리는 사거리밴드가 아니라(전투기 항속거리는 이격거리가 아니다) 위협 제원의
+   * launchStandoffKm(발사·이륙 원점 → 축선 진입점 개념 이격거리, 등급 C)이다. 그 거리만큼 진입점
+   * 뒤쪽(축선 연장선 위)에서 비행을 시작하고, 체공시간은 동비율로 늘려 함의 속도를 유지한다.
+   * 탄도·비탄도 판정은 호출부(엔진 iadsThreatCategory)가 지킨다 — 이 함수는 standoff가 있으면 값을 낸다.
+   * @returns {extKm, reachKm, scale} — standoff가 없거나 0이면 null
+   */
+  KJ.airLaunchExtension = function (type, axisKey) {
+    var tt = KJ.threatType(type), a = KJ.AXES[axisKey];
+    if (!tt || !a || !a.conceptReachKm) return null;
+    var ext = Number(tt.launchStandoffKm) || 0;
+    if (!(ext > 0)) return null;
+    return { extKm: ext, reachKm: a.conceptReachKm,
+      scale: (a.conceptReachKm + ext) / a.conceptReachKm };
+  };
+
+  /**
    * 위협 유형 × 축선의 발사권역·사거리 정합성 검증 (ENV-AXIS-FIT-01).
    * @returns { ok:boolean, reasons:string[] } — ok=false면 reasons에 모순 사유
    */

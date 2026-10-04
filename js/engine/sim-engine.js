@@ -363,6 +363,9 @@
     // 종전 종말 구간 모델에서는 모든 센서가 스폰 즉시 볼 수 있어 탐지 선착이 난수 추첨이었다.
     // 켜면 탐지 시각·교전 기하가 전부 이동한다 — 기본 OFF(불변 규칙 1 · 재기준선 대상).
     this.ballisticLaunchAxes = ff('ballisticLaunchAxes', false);
+    // ADR-114: 공중 위협(순항·전투기·무인기·저속기·헬기)도 발사·이륙 원점에서 비행을 시작한다 — 「생성」의 기준을
+    // 탄도(발사 시각)와 같게 맞춘다. 종전에는 감시 공역 진입점에서 생성돼 생성→탐지가 0이었다. 기본 OFF(bit-exact).
+    this.airLaunchAxes = ff('airLaunchAxes', false);
     // ADR-103: 탄도 위협 **시작 보고원 고정** — IADS_codex `kamd_ballistic`(startNode GREEN_PINE_B) 정합.
     // 탄도 위협(srbm·mrl_large)의 탄도 책임 C2(As-Is KAMD_OPS / KAMDOC 무력화 시 권역 ICC · To-Be IAOC)로
     // 가는 시작 보고 번들은 role `ballistic_early_warning`인 센서(그린파인)만 낸다. FPS-117·TPS-880K·
@@ -561,6 +564,7 @@
     if (this.threatTargetDispersion) this.features.targetSpreadKm = this.targetSpreadKm;
     // wire shape 규율 — 켜졌을 때만 키가 실린다(OFF 골든 불변).
     if (this.threatAimpoints) this.features.threatAimpoints = true;
+    if (this.airLaunchAxes) this.features.airLaunchAxes = true;   // ADR-114 (OFF wire shape 보존)
     if (this.ballisticReportSource) this.features.ballisticReportSource = true; // ADR-103 (OFF wire shape 보존)
     if (this.rokUsfkCoordination) {   // ADR-105 — 요청했을 때만 신고(OFF wire shape 보존)
       this.features.rokUsfkCoordination = this.coalitionActive ? this.rokUsfkCoordination : 'disabled_no_coalition_links';
@@ -4214,6 +4218,14 @@
       if (lx) {
         threat._launchExtKm = lx.extKm;
         threat.dwellSec = threat.dwellSec * lx.scale;
+      }
+    } else if (this.airLaunchAxes && iadsThreatCategory(entry.type) !== 'ballistic') {
+      // ADR-114: 공중 위협 발사점 연장 — 같은 재매개변수화(iadsThreatPosition의 _launchExtKm 갈래)를 그대로 탄다.
+      // 새 난수 소비 없음(유형 상수) · 탐지는 레이더가 실제로 닿는 지점에서 일어나므로 생성→탐지가 0이 아니게 된다.
+      var ax = KJ.airLaunchExtension && KJ.airLaunchExtension(entry.type, entry.axis);
+      if (ax) {
+        threat._launchExtKm = ax.extKm;
+        threat.dwellSec = threat.dwellSec * ax.scale;
       }
     }
     this._metricEvent('THREAT_SPAWNED', t, threat, { threatType: threat.type, axis: threat.axis });

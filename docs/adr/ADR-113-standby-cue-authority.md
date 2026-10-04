@@ -41,7 +41,7 @@ ADR-104의 대기 지시(큐)는 표적 정보와 **발사 권한**을 함께 �
 
 ## 수치 영향
 
-`docs/analysis/2026-09-29-moe-analysis/README.md` 5판(이 ADR 이후 재산출 · 6장 14항)과 `tests/standby-cue-authority.test.mjs` 참조.
+`docs/analysis/2026-09-29-moe-analysis/README.md` 5판(이 ADR 이후 재산출 · 6장 14항 · 6판은 ADR-114 조건으로 재산출돼 수치가 다름)과 `tests/standby-cue-authority.test.mjs` 참조.
 
 SC3 · FULL · 화면 기본 플래그(bsr 포함) · 생성 1800초 · 관측 3600초, 'fire'(4판) → 'prepare'(5판):
 

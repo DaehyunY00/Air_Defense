@@ -2,9 +2,9 @@
   {
     "html": "report.html",
     "pdf": "K-JAMDS_지휘흐름_모의논리서.pdf",
-    "pages": 19,
+    "pages": 20,
     "errors": [],
     "renderer": "headless_shell --print-to-pdf",
-    "renderedAt": "2026-10-03T05:25:07.306Z"
+    "renderedAt": "2026-10-04T02:45:02.886Z"
   }
 ]

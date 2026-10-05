@@ -267,9 +267,9 @@
 <text x="1274.0" y="652.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">비호 1중대</text>
 <text x="18" y="704" font-size="10" fill="#44525e">그 밖 3건 · 3가지 사슬(각 1건 이하) — fig/pipelines.json에 전부 있음</text>
 <rect x="8" y="732" width="1224" height="654" rx="8" fill="#f6fbf7" stroke="#d6dde3"/>
-<text x="20" y="756" font-size="13.5" font-weight="700" fill="#143d5c">To-Be (Kill-web 통합형) — 발사 도달 53/53개 · 사슬 12가지</text>
+<text x="20" y="756" font-size="13.5" font-weight="700" fill="#143d5c">To-Be (Kill-web 통합형) — 발사 도달 53/53개 · 사슬 14가지</text>
 <text x="18" y="796.0" font-size="12" font-weight="700" fill="#1d2a35">17건</text>
-<text x="18" y="812.0" font-size="9.5" fill="#44525e">노드 5 · 탐지→발사 532초</text>
+<text x="18" y="812.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 532초</text>
 <rect x="150" y="778" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="804.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 레이더 백령</text>
 <line x1="254" y1="800.0" x2="282" y2="800.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -282,14 +282,22 @@
 <text x="470.0" y="804.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">서부 군단 방공</text>
 <line x1="522" y1="800.0" x2="550" y2="800.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="537.0" y="794.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="552" y="778" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="604.0" y="804.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 사격통제소 1중대</text>
-<line x1="656" y1="800.0" x2="684" y2="800.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="671.0" y="794.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="686" y="778" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="738.0" y="804.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 1중대</text>
-<text x="18" y="870.0" font-size="12" font-weight="700" fill="#1d2a35">11건</text>
-<text x="18" y="886.0" font-size="9.5" fill="#44525e">노드 4 · 탐지→발사 149초</text>
+<rect x="552" y="778" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="604.0" y="804.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<line x1="656" y1="800.0" x2="684" y2="800.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="671.0" y="794.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="686" y="778" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="738.0" y="804.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">서부 군단 방공</text>
+<line x1="790" y1="800.0" x2="818" y2="800.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="794.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="820" y="778" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="872.0" y="804.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 사격통제소 1중대</text>
+<line x1="924" y1="800.0" x2="952" y2="800.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="939.0" y="794.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="954" y="778" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1006.0" y="804.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 1중대</text>
+<text x="18" y="870.0" font-size="12" font-weight="700" fill="#1d2a35">10건</text>
+<text x="18" y="886.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 152초</text>
 <rect x="150" y="852" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="878.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">TPS-880K 철원</text>
 <line x1="254" y1="874.0" x2="282" y2="874.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -298,14 +306,22 @@
 <text x="336.0" y="878.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">중부 군단 방공</text>
 <line x1="388" y1="874.0" x2="416" y2="874.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="868.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="418" y="852" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="470.0" y="878.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 사격통제소 8중대</text>
-<line x1="522" y1="874.0" x2="550" y2="874.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="537.0" y="868.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="552" y="852" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="604.0" y="878.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 8중대</text>
+<rect x="418" y="852" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="470.0" y="878.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<line x1="522" y1="874.0" x2="550" y2="874.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="537.0" y="868.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="552" y="852" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="604.0" y="878.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">중부 군단 방공</text>
+<line x1="656" y1="874.0" x2="684" y2="874.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="671.0" y="868.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="686" y="852" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="738.0" y="878.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 사격통제소 8중대</text>
+<line x1="790" y1="874.0" x2="818" y2="874.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="868.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="820" y="852" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="872.0" y="878.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 8중대</text>
 <text x="18" y="944.0" font-size="12" font-weight="700" fill="#1d2a35">6건</text>
-<text x="18" y="960.0" font-size="9.5" fill="#44525e">노드 4 · 탐지→발사 862초</text>
+<text x="18" y="960.0" font-size="9.5" fill="#44525e">노드 4 · 탐지→발사 863초</text>
 <rect x="150" y="926" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="952.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 레이더 김포</text>
 <line x1="254" y1="948.0" x2="282" y2="948.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -321,7 +337,7 @@
 <rect x="552" y="926" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
 <text x="604.0" y="952.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 수도</text>
 <text x="18" y="1018.0" font-size="12" font-weight="700" fill="#1d2a35">5건</text>
-<text x="18" y="1034.0" font-size="9.5" fill="#44525e">노드 4 · 탐지→발사 286초</text>
+<text x="18" y="1034.0" font-size="9.5" fill="#44525e">노드 6 · 탐지→발사 286초</text>
 <rect x="150" y="1000" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">TPS-880K 강화</text>
 <line x1="254" y1="1022.0" x2="282" y2="1022.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -330,14 +346,22 @@
 <text x="336.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">서부 군단 방공</text>
 <line x1="388" y1="1022.0" x2="416" y2="1022.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="1016.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="418" y="1000" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="470.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 사격통제소 3중대</text>
-<line x1="522" y1="1022.0" x2="550" y2="1022.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="537.0" y="1016.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="552" y="1000" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="604.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 3중대</text>
+<rect x="418" y="1000" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="470.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<line x1="522" y1="1022.0" x2="550" y2="1022.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="537.0" y="1016.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="552" y="1000" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="604.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">서부 군단 방공</text>
+<line x1="656" y1="1022.0" x2="684" y2="1022.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="671.0" y="1016.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="686" y="1000" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="738.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 사격통제소 3중대</text>
+<line x1="790" y1="1022.0" x2="818" y2="1022.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="1016.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="820" y="1000" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="872.0" y="1026.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 3중대</text>
 <text x="18" y="1092.0" font-size="12" font-weight="700" fill="#1d2a35">3건</text>
-<text x="18" y="1108.0" font-size="9.5" fill="#44525e">노드 5 · 탐지→발사 529초</text>
+<text x="18" y="1108.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 529초</text>
 <rect x="150" y="1074" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 레이더 연평</text>
 <line x1="254" y1="1096.0" x2="282" y2="1096.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -350,14 +374,22 @@
 <text x="470.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">서부 군단 방공</text>
 <line x1="522" y1="1096.0" x2="550" y2="1096.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="537.0" y="1090.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="552" y="1074" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="604.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 사격통제소 1중대</text>
-<line x1="656" y1="1096.0" x2="684" y2="1096.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="671.0" y="1090.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="686" y="1074" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="738.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 1중대</text>
+<rect x="552" y="1074" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="604.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<line x1="656" y1="1096.0" x2="684" y2="1096.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="671.0" y="1090.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="686" y="1074" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="738.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">서부 군단 방공</text>
+<line x1="790" y1="1096.0" x2="818" y2="1096.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="1090.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="820" y="1074" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="872.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 사격통제소 1중대</text>
+<line x1="924" y1="1096.0" x2="952" y2="1096.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="939.0" y="1090.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="954" y="1074" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1006.0" y="1100.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 1중대</text>
 <text x="18" y="1166.0" font-size="12" font-weight="700" fill="#1d2a35">2건</text>
-<text x="18" y="1182.0" font-size="9.5" fill="#44525e">노드 4 · 탐지→발사 892초</text>
+<text x="18" y="1182.0" font-size="9.5" fill="#44525e">노드 4 · 탐지→발사 890초</text>
 <rect x="150" y="1148" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
 <text x="202.0" y="1174.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 레이더 백령</text>
 <line x1="254" y1="1170.0" x2="282" y2="1170.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
@@ -373,29 +405,37 @@
 <rect x="552" y="1148" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
 <text x="604.0" y="1174.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 수도</text>
 <text x="18" y="1240.0" font-size="12" font-weight="700" fill="#1d2a35">2건</text>
-<text x="18" y="1256.0" font-size="9.5" fill="#44525e">노드 5 · 탐지→발사 308초</text>
+<text x="18" y="1256.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 389초</text>
 <rect x="150" y="1222" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">TPS-880K 강화</text>
+<text x="202.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 레이더 김포</text>
 <line x1="254" y1="1244.0" x2="282" y2="1244.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="269.0" y="1238.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">3</text>
+<text x="269.0" y="1238.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">1</text>
 <rect x="284" y="1222" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="336.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">서부 군단 방공</text>
+<text x="336.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
 <line x1="388" y1="1244.0" x2="416" y2="1244.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="403.0" y="1238.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
 <rect x="418" y="1222" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
-<text x="470.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<text x="470.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">서부 군단 방공</text>
 <line x1="522" y1="1244.0" x2="550" y2="1244.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="537.0" y="1238.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="552" y="1222" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="604.0" y="1242.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 사격통제소</text><text x="604.0" y="1256.0" text-anchor="middle" font-size="10" fill="#1d2a35">수도</text>
-<line x1="656" y1="1244.0" x2="684" y2="1244.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="671.0" y="1238.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="686" y="1222" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="738.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">L-SAM 수도</text>
+<rect x="552" y="1222" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="604.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<line x1="656" y1="1244.0" x2="684" y2="1244.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="671.0" y="1238.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="686" y="1222" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="738.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">서부 군단 방공</text>
+<line x1="790" y1="1244.0" x2="818" y2="1244.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="1238.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="820" y="1222" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="872.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 사격통제소 3중대</text>
+<line x1="924" y1="1244.0" x2="952" y2="1244.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="939.0" y="1238.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="954" y="1222" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1006.0" y="1248.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 3중대</text>
 <text x="18" y="1314.0" font-size="12" font-weight="700" fill="#1d2a35">2건</text>
-<text x="18" y="1330.0" font-size="9.5" fill="#44525e">노드 5 · 탐지→발사 288초</text>
+<text x="18" y="1330.0" font-size="9.5" fill="#44525e">노드 7 · 탐지→발사 547초</text>
 <rect x="150" y="1296" width="104" height="44" rx="5" fill="#e0f7fa" stroke="#0e7490" stroke-width="1.4"/>
-<text x="202.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 레이더 김포</text>
+<text x="202.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천궁-II 레이더 백령</text>
 <line x1="254" y1="1318.0" x2="282" y2="1318.0" stroke="#0e7490" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="269.0" y="1312.0" text-anchor="middle" font-size="9" fill="#0e7490" font-weight="700">0</text>
 <rect x="284" y="1296" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
@@ -406,11 +446,19 @@
 <text x="470.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">서부 군단 방공</text>
 <line x1="522" y1="1318.0" x2="550" y2="1318.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
 <text x="537.0" y="1312.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
-<rect x="552" y="1296" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
-<text x="604.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 사격통제소 3중대</text>
-<line x1="656" y1="1318.0" x2="684" y2="1318.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
-<text x="671.0" y="1312.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
-<rect x="686" y="1296" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
-<text x="738.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">천마 3중대</text>
-<text x="18" y="1374" font-size="10" fill="#44525e">그 밖 5건 · 4가지 사슬(각 2건 이하) — fig/pipelines.json에 전부 있음</text>
+<rect x="552" y="1296" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="604.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">통합공중작전통제소</text>
+<line x1="656" y1="1318.0" x2="684" y2="1318.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="671.0" y="1312.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="686" y="1296" width="104" height="44" rx="5" fill="#e8edf1" stroke="#143d5c" stroke-width="1.4"/>
+<text x="738.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">서부 군단 방공</text>
+<line x1="790" y1="1318.0" x2="818" y2="1318.0" stroke="#143d5c" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="805.0" y="1312.0" text-anchor="middle" font-size="9" fill="#143d5c" font-weight="700">1</text>
+<rect x="820" y="1296" width="104" height="44" rx="5" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.4"/>
+<text x="872.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">비호 사격통제소 1중대</text>
+<line x1="924" y1="1318.0" x2="952" y2="1318.0" stroke="#6b7280" stroke-width="1.8" marker-end="url(#ah)"/>
+<text x="939.0" y="1312.0" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="700">1</text>
+<rect x="954" y="1296" width="104" height="44" rx="5" fill="#e3f2e8" stroke="#1b7f3b" stroke-width="1.4"/>
+<text x="1006.0" y="1322.0" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1d2a35">비호 1중대</text>
+<text x="18" y="1374" font-size="10" fill="#44525e">그 밖 6건 · 6가지 사슬(각 1건 이하) — fig/pipelines.json에 전부 있음</text>
 </svg>

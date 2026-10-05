@@ -546,6 +546,9 @@
   .mnode.idle { opacity: .3; }
   .mnode-lab { fill: #7d8ba0; font-size: 7.5px; paint-order: stroke;
     stroke: #080d14; stroke-width: 2; pointer-events: none; }
+  .mnode-lab.small { font-size: 5.8px; fill: #6f7f96; stroke-width: 1.6; }
+  .mnode-lab.small.sensor { fill: #5fb3c4; }
+  .mnode-lab.small.shooter { fill: #6fae7e; }
   /* 항적 — 축선 진입점에서 지금 위치까지의 자국 + 현재 위치 */
   .mtrail { fill: none; stroke-width: 1; opacity: .3; }
   .mthreat { stroke: #04121f; stroke-width: .7; }
@@ -589,6 +592,8 @@
   .idlen.c2 { stroke: #3a72b0; }
   .idlen.shooter { stroke: #2a8f6c; }
   .idlelabel { fill: #6b7a91; font-size: 9px; }
+  .ntiny { fill: #9fb0c6; font-size: 6.5px; pointer-events: none; }
+  .nodeg.idle .ntiny { fill: #5b6878; }
   /* 항적 토큰 — 탐지부터 요격까지 **끊기지 않는 공**. 계선을 건널 때는 선 위를 지나고,
      노드에서 처리·대기하는 동안은 그 노드 옆에 머문다. 종전에는 전송 중일 때만 점이 있어
      노드에 머무는 구간에서 공이 사라졌다(사용자 지적 2026-09-03). */
@@ -1010,6 +1015,7 @@
         </span>
         <span id="map-scale"></span>
         <label title="센서 탐지거리·사수 사거리를 타원으로 그린다 — 「사거리 밖이라 못 쐈다」를 물을 때 켠다"><input type="checkbox" id="map-rings"> 사거리</label>
+        <label title="센서·포대 점 옆에 짧은 이름(FPS-117 강원북 · L-SAM 수도 …)을 작게 붙인다 — 글자가 겹치면 끈다"><input type="checkbox" id="map-node-names" checked> 장비 이름</label>
         <label title="이 실행의 항적을 축선 진입점에서 착탄점까지 실제 궤적으로 그린다"><input type="checkbox" id="map-threats" checked> 항적</label>
         <label title="움직이는 항적 옆에 항적 이름을 작게 붙인다 — 항적이 몰려 글자가 겹치면 끈다"><input type="checkbox" id="map-threat-names" checked> 이름</label>
         <label title="요격탄이 사수에서 요격점까지 날아가고, 결과가 격추(녹색 링)·명중실패(적색 ✕)·발사불가(적색 ✕ · 사수 자리)로 튄다"><input type="checkbox" id="map-shots" checked> 요격</label>
@@ -9882,6 +9888,42 @@ function nodeTier(n) {
  */
 const NODE_SHORT = { KAMD_OPS: 'KAMDOC', MCRC: 'MCRC', IAOC: 'IAOC',
   USFK_THAAD_C2: 'THAAD C2', USFK_PATRIOT_C2: 'PAC C2' };
+/** 센서·포대의 **짧은 이름** — 밀집 열(센서 71 · 포대 84)과 지도에 작게 달기 위한 것.
+ *  노드 id의 자리 키(SENSOR_FPS117_GANGWON_N → FPS-117 강원북)를 토큰별로 우리말로 바꾼다.
+ *  표에 없는 토큰은 그대로 둔다 — 틀린 번역보다 영문 키가 낫다. */
+const TINY_TOKEN = {
+  FPS117: 'FPS-117', TPS880K: 'TPS-880K', GREEN: '그린파인', PINE: '', AN: 'AN/', TPY2: 'TPY-2',
+  LSAM: 'L-SAM', MSAM2: '천궁II', MSAM: '천궁', PAC3: 'PAC-3', PATRIOT: 'Patriot', THAAD: 'THAAD',
+  CHUNMA: '천마', BIHO: '비호', SHORAD: '단거리', LLR: '저고도R', SR: '감시R', MFR: '', USFK: '미',
+  BAENGNYEONG: '백령', ULLEUNG: '울릉', JEJU: '제주', GANGWON: '강원', GYEONGGI: '경기', CHUNGBUK: '충북',
+  CHUNGNAM: '충남', JEONBUK: '전북', JEONNAM: '전남', GYEONGBUK: '경북', GYEONGNAM: '경남', BUSAN: '부산',
+  ULSAN: '울산', YEONPYEONG: '연평', GANGHWA: '강화', PAJU: '파주', YEONCHEON: '연천', CHEORWON: '철원',
+  HWACHEON: '화천', YANGGU: '양구', SEOHWA: '서화', GOSEONG: '고성', GANGNEUNG: '강릉', SEOUL: '서울',
+  SOUTH: '남부', MID: '중', NORTH: '북', CAPITAL: '수도', CHEONAN: '천안', DANGJIN: '당진', CHUNGJU: '충주',
+  CHEONGJU: '청주', WONJU: '원주', BUKAKSAN: '북악산', OSAN: '오산', HUMPHREYS: '험프리스', KUNSAN: '군산',
+  CASEY: '케이시', CAMP: '캠프', WALKER: '워커', SEONGJU: '성주', GIMPO: '김포', DAEGU: '대구', INCHEON: '인천',
+  SUWON: '수원', PYEONGTAEK: '평택', N: '북', S: '남', W: '서', E: '동', NW: '서북', CO: '중대', BAT: '포대'
+};
+function nodeTinyName(n) {
+  if (!n) return '';
+  const isEcs = /^ECS_/.test(String(n.id || ''));
+  if (n.category !== 'sensor' && n.category !== 'shooter' && !isEcs) return nodeShortName(n);
+  const key = String(n.id || '').replace(/^(SENSOR|BATTERY|ECS)_/, '');
+  const toks = key.split('_').filter(Boolean).map((t) => {
+    const m = t.match(/^CO(\d+)$/);
+    if (m) return m[1] + '중대';
+    return TINY_TOKEN[t] === undefined ? t : TINY_TOKEN[t];
+  }).filter((t) => t !== '');
+  // 「중 북」처럼 방향 토큰이 둘로 갈라진 것은 붙인다(MID_NORTH → 중북 · GANGWON_N → 강원북).
+  const out = [];
+  toks.forEach((t) => {
+    if (out.length && /^(북|남|서|동|서북)$/.test(t)) out[out.length - 1] += t;
+    else if (out.length && t === '중') out.push(t);
+    else if (out.length && out[out.length - 1] === '중') out[out.length - 1] += t;
+    else out.push(t);
+  });
+  return (isEcs ? 'ECS ' : '') + out.join(' ').replace(/AN\/ /, 'AN/');
+}
 function nodeShortName(n) {
   if (!n) return '';
   const nm = n.name || n.id || '';
@@ -11814,6 +11856,7 @@ function layoutMap() {
 
   // ── 노드 ──
   let nodeSvg = '';
+  const mapNames = el('map-node-names').checked;
   Object.keys(run.nodes).forEach((id) => {
     const n = run.nodes[id];
     if (!n.coord) return;
@@ -11823,8 +11866,10 @@ function layoutMap() {
     g.nodes[id] = { id, x: p[0], y: p[1], cat };
     nodeSvg += `<g class="mnode ${cat}" data-id="${esc(id)}">` +
       `<circle class="mdot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}"></circle>` +
-      (narrow || !MAP_LABEL[n.typeId] ? '' :
-        `<text class="mnode-lab" x="${(p[0] + r + 2).toFixed(1)}" y="${(p[1] + 3).toFixed(1)}">${esc(nodeShortName(n))}</text>`) +
+      (narrow ? '' : MAP_LABEL[n.typeId]
+        ? `<text class="mnode-lab" x="${(p[0] + r + 2).toFixed(1)}" y="${(p[1] + 3).toFixed(1)}">${esc(nodeShortName(n))}</text>`
+        : (mapNames && (cat === 'sensor' || cat === 'shooter')
+          ? `<text class="mnode-lab small ${cat}" x="${(p[0] + r + 1.5).toFixed(1)}" y="${(p[1] + 2.5).toFixed(1)}">${esc(nodeTinyName(n))}</text>` : '')) +
       `<title>${esc((n.name || id) + '\n' + nodeTier(n) +
         '\n개념좌표 ' + n.coord[0].toFixed(2) + '°N ' + n.coord[1].toFixed(2) + '°E' +
         '\n클릭하면 이 노드를 짚습니다')}</title></g>`;
@@ -12283,8 +12328,16 @@ function nodeDecorSvg(p, n, cap) {
     out += `<rect class="qbar-bg" x="${bx}" y="${by}" width="${bw}" height="2.6" rx="1.3"></rect>` +
       `<rect class="qbar-i" x="${bx}" y="${by}" width="0" height="2.6" rx="1.3" data-bw="${bw}"></rect>`;
   }
-  // 밀집 열은 이름을 못 단다(자리가 없다) — 배지만 글리프 옆에 붙인다.
-  if (p.dense) return out + badge(p.x + half + 3, p.y + 3, 'start');
+  // 밀집 열(센서 71 · 포대 84)은 긴 이름을 못 단다 — 짧은 이름을 작게(6.5px) 글리프 아래 두 줄까지
+  // 달고, 배지는 종전대로 글리프 옆에 둔다(사용자 요청 2026-10-05: 어느 레이더인지 바로 보이게).
+  if (p.dense) {
+    const tiny = wrapLabel(nodeTinyName(n) + suffix, 8, 2);
+    tiny.forEach((ln, i) => {
+      out += `<text class="ntiny" x="${p.x.toFixed(1)}" y="${(p.y + half + 7 + i * 7.5).toFixed(1)}"` +
+        ` text-anchor="middle">${esc(ln)}</text>`;
+    });
+    return out + badge(p.x + half + 3, p.y + 3, 'start');
+  }
   const top = p.y + half + (cap ? 6 : 0);
   if (p.tier3) {
     out += `<text class="ntier" x="${p.x.toFixed(1)}" y="${(p.y - half - 7).toFixed(1)}"` +
@@ -14566,6 +14619,7 @@ el('linekey-close').addEventListener('click', () => el('key-toggle').click());
 el('sw-panel').addEventListener('click', () => setSideView('panel'));
 el('sw-map').addEventListener('click', () => setSideView('map'));
 el('map-rings').addEventListener('change', () => mapRefresh());
+el('map-node-names').addEventListener('change', () => mapRefresh());
 // ── 지도 확대·이동 ──
 el('mz-in').addEventListener('click', () => mapZoom(1.6, null));
 el('mz-out').addEventListener('click', () => mapZoom(1 / 1.6, null));

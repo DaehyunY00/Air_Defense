@@ -413,6 +413,9 @@
     // ADR-115 ①: 천마의 순항미사일 교전도 **양 모드** 제외(shoradCruiseExclusion 위에 얹음). 체계 특성상 순항 요격이
     // 어렵다면 두 체계에 같은 무기 능력 가정을 둬야 지휘 구조 비교가 된다(사용자 결정 2026-10-05). 기본 OFF.
     this.shoradCruiseExclusionAll = ff('shoradCruiseExclusionAll', false);
+    // ADR-116: 저고도 소형 무인기의 책임 지휘소를 **국지방공(군단 방공)으로 한정**한다 — 중앙 지휘소(As-Is MCRC · To-Be IAOC)는
+    // 무인기에 자기 사수(L-SAM)를 지정하지 않는다(승인권·교전현황 수신은 그대로). 민감도 전용(결과서 7장) · 기본 OFF.
+    this.uavLocalAdPriority = ff('uavLocalAdPriority', false);
     // ADR-115 ②: To-Be(킬웹)에도 교전 승인·할당 절차를 둔다 — 위협 제원의 To-Be 자동화 수준(사전 승인 자동교전·감독하
     // 자동교전·승인권자 없음)을 무시하고 **모든 위협을 「승인권자 IAOC까지 협조 경로 + 승인 처리」(human-in-loop)**로 본다.
     // IAOC 자신의 결심은 자기 승인이라 그대로이고, 군단 방공 등 하위 결심 C2가 IAOC의 승인을 데이터링크(1초)로
@@ -593,6 +596,7 @@
     if (this.shoradCruiseExclusion) this.features.shoradCruiseExclusion = true; // ADR-107 ①
     if (this.shoradCruiseExclusionAll) this.features.shoradCruiseExclusionAll = true; // ADR-115 ①
     if (this.tobeApprovalRealism) this.features.tobeApprovalRealism = true; // ADR-115 ②
+    if (this.uavLocalAdPriority) this.features.uavLocalAdPriority = true; // ADR-116
     if (f.catalogOverlay && typeof f.catalogOverlay === 'object') {   // ADR-108: 객체 대신 적용 요약만 신고
       var ovl = this.catalog.overlay || {};
       this.features.catalogOverlay = { nodes: ovl.nodes || 0, links: ovl.links || 0, removed: ovl.removed || 0,
@@ -1271,6 +1275,12 @@
       var typeId = axis === 'USFK_THAAD' ? 'USFK_THAAD_C2' : 'USFK_PATRIOT_C2';
       add(c2ByType(typeId), 'global', bs, axis);
     });
+    // ADR-116: 저고도 소형 무인기는 국지방공이 책임 지휘소 — 국지방공 축이 하나라도 서면 중앙 축(MCRC·KILL_WEB)을 뺀다.
+    // 국지방공 축이 없는 항적(권역 밖)은 종전대로 중앙 축이 맡아 「책임 공백」을 새로 만들지 않는다. OFF면 분기 자체를 안 탄다.
+    if (this.uavLocalAdPriority && threat.type === 'uav_small' &&
+        out.some(function (c) { return c.axis === 'LOCAL_AD'; })) {
+      out = out.filter(function (c) { return c.axis !== 'MCRC' && c.axis !== 'KILL_WEB'; });
+    }
     return out;
   };
 

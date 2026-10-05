@@ -106,6 +106,7 @@ var suites = [
   ,['standby-cue-authority.test.mjs', 'ADR-113 큐 권한 (fire 기본 bit-exact·prepare 긴급발사 0·정식 발사 증가·자위권 계정·보존법칙)']
   ,['air-launch-axes.test.mjs', 'ADR-114 공중 발사점 연장 (OFF bit-exact·공중만 연장·연장량=standoff·체공 동비율·탄도 궤적 불변·결정론·관측 배선)']
   ,['tobe-approval-realism.test.mjs', 'ADR-115 천마 순항 양 모드 제외·To-Be 승인 절차 (OFF bit-exact·features·천마 순항 발사 0·IAOC 협조·승인 단계·결정론·As-Is 불변)']
+  ,['uav-local-ad-priority.test.mjs', 'ADR-116 저고도 무인기 국지방공 우선 (OFF bit-exact·features·중앙 무인기 지정 0·군단 방공 지정 유지·타 유형 불변·결정론)']
 ];
 // 스위트 타임아웃: 고해상도 FULL 스위트는 느린 CI·컨테이너에서 4분을 넘길 수 있어
 // 종전 120초 상한이 정상 통과하는 테스트를 강제 종료해 거짓 실패를 냈다(2026-07).

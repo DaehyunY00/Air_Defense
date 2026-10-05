@@ -1108,7 +1108,7 @@
    ══════════════════════════════════════════════════════════════════════════ */
 // ⚠️ 캐시 버스터는 수동이다. js/를 고치면 **여기 `V`도 같이 올려야 한다** — 안 올리면
 //    브라우저가 옛 사본을 섞어 써서 조용히 다른 결과가 나온다(본 앱 index.html·워커와 같은 규율).
-const V = '?v=20261005b';
+const V = '?v=20261005c';
 const { installIadsKernel } = await import('../js/model/iads/index.js' + V);
 for (const m of [
   '../js/config/system-types.js', '../js/config/geo-mdl.js', '../js/config/deployments.js',
@@ -1541,6 +1541,7 @@ function features() {
     shoradPkRealism: P.shpk,       // ADR-107 ② — 〃
     shoradCruiseExclusionAll: P.nocm && P.cmall, // ADR-115 ① — 천마 순항 교전도 양 모드 제외 (엔진 기본 OFF · 이 화면만 기본 ON · 사용자 결정 2026-10-05)
     tobeApprovalRealism: P.tar,    // ADR-115 ② — To-Be에도 IAOC 교전 승인·할당 절차 (엔진 기본 OFF · 이 화면만 기본 ON · 사용자 결정 2026-10-05)
+    uavLocalAdPriority: P.uavprio, // ADR-116 — 저고도 무인기 책임 지휘소를 국지방공으로 한정(민감도 · 엔진·화면 모두 기본 OFF)
     commanderRouteRetry: P.rr,     // ADR-106 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 요청 2026-09-29)
     rokUsfkCoordination: P.coal ? { asis: 'voice', tobe: 'datalink' } : null, // ADR-105 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-29) · To-Be는 데이터링크(사용자 결정 2026-10-01)
     ballisticLaunchAxes: P.lx,   // ADR-091 — 〃
@@ -1667,6 +1668,7 @@ const PARAMS = [
   { k: 'shpk',  d: 1,       t: 'bool', h: '비호·천마 소형 무인기·순항 요격확률 0.7 고정 (ADR-107 ② · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   { k: 'cmall', d: 1,       t: 'bool', h: '천마 순항미사일 교전도 양 모드 제외 — 비호·천마 모두 순항 불가, 두 체계 같은 무기 능력 가정 (ADR-115 ① · nocm=1일 때만 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   { k: 'tar',   d: 1,       t: 'bool', h: 'To-Be에도 교전 승인·할당 절차 — 모든 위협을 「IAOC까지 협조(데이터링크) + 승인 처리」로, 사전 승인 자동교전 없음 (ADR-115 ② · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  { k: 'uavprio', d: 0,     t: 'bool', h: '저고도 소형 무인기의 책임 지휘소를 국지방공(군단 방공)으로 한정 — 중앙 지휘소(MCRC·IAOC)는 무인기에 L-SAM을 지정하지 않음. 결과서 7-2 민감도 재현용 (ADR-116 · 기본 꺼짐)' },
   // ── ea(ADR-109): 조기 사수 지정. 종전 결심 규칙은 「지금 쏠 수 있는 포대」가 생길 때까지 결심을 보류했다(결심 시각 =
   //    포대가 준비된 시각). 켜면 결심 지휘소가 항적을 받은 시점에 예상 요격 창이 있는 포대까지 후보에 넣어 사수를 고르고
   //    「준비되면 쏘라」는 명령을 내린다(사용자 요청 2026-10-01). **엔진 기본 OFF · 이 화면만 기본 ON**. 끄려면 ?ea=0.
@@ -1789,6 +1791,7 @@ function activeConfigChips() {
   if (P.rr) out.push('보고 재시도 ON');
   if (P.nocm) out.push(P.cmall ? '비호·천마 순항 제외(양 모드)' : '비호 순항 제외·천마 킬웹만');
   if (P.tar) out.push('To-Be 승인 절차 ON');
+  if (P.uavprio) out.push('무인기 국지방공 우선');
   if (P.shpk) out.push('단거리방공 Pk 0.7');
   if (P.ea) out.push(P.cf ? '조기 사수지정+되먹임 ON' : '조기 사수지정 ON');
   if (P.bsr) out.push('포대 상태 보고 ON (주기 ' + (P.bsrp > 0 ? P.bsrp : 4) + '초+계선 지연)');

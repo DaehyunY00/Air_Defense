@@ -410,6 +410,14 @@
     // 발사 시 명중 판정에는 분포 추출(플래그 ON에서만 RNG 소비). 둘 다 기본 OFF(불변 규칙 1 · 재기준선 대상).
     this.shoradCruiseExclusion = ff('shoradCruiseExclusion', false);
     this.shoradPkRealism = ff('shoradPkRealism', false);
+    // ADR-115 ①: 천마의 순항미사일 교전도 **양 모드** 제외(shoradCruiseExclusion 위에 얹음). 체계 특성상 순항 요격이
+    // 어렵다면 두 체계에 같은 무기 능력 가정을 둬야 지휘 구조 비교가 된다(사용자 결정 2026-10-05). 기본 OFF.
+    this.shoradCruiseExclusionAll = ff('shoradCruiseExclusionAll', false);
+    // ADR-115 ②: To-Be(킬웹)에도 교전 승인·할당 절차를 둔다 — 위협 제원의 To-Be 자동화 수준(사전 승인 자동교전·감독하
+    // 자동교전·승인권자 없음)을 무시하고 **모든 위협을 「승인권자 IAOC까지 협조 경로 + 승인 처리」(human-in-loop)**로 본다.
+    // IAOC 자신의 결심은 자기 승인이라 그대로이고, 군단 방공 등 하위 결심 C2가 IAOC의 승인을 데이터링크(1초)로
+    // 받아야 쏜다. 「사전 승인 자동교전으로 잰 시간 비교는 의미가 없다」는 지적(사용자 결정 2026-10-05). 기본 OFF.
+    this.tobeApprovalRealism = ff('tobeApprovalRealism', false);
     // 사용자 가정(2026-09-30): 비호·천마의 소형 무인기·순항 요격확률 = 0.7 고정(분포 없음 · RNG 추가 소비 없음).
     this.shoradSmallTargetPk = (typeof f.shoradSmallTargetPk === 'number' && f.shoradSmallTargetPk > 0 && f.shoradSmallTargetPk <= 1)
       ? f.shoradSmallTargetPk : 0.7;
@@ -583,6 +591,8 @@
     }
     if (this.commanderRouteRetry) this.features.commanderRouteRetry = true; // ADR-106 (OFF wire shape 보존)
     if (this.shoradCruiseExclusion) this.features.shoradCruiseExclusion = true; // ADR-107 ①
+    if (this.shoradCruiseExclusionAll) this.features.shoradCruiseExclusionAll = true; // ADR-115 ①
+    if (this.tobeApprovalRealism) this.features.tobeApprovalRealism = true; // ADR-115 ②
     if (f.catalogOverlay && typeof f.catalogOverlay === 'object') {   // ADR-108: 객체 대신 적용 요약만 신고
       var ovl = this.catalog.overlay || {};
       this.features.catalogOverlay = { nodes: ovl.nodes || 0, links: ovl.links || 0, removed: ovl.removed || 0,
@@ -1273,7 +1283,7 @@
     // ADR-107 ①(2026-09-30 개정): 비호는 순항미사일 교전 불가(양 모드). 천마는 근거리 순항 요격이 가능하되 **현 체계에서는**
     // 비호와 같은 군단 방공에 묶여 순항 항적을 받지 못하므로 불가, 킬웹에서는 가능(사용자 가정).
     if (this.shoradCruiseExclusion && threat.type === 'cruise' && isShorad(shooter) &&
-        (shooter.typeId === 'BIHO' || this.mode !== 'tobe')) return false;
+        (shooter.typeId === 'BIHO' || this.shoradCruiseExclusionAll || this.mode !== 'tobe')) return false;   // ADR-115 ①
     if (!this.iadsSensorPhysics) return !!(shooter.canEngage && shooter.canEngage[threat.type]);
     var type = shooterSpec(shooter);
     var allowed = type && type.iadsEngageableThreats;
@@ -3680,6 +3690,11 @@
                    approvalRole: tt.approvalLevel ? tt.approvalLevel[pm] || null : null,
                    policyMode: pm };
         })(this.mode);
+    // ADR-115 ②: To-Be에도 승인·할당 절차 — 모든 위협을 「IAOC까지 협조 경로 + 승인 처리」로 본다. 결심 C2가 IAOC
+    // 자신이면 아래 자기 승인 규칙으로 즉시 granted(할당 처리 시간은 항적 접수 큐가 이미 센다).
+    if (this.tobeApprovalRealism && this.mode === 'tobe') {
+      policy = { auto: 'human-in-loop', approvalRole: 'IAOC', policyMode: 'tobe' };
+    }
     var approvalId = policy.approvalRole ? this._resolveRole(policy.approvalRole) : null;
     // ADR-087: 소형 무인기 국지방공 자체 교전(옵트인, 기본 OFF).
     //

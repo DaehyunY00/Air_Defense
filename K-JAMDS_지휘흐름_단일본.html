@@ -4477,6 +4477,14 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // 발사 시 명중 판정에는 분포 추출(플래그 ON에서만 RNG 소비). 둘 다 기본 OFF(불변 규칙 1 · 재기준선 대상).
     this.shoradCruiseExclusion = ff('shoradCruiseExclusion', false);
     this.shoradPkRealism = ff('shoradPkRealism', false);
+    // ADR-115 ①: 천마의 순항미사일 교전도 **양 모드** 제외(shoradCruiseExclusion 위에 얹음). 체계 특성상 순항 요격이
+    // 어렵다면 두 체계에 같은 무기 능력 가정을 둬야 지휘 구조 비교가 된다(사용자 결정 2026-10-05). 기본 OFF.
+    this.shoradCruiseExclusionAll = ff('shoradCruiseExclusionAll', false);
+    // ADR-115 ②: To-Be(킬웹)에도 교전 승인·할당 절차를 둔다 — 위협 제원의 To-Be 자동화 수준(사전 승인 자동교전·감독하
+    // 자동교전·승인권자 없음)을 무시하고 **모든 위협을 「승인권자 IAOC까지 협조 경로 + 승인 처리」(human-in-loop)**로 본다.
+    // IAOC 자신의 결심은 자기 승인이라 그대로이고, 군단 방공 등 하위 결심 C2가 IAOC의 승인을 데이터링크(1초)로
+    // 받아야 쏜다. 「사전 승인 자동교전으로 잰 시간 비교는 의미가 없다」는 지적(사용자 결정 2026-10-05). 기본 OFF.
+    this.tobeApprovalRealism = ff('tobeApprovalRealism', false);
     // 사용자 가정(2026-09-30): 비호·천마의 소형 무인기·순항 요격확률 = 0.7 고정(분포 없음 · RNG 추가 소비 없음).
     this.shoradSmallTargetPk = (typeof f.shoradSmallTargetPk === 'number' && f.shoradSmallTargetPk > 0 && f.shoradSmallTargetPk <= 1)
       ? f.shoradSmallTargetPk : 0.7;
@@ -4650,6 +4658,8 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     }
     if (this.commanderRouteRetry) this.features.commanderRouteRetry = true; // ADR-106 (OFF wire shape 보존)
     if (this.shoradCruiseExclusion) this.features.shoradCruiseExclusion = true; // ADR-107 ①
+    if (this.shoradCruiseExclusionAll) this.features.shoradCruiseExclusionAll = true; // ADR-115 ①
+    if (this.tobeApprovalRealism) this.features.tobeApprovalRealism = true; // ADR-115 ②
     if (f.catalogOverlay && typeof f.catalogOverlay === 'object') {   // ADR-108: 객체 대신 적용 요약만 신고
       var ovl = this.catalog.overlay || {};
       this.features.catalogOverlay = { nodes: ovl.nodes || 0, links: ovl.links || 0, removed: ovl.removed || 0,
@@ -5340,7 +5350,7 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
     // ADR-107 ①(2026-09-30 개정): 비호는 순항미사일 교전 불가(양 모드). 천마는 근거리 순항 요격이 가능하되 **현 체계에서는**
     // 비호와 같은 군단 방공에 묶여 순항 항적을 받지 못하므로 불가, 킬웹에서는 가능(사용자 가정).
     if (this.shoradCruiseExclusion && threat.type === 'cruise' && isShorad(shooter) &&
-        (shooter.typeId === 'BIHO' || this.mode !== 'tobe')) return false;
+        (shooter.typeId === 'BIHO' || this.shoradCruiseExclusionAll || this.mode !== 'tobe')) return false;   // ADR-115 ①
     if (!this.iadsSensorPhysics) return !!(shooter.canEngage && shooter.canEngage[threat.type]);
     var type = shooterSpec(shooter);
     var allowed = type && type.iadsEngageableThreats;
@@ -7747,6 +7757,11 @@ const RAW_DEPLOYMENT_HANBANDO_LEGACY_KAMDOC_DOWN = Object.freeze({
                    approvalRole: tt.approvalLevel ? tt.approvalLevel[pm] || null : null,
                    policyMode: pm };
         })(this.mode);
+    // ADR-115 ②: To-Be에도 승인·할당 절차 — 모든 위협을 「IAOC까지 협조 경로 + 승인 처리」로 본다. 결심 C2가 IAOC
+    // 자신이면 아래 자기 승인 규칙으로 즉시 granted(할당 처리 시간은 항적 접수 큐가 이미 센다).
+    if (this.tobeApprovalRealism && this.mode === 'tobe') {
+      policy = { auto: 'human-in-loop', approvalRole: 'IAOC', policyMode: 'tobe' };
+    }
     var approvalId = policy.approvalRole ? this._resolveRole(policy.approvalRole) : null;
     // ADR-087: 소형 무인기 국지방공 자체 교전(옵트인, 기본 OFF).
     //
@@ -10076,6 +10091,8 @@ function features() {
     assignmentFeedback: P.ea && P.cf,  // ADR-110 — 예측 일치 · 사수 CANTCO 회신 · 즉시 재지정 (엔진 기본 OFF · 이 화면만 기본 ON)
     shoradCruiseExclusion: P.nocm, // ADR-107 ① — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-30)
     shoradPkRealism: P.shpk,       // ADR-107 ② — 〃
+    shoradCruiseExclusionAll: P.nocm && P.cmall, // ADR-115 ① — 천마 순항 교전도 양 모드 제외 (엔진 기본 OFF · 이 화면만 기본 ON · 사용자 결정 2026-10-05)
+    tobeApprovalRealism: P.tar,    // ADR-115 ② — To-Be에도 IAOC 교전 승인·할당 절차 (엔진 기본 OFF · 이 화면만 기본 ON · 사용자 결정 2026-10-05)
     commanderRouteRetry: P.rr,     // ADR-106 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 요청 2026-09-29)
     rokUsfkCoordination: P.coal ? { asis: 'voice', tobe: 'datalink' } : null, // ADR-105 — 엔진 기본 OFF (이 화면만 기본 ON · 사용자 결정 2026-09-29) · To-Be는 데이터링크(사용자 결정 2026-10-01)
     ballisticLaunchAxes: P.lx,   // ADR-091 — 〃
@@ -10200,6 +10217,8 @@ const PARAMS = [
   //    0.7로 둔다(사용자 가정). 천마는 킬웹에서만 순항 교전 허용. **엔진 기본 OFF · 이 화면만 기본 ON**(사용자 결정 2026-09-30).
   { k: 'nocm',  d: 1,       t: 'bool', h: '비호 순항미사일 교전 제외(양 모드) · 천마는 킬웹에서만 허용 (ADR-107 ① · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   { k: 'shpk',  d: 1,       t: 'bool', h: '비호·천마 소형 무인기·순항 요격확률 0.7 고정 (ADR-107 ② · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  { k: 'cmall', d: 1,       t: 'bool', h: '천마 순항미사일 교전도 양 모드 제외 — 비호·천마 모두 순항 불가, 두 체계 같은 무기 능력 가정 (ADR-115 ① · nocm=1일 때만 · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
+  { k: 'tar',   d: 1,       t: 'bool', h: 'To-Be에도 교전 승인·할당 절차 — 모든 위협을 「IAOC까지 협조(데이터링크) + 승인 처리」로, 사전 승인 자동교전 없음 (ADR-115 ② · 이 화면만 기본 켜짐, 엔진 기본은 꺼짐)' },
   // ── ea(ADR-109): 조기 사수 지정. 종전 결심 규칙은 「지금 쏠 수 있는 포대」가 생길 때까지 결심을 보류했다(결심 시각 =
   //    포대가 준비된 시각). 켜면 결심 지휘소가 항적을 받은 시점에 예상 요격 창이 있는 포대까지 후보에 넣어 사수를 고르고
   //    「준비되면 쏘라」는 명령을 내린다(사용자 요청 2026-10-01). **엔진 기본 OFF · 이 화면만 기본 ON**. 끄려면 ?ea=0.
@@ -10320,7 +10339,8 @@ function activeConfigChips() {
   if (P.coal) out.push('한미 협조 ON (As-Is 음성·To-Be 데이터링크)');
   if (P.sw > 0) out.push('생성 구간 ' + P.sw + '초');
   if (P.rr) out.push('보고 재시도 ON');
-  if (P.nocm) out.push('비호 순항 제외·천마 킬웹만');
+  if (P.nocm) out.push(P.cmall ? '비호·천마 순항 제외(양 모드)' : '비호 순항 제외·천마 킬웹만');
+  if (P.tar) out.push('To-Be 승인 절차 ON');
   if (P.shpk) out.push('단거리방공 Pk 0.7');
   if (P.ea) out.push(P.cf ? '조기 사수지정+되먹임 ON' : '조기 사수지정 ON');
   if (P.bsr) out.push('포대 상태 보고 ON (주기 ' + (P.bsrp > 0 ? P.bsrp : 4) + '초+계선 지연)');

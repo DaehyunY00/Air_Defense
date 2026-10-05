@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url);
 const root = ROOT;
 ['config/system-types.js','config/geo-mdl.js','config/deployments.js','data/nodes.js','data/links.js','data/threats.js','data/scenarios.js','data/axes.js','config/deployment-adapter.js','core/rng.js','core/heap.js','engine/sim-engine.js'].forEach((f) => require(path.join(root, f)));
 const KJ = globalThis.KJ; installIadsKernel(KJ);
-const BASE = { highResolutionDeployment:true, threatTargetDispersion:true, southernAxes:true, linkSemanticsV2:true, sensorReportParity:true, sawtoothFreshness:true, approvalChain:true, unifiedEngagementState:true, selfDefenseFire:true, ballisticLaunchAxes:true, airLaunchAxes:true, threatAimpoints:true, c2DecisionTimeParity:true, approvalPipelineRealism:true, iccRelayAuthorization:true, ballisticReportSource:true, standbyCue:true, rokUsfkCoordination:{asis:'voice',tobe:'datalink'}, commanderRouteRetry:true, shoradCruiseExclusion:true, shoradPkRealism:true, earlyShooterAssignment:true, assignmentFeedback:true, batteryStatusReporting:true, statusReportPeriodSec:4, standbyCueAuthority:'prepare' };
+const BASE = { highResolutionDeployment:true, threatTargetDispersion:true, southernAxes:true, linkSemanticsV2:true, sensorReportParity:true, sawtoothFreshness:true, approvalChain:true, unifiedEngagementState:true, selfDefenseFire:true, ballisticLaunchAxes:true, airLaunchAxes:true, threatAimpoints:true, c2DecisionTimeParity:true, approvalPipelineRealism:true, iccRelayAuthorization:true, ballisticReportSource:true, standbyCue:true, rokUsfkCoordination:{asis:'voice',tobe:'datalink'}, commanderRouteRetry:true, shoradCruiseExclusion:true, shoradCruiseExclusionAll:true, tobeApprovalRealism:true, shoradPkRealism:true, earlyShooterAssignment:true, assignmentFeedback:true, batteryStatusReporting:true, statusReportPeriodSec:4, standbyCueAuthority:'prepare' };
 const TYPES = ['srbm','mrl_large','cruise','fighter','uav_small'];
 const q = (a,p)=>{ if(!a.length) return NaN; const s=[...a].sort((x,y)=>x-y); return s[Math.min(s.length-1,Math.floor(p*s.length))]; };
 const short = (id)=>id.replace(/^(C2_|SENSOR_|BATTERY_|ECS_)/,'').replace(/^(KAMD_OPS|MCRC|IAOC|ICC|ARMY_LOCAL_AD|USFK_PATRIOT_C2|USFK_THAAD_C2)_.*/,'$1');
@@ -27,7 +27,10 @@ function analyze(res) {
     const ty = tr.type; if(!out.time[ty]) return; const T=out.time[ty]; T.n++;
     const o = out.outcomeByType[ty]; o[tr.outcome==='killed'?'killed':tr.outcome==='leaked'?'leaked':'unresolved']++;
     const st = tr.stages; const f=(re)=>st.find(s=>re.test(s.name));
-    const det=f(/^탐지$/), c2=f(/^항적정보접수:/), dec=f(/^(사수선정·표적할당|긴급발사|자위권발사):/), fire=f(/^발사:/), hit=st.find(s=>/^BDA:HIT/.test(s.name));
+    const det=f(/^탐지$/), c2=f(/^항적정보접수:/), decAny=f(/^(사수선정·표적할당|긴급발사|자위권발사):/), fire=f(/^발사:/), hit=st.find(s=>/^BDA:HIT/.test(s.name));
+    // 7판: 「결심」= 실제로 처음 쏜 포대를 사수로 정한 결심(어느 C2든 가장 먼저 한 지정이 아님 — 사용자 지적 2026-10-05).
+    const bat = fire ? fire.name.replace(/^발사:/,'').split('/')[0] : null;
+    const dec = (bat && st.find(s=>/^(사수선정·표적할당|긴급발사|자위권발사):/.test(s.name) && s.name.includes('→'+bat))) || decAny;
     if(det) T.det.push(det.t-tr.spawnT); if(det&&c2) T.c2.push(c2.t-det.t); if(c2&&dec) T.dec.push(dec.t-c2.t); if(dec&&fire) T.fire.push(fire.t-dec.t); if(fire&&hit) T.kill.push(hit.t-fire.t); if(det&&hit) T.total.push(hit.t-det.t);
     if(fire) o.fired++; if(f(/^긴급발사:/)) o.emergency++; if(f(/^자위권발사:/)) o.selfdef++;
     const sd = st.filter(s=>/^SENSOR_DETECTED:/.test(s.name)).sort((a,b)=>a.t-b.t); if(sd.length){ const s=sd[0].name.split(':')[1]; firstDet[s]=(firstDet[s]||0)+1; } sd.forEach(s=>{ const id=s.name.split(':')[1]; sensorAny[id]=(sensorAny[id]||0)+1; });

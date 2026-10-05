@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-04T02:07:57.967Z",
+ "generatedAt": "2026-10-05T13:56:04.697Z",
  "condition": "SC3 · FULL · seed 29 · 생성 1800초 · 관측 3600초 · 화면 기본 플래그(bsr 4초 · 큐 권한 prepare 포함)",
  "modes": {
   "asis": {
@@ -4321,9 +4321,9 @@
    }
   },
   "tobe": {
-   "killed": 192,
-   "leaked": 36,
-   "fired": 206,
+   "killed": 190,
+   "leaked": 38,
+   "fired": 205,
    "types": {
     "srbm": {
      "fired": 53,
@@ -4373,10 +4373,10 @@
         "ifcn",
         "internal"
        ],
-       "n": 29,
+       "n": 31,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 189.45852051290012,
+       "detToFireMed": 189.95191485063197,
        "linkDelayMed": [
         0.44501773648335075,
         1,
@@ -4386,9 +4386,9 @@
         1
        ],
        "gapBeforeMed": [
-        20.40000000000029,
+        20.39999999999884,
         0,
-        3.334333553703118,
+        3.354900296212179,
         0,
         0,
         0
@@ -4451,7 +4451,7 @@
        "n": 5,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 293.2767906070817,
+       "detToFireMed": 292.5365147155087,
        "linkDelayMed": [
         0.6982072345529104,
         1,
@@ -4465,7 +4465,7 @@
         19.00000000000432,
         0,
         0,
-        26.853844998924956,
+        10.362780203382954,
         0,
         0,
         0
@@ -4478,16 +4478,16 @@
       },
       {
        "nodes": [
-        "SENSOR_AN_TPY2_SEONGJU",
-        "ECS_THAAD_SEONGJU",
+        "SENSOR_GREEN_PINE_CHUNGBUK",
+        "C2_IAOC_IAOC",
         "C2_USFK_THAAD_C2_USFK_THAAD_C2",
         "C2_IAOC_IAOC",
         "ECS_LSAM_CAPITAL",
         "BATTERY_LSAM_CAPITAL"
        ],
        "names": [
-        "AN/TPY-2 계열 센서 (AN_TPY2_SEONGJU)",
-        "ECS THAAD THAAD_SEONGJU",
+        "Green Pine Block-B (GREEN_PINE_CHUNGBUK)",
+        "통합공중작전통제소",
         "USFK THAAD C2",
         "통합공중작전통제소",
         "ECS LSAM LSAM_CAPITAL",
@@ -4510,33 +4510,33 @@
        ],
        "media": [
         "report-cycle",
-        "ifcn",
+        "datalink",
         "datalink",
         "ifcn",
         "internal"
        ],
-       "n": 4,
+       "n": 3,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 262.35927757291205,
+       "detToFireMed": 262.3129198828638,
        "linkDelayMed": [
-        0.4917481414328222,
+        9.81634004261602,
         1,
         1,
         1,
         1
        ],
        "gapBeforeMed": [
-        19.399999999998897,
         0,
-        2.8043008432228618,
+        2.8836248662914272,
+        0,
         0,
         0
        ],
        "examples": [
-        "srbm#12",
+        "srbm#32",
         "srbm#39",
-        "srbm#49"
+        "srbm#69"
        ]
       },
       {
@@ -4581,7 +4581,7 @@
        "n": 2,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 263.8836566480692,
+       "detToFireMed": 263.84714954752934,
        "linkDelayMed": [
         0.6817514434891763,
         1,
@@ -4592,7 +4592,7 @@
        "gapBeforeMed": [
         29.400000000000215,
         0,
-        3.107559462813697,
+        8.332372319967249,
         0,
         0
        ],
@@ -4607,161 +4607,12 @@
         "ECS_THAAD_SEONGJU",
         "C2_USFK_THAAD_C2_USFK_THAAD_C2",
         "C2_IAOC_IAOC",
-        "C2_USFK_THAAD_C2_USFK_THAAD_C2",
-        "C2_IAOC_IAOC",
-        "C2_USFK_THAAD_C2_USFK_THAAD_C2",
-        "ECS_THAAD_SEONGJU",
-        "BATTERY_THAAD_SEONGJU"
-       ],
-       "names": [
-        "AN/TPY-2 계열 센서 (AN_TPY2_SEONGJU)",
-        "ECS THAAD THAAD_SEONGJU",
-        "USFK THAAD C2",
-        "통합공중작전통제소",
-        "USFK THAAD C2",
-        "통합공중작전통제소",
-        "USFK THAAD C2",
-        "ECS THAAD THAAD_SEONGJU",
-        "USFK THAAD (THAAD_SEONGJU)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "c2",
-        "c2",
-        "c2",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "coord",
-        "coord",
-        "coord",
-        "coord",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "ifcn",
-        "datalink",
-        "datalink",
-        "datalink",
-        "datalink",
-        "ifcn",
-        "internal"
-       ],
-       "n": 2,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 199.2557804612012,
-       "linkDelayMed": [
-        0.6793704664514166,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        21.400000000004866,
-        0,
-        0.3032184396051889,
-        0.6535430824276318,
-        108.38188050528993,
-        0,
-        8,
-        0
-       ],
-       "examples": [
-        "srbm#36",
-        "srbm#194"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_GREEN_PINE_CHUNGBUK",
-        "C2_IAOC_IAOC",
-        "C2_USFK_THAAD_C2_USFK_THAAD_C2",
-        "C2_IAOC_IAOC",
-        "ECS_MSAM2_GWANGJU",
-        "BATTERY_MSAM2_GWANGJU"
-       ],
-       "names": [
-        "Green Pine Block-B (GREEN_PINE_CHUNGBUK)",
-        "통합공중작전통제소",
-        "USFK THAAD C2",
-        "통합공중작전통제소",
-        "ECS CHEONGUNG2 MSAM2_GWANGJU",
-        "천궁-II (MSAM2_GWANGJU)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "coord",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "datalink",
-        "datalink",
-        "ifcn",
-        "internal"
-       ],
-       "n": 2,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 321.8057228980085,
-       "linkDelayMed": [
-        10.812351502259162,
-        1,
-        1,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        0,
-        2.6190017104593153,
-        0,
-        0,
-        0
-       ],
-       "examples": [
-        "srbm#45",
-        "srbm#145"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_AN_TPY2_SEONGJU",
-        "ECS_THAAD_SEONGJU",
-        "C2_USFK_THAAD_C2_USFK_THAAD_C2",
-        "C2_IAOC_IAOC",
-        "C2_USFK_THAAD_C2_USFK_THAAD_C2",
-        "C2_IAOC_IAOC",
         "ECS_LSAM_CAPITAL",
         "BATTERY_LSAM_CAPITAL"
        ],
        "names": [
         "AN/TPY-2 계열 센서 (AN_TPY2_SEONGJU)",
         "ECS THAAD THAAD_SEONGJU",
-        "USFK THAAD C2",
-        "통합공중작전통제소",
         "USFK THAAD C2",
         "통합공중작전통제소",
         "ECS LSAM LSAM_CAPITAL",
@@ -4773,13 +4624,75 @@
         "c2",
         "c2",
         "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "ifcn",
+        "datalink",
+        "ifcn",
+        "internal"
+       ],
+       "n": 2,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 277.22832988588215,
+       "linkDelayMed": [
+        0.04576583009526303,
+        1,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        19.399999999998897,
+        0,
+        4.01949565466856,
+        0,
+        0
+       ],
+       "examples": [
+        "srbm#12",
+        "srbm#49"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_AN_TPY2_SEONGJU",
+        "ECS_THAAD_SEONGJU",
+        "C2_USFK_THAAD_C2_USFK_THAAD_C2",
+        "C2_IAOC_IAOC",
+        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
+        "ECS_USFK_PATRIOT_KUNSAN",
+        "BATTERY_USFK_PATRIOT_KUNSAN"
+       ],
+       "names": [
+        "AN/TPY-2 계열 센서 (AN_TPY2_SEONGJU)",
+        "ECS THAAD THAAD_SEONGJU",
+        "USFK THAAD C2",
+        "통합공중작전통제소",
+        "USFK Patriot C2",
+        "ECS USFK_PAC3 USFK_PATRIOT_KUNSAN",
+        "USFK Patriot (USFK_PATRIOT_KUNSAN)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
         "c2",
         "c2",
         "shooter"
        ],
        "kinds": [
         "report",
-        "coord",
         "coord",
         "coord",
         "coord",
@@ -4791,17 +4704,15 @@
         "ifcn",
         "datalink",
         "datalink",
-        "datalink",
         "ifcn",
         "internal"
        ],
        "n": 2,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 270.3704153040567,
+       "detToFireMed": 287.593391517265,
        "linkDelayMed": [
-        0.5803989401078979,
-        1,
+        0.6123515022629817,
         1,
         1,
         1,
@@ -4809,17 +4720,16 @@
         1
        ],
        "gapBeforeMed": [
-        18.400000000004184,
+        17.000000000003865,
         0,
-        17.025641721870443,
-        133.1102400037978,
-        90,
         0,
+        0,
+        260.1441608305681,
         0
        ],
        "examples": [
-        "srbm#189",
-        "srbm#196"
+        "srbm#105",
+        "srbm#145"
        ]
       },
       {
@@ -4885,20 +4795,20 @@
       },
       {
        "nodes": [
-        "SENSOR_GREEN_PINE_CHUNGBUK",
-        "C2_IAOC_IAOC",
+        "SENSOR_AN_TPY2_SEONGJU",
+        "ECS_THAAD_SEONGJU",
         "C2_USFK_THAAD_C2_USFK_THAAD_C2",
         "C2_IAOC_IAOC",
-        "ECS_LSAM_CAPITAL",
-        "BATTERY_LSAM_CAPITAL"
+        "ECS_MSAM2_GWANGJU",
+        "BATTERY_MSAM2_GWANGJU"
        ],
        "names": [
-        "Green Pine Block-B (GREEN_PINE_CHUNGBUK)",
-        "통합공중작전통제소",
+        "AN/TPY-2 계열 센서 (AN_TPY2_SEONGJU)",
+        "ECS THAAD THAAD_SEONGJU",
         "USFK THAAD C2",
         "통합공중작전통제소",
-        "ECS LSAM LSAM_CAPITAL",
-        "L-SAM (LSAM_CAPITAL)"
+        "ECS CHEONGUNG2 MSAM2_GWANGJU",
+        "천궁-II (MSAM2_GWANGJU)"
        ],
        "categories": [
         "sensor",
@@ -4917,7 +4827,7 @@
        ],
        "media": [
         "report-cycle",
-        "datalink",
+        "ifcn",
         "datalink",
         "ifcn",
         "internal"
@@ -4925,23 +4835,23 @@
        "n": 1,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 281.6044840154632,
+       "detToFireMed": 321.71944196866644,
        "linkDelayMed": [
-        9.81634004261602,
+        0.04087745834959833,
         1,
         1,
         1,
         1
        ],
        "gapBeforeMed": [
+        17.199999999999022,
         0,
-        13.83956764745443,
-        0,
+        0.12014579041806428,
         0,
         0
        ],
        "examples": [
-        "srbm#32"
+        "srbm#45"
        ]
       },
       {
@@ -4996,7 +4906,7 @@
        "n": 1,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 289.6204847056427,
+       "detToFireMed": 289.5953553590297,
        "linkDelayMed": [
         0.16049999421755956,
         1,
@@ -5010,81 +4920,13 @@
         29.19999999999834,
         0,
         0,
-        1.604217536992337,
+        22.023781943508084,
         0,
         0,
         0
        ],
        "examples": [
         "srbm#50"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_AN_TPY2_SEONGJU",
-        "ECS_THAAD_SEONGJU",
-        "C2_USFK_THAAD_C2_USFK_THAAD_C2",
-        "C2_IAOC_IAOC",
-        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
-        "ECS_USFK_PATRIOT_KUNSAN",
-        "BATTERY_USFK_PATRIOT_KUNSAN"
-       ],
-       "names": [
-        "AN/TPY-2 계열 센서 (AN_TPY2_SEONGJU)",
-        "ECS THAAD THAAD_SEONGJU",
-        "USFK THAAD C2",
-        "통합공중작전통제소",
-        "USFK Patriot C2",
-        "ECS USFK_PAC3 USFK_PATRIOT_KUNSAN",
-        "USFK Patriot (USFK_PATRIOT_KUNSAN)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "c2",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "coord",
-        "coord",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "ifcn",
-        "datalink",
-        "datalink",
-        "ifcn",
-        "internal"
-       ],
-       "n": 1,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 287.7684725625452,
-       "linkDelayMed": [
-        0.11413329066454025,
-        1,
-        1,
-        1,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        17.000000000003865,
-        0,
-        0,
-        0,
-        260.25083818789517,
-        0
-       ],
-       "examples": [
-        "srbm#105"
        ]
       },
       {
@@ -5129,7 +4971,7 @@
        "n": 1,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 289.5564752790608,
+       "detToFireMed": 290.1529987003589,
        "linkDelayMed": [
         5.561824516278648,
         1,
@@ -5139,7 +4981,7 @@
        ],
        "gapBeforeMed": [
         0,
-        24.41548689953379,
+        5.893317031247989,
         0,
         0,
         0
@@ -5205,7 +5047,7 @@
        "n": 1,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 195.8053994861623,
+       "detToFireMed": 195.87537540482617,
        "linkDelayMed": [
         0.4888245785298295,
         1,
@@ -5221,7 +5063,7 @@
         0,
         0,
         0,
-        2.01624609004989,
+        6.900709534933867,
         0,
         0,
         0
@@ -5272,7 +5114,7 @@
        "n": 1,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 288.9138192132905,
+       "detToFireMed": 288.8711295799478,
        "linkDelayMed": [
         0.14630603644536677,
         1,
@@ -5283,18 +5125,175 @@
        "gapBeforeMed": [
         3.6000000000008185,
         0,
-        7.5597614772045745,
+        1.9354659984517184,
         0,
         0
        ],
        "examples": [
         "srbm#173"
        ]
+      },
+      {
+       "nodes": [
+        "SENSOR_AN_TPY2_SEONGJU",
+        "ECS_THAAD_SEONGJU",
+        "C2_USFK_THAAD_C2_USFK_THAAD_C2",
+        "C2_IAOC_IAOC",
+        "C2_USFK_THAAD_C2_USFK_THAAD_C2",
+        "C2_IAOC_IAOC",
+        "C2_USFK_THAAD_C2_USFK_THAAD_C2",
+        "ECS_THAAD_SEONGJU",
+        "BATTERY_THAAD_SEONGJU"
+       ],
+       "names": [
+        "AN/TPY-2 계열 센서 (AN_TPY2_SEONGJU)",
+        "ECS THAAD THAAD_SEONGJU",
+        "USFK THAAD C2",
+        "통합공중작전통제소",
+        "USFK THAAD C2",
+        "통합공중작전통제소",
+        "USFK THAAD C2",
+        "ECS THAAD THAAD_SEONGJU",
+        "USFK THAAD (THAAD_SEONGJU)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "coord",
+        "coord",
+        "coord",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "ifcn",
+        "datalink",
+        "datalink",
+        "datalink",
+        "datalink",
+        "ifcn",
+        "internal"
+       ],
+       "n": 1,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 187.98618688553302,
+       "linkDelayMed": [
+        0.15144697323694345,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        21.400000000004866,
+        0,
+        0.1160894892491342,
+        0,
+        108.80639750827117,
+        0,
+        7,
+        0
+       ],
+       "examples": [
+        "srbm#194"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_AN_TPY2_SEONGJU",
+        "ECS_THAAD_SEONGJU",
+        "C2_USFK_THAAD_C2_USFK_THAAD_C2",
+        "C2_IAOC_IAOC",
+        "C2_USFK_THAAD_C2_USFK_THAAD_C2",
+        "C2_IAOC_IAOC",
+        "ECS_LSAM_CAPITAL",
+        "BATTERY_LSAM_CAPITAL"
+       ],
+       "names": [
+        "AN/TPY-2 계열 센서 (AN_TPY2_SEONGJU)",
+        "ECS THAAD THAAD_SEONGJU",
+        "USFK THAAD C2",
+        "통합공중작전통제소",
+        "USFK THAAD C2",
+        "통합공중작전통제소",
+        "ECS LSAM LSAM_CAPITAL",
+        "L-SAM (LSAM_CAPITAL)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "coord",
+        "coord",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "ifcn",
+        "datalink",
+        "datalink",
+        "datalink",
+        "ifcn",
+        "internal"
+       ],
+       "n": 1,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 270.4085848262164,
+       "linkDelayMed": [
+        0.5803989401078979,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        18.400000000004184,
+        0,
+        17.23966321092871,
+        0,
+        90,
+        0,
+        0
+       ],
+       "examples": [
+        "srbm#196"
+       ]
       }
      ]
     },
     "mrl_large": {
-     "fired": 68,
+     "fired": 67,
      "total": 90,
      "chains": [
       {
@@ -5329,21 +5328,21 @@
        "n": 19,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 48.37274747226229,
+       "detToFireMed": 46.75486095645874,
        "linkDelayMed": [
-        9.003106290503581,
+        8.321970159626744,
         1,
         1
        ],
        "gapBeforeMed": [
-        6.400000000001455,
-        27.559047899333564,
+        6.399999999999636,
+        29.22901739884776,
         0
        ],
        "examples": [
         "mrl_large#1",
-        "mrl_large#29",
-        "mrl_large#40"
+        "mrl_large#24",
+        "mrl_large#26"
        ]
       },
       {
@@ -5388,17 +5387,17 @@
        "n": 11,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 31.674791110342824,
+       "detToFireMed": 40.88827453319868,
        "linkDelayMed": [
-        8.284105372079978,
+        8.20368336603184,
         1,
         1,
         1,
         1
        ],
        "gapBeforeMed": [
-        5.79999999999967,
-        14.396650463350625,
+        6.400000000001455,
+        13.692129409535255,
         0,
         0,
         0
@@ -5406,7 +5405,56 @@
        "examples": [
         "mrl_large#6",
         "mrl_large#8",
-        "mrl_large#24"
+        "mrl_large#23"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_GREEN_PINE_CHUNGBUK",
+        "C2_IAOC_IAOC",
+        "ECS_PAC3_DANGJIN",
+        "BATTERY_PAC3_DANGJIN"
+       ],
+       "names": [
+        "Green Pine Block-B (GREEN_PINE_CHUNGBUK)",
+        "통합공중작전통제소",
+        "ECS PAC3 PAC3_DANGJIN",
+        "한국군 PAC-3 (PAC3_DANGJIN)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "ifcn",
+        "internal"
+       ],
+       "n": 9,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 94.39422760424725,
+       "linkDelayMed": [
+        6.970327835773105,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        6.400000000001455,
+        78.43887398426705,
+        0
+       ],
+       "examples": [
+        "mrl_large#31",
+        "mrl_large#109",
+        "mrl_large#154"
        ]
       },
       {
@@ -5448,77 +5496,28 @@
         "ifcn",
         "internal"
        ],
-       "n": 10,
+       "n": 7,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 53.048620607453415,
+       "detToFireMed": 41.787437533001764,
        "linkDelayMed": [
-        8.229855145054444,
+        7.367859978219997,
         1,
         1,
         1,
         1
        ],
        "gapBeforeMed": [
-        8.40000000000012,
-        27.709588149510978,
+        8.199999999999534,
+        19.642697047944125,
         0,
         0,
         0
        ],
        "examples": [
-        "mrl_large#7",
         "mrl_large#13",
-        "mrl_large#21"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_GREEN_PINE_CHUNGBUK",
-        "C2_IAOC_IAOC",
-        "ECS_PAC3_DANGJIN",
-        "BATTERY_PAC3_DANGJIN"
-       ],
-       "names": [
-        "Green Pine Block-B (GREEN_PINE_CHUNGBUK)",
-        "통합공중작전통제소",
-        "ECS PAC3 PAC3_DANGJIN",
-        "한국군 PAC-3 (PAC3_DANGJIN)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "ifcn",
-        "internal"
-       ],
-       "n": 8,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 97.75596006026262,
-       "linkDelayMed": [
-        8.561205100700704,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        6.400000000001455,
-        79.42783028404119,
-        0
-       ],
-       "examples": [
-        "mrl_large#22",
-        "mrl_large#31",
-        "mrl_large#109"
+        "mrl_large#21",
+        "mrl_large#44"
        ]
       },
       {
@@ -5550,24 +5549,80 @@
         "ifcn",
         "internal"
        ],
-       "n": 4,
+       "n": 5,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 191.63031504319156,
+       "detToFireMed": 138.75996295824257,
        "linkDelayMed": [
         9.705613045838732,
         1,
         1
        ],
        "gapBeforeMed": [
-        6.800000000001546,
-        176.36716090487835,
+        5.600000000001273,
+        117.63648291986124,
         0
        ],
        "examples": [
         "mrl_large#116",
         "mrl_large#124",
         "mrl_large#134"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_GREEN_PINE_CHUNGBUK",
+        "C2_IAOC_IAOC",
+        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
+        "ECS_USFK_PATRIOT_CASEY",
+        "BATTERY_USFK_PATRIOT_CASEY"
+       ],
+       "names": [
+        "Green Pine Block-B (GREEN_PINE_CHUNGBUK)",
+        "통합공중작전통제소",
+        "USFK Patriot C2",
+        "ECS USFK_PAC3 USFK_PATRIOT_CASEY",
+        "USFK Patriot (USFK_PATRIOT_CASEY)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "datalink",
+        "ifcn",
+        "internal"
+       ],
+       "n": 3,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 125.34584771971186,
+       "linkDelayMed": [
+        7.462410208412393,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        9.000000000002046,
+        23.885597331442398,
+        0,
+        0
+       ],
+       "examples": [
+        "mrl_large#7",
+        "mrl_large#157",
+        "mrl_large#207"
        ]
       },
       {
@@ -5609,10 +5664,10 @@
         "ifcn",
         "internal"
        ],
-       "n": 2,
+       "n": 3,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 168.72676635400705,
+       "detToFireMed": 168.06837566545255,
        "linkDelayMed": [
         10.69848477797973,
         1,
@@ -5622,179 +5677,15 @@
        ],
        "gapBeforeMed": [
         8.40000000000191,
-        30.107859294709556,
+        17.534790586084,
         0,
         0,
         0
        ],
        "examples": [
         "mrl_large#119",
-        "mrl_large#209"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_GREEN_PINE_CHUNGBUK",
-        "C2_IAOC_IAOC",
-        "ECS_MSAM2_DAEGU",
-        "BATTERY_MSAM2_DAEGU"
-       ],
-       "names": [
-        "Green Pine Block-B (GREEN_PINE_CHUNGBUK)",
-        "통합공중작전통제소",
-        "ECS CHEONGUNG2 MSAM2_DAEGU",
-        "천궁-II (MSAM2_DAEGU)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "cue",
-        "selfdef"
-       ],
-       "media": [
-        "report-cycle",
-        "ifcn",
-        "selfdef"
-       ],
-       "n": 2,
-       "emergency": 0,
-       "selfDefense": 2,
-       "detToFireMed": 141.62859813896603,
-       "linkDelayMed": [
-        6.335820675505602,
-        1,
-        0
-       ],
-       "gapBeforeMed": [
-        5.800000000001319,
-        0,
-        131.20091221213193
-       ],
-       "examples": [
-        "mrl_large#126",
-        "mrl_large#162"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_GREEN_PINE_CHUNGBUK",
-        "C2_IAOC_IAOC",
-        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
-        "ECS_USFK_PATRIOT_CASEY",
-        "BATTERY_USFK_PATRIOT_CASEY"
-       ],
-       "names": [
-        "Green Pine Block-B (GREEN_PINE_CHUNGBUK)",
-        "통합공중작전통제소",
-        "USFK Patriot C2",
-        "ECS USFK_PAC3 USFK_PATRIOT_CASEY",
-        "USFK Patriot (USFK_PATRIOT_CASEY)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "datalink",
-        "ifcn",
-        "internal"
-       ],
-       "n": 2,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 126.1679513633137,
-       "linkDelayMed": [
-        14.612166430355728,
-        1,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        9.000000000002046,
-        45.89328001566355,
-        1.5713524568202502,
-        0
-       ],
-       "examples": [
         "mrl_large#139",
-        "mrl_large#207"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_GREEN_PINE_CHUNGBUK",
-        "C2_IAOC_IAOC",
-        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
-        "C2_IAOC_IAOC",
-        "ECS_MSAM2_YEONCHEON",
-        "BATTERY_MSAM2_YEONCHEON"
-       ],
-       "names": [
-        "Green Pine Block-B (GREEN_PINE_CHUNGBUK)",
-        "통합공중작전통제소",
-        "USFK Patriot C2",
-        "통합공중작전통제소",
-        "ECS CHEONGUNG2 MSAM2_YEONCHEON",
-        "천궁-II (MSAM2_YEONCHEON)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "coord",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "datalink",
-        "datalink",
-        "ifcn",
-        "internal"
-       ],
-       "n": 2,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 164.41121404416276,
-       "linkDelayMed": [
-        11.459520624822744,
-        1,
-        1,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        8.800000000002001,
-        30.532957880134518,
-        0,
-        0,
-        0
-       ],
-       "examples": [
-        "mrl_large#188",
-        "mrl_large#208"
+        "mrl_large#209"
        ]
       },
       {
@@ -5860,60 +5751,6 @@
       },
       {
        "nodes": [
-        "SENSOR_PATRIOT_MFR_USFK_CASEY",
-        "ECS_USFK_PATRIOT_CASEY",
-        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
-        "ECS_USFK_PATRIOT_OSAN",
-        "BATTERY_USFK_PATRIOT_OSAN"
-       ],
-       "names": [
-        "Patriot 포대 전속 레이더 (PATRIOT_MFR_USFK_CASEY)",
-        "ECS USFK_PAC3 USFK_PATRIOT_CASEY",
-        "USFK Patriot C2",
-        "ECS USFK_PAC3 USFK_PATRIOT_OSAN",
-        "USFK Patriot (USFK_PATRIOT_OSAN)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "ifcn",
-        "ifcn",
-        "internal"
-       ],
-       "n": 1,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 120.24507741502816,
-       "linkDelayMed": [
-        0.5678599782181664,
-        1,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        40.3999999999977,
-        0,
-        48.68304472485778,
-        0
-       ],
-       "examples": [
-        "mrl_large#46"
-       ]
-      },
-      {
-       "nodes": [
         "SENSOR_GREEN_PINE_CHUNGNAM",
         "C2_IAOC_IAOC",
         "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
@@ -5954,7 +5791,7 @@
        "n": 1,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 48.85368340952613,
+       "detToFireMed": 36.7381821870797,
        "linkDelayMed": [
         7.957615334338016,
         1,
@@ -5964,7 +5801,7 @@
        ],
        "gapBeforeMed": [
         8.399999999999523,
-        27.34816186674118,
+        14.979702711789287,
         0,
         0,
         0
@@ -5975,19 +5812,22 @@
       },
       {
        "nodes": [
-        "SENSOR_GREEN_PINE_CHUNGBUK",
-        "C2_IAOC_IAOC",
-        "ECS_PAC3_CHEONAN",
-        "BATTERY_PAC3_CHEONAN"
+        "SENSOR_PATRIOT_MFR_USFK_CASEY",
+        "ECS_USFK_PATRIOT_CASEY",
+        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
+        "ECS_USFK_PATRIOT_KUNSAN",
+        "BATTERY_USFK_PATRIOT_KUNSAN"
        ],
        "names": [
-        "Green Pine Block-B (GREEN_PINE_CHUNGBUK)",
-        "통합공중작전통제소",
-        "ECS PAC3 PAC3_CHEONAN",
-        "한국군 PAC-3 (PAC3_CHEONAN)"
+        "Patriot 포대 전속 레이더 (PATRIOT_MFR_USFK_CASEY)",
+        "ECS USFK_PAC3 USFK_PATRIOT_CASEY",
+        "USFK Patriot C2",
+        "ECS USFK_PAC3 USFK_PATRIOT_KUNSAN",
+        "USFK Patriot (USFK_PATRIOT_KUNSAN)"
        ],
        "categories": [
         "sensor",
+        "c2",
         "c2",
         "c2",
         "shooter"
@@ -5995,25 +5835,83 @@
        "kinds": [
         "report",
         "coord",
+        "coord",
         "command"
        ],
        "media": [
         "report-cycle",
+        "ifcn",
         "ifcn",
         "internal"
        ],
        "n": 1,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 114.74993868577735,
+       "detToFireMed": 117.64407266785912,
        "linkDelayMed": [
-        10.394608332633084,
+        0.8031062905018871,
+        1,
         1,
         1
        ],
        "gapBeforeMed": [
-        8.40000000000191,
-        60.716110373039555,
+        36.19999999999794,
+        0,
+        77.07135169948197,
+        0
+       ],
+       "examples": [
+        "mrl_large#73"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_PATRIOT_MFR_USFK_CASEY",
+        "ECS_USFK_PATRIOT_CASEY",
+        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
+        "ECS_USFK_PATRIOT_OSAN",
+        "BATTERY_USFK_PATRIOT_OSAN"
+       ],
+       "names": [
+        "Patriot 포대 전속 레이더 (PATRIOT_MFR_USFK_CASEY)",
+        "ECS USFK_PAC3 USFK_PATRIOT_CASEY",
+        "USFK Patriot C2",
+        "ECS USFK_PAC3 USFK_PATRIOT_OSAN",
+        "USFK Patriot (USFK_PATRIOT_OSAN)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "ifcn",
+        "ifcn",
+        "internal"
+       ],
+       "n": 1,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 120.50103226054694,
+       "linkDelayMed": [
+        0.7946083326406779,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        41.800000000009504,
+        0,
+        48.26475521784073,
         0
        ],
        "examples": [
@@ -6062,7 +5960,7 @@
        "n": 1,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 181.10331905317946,
+       "detToFireMed": 181.15800143330478,
        "linkDelayMed": [
         0.08837573983930724,
         1,
@@ -6072,7 +5970,7 @@
        ],
        "gapBeforeMed": [
         6.800000000001546,
-        29.403501552452894,
+        27.9243079940519,
         0,
         0,
         0
@@ -6133,7 +6031,7 @@
        ],
        "gapBeforeMed": [
         8.40000000000191,
-        65.36821838319065,
+        65.4208860521203,
         0,
         0,
         0
@@ -6146,14 +6044,14 @@
        "nodes": [
         "SENSOR_GREEN_PINE_CHUNGBUK",
         "C2_IAOC_IAOC",
-        "ECS_MSAM2_BUSAN",
-        "BATTERY_MSAM2_BUSAN"
+        "ECS_MSAM2_DAEGU",
+        "BATTERY_MSAM2_DAEGU"
        ],
        "names": [
         "Green Pine Block-B (GREEN_PINE_CHUNGBUK)",
         "통합공중작전통제소",
-        "ECS CHEONGUNG2 MSAM2_BUSAN",
-        "천궁-II (MSAM2_BUSAN)"
+        "ECS CHEONGUNG2 MSAM2_DAEGU",
+        "천궁-II (MSAM2_DAEGU)"
        ],
        "categories": [
         "sensor",
@@ -6163,30 +6061,30 @@
        ],
        "kinds": [
         "report",
-        "coord",
-        "command"
+        "cue",
+        "selfdef"
        ],
        "media": [
         "report-cycle",
         "ifcn",
-        "internal"
+        "selfdef"
        ],
        "n": 1,
        "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 199.2751171017626,
+       "selfDefense": 1,
+       "detToFireMed": 141.4713100860431,
        "linkDelayMed": [
-        5.584072259350705,
+        6.335820675505602,
         1,
-        1
-       ],
-       "gapBeforeMed": [
-        7.8000000000017735,
-        178.3509936730179,
         0
        ],
+       "gapBeforeMed": [
+        5.800000000001319,
+        0,
+        128.33548941053618
+       ],
        "examples": [
-        "mrl_large#135"
+        "mrl_large#162"
        ]
       },
       {
@@ -6195,22 +6093,19 @@
         "ECS_USFK_PATRIOT_CASEY",
         "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
         "C2_IAOC_IAOC",
-        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
-        "ECS_USFK_PATRIOT_CASEY",
-        "BATTERY_USFK_PATRIOT_CASEY"
+        "ECS_MSAM2_YEONCHEON",
+        "BATTERY_MSAM2_YEONCHEON"
        ],
        "names": [
         "Patriot 포대 전속 레이더 (PATRIOT_MFR_USFK_CASEY)",
         "ECS USFK_PAC3 USFK_PATRIOT_CASEY",
         "USFK Patriot C2",
         "통합공중작전통제소",
-        "USFK Patriot C2",
-        "ECS USFK_PAC3 USFK_PATRIOT_CASEY",
-        "USFK Patriot (USFK_PATRIOT_CASEY)"
+        "ECS CHEONGUNG2 MSAM2_YEONCHEON",
+        "천궁-II (MSAM2_YEONCHEON)"
        ],
        "categories": [
         "sensor",
-        "c2",
         "c2",
         "c2",
         "c2",
@@ -6222,13 +6117,11 @@
         "coord",
         "coord",
         "coord",
-        "coord",
         "command"
        ],
        "media": [
         "report-cycle",
         "ifcn",
-        "datalink",
         "datalink",
         "ifcn",
         "internal"
@@ -6236,25 +6129,145 @@
        "n": 1,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 126.0870335786426,
+       "detToFireMed": 164.49024727905226,
        "linkDelayMed": [
-        0.06241020842753642,
-        1,
+        0.2595206248345221,
         1,
         1,
         1,
         1
        ],
        "gapBeforeMed": [
-        75.60000000001719,
+        60.60000000001378,
         0,
-        0.006532546170774367,
-        0,
+        3.6601202778524566,
         0,
         0
        ],
        "examples": [
-        "mrl_large#157"
+        "mrl_large#188"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_PATRIOT_MFR_USFK_CASEY",
+        "ECS_USFK_PATRIOT_CASEY",
+        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
+        "C2_IAOC_IAOC",
+        "ECS_LSAM_MID_NORTH",
+        "BATTERY_LSAM_MID_NORTH"
+       ],
+       "names": [
+        "Patriot 포대 전속 레이더 (PATRIOT_MFR_USFK_CASEY)",
+        "ECS USFK_PAC3 USFK_PATRIOT_CASEY",
+        "USFK Patriot C2",
+        "통합공중작전통제소",
+        "ECS LSAM LSAM_MID_NORTH",
+        "L-SAM (LSAM_MID_NORTH)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "ifcn",
+        "datalink",
+        "ifcn",
+        "internal"
+       ],
+       "n": 1,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 55.11005777180935,
+       "linkDelayMed": [
+        0.14254737913370263,
+        1,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        48.000000000010914,
+        0,
+        0.22047351123205772,
+        0,
+        0
+       ],
+       "examples": [
+        "mrl_large#203"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_PATRIOT_MFR_USFK_CASEY",
+        "ECS_USFK_PATRIOT_CASEY",
+        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
+        "C2_IAOC_IAOC",
+        "ECS_LSAM_CAPITAL",
+        "BATTERY_LSAM_CAPITAL"
+       ],
+       "names": [
+        "Patriot 포대 전속 레이더 (PATRIOT_MFR_USFK_CASEY)",
+        "ECS USFK_PAC3 USFK_PATRIOT_CASEY",
+        "USFK Patriot C2",
+        "통합공중작전통제소",
+        "ECS LSAM LSAM_CAPITAL",
+        "L-SAM (LSAM_CAPITAL)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "ifcn",
+        "datalink",
+        "ifcn",
+        "internal"
+       ],
+       "n": 1,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 70.00975388138363,
+       "linkDelayMed": [
+        0.47853688867849087,
+        1,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        59.000000000013415,
+        0,
+        1.5664799941848742,
+        0,
+        0
+       ],
+       "examples": [
+        "mrl_large#208"
        ]
       }
      ]
@@ -6310,7 +6323,7 @@
        "n": 11,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 60.32045774392827,
+       "detToFireMed": 58.89781296749095,
        "linkDelayMed": [
         0.4788094612893019,
         1,
@@ -6320,9 +6333,9 @@
         1
        ],
        "gapBeforeMed": [
-        3.400000000000773,
+        3.2000000000007276,
         0,
-        1.9766911032079406,
+        1.7141505552326635,
         0,
         0,
         0
@@ -6370,9 +6383,9 @@
        "n": 3,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 54.554190572933294,
+       "detToFireMed": 55.05708991150585,
        "linkDelayMed": [
-        1.5009575398336281,
+        4.432155100389082,
         1,
         1,
         1
@@ -6385,27 +6398,30 @@
        ],
        "examples": [
         "cruise#10",
-        "cruise#77",
-        "cruise#87"
+        "cruise#127",
+        "cruise#183"
        ]
       },
       {
        "nodes": [
-        "SENSOR_FPS117_GANGWON_N",
+        "SENSOR_PATRIOT_MFR_USFK_CASEY",
+        "ECS_USFK_PATRIOT_CASEY",
+        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
         "C2_IAOC_IAOC",
-        "C2_ARMY_LOCAL_AD_ARMY_CENTRAL_FRONT_AD",
-        "ECS_CHUNMA_CO9",
-        "BATTERY_CHUNMA_CO9"
+        "ECS_MSAM2_CHUNGJU",
+        "BATTERY_MSAM2_CHUNGJU"
        ],
        "names": [
-        "FPS-117 계열 장거리 감시레이더 (FPS117_GANGWON_N)",
+        "Patriot 포대 전속 레이더 (PATRIOT_MFR_USFK_CASEY)",
+        "ECS USFK_PAC3 USFK_PATRIOT_CASEY",
+        "USFK Patriot C2",
         "통합공중작전통제소",
-        "육군 중부전방 군단 AOC/C2A",
-        "ECS CHUNMA CHUNMA_CO9",
-        "천마 중대 (CHUNMA_CO9)"
+        "ECS CHEONGUNG2 MSAM2_CHUNGJU",
+        "천궁-II (MSAM2_CHUNGJU)"
        ],
        "categories": [
         "sensor",
+        "c2",
         "c2",
         "c2",
         "c2",
@@ -6415,28 +6431,32 @@
         "report",
         "coord",
         "coord",
+        "coord",
         "command"
        ],
        "media": [
         "report-cycle",
         "ifcn",
+        "datalink",
         "ifcn",
         "internal"
        ],
        "n": 2,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 87.22035995638657,
+       "detToFireMed": 108.87733094974419,
        "linkDelayMed": [
-        1.723133512293657,
+        0.12379771421501573,
+        1,
         1,
         1,
         1
        ],
        "gapBeforeMed": [
+        1.3999999999999204,
         0,
+        3.5728083136583564,
         0,
-        0.5390203235187983,
         0
        ],
        "examples": [
@@ -6450,6 +6470,132 @@
      "fired": 16,
      "total": 16,
      "chains": [
+      {
+       "nodes": [
+        "SENSOR_LSAM_MFR_CAPITAL",
+        "C2_IAOC_IAOC",
+        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
+        "C2_IAOC_IAOC",
+        "ECS_LSAM_CAPITAL",
+        "BATTERY_LSAM_CAPITAL"
+       ],
+       "names": [
+        "L-SAM 포대 전속 MFR (LSAM_MFR_CAPITAL)",
+        "통합공중작전통제소",
+        "USFK Patriot C2",
+        "통합공중작전통제소",
+        "ECS LSAM LSAM_CAPITAL",
+        "L-SAM (LSAM_CAPITAL)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "datalink",
+        "datalink",
+        "ifcn",
+        "internal"
+       ],
+       "n": 5,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 17.4150500903815,
+       "linkDelayMed": [
+        0.14432312107317102,
+        1,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        0,
+        11.564362770945365,
+        0,
+        0,
+        0
+       ],
+       "examples": [
+        "fighter#28",
+        "fighter#76",
+        "fighter#78"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_LSAM_MFR_CAPITAL",
+        "C2_IAOC_IAOC",
+        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
+        "C2_IAOC_IAOC",
+        "ECS_MSAM2_YEONPYEONG",
+        "BATTERY_MSAM2_YEONPYEONG"
+       ],
+       "names": [
+        "L-SAM 포대 전속 MFR (LSAM_MFR_CAPITAL)",
+        "통합공중작전통제소",
+        "USFK Patriot C2",
+        "통합공중작전통제소",
+        "ECS CHEONGUNG2 MSAM2_YEONPYEONG",
+        "천궁-II (MSAM2_YEONPYEONG)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "datalink",
+        "datalink",
+        "ifcn",
+        "internal"
+       ],
+       "n": 5,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 101.17821537916302,
+       "linkDelayMed": [
+        0.34000007320969416,
+        1,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        0,
+        41.854025092220354,
+        0,
+        0,
+        0
+       ],
+       "examples": [
+        "fighter#83",
+        "fighter#92",
+        "fighter#143"
+       ]
+      },
       {
        "nodes": [
         "SENSOR_PATRIOT_MFR_USFK_CASEY",
@@ -6494,10 +6640,10 @@
         "ifcn",
         "internal"
        ],
-       "n": 4,
+       "n": 3,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 72.3927526062098,
+       "detToFireMed": 72.38714201682251,
        "linkDelayMed": [
         0.1743498354910571,
         1,
@@ -6509,141 +6655,15 @@
        "gapBeforeMed": [
         0,
         0,
-        4.482242011653852,
+        1.266139433650551,
         0,
         0,
         0
        ],
        "examples": [
-        "fighter#28",
         "fighter#103",
-        "fighter#113"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_LSAM_MFR_CAPITAL",
-        "C2_IAOC_IAOC",
-        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
-        "C2_IAOC_IAOC",
-        "ECS_LSAM_CAPITAL",
-        "BATTERY_LSAM_CAPITAL"
-       ],
-       "names": [
-        "L-SAM 포대 전속 MFR (LSAM_MFR_CAPITAL)",
-        "통합공중작전통제소",
-        "USFK Patriot C2",
-        "통합공중작전통제소",
-        "ECS LSAM LSAM_CAPITAL",
-        "L-SAM (LSAM_CAPITAL)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "coord",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "datalink",
-        "datalink",
-        "ifcn",
-        "internal"
-       ],
-       "n": 4,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 20.049809059619747,
-       "linkDelayMed": [
-        0.6476424017330373,
-        1,
-        1,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        0,
-        7.860002838852097,
-        0,
-        0,
-        0
-       ],
-       "examples": [
-        "fighter#76",
-        "fighter#78",
-        "fighter#92"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_LSAM_MFR_CAPITAL",
-        "C2_IAOC_IAOC",
-        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
-        "C2_IAOC_IAOC",
-        "ECS_MSAM2_YEONPYEONG",
-        "BATTERY_MSAM2_YEONPYEONG"
-       ],
-       "names": [
-        "L-SAM 포대 전속 MFR (LSAM_MFR_CAPITAL)",
-        "통합공중작전통제소",
-        "USFK Patriot C2",
-        "통합공중작전통제소",
-        "ECS CHEONGUNG2 MSAM2_YEONPYEONG",
-        "천궁-II (MSAM2_YEONPYEONG)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "coord",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "datalink",
-        "datalink",
-        "ifcn",
-        "internal"
-       ],
-       "n": 4,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 101.07773096481264,
-       "linkDelayMed": [
-        0.12890603011294388,
-        1,
-        1,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        0,
-        39.6643645731383,
-        0,
-        0,
-        0
-       ],
-       "examples": [
-        "fighter#83",
-        "fighter#89",
-        "fighter#197"
+        "fighter#113",
+        "fighter#206"
        ]
       },
       {
@@ -6688,7 +6708,7 @@
        "n": 2,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 15.362923349021912,
+       "detToFireMed": 22.86545842566511,
        "linkDelayMed": [
         0.6502090862024943,
         1,
@@ -6699,7 +6719,7 @@
        "gapBeforeMed": [
         0,
         0,
-        2.152278562586673,
+        3.4811848116475517,
         0,
         0
        ],
@@ -6750,7 +6770,7 @@
        "n": 1,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 22.440416279957958,
+       "detToFireMed": 48.64626919277072,
        "linkDelayMed": [
         0.5988996174764338,
         1,
@@ -6760,74 +6780,13 @@
        ],
        "gapBeforeMed": [
         0,
-        16.55658746570981,
+        42.62979397872243,
         0,
         0,
         0
        ],
        "examples": [
         "fighter#75"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_LSAM_MFR_CAPITAL",
-        "C2_IAOC_IAOC",
-        "C2_USFK_PATRIOT_C2_USFK_PATRIOT_C2",
-        "C2_IAOC_IAOC",
-        "ECS_MSAM2_GIMPO",
-        "BATTERY_MSAM2_GIMPO"
-       ],
-       "names": [
-        "L-SAM 포대 전속 MFR (LSAM_MFR_CAPITAL)",
-        "통합공중작전통제소",
-        "USFK Patriot C2",
-        "통합공중작전통제소",
-        "ECS CHEONGUNG2 MSAM2_GIMPO",
-        "천궁-II (MSAM2_GIMPO)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "coord",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "datalink",
-        "datalink",
-        "ifcn",
-        "internal"
-       ],
-       "n": 1,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 169.4234404557319,
-       "linkDelayMed": [
-        0.34000007320969416,
-        1,
-        1,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        0,
-        14.020821746796855,
-        0,
-        0,
-        0
-       ],
-       "examples": [
-        "fighter#143"
        ]
       }
      ]
@@ -6841,11 +6800,15 @@
         "SENSOR_MSAM2_BAENGNYEONG_MFR",
         "C2_IAOC_IAOC",
         "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
         "ECS_CHUNMA_CO1",
         "BATTERY_CHUNMA_CO1"
        ],
        "names": [
         "천궁-II 포대 전속 MFR (MSAM2_BAENGNYEONG_MFR)",
+        "통합공중작전통제소",
+        "육군 서부전방 군단 AOC/C2A",
         "통합공중작전통제소",
         "육군 서부전방 군단 AOC/C2A",
         "ECS CHUNMA CHUNMA_CO1",
@@ -6856,10 +6819,14 @@
         "c2",
         "c2",
         "c2",
+        "c2",
+        "c2",
         "shooter"
        ],
        "kinds": [
         "report",
+        "coord",
+        "coord",
         "coord",
         "coord",
         "command"
@@ -6868,14 +6835,18 @@
         "report-cycle",
         "ifcn",
         "ifcn",
+        "ifcn",
+        "ifcn",
         "internal"
        ],
        "n": 17,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 532.1127634846539,
+       "detToFireMed": 532.0813748937758,
        "linkDelayMed": [
         0.3791118015240045,
+        1,
+        1,
         1,
         1,
         1
@@ -6883,7 +6854,9 @@
        "gapBeforeMed": [
         0,
         0,
-        2.46254192780367,
+        1.593143669523215,
+        10.331155876026628,
+        4.642250738826988,
         0
        ],
        "examples": [
@@ -6896,11 +6869,15 @@
        "nodes": [
         "SENSOR_TPS880K_CHEORWON",
         "C2_ARMY_LOCAL_AD_ARMY_CENTRAL_FRONT_AD",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_CENTRAL_FRONT_AD",
         "ECS_CHUNMA_CO8",
         "BATTERY_CHUNMA_CO8"
        ],
        "names": [
         "TPS-880K 계열 국지방공레이더 (TPS880K_CHEORWON)",
+        "육군 중부전방 군단 AOC/C2A",
+        "통합공중작전통제소",
         "육군 중부전방 군단 AOC/C2A",
         "ECS CHUNMA CHUNMA_CO8",
         "천마 중대 (CHUNMA_CO8)"
@@ -6909,30 +6886,40 @@
         "sensor",
         "c2",
         "c2",
+        "c2",
+        "c2",
         "shooter"
        ],
        "kinds": [
         "report",
+        "coord",
+        "coord",
         "coord",
         "command"
        ],
        "media": [
         "report-cycle",
         "ifcn",
+        "ifcn",
+        "ifcn",
         "internal"
        ],
-       "n": 11,
+       "n": 10,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 149.22551089968647,
+       "detToFireMed": 151.5753069758179,
        "linkDelayMed": [
-        1.696541452589372,
+        1.7556043136493713,
+        1,
+        1,
         1,
         1
        ],
        "gapBeforeMed": [
         0,
-        5.230507535138827,
+        2.4973329488533977,
+        50.776100697011145,
+        10.786790398928588,
         0
        ],
        "examples": [
@@ -6973,7 +6960,7 @@
        "n": 6,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 862.0629838349398,
+       "detToFireMed": 862.6980383487346,
        "linkDelayMed": [
         0.2436640169362363,
         1,
@@ -6981,7 +6968,7 @@
        ],
        "gapBeforeMed": [
         0,
-        859.0972484679046,
+        859.4444182672337,
         0
        ],
        "examples": [
@@ -6994,11 +6981,15 @@
        "nodes": [
         "SENSOR_TPS880K_GANGHWA",
         "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
         "ECS_CHUNMA_CO3",
         "BATTERY_CHUNMA_CO3"
        ],
        "names": [
         "TPS-880K 계열 국지방공레이더 (TPS880K_GANGHWA)",
+        "육군 서부전방 군단 AOC/C2A",
+        "통합공중작전통제소",
         "육군 서부전방 군단 AOC/C2A",
         "ECS CHUNMA CHUNMA_CO3",
         "천마 중대 (CHUNMA_CO3)"
@@ -7007,30 +6998,40 @@
         "sensor",
         "c2",
         "c2",
+        "c2",
+        "c2",
         "shooter"
        ],
        "kinds": [
         "report",
+        "coord",
+        "coord",
         "coord",
         "command"
        ],
        "media": [
         "report-cycle",
         "ifcn",
+        "ifcn",
+        "ifcn",
         "internal"
        ],
        "n": 5,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 285.8137556917252,
+       "detToFireMed": 285.7873458582278,
        "linkDelayMed": [
         2.4164173003500764,
+        1,
+        1,
         1,
         1
        ],
        "gapBeforeMed": [
         0,
-        0.787711019575454,
+        2.8316036773535416,
+        11.061681151258654,
+        1.372520187076816,
         0
        ],
        "examples": [
@@ -7044,11 +7045,15 @@
         "SENSOR_MSAM2_YEONPYEONG_MFR",
         "C2_IAOC_IAOC",
         "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
         "ECS_CHUNMA_CO1",
         "BATTERY_CHUNMA_CO1"
        ],
        "names": [
         "천궁-II 포대 전속 MFR (MSAM2_YEONPYEONG_MFR)",
+        "통합공중작전통제소",
+        "육군 서부전방 군단 AOC/C2A",
         "통합공중작전통제소",
         "육군 서부전방 군단 AOC/C2A",
         "ECS CHUNMA CHUNMA_CO1",
@@ -7059,10 +7064,14 @@
         "c2",
         "c2",
         "c2",
+        "c2",
+        "c2",
         "shooter"
        ],
        "kinds": [
         "report",
+        "coord",
+        "coord",
         "coord",
         "coord",
         "command"
@@ -7071,14 +7080,18 @@
         "report-cycle",
         "ifcn",
         "ifcn",
+        "ifcn",
+        "ifcn",
         "internal"
        ],
        "n": 3,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 528.7012140452434,
+       "detToFireMed": 528.74471293637,
        "linkDelayMed": [
         0.6437099185205284,
+        1,
+        1,
         1,
         1,
         1
@@ -7086,7 +7099,9 @@
        "gapBeforeMed": [
         0,
         0,
-        1.540159774621202,
+        2.4931743977354017,
+        17.949458238355533,
+        1.3351242492917663,
         0
        ],
        "examples": [
@@ -7127,7 +7142,7 @@
        "n": 2,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 891.6566393364603,
+       "detToFireMed": 889.7615499537417,
        "linkDelayMed": [
         0.9236514940588734,
         1,
@@ -7141,6 +7156,477 @@
        "examples": [
         "uav_small#25",
         "uav_small#165"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_MSAM2_GIMPO_MFR",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
+        "ECS_CHUNMA_CO3",
+        "BATTERY_CHUNMA_CO3"
+       ],
+       "names": [
+        "천궁-II 포대 전속 MFR (MSAM2_GIMPO_MFR)",
+        "통합공중작전통제소",
+        "육군 서부전방 군단 AOC/C2A",
+        "통합공중작전통제소",
+        "육군 서부전방 군단 AOC/C2A",
+        "ECS CHUNMA CHUNMA_CO3",
+        "천마 중대 (CHUNMA_CO3)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "coord",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "ifcn",
+        "ifcn",
+        "ifcn",
+        "ifcn",
+        "internal"
+       ],
+       "n": 2,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 389.15677067443926,
+       "linkDelayMed": [
+        0.705130254282949,
+        1,
+        1,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        0,
+        0,
+        4.319477100115591,
+        49.791341211357576,
+        37.35832705999883,
+        0
+       ],
+       "examples": [
+        "uav_small#72",
+        "uav_small#181"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_MSAM2_BAENGNYEONG_MFR",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
+        "ECS_BIHO_CO1",
+        "BATTERY_BIHO_CO1"
+       ],
+       "names": [
+        "천궁-II 포대 전속 MFR (MSAM2_BAENGNYEONG_MFR)",
+        "통합공중작전통제소",
+        "육군 서부전방 군단 AOC/C2A",
+        "통합공중작전통제소",
+        "육군 서부전방 군단 AOC/C2A",
+        "ECS BIHO BIHO_CO1",
+        "비호 중대 (BIHO_CO1)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "coord",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "ifcn",
+        "ifcn",
+        "ifcn",
+        "ifcn",
+        "internal"
+       ],
+       "n": 2,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 547.474947659641,
+       "linkDelayMed": [
+        0.17189605046905854,
+        1,
+        1,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        2.600000000000591,
+        0,
+        10.671460277949109,
+        53.80023450537237,
+        41.410742101327514,
+        0
+       ],
+       "examples": [
+        "uav_small#187",
+        "uav_small#222"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_TPS880K_GANGHWA",
+        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
+        "C2_IAOC_IAOC",
+        "ECS_LSAM_CAPITAL",
+        "BATTERY_LSAM_CAPITAL"
+       ],
+       "names": [
+        "TPS-880K 계열 국지방공레이더 (TPS880K_GANGHWA)",
+        "육군 서부전방 군단 AOC/C2A",
+        "통합공중작전통제소",
+        "육군 서부전방 군단 AOC/C2A",
+        "통합공중작전통제소",
+        "ECS LSAM LSAM_CAPITAL",
+        "L-SAM (LSAM_CAPITAL)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "status",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "ifcn",
+        "ifcn",
+        "ifcn",
+        "ifcn",
+        "internal"
+       ],
+       "n": 1,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 356.7226671624474,
+       "linkDelayMed": [
+        1.336842734349318,
+        1,
+        1,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        0,
+        4.661057358214919,
+        14.162636084242877,
+        30.16437199044765,
+        299.50000000000006,
+        0
+       ],
+       "examples": [
+        "uav_small#66"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_MSAM2_BAENGNYEONG_MFR",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
+        "ECS_CHUNMA_CO2",
+        "BATTERY_CHUNMA_CO2"
+       ],
+       "names": [
+        "천궁-II 포대 전속 MFR (MSAM2_BAENGNYEONG_MFR)",
+        "통합공중작전통제소",
+        "육군 서부전방 군단 AOC/C2A",
+        "통합공중작전통제소",
+        "육군 서부전방 군단 AOC/C2A",
+        "ECS CHUNMA CHUNMA_CO2",
+        "천마 중대 (CHUNMA_CO2)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "coord",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "ifcn",
+        "ifcn",
+        "ifcn",
+        "ifcn",
+        "internal"
+       ],
+       "n": 1,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 690.2270696553594,
+       "linkDelayMed": [
+        0.6987338445067053,
+        1,
+        1,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        0,
+        0,
+        100.74465552212666,
+        14.91291169904855,
+        188.07441415846858,
+        0
+       ],
+       "examples": [
+        "uav_small#84"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_TPS880K_CHEORWON",
+        "C2_ARMY_LOCAL_AD_ARMY_CENTRAL_FRONT_AD",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_CENTRAL_FRONT_AD",
+        "ECS_BIHO_CO12",
+        "BATTERY_BIHO_CO12"
+       ],
+       "names": [
+        "TPS-880K 계열 국지방공레이더 (TPS880K_CHEORWON)",
+        "육군 중부전방 군단 AOC/C2A",
+        "통합공중작전통제소",
+        "육군 중부전방 군단 AOC/C2A",
+        "ECS BIHO BIHO_CO12",
+        "비호 중대 (BIHO_CO12)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "ifcn",
+        "ifcn",
+        "ifcn",
+        "internal"
+       ],
+       "n": 1,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 170.02835028326513,
+       "linkDelayMed": [
+        0.8522461336517608,
+        1,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        0,
+        2.7128318777258755,
+        158.1988471782206,
+        0.16075955711585266,
+        0
+       ],
+       "examples": [
+        "uav_small#156"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_MSAM2_GIMPO_MFR",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
+        "C2_IAOC_IAOC",
+        "ECS_LSAM_CAPITAL",
+        "BATTERY_LSAM_CAPITAL"
+       ],
+       "names": [
+        "천궁-II 포대 전속 MFR (MSAM2_GIMPO_MFR)",
+        "통합공중작전통제소",
+        "육군 서부전방 군단 AOC/C2A",
+        "통합공중작전통제소",
+        "ECS LSAM LSAM_CAPITAL",
+        "L-SAM (LSAM_CAPITAL)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "ifcn",
+        "ifcn",
+        "ifcn",
+        "internal"
+       ],
+       "n": 1,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 648.4538290094745,
+       "linkDelayMed": [
+        0.4224776769804066,
+        1,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        0,
+        0,
+        4.432945458574068,
+        639.1676292589054,
+        0
+       ],
+       "examples": [
+        "uav_small#212"
+       ]
+      },
+      {
+       "nodes": [
+        "SENSOR_MSAM2_GIMPO_MFR",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
+        "C2_IAOC_IAOC",
+        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
+        "C2_IAOC_IAOC",
+        "ECS_LSAM_CAPITAL",
+        "BATTERY_LSAM_CAPITAL"
+       ],
+       "names": [
+        "천궁-II 포대 전속 MFR (MSAM2_GIMPO_MFR)",
+        "통합공중작전통제소",
+        "육군 서부전방 군단 AOC/C2A",
+        "통합공중작전통제소",
+        "육군 서부전방 군단 AOC/C2A",
+        "통합공중작전통제소",
+        "ECS LSAM LSAM_CAPITAL",
+        "L-SAM (LSAM_CAPITAL)"
+       ],
+       "categories": [
+        "sensor",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "c2",
+        "shooter"
+       ],
+       "kinds": [
+        "report",
+        "coord",
+        "coord",
+        "coord",
+        "status",
+        "coord",
+        "command"
+       ],
+       "media": [
+        "report-cycle",
+        "ifcn",
+        "ifcn",
+        "ifcn",
+        "ifcn",
+        "ifcn",
+        "internal"
+       ],
+       "n": 1,
+       "emergency": 0,
+       "selfDefense": 0,
+       "detToFireMed": 339.78364539268864,
+       "linkDelayMed": [
+        0.9562212429907504,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+       ],
+       "gapBeforeMed": [
+        0,
+        0,
+        0.046156182860841,
+        28.448921742606444,
+        4.594856594574594,
+        299.5,
+        0
+       ],
+       "examples": [
+        "uav_small#220"
        ]
       },
       {
@@ -7167,7 +7653,7 @@
        ],
        "kinds": [
         "report",
-        "status",
+        "coord",
         "coord",
         "command"
        ],
@@ -7177,10 +7663,10 @@
         "ifcn",
         "internal"
        ],
-       "n": 2,
+       "n": 1,
        "emergency": 0,
        "selfDefense": 0,
-       "detToFireMed": 308.02394306019886,
+       "detToFireMed": 835.9898271178283,
        "linkDelayMed": [
         3.1554127916490415,
         1,
@@ -7189,299 +7675,12 @@
        ],
        "gapBeforeMed": [
         0,
-        2.289035973253931,
-        299.4999999999998,
+        2.610135612207614,
+        826.0814805567397,
         0
        ],
        "examples": [
-        "uav_small#66",
         "uav_small#227"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_MSAM2_GIMPO_MFR",
-        "C2_IAOC_IAOC",
-        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
-        "ECS_CHUNMA_CO3",
-        "BATTERY_CHUNMA_CO3"
-       ],
-       "names": [
-        "천궁-II 포대 전속 MFR (MSAM2_GIMPO_MFR)",
-        "통합공중작전통제소",
-        "육군 서부전방 군단 AOC/C2A",
-        "ECS CHUNMA CHUNMA_CO3",
-        "천마 중대 (CHUNMA_CO3)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "ifcn",
-        "ifcn",
-        "internal"
-       ],
-       "n": 2,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 288.0042083373556,
-       "linkDelayMed": [
-        0.4224776769804066,
-        1,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        0,
-        0,
-        1.249433938382822,
-        0
-       ],
-       "examples": [
-        "uav_small#72",
-        "uav_small#212"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_MSAM2_GIMPO_MFR",
-        "C2_IAOC_IAOC",
-        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
-        "C2_IAOC_IAOC",
-        "ECS_LSAM_CAPITAL",
-        "BATTERY_LSAM_CAPITAL"
-       ],
-       "names": [
-        "천궁-II 포대 전속 MFR (MSAM2_GIMPO_MFR)",
-        "통합공중작전통제소",
-        "육군 서부전방 군단 AOC/C2A",
-        "통합공중작전통제소",
-        "ECS LSAM LSAM_CAPITAL",
-        "L-SAM (LSAM_CAPITAL)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "status",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "ifcn",
-        "ifcn",
-        "ifcn",
-        "internal"
-       ],
-       "n": 2,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 314.30459730467896,
-       "linkDelayMed": [
-        0.9562212429907504,
-        1,
-        1,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        0,
-        0,
-        9.102298638372531,
-        299.5000000000002,
-        0
-       ],
-       "examples": [
-        "uav_small#181",
-        "uav_small#220"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_MSAM2_BAENGNYEONG_MFR",
-        "C2_IAOC_IAOC",
-        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
-        "ECS_CHUNMA_CO2",
-        "BATTERY_CHUNMA_CO2"
-       ],
-       "names": [
-        "천궁-II 포대 전속 MFR (MSAM2_BAENGNYEONG_MFR)",
-        "통합공중작전통제소",
-        "육군 서부전방 군단 AOC/C2A",
-        "ECS CHUNMA CHUNMA_CO2",
-        "천마 중대 (CHUNMA_CO2)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "ifcn",
-        "ifcn",
-        "internal"
-       ],
-       "n": 1,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 690.2258796403912,
-       "linkDelayMed": [
-        0.6987338445067053,
-        1,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        0,
-        0,
-        3.077635705314947,
-        0
-       ],
-       "examples": [
-        "uav_small#84"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_MSAM2_BAENGNYEONG_MFR",
-        "C2_IAOC_IAOC",
-        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
-        "C2_IAOC_IAOC",
-        "ECS_LSAM_CAPITAL",
-        "BATTERY_LSAM_CAPITAL"
-       ],
-       "names": [
-        "천궁-II 포대 전속 MFR (MSAM2_BAENGNYEONG_MFR)",
-        "통합공중작전통제소",
-        "육군 서부전방 군단 AOC/C2A",
-        "통합공중작전통제소",
-        "ECS LSAM LSAM_CAPITAL",
-        "L-SAM (LSAM_CAPITAL)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "status",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "ifcn",
-        "ifcn",
-        "ifcn",
-        "internal"
-       ],
-       "n": 1,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 545.0272515296842,
-       "linkDelayMed": [
-        0.17189605046905854,
-        1,
-        1,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        0,
-        0,
-        1.8047993603322539,
-        506.9738358612799,
-        0
-       ],
-       "examples": [
-        "uav_small#187"
-       ]
-      },
-      {
-       "nodes": [
-        "SENSOR_MSAM2_BAENGNYEONG_MFR",
-        "C2_IAOC_IAOC",
-        "C2_ARMY_LOCAL_AD_ARMY_WEST_FRONT_AD",
-        "ECS_BIHO_CO1",
-        "BATTERY_BIHO_CO1"
-       ],
-       "names": [
-        "천궁-II 포대 전속 MFR (MSAM2_BAENGNYEONG_MFR)",
-        "통합공중작전통제소",
-        "육군 서부전방 군단 AOC/C2A",
-        "ECS BIHO BIHO_CO1",
-        "비호 중대 (BIHO_CO1)"
-       ],
-       "categories": [
-        "sensor",
-        "c2",
-        "c2",
-        "c2",
-        "shooter"
-       ],
-       "kinds": [
-        "report",
-        "coord",
-        "coord",
-        "command"
-       ],
-       "media": [
-        "report-cycle",
-        "ifcn",
-        "ifcn",
-        "internal"
-       ],
-       "n": 1,
-       "emergency": 0,
-       "selfDefense": 0,
-       "detToFireMed": 541.6576592947922,
-       "linkDelayMed": [
-        0.08918897611079046,
-        1,
-        1,
-        1
-       ],
-       "gapBeforeMed": [
-        2.600000000000591,
-        0,
-        1.1775736490956206,
-        0
-       ],
-       "examples": [
-        "uav_small#222"
        ]
       }
      ]
